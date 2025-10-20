@@ -15,7 +15,8 @@ This project is documented across several files to keep the information organize
 - **[Roadmap](docs/roadmap.md)**: The development plan and future features.
 
 ## TODOs
-- **[V0 TODO](v0_TODO.md)**: A step by step TODO for the initial MVP implementation.
+- **[V0 TODO](v0_TODO.md)**: A step by step TODO for the initial MVP implementation (completed).
+- **[V1 TODO](v1_TODO.md)**: A step by step TODO for the v1 implementation.
 
 ## Development Workflow
   - Examination
@@ -26,8 +27,9 @@ This project is documented across several files to keep the information organize
   - Request and wait for permission to Execute/Implement the plan
   - Write temporary TODO file to keep track of the implementation
   - Execution/implementation (reading files, creating/editing/deleting, etc) while updating the temporary TODO
+  - Check the work for missing or imcomplete implementations
   - Run ruff to check for errors
   - Run the game to check for errors
   - Summarize changes
   - Ask for next step
-Always ponder and consider the possible downstream effects of changes.
+Always ponder and consider the possible downstream effects
