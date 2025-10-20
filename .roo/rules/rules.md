@@ -32,4 +32,4 @@ This project is documented across several files to keep the information organize
   - Run the game to check for errors
   - Summarize changes
   - Ask for next step
-Always ponder and consider the possible downstream effects
+Always ponder and consider the possible downstream effects of changes.
