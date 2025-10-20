@@ -1,0 +1,8 @@
+google
+google.genai
+grpcio
+grpcio-status
+pydantic
+python-dotenv
+customtkinter
+requests
