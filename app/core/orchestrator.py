@@ -6,8 +6,9 @@ from app.llm.gemini_connector import GeminiConnector
 from app.llm.openai_connector import OpenAIConnector
 
 class Orchestrator:
-    def __init__(self, view: MainView):
+    def __init__(self, view: MainView, db_manager):
         self.view = view
+        self.db_manager = db_manager
         
         # Load the initial prompt
         with open("prompts/default.txt", "r") as f:
@@ -17,6 +18,7 @@ class Orchestrator:
         self.llm_connector = self._get_llm_connector()
 
         self.view.send_button.configure(command=self.handle_send)
+        self.view.orchestrator = self
 
     def _get_llm_connector(self) -> LLMConnector:
         provider = os.environ.get("LLM_PROVIDER", "GEMINI").upper()
@@ -50,3 +52,15 @@ class Orchestrator:
 
     def run(self):
         self.view.mainloop()
+
+    def new_session(self, system_prompt: str):
+        self.session = Session("default_session", system_prompt=system_prompt)
+
+    def save_game(self, name: str):
+        session_data = self.session.to_json()
+        self.db_manager.save_session(name, session_data)
+
+    def load_game(self, session_id: int):
+        game_session = self.db_manager.load_session(session_id)
+        if game_session:
+            self.session = Session.from_json(game_session.session_data)

@@ -28,7 +28,7 @@ This project is documented across several files to keep the information organize
   - Write temporary TODO file to keep track of the implementation
   - Execution/implementation (reading files, creating/editing/deleting, etc) while updating the temporary TODO
   - Check the work for missing or imcomplete implementations
-  - Run ruff to check for errors
+  - Run ruff (with --fix) to check for errors
   - Run the game to check for errors
   - Summarize changes
   - Ask for next step

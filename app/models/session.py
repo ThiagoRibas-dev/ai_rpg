@@ -19,17 +19,14 @@ class Session:
         """Returns the entire conversation history."""
         return self.history
 
-    def save_to_file(self, file_path: str):
-        """Saves the session history to a JSON file."""
-        with open(file_path, 'w') as f:
-            json.dump([message.__dict__ for message in self.history], f, indent=2)
+    def to_json(self) -> str:
+        """Serializes the session to a JSON string."""
+        return json.dumps({"session_id": self.session_id, "history": [message.__dict__ for message in self.history]})
 
     @classmethod
-    def load_from_file(cls, file_path: str, session_id: str):
-        """Loads a session history from a JSON file."""
-        with open(file_path, 'r') as f:
-            data = json.load(f)
-        
-        session = cls(session_id)
-        session.history = [Message(**item) for item in data]
+    def from_json(cls, json_str: str):
+        """Deserializes a session from a JSON string."""
+        data = json.loads(json_str)
+        session = cls(data["session_id"])
+        session.history = [Message(**item) for item in data["history"]]
         return session
