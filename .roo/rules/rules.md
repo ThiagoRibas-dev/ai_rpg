@@ -30,6 +30,6 @@ This project is documented across several files to keep the information organize
   - Check the work for missing or imcomplete implementations
   - Run ruff (with --fix) to check for errors
   - Run the game to check for errors
-  - Summarize changes
+  - Summarize changes and update the relevant files (indexes,TODOs, GEMINI.md, etc)
   - Ask for next step
 Always ponder and consider the possible downstream effects of changes.

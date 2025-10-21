@@ -30,7 +30,9 @@ class DBManager:
                 CREATE TABLE IF NOT EXISTS sessions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT NOT NULL,
-                    session_data TEXT NOT NULL
+                    session_data TEXT NOT NULL,
+                    prompt_id INTEGER NOT NULL,
+                    FOREIGN KEY (prompt_id) REFERENCES prompts (id)
                 )
             """)
 
@@ -52,18 +54,28 @@ class DBManager:
         with self.conn:
             self.conn.execute("DELETE FROM prompts WHERE id = ?", (prompt_id,))
 
-    def save_session(self, name: str, session_data: str) -> GameSession:
+    def save_session(self, name: str, session_data: str, prompt_id: int) -> GameSession:
         with self.conn:
-            cursor = self.conn.execute("INSERT INTO sessions (name, session_data) VALUES (?, ?)", (name, session_data))
-            return GameSession(id=cursor.lastrowid, name=name, session_data=session_data)
+            cursor = self.conn.execute("INSERT INTO sessions (name, session_data, prompt_id) VALUES (?, ?, ?)", (name, session_data, prompt_id))
+            return GameSession(id=cursor.lastrowid, name=name, session_data=session_data, prompt_id=prompt_id)
 
     def load_session(self, session_id: int) -> GameSession | None:
         with self.conn:
-            cursor = self.conn.execute("SELECT id, name, session_data FROM sessions WHERE id = ?", (session_id,))
+            cursor = self.conn.execute("SELECT id, name, session_data, prompt_id FROM sessions WHERE id = ?", (session_id,))
             row = cursor.fetchone()
             return GameSession(**row) if row else None
 
     def get_all_sessions(self) -> List[GameSession]:
         with self.conn:
-            cursor = self.conn.execute("SELECT id, name, session_data FROM sessions")
+            cursor = self.conn.execute("SELECT id, name, session_data, prompt_id FROM sessions")
             return [GameSession(**row) for row in cursor.fetchall()]
+
+    def get_sessions_by_prompt(self, prompt_id: int) -> List[GameSession]:
+        with self.conn:
+            cursor = self.conn.execute("SELECT id, name, session_data, prompt_id FROM sessions WHERE prompt_id = ?", (prompt_id,))
+            return [GameSession(**row) for row in cursor.fetchall()]
+
+    def update_session(self, session: GameSession):
+        with self.conn:
+            self.conn.execute("UPDATE sessions SET name = ?, session_data = ?, prompt_id = ? WHERE id = ?",
+                              (session.name, session.session_data, session.prompt_id, session.id))

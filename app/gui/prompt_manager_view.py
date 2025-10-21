@@ -1,9 +1,10 @@
 import customtkinter as ctk
 
 class PromptManagerView(ctk.CTkToplevel):
-    def __init__(self, master, db_manager):
+    def __init__(self, master, db_manager, on_close_callback=None):
         super().__init__(master)
         self.db_manager = db_manager
+        self.on_close_callback = on_close_callback
 
         self.title("Prompt Manager")
         self.geometry("600x400")
@@ -24,6 +25,13 @@ class PromptManagerView(ctk.CTkToplevel):
         self.delete_button.grid(row=1, column=2, padx=10, pady=10)
 
         self.refresh_prompts()
+
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
+
+    def on_close(self):
+        if self.on_close_callback:
+            self.on_close_callback()
+        self.destroy()
 
     def refresh_prompts(self):
         self.prompts_list.configure(state="normal")
