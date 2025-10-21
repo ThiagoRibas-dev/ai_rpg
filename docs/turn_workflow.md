@@ -11,16 +11,20 @@ Fast path vs full pipeline to minimize latency.
 - RAG prefetch: last user input → embeddings search (non-blocking, with timeout ~150–300 ms)
 - State snapshot: only relevant entities requested via selectors (scene, party, location)
 
-**3) Planning (schema `TurnPlan`)**
-- Small prompt to model: “Do we need rag/tools? Which ones?” Response validated.
+**3) Tool Provisioning & Planning (Schema: `TurnPlan`)**
+- The `Orchestrator` queries the `ToolRegistry` for all available tool schemas.
+- These schemas are sent to the LLM along with the prompt and the `TurnPlan` schema.
+- The LLM's response is constrained to the `TurnPlan` schema, forcing it to provide a structured plan (e.g., `{"thought": "...", "tool_calls": [...]}`). This avoids unreliable text parsing.
 
-**4) Tool execution**
-- Run in parallel where safe: rag.search, time.now, math.eval, asset.resolve
-- RNG/tool results streamed to UI as they complete
+**4) Tool Execution & Result Consolidation**
+- The `Orchestrator` receives the `tool_calls` request.
+- It parses the request, validates the arguments against the tool's JSON schema, and executes the corresponding Python handler via the `ToolRegistry`.
+- The result of the tool execution (e.g., `15`) is captured.
 
-**5) Narrative + Proposals (schema `NarrativeStep`)**
-- Model streams narrative
-- Proposes `StatePatch` and `MemoryIntent` arrays
+**5) Narrative Generation (Schema: `NarrativeStep`)**
+- The `Orchestrator` makes a second call to the LLM, providing the tool results and the `NarrativeStep` schema.
+- The LLM's response is constrained to the `NarrativeStep` schema, forcing it to provide the narrative, `StatePatch` proposals, and `MemoryIntent` proposals in a structured format.
+- The `Orchestrator` can then reliably extract and process each part of the response.
 
 **6) Validation and commit**
 - Engine validates ops; if safe, commit and display “State updated”
