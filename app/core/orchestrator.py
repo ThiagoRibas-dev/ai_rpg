@@ -11,11 +11,6 @@ class Orchestrator:
         self.view = view
         self.db_manager = db_manager
         
-        # Load the initial prompt
-        with open("prompts/default.txt", "r") as f:
-            system_prompt = f.read()
-
-        self.session = Session("default_session", system_prompt=system_prompt)
         self.llm_connector = self._get_llm_connector()
 
         self.view.orchestrator = self

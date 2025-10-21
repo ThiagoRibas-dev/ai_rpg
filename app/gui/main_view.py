@@ -164,14 +164,6 @@ class MainView(ctk.CTk):
             
         prompts = self.db_manager.get_all_prompts()
         
-        # Ensure "Default" prompt exists
-        default_prompt = next((p for p in prompts if p.name == "Default"), None)
-        if not default_prompt:
-            with open("prompts/default.txt", "r") as f:
-                default_prompt_content = f.read()
-            default_prompt = self.db_manager.create_prompt("Default", default_prompt_content)
-            prompts.insert(0, default_prompt)
-
         for prompt in prompts:
             btn = ctk.CTkButton(self.prompt_scrollable_frame, text=prompt.name,
                                 command=lambda p=prompt: self.on_prompt_select(p))
