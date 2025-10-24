@@ -19,6 +19,9 @@ This project is documented across several files to keep the information organize
 - **[V1 TODO](v1_TODO.md)**: A step by step TODO for the v1 implementation.
 
 ## Development Workflow
+
+The process of implementing the features must follow the steps outlined below :
+
   - Examination
   - Planning (what, where, how, why), including details of implementation
   - Refining (break into components, detail, consider possibilities, brainstorm)

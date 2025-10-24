@@ -5,6 +5,8 @@ from app.models.game_session import GameSession
 from app.llm.llm_connector import LLMConnector
 from app.llm.gemini_connector import GeminiConnector
 from app.llm.openai_connector import OpenAIConnector
+from app.tools.registry import ToolRegistry
+from app.io.schemas import TurnPlan, NarrativeStep
 
 class Orchestrator:
     def __init__(self, view: MainView, db_manager):
@@ -12,6 +14,7 @@ class Orchestrator:
         self.db_manager = db_manager
         
         self.llm_connector = self._get_llm_connector()
+        self.tool_registry = ToolRegistry()
 
         self.view.orchestrator = self
 
@@ -33,17 +36,55 @@ class Orchestrator:
         self.view.add_message(f"You: {user_input}\n")
         self.view.clear_input()
 
-        # A more sophisticated approach would be to format the whole history.
         prompt = "\n".join([f"{m.role}: {m.content}" for m in self.session.get_history()])
+        tool_schemas = self.tool_registry.get_all_schemas()
+        print(f"--- Prompt for Planning ---\n{prompt}\n--------------------------")
+        print(f"--- Tools for Planning ---\n{tool_schemas}\n-------------------------")
 
-        full_response = ""
-        self.view.add_message("AI: ")
-        for chunk in self.llm_connector.get_streaming_response(prompt):
-            full_response += chunk
-            self.view.add_message(chunk)
-        
-        self.session.add_message("assistant", full_response)
-        self.view.add_message("\n")
+        # 1. Planning Step
+        print("--- 1. Requesting TurnPlan from LLM ---")
+        try:
+            plan_response = self.llm_connector.get_structured_response(prompt, tool_schemas, TurnPlan)
+            print(f"--- LLM Response (TurnPlan) ---\n{plan_response}\n-----------------------------")
+            plan = TurnPlan.parse_obj(plan_response)
+        except Exception as e:
+            print(f"--- ERROR during planning ---\n{e}\n-----------------------------")
+            self.view.add_message(f"Error during planning: {e}\n")
+            return
+
+        self.view.add_message(f"[Thought: {plan.thought}]\n")
+
+        # 2. Tool Execution Step
+        print("--- 2. Executing Tools ---")
+        tool_results = []
+        if plan.tool_calls:
+            for tool_call in plan.tool_calls:
+                try:
+                    result = self.tool_registry.execute_tool(tool_call.name, tool_call.arguments)
+                    tool_results.append({"tool_name": tool_call.name, "result": result})
+                    self.view.add_message(f"[Tool: {tool_call.name}({tool_call.arguments}) -> {result}]\n")
+                except Exception as e:
+                    tool_results.append({"tool_name": tool_call.name, "error": str(e)})
+                    self.view.add_message(f"[Tool Error: {tool_call.name} -> {e}]\n")
+        print(f"--- Tool Results ---\n{tool_results}\n--------------------")
+
+        # 3. Narrative Generation Step
+        narrative_prompt = f"{prompt}\nTool Results: {tool_results}"
+        print(f"--- Prompt for Narrative ---\n{narrative_prompt}\n---------------------------")
+        print("--- 3. Requesting NarrativeStep from LLM ---")
+        try:
+            narrative_response = self.llm_connector.get_structured_response(narrative_prompt, [], NarrativeStep)
+            print(f"--- LLM Response (NarrativeStep) ---\n{narrative_response}\n----------------------------------")
+            narrative_step = NarrativeStep.parse_obj(narrative_response)
+        except Exception as e:
+            print(f"--- ERROR during narrative generation ---\n{e}\n---------------------------------------")
+            self.view.add_message(f"Error during narrative generation: {e}\n")
+            return
+
+        self.view.add_message(f"AI: {narrative_step.narrative}\n")
+        self.session.add_message("assistant", narrative_step.narrative)
+
+        # TODO: Process state_patch and memory_intent
 
         self.update_game(session)
 

@@ -1,6 +1,9 @@
 import os
+import json
 import google.generativeai as genai
-from typing import Generator
+from google.generativeai.types import FunctionDeclaration
+from typing import Generator, List, Dict, Any, Type
+from pydantic import BaseModel
 from app.llm.llm_connector import LLMConnector
 
 class GeminiConnector(LLMConnector):
@@ -30,3 +33,22 @@ class GeminiConnector(LLMConnector):
         for chunk in response:
             if chunk.text:
                 yield chunk.text
+
+    def get_structured_response(self, prompt: str, tools: List[Dict[str, Any]], output_schema: Type[BaseModel]) -> Dict[str, Any]:
+        """
+        Returns a structured JSON response from the Gemini API that conforms to the
+        provided Pydantic schema.
+        """
+        # Convert tool schemas to Gemini's FunctionDeclaration format
+        gemini_tools = [FunctionDeclaration(**tool) for tool in tools] if tools else None
+
+        response = self.model.generate_content(
+            prompt,
+            tools=gemini_tools,
+            generation_config=genai.types.GenerationConfig(
+                response_mime_type="application/json",
+                response_schema=output_schema,
+            ),
+        )
+        # The API returns a structured object that pydantic can parse directly
+        return response.candidates.content.parts.function_call if response.candidates.content.parts.function_call else json.loads(response.text)

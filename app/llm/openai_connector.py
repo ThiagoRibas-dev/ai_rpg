@@ -1,6 +1,8 @@
 import os
+import json
 import openai
-from typing import Generator
+from typing import Generator, List, Dict, Any, Type
+from pydantic import BaseModel
 from app.llm.llm_connector import LLMConnector
 
 class OpenAIConnector(LLMConnector):
@@ -43,3 +45,25 @@ class OpenAIConnector(LLMConnector):
         for chunk in stream:
             if chunk.choices.delta.content:
                 yield chunk.choices.delta.content
+
+    def get_structured_response(self, prompt: str, tools: List[Dict[str, Any]], output_schema: Type[BaseModel]) -> Dict[str, Any]:
+        """
+        Returns a structured JSON response from an OpenAI-compatible API that
+        conforms to the provided Pydantic schema.
+        """
+        messages = [{"role": "user", "content": prompt}]
+        
+        # Forcing JSON output with a system message is a common technique.
+        messages.insert(0, {
+            "role": "system",
+            "content": f"Please respond with a JSON object that adheres to this schema: {output_schema.model_json_schema()}"
+        })
+
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            tools=tools,
+            response_format={"type": "json_object"},
+        )
+        
+        return json.loads(response.choices.message.content)
