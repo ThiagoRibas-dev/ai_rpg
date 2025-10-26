@@ -28,12 +28,3 @@ python main.py
 4) First steps
 - Add a “Game Master” system prompt in Prompt Manager.
 - Start a new game, type an action, watch tool events in the right panel.
-
-## Project structure
-- app/gui: tkinter views
-- app/core: orchestrator and prompts
-- app/llm: provider adapters
-- app/tools: deterministic tools and registry
-- app/io: Pydantic schemas (single source of truth)
-- app/database: SQLite helpers
-- docs: design and operations

@@ -22,24 +22,22 @@ An advanced, text-based RPG engine powered by Large Language Models (LLMs). The 
 
 This project is documented across several files to keep the information organized and easy to navigate.
 
-- **[System Architecture](docs/architecture.md)**
-- **[LLM Connectors](docs/CONNECTORS.md)**
-- **[GUI](docs/GUI.md)**
-- **[Database Migrations](docs/MIGRATIONS.md)**
-- **[RAG](docs/RAG.md)**
+- **[Introduction](docs/01_introduction.md)**
+- **[System Architecture](docs/02_architecture.md)**
+- **[LLM Connectors](docs/03_llm_connectors.md)**
+- **[Database Schema](docs/04_database_schema.md)**
+- **[GUI](docs/05_gui.md)**
 - **[Roadmap](docs/roadmap.md)**
-- **[Turn Workflow](docs/turn_workflow.md)**
-- **[Workflow](docs/WORKFLOW.md)**
 
 ## Project TODOs
 
-- **[V0 TODO](v0_TODO.md)**
-- **[V1 TODO](v1_TODO.md)**
-- **[V1.5 TODO](v1.5_TODO.md)**
-- **[V1.6 TODO](v1.6_TODO.md)**
-- **[V1.7 TODO](v1.7_TODO.md)**
-- **[V2 TODO](v2_TODO.md)**
-- **[V2.1 TODO](v2.1_TODO.md)**
+- **[V0 TODO](todos/v0_TODO.md)**
+- **[V1 TODO](todos/v1_TODO.md)**
+- **[V1.5 TODO](todos/v1.5_TODO.md)**
+- **[V1.6 TODO](todos/v1.6_TODO.md)**
+- **[V1.7 TODO](todos/v1.7_TODO.md)**
+- **[V2 TODO](todos/v2_TODO.md)**
+- **[V2.1 TODO](todos/v2.1_TODO.md)**
 
 ## Notes
 

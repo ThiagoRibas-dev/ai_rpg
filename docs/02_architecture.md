@@ -1,6 +1,17 @@
-# Turn Workflow
+# Architecture
 
-Fast path vs full pipeline to minimize latency.
+This document outlines the system architecture, data flow, and core components of the AI-RPG project.
+
+## System Architecture
+- GUI renders streamed tokens and inline tool events.
+- Orchestrator executes a per-turn pipeline: Plan → Tools → Narrative → Patches/Memories.
+- Provider adapters normalize Gemini and OpenAI-compatible APIs.
+- Tools are deterministic functions with JSON schemas + Python handlers.
+- Optional RAG for flavor and continuity.
+
+## Turn Workflow (Data Flow)
+
+The system uses a fast path vs. full pipeline approach to minimize latency.
 
 **1) Preprocess**
 - Detect slash-commands or equivalent input via a menu (/roll 1d20, /inventory) handled locally.
@@ -32,3 +43,17 @@ Fast path vs full pipeline to minimize latency.
 
 **7) Finalization**
 - Save messages, tool events, patches; compute token/latency; emit telemetry
+
+## RAG Service
+- Local vector index (FAISS/sqlite-vss).
+- Index lore bible + episodic summaries + player prefs.
+- Query with filters; timebox ≤200 ms.
+
+## Project structure
+- app/gui: tkinter views
+- app/core: orchestrator and prompts
+- app/llm: provider adapters
+- app/tools: deterministic tools and registry
+- app/io: Pydantic schemas (single source of truth)
+- app/database: SQLite helpers
+- docs: design and operations
