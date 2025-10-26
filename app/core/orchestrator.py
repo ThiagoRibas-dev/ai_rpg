@@ -17,9 +17,6 @@ logger = logging.getLogger(__name__)
 PLAN_TEMPLATE = """You are a roleplay engine. Your goal is to select and execute the most appropriate tools to respond to the user's input and advance the game state.
 Available tools (JSON Schemas):
 {tool_schemas}
-
-Recent chat:
-{chat}
 """
 
 NARRATIVE_TEMPLATE = """You are a roleplay engine. Write the next scene based on tool results.
@@ -28,9 +25,6 @@ Guidelines:
 - Use second person ("You ...").
 - Respect tool outcomes; do not fabricate mechanics.
 - Propose minimal patches and appropriate memory intents.
-
-Recent chat:
-{chat}
 
 Tool results:
 {tool_results}
@@ -66,17 +60,15 @@ class Orchestrator:
         self.view.add_message(f"You: {user_input}\n")
         self.view.clear_input()
 
-        chat_history = self.session.get_history()
-        chat_str = "\n".join([f"{msg.role}: {msg.content}" for msg in chat_history])
-
         # 1) Plan
         try:
-            prompt = PLAN_TEMPLATE.format(
-                tool_schemas=self.tool_registry.get_all_schemas(),
-                chat=chat_str
+            system_prompt_plan = PLAN_TEMPLATE.format(
+                tool_schemas=self.tool_registry.get_all_schemas()
             )
+            chat_history = self.session.get_history()
             plan_dict = self.llm_connector.get_structured_response(
-                prompt=prompt,
+                system_prompt=system_prompt_plan,
+                chat_history=chat_history,
                 output_schema=TurnPlan
             )
             plan = TurnPlan.model_validate(plan_dict)
@@ -108,12 +100,13 @@ class Orchestrator:
         # 3) Narrative + proposals
         try:
             tool_results_str = str(tool_results)
-            prompt = NARRATIVE_TEMPLATE.format(
-                chat=chat_str,
+            system_prompt_narrative = NARRATIVE_TEMPLATE.format(
                 tool_results=tool_results_str
             )
+            chat_history = self.session.get_history()
             narrative_dict = self.llm_connector.get_structured_response(
-                prompt=prompt,
+                system_prompt=system_prompt_narrative,
+                chat_history=chat_history,
                 output_schema=NarrativeStep
             )
             narrative = NarrativeStep.model_validate(narrative_dict)

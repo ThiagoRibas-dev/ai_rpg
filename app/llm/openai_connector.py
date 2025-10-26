@@ -1,9 +1,10 @@
 import os
 import json
 import openai
-from typing import Dict, Any, Type
+from typing import Dict, Any, Type, List, Generator
 from pydantic import BaseModel
 from app.llm.llm_connector import LLMConnector
+from app.models.message import Message
 
 class OpenAIConnector(LLMConnector):
     def __init__(self):
@@ -18,27 +19,34 @@ class OpenAIConnector(LLMConnector):
             raise ValueError("OPENAI_API_MODEL environment variable not set.")
         self.client = openai.OpenAI(base_url=self.base_url, api_key=self.api_key)
 
-    def get_streaming_response(self, prompt: str):
-        messages = [{"role": "user", "content": prompt}]
+    def _convert_chat_history_to_messages(self, chat_history: List[Message]) -> List[Dict[str, str]]:
+        messages = []
+        for msg in chat_history:
+            messages.append({"role": msg.role, "content": msg.content})
+        return messages
+
+    def get_streaming_response(self, system_prompt: str, chat_history: List[Message]) -> Generator[str, None, None]:
+        messages = [{"role": "system", "content": system_prompt}]
+        messages.extend(self._convert_chat_history_to_messages(chat_history))
+        
         stream = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
             stream=True,
         )
         for chunk in stream:
-            # Correct access pattern
             if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
                 yield chunk.choices[0].delta.content
 
-    def get_structured_response(self, prompt: str, output_schema: Type[BaseModel]) -> Dict[str, Any]:
-        # Force JSON-only response matching the schema
+    def get_structured_response(self, system_prompt: str, chat_history: List[Message], output_schema: Type[BaseModel]) -> Dict[str, Any]:
         messages = [
             {
                 "role": "system",
-                "content": f"Return strictly valid JSON matching this schema. No extra keys, no comments:\n{output_schema.model_json_schema()}",
-            },
-            {"role": "user", "content": prompt},
+                "content": f"{system_prompt}\nReturn strictly valid JSON matching this schema. No extra keys, no comments:\n{output_schema.model_json_schema()}",
+            }
         ]
+        messages.extend(self._convert_chat_history_to_messages(chat_history))
+
         resp = self.client.chat.completions.create(
             model=self.model,
             messages=messages,

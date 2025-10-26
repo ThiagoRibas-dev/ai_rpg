@@ -23,11 +23,13 @@ An advanced, text-based RPG engine powered by Large Language Models (LLMs). The 
 This project is documented across several files to keep the information organized and easy to navigate.
 
 - **[System Architecture](docs/architecture.md)**
-- **[Data Model](docs/data_model.md)**
-- **[User Interface (UI)](docs/ui.md)**
-- **[LLM Provider Abstraction](docs/llm_providers.md)**
-- **[Turn Workflow](docs/turn_workflow.md)**
+- **[LLM Connectors](docs/CONNECTORS.md)**
+- **[GUI](docs/GUI.md)**
+- **[Database Migrations](docs/MIGRATIONS.md)**
+- **[RAG](docs/RAG.md)**
 - **[Roadmap](docs/roadmap.md)**
+- **[Turn Workflow](docs/turn_workflow.md)**
+- **[Workflow](docs/WORKFLOW.md)**
 
 ## Project TODOs
 
@@ -48,36 +50,3 @@ This project is documented across several files to keep the information organize
 **Ruff Linter:** During Execution, after performing a batch of changes, always run `ruff check . --fix` to ensure things are in order.
 
 **Logging:** All code will contain tracking logs that output to the console so that errors are easier to debug.
-
-**Gemini API Schema Limitations:** A key architectural constraint is that the Google Gemini API's schema validation for structured JSON output is very strict. It does not support free-form dictionaries (e.g., `Dict[str, int]`) because they translate to a JSON schema with `"type": "object"` but no defined `"properties"`, which the API rejects. Furthermore, the `additionalProperties` field, a common way to define dictionaries in JSON Schema, is also not supported.
-Some notes from the `types.py` file from google's genai library:
-```
-    response_schema: Optional[SchemaUnion] = Field(
-        default=None,
-        description="""The `Schema` object allows the definition of input and output data types.
-        These types can be objects, but also primitives and arrays.
-        Represents a select subset of an [OpenAPI 3.0 schema
-        object](https://spec.openapis.org/oas/v3.0.3#schema).
-        If set, a compatible response_mime_type must also be set.
-        Compatible mimetypes: `application/json`: Schema for JSON response.
-        """,
-    )
-    response_json_schema: Optional[Any] = Field(
-        default=None,
-        description="""Optional. Output schema of the generated response.
-        This is an alternative to `response_schema` that accepts [JSON
-        Schema](https://json-schema.org/). If set, `response_schema` must be
-        omitted, but `response_mime_type` is required. While the full JSON Schema
-        may be sent, not all features are supported. Specifically, only the
-        following properties are supported: - `$id` - `$defs` - `$ref` - `$anchor`
-        - `type` - `format` - `title` - `description` - `enum` (for strings and
-        numbers) - `items` - `prefixItems` - `minItems` - `maxItems` - `minimum` -
-        `maximum` - `anyOf` - `oneOf` (interpreted the same as `anyOf`) -
-        `properties` - `additionalProperties` - `required` The non-standard
-        `propertyOrdering` property may also be set. Cyclic references are
-        unrolled to a limited degree and, as such, may only be used within
-        non-required properties. (Nullable properties are not sufficient.) If
-        `$ref` is set on a sub-schema, no other properties, except for than those
-        starting as a `$`, may be set.""",
-    )
-  ```

@@ -1,7 +1,6 @@
-from dataclasses import dataclass
+from pydantic import BaseModel
 
-@dataclass
-class Message:
+class Message(BaseModel):
     """
     A class to represent a single message in the chat history.
     """
