@@ -1,3 +1,7 @@
+# Runtime dependencies for AI-RPG
+# Python 3.11+
+
+openai
 google
 google.genai
 grpcio
@@ -6,3 +10,7 @@ pydantic
 python-dotenv
 customtkinter
 requests
+
+# Optional (uncomment if/when you add local RAG)
+# faiss-cpu
+# sqlite-vss

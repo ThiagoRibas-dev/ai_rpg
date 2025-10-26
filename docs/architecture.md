@@ -1,40 +1,15 @@
-# System Architecture
+# Architecture
 
-- **GUI (customtkinter)**
-  - Renders streamed tokens and tool events
-  - Dispatches user input to Orchestrator
-  - Non-blocking via background worker threads/async
-- **Orchestrator (brain)**
-  - Builds prompts, enforces schemas, runs the per-turn workflow (plan → retrieve → tool calls → patch → respond)
-  - Validates LLM JSON outputs; retries or falls back on parse errors
-  - Applies latency policy (fast path/full pipeline)
-- **Provider Abstraction Layer**
-  - GeminiAdapter, OpenAIAdapter, LlamaCppAdapter (OpenAI-compatible)
-  - Streaming, tool/JSON-schema compatibility shims, retries/rate-limits
-- **Tool Registry**
-  - Deterministic tools: rng.roll, math.eval, time.now, memory.upsert, state.apply_patch, rag.search, asset.resolve
-  - Each tool has a JSON Schema and a Python handler
-- **State Manager**
-  - SQLite store with JSON columns; Pydantic models; JSON Patch commit/rollback
-  - Memory types: episodic, semantic, long-term, world lore, user preferences
-  - LLM proposes MemoryIntent/StatePatch; validators dedupe and enforce constraints
-- **RAG Service**
-  - Local vector index (FAISS/SQLite-VSS) + metadata/tagged filters
-  - Incremental indexers; supports offline/open-source or provider embeddings
-- **Telemetry/Logging**
-  - Structured logs of turns, provider usage, token counts, latency; redaction for privacy
-- **Config/Secrets**
-  - Per-provider keys; per-session overrides;
+- GUI renders streamed tokens and inline tool events.
+- Orchestrator executes a per-turn pipeline: Plan → Tools → Narrative → Patches/Memories.
+- Provider adapters normalize Gemini and OpenAI-compatible APIs.
+- Tools are deterministic functions with JSON schemas + Python handlers.
+- Optional RAG for flavor and continuity.
 
-## Folder Structure
-
-- `app/`
-  - `gui/` (customtkinter views, view-models)
-  - `core/` (orchestrator.py, prompts.py, policies.py)
-  - `providers/` (gemini.py, openai_compat.py, llama_cpp.py)
-  - `tools/` (registry.py, builtin/*.py)
-  - `state/` (models.py, store.py, patches.py)
-  - `rag/` (index.py, embed.py, search.py)
-  - `io/` (schemas.py, validation.py, streaming.py)
-  - `telemetry/` (log.py, metrics.py, tracing.py)
-  - `config.py`
+## Data flow (one turn)
+1) Build a planning prompt from recent history and state selectors.
+2) LLM returns TurnPlan.tool_calls (structured).
+3) Execute tools (parallel where safe).
+4) LLM returns NarrativeStep with narrative + proposed_patches + memory_intents.
+5) Engine validates/applies patches and stores memory.
+6) Persist everything and render streaming output.

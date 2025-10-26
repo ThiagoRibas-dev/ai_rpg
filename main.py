@@ -11,6 +11,7 @@ def main():
         db_manager.create_tables()
         view = MainView(db_manager)
         orchestrator = Orchestrator(view, db_manager)
+        orchestrator.tool_event_callback = view.log_tool_event
         orchestrator.run()
 
 if __name__ == "__main__":

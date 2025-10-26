@@ -53,6 +53,9 @@ function Get-DirectoryTreeString {
     "*campaign_load.log*",
     "*.pyc",
     "*.md",
+    "*.roo*",
+	"*examples*",
+	"*__pycache__*",
     "*package-lock.json",
     "*.DS_Store", # macOS folder metadata file
     "*Thumbs.db",   # Windows thumbnail cache file

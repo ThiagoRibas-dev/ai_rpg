@@ -46,5 +46,5 @@
 
 ## Phase 4: UI Feedback
 <!-- Relevant Docs: [UI](docs/ui.md) -->
-- [ ] **Display Tool Events:**
-  - [ ] (Optional) Add a mechanism to the UI to display when a tool is called and what the result was, for better user visibility.
+- [x] **Display Tool Events:**
+  - [x] (Optional) Add a mechanism to the UI to display when a tool is called and what the result was, for better user visibility.

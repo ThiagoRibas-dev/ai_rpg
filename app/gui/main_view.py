@@ -43,13 +43,13 @@ class MainView(ctk.CTk):
         self.control_panel = ctk.CTkFrame(self, fg_color="#2B2B2B")
         self.control_panel.grid(row=0, column=1, sticky="nsew", padx=(0, 10), pady=10)
         self.control_panel.grid_propagate(False)
-        self._create_control_panel_widgets()
+        self._create_right_panel_widgets()
 
         self.refresh_prompt_list()
         self.refresh_session_list()
 
 
-    def _create_control_panel_widgets(self):
+    def _create_right_panel_widgets(self):
         # Game Session Management
         session_frame = ctk.CTkFrame(self.control_panel)
         session_frame.pack(pady=10, padx=10, fill="x", expand=False)
@@ -95,15 +95,26 @@ class MainView(ctk.CTk):
         self.top_p_slider.pack(pady=5, padx=5, fill="x")
 
         # Game State Inspector
-        inspector_frame = ctk.CTkFrame(self.control_panel)
-        inspector_frame.pack(pady=10, padx=10, fill="both", expand=True)
+        game_state_inspector_frame = ctk.CTkFrame(self.control_panel)
+        game_state_inspector_frame.pack(pady=10, padx=10, fill="both", expand=True)
 
-        inspector_tabs = ctk.CTkTabview(inspector_frame)
-        inspector_tabs.pack(fill="both", expand=True)
-        inspector_tabs.add("Characters")
-        inspector_tabs.add("Inventory")
-        inspector_tabs.add("Quests")
+        self.game_state_inspector_tabs = ctk.CTkTabview(game_state_inspector_frame)
+        self.game_state_inspector_tabs.pack(fill="both", expand=True)
+        self.game_state_inspector_tabs.add("Characters")
+        self.game_state_inspector_tabs.add("Inventory")
+        self.game_state_inspector_tabs.add("Quests")
+        self.game_state_inspector_tabs.add("Tool Events")
 
+        # Add a textbox for tool events
+        self.tool_events_textbox = ctk.CTkTextbox(self.game_state_inspector_tabs.tab("Tool Events"), state="disabled")
+        self.tool_events_textbox.pack(fill="both", expand=True)
+
+
+    def log_tool_event(self, message: str):
+        self.tool_events_textbox.configure(state="normal")
+        self.tool_events_textbox.insert("end", message + "\n")
+        self.tool_events_textbox.configure(state="disabled")
+        self.tool_events_textbox.see("end")
 
     def add_message(self, message: str):
         self.chat_history.configure(state="normal")
@@ -135,7 +146,7 @@ class MainView(ctk.CTk):
 
     def handle_send_button(self):
         if self.selected_session:
-            self.orchestrator.handle_send(self.selected_session)
+            self.orchestrator.plan_and_execute(self.selected_session)
 
     def load_game(self, session_id: int):
         self.orchestrator.load_game(session_id)

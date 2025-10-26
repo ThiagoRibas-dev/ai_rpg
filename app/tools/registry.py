@@ -1,7 +1,56 @@
 import importlib
 import pkgutil
 from pathlib import Path
-from typing import Dict, Any, Callable, List
+from typing import Dict, Any, Callable, List, Type
+from pydantic import BaseModel
+from app.tools import schemas as tool_schemas
+
+def _convert_types_to_uppercase(d: Any):
+    """Recursively traverses a dictionary or list and converts 'type' values to uppercase."""
+    if isinstance(d, dict):
+        for key, value in d.items():
+            if key == "type" and isinstance(value, str):
+                d[key] = value.upper()
+            else:
+                _convert_types_to_uppercase(value)
+    elif isinstance(d, list):
+        for item in d:
+            _convert_types_to_uppercase(item)
+
+
+def _remove_default_field(d: Any):
+    """Recursively traverses a dictionary or list and removes the 'default' key."""
+    if isinstance(d, dict):
+        if "default" in d:
+            del d["default"]
+        for value in d.values():
+            _remove_default_field(value)
+    elif isinstance(d, list):
+        for item in d:
+            _remove_default_field(item)
+
+
+def _remove_anyof_field(d: Any):
+    """Recursively traverses a dictionary or list and removes the 'anyOf' key."""
+    if isinstance(d, dict):
+        if "anyOf" in d:
+            del d["anyOf"]
+        for value in d.values():
+            _remove_anyof_field(value)
+    elif isinstance(d, list):
+        for item in d:
+            _remove_anyof_field(item)
+
+
+_TOOL_SCHEMA_MAP: Dict[str, Type[BaseModel]] = {
+    "math.eval": tool_schemas.MathEval,
+    "memory.upsert": tool_schemas.MemoryUpsert,
+    "rag.search": tool_schemas.RagSearch,
+    "rng.roll": tool_schemas.RngRoll,
+    "rules.resolve_action": tool_schemas.RulesResolveAction,
+    "state.apply_patch": tool_schemas.StateApplyPatch,
+    "time.now": tool_schemas.TimeNow,
+}
 
 class ToolRegistry:
     """
@@ -24,12 +73,45 @@ class ToolRegistry:
         for _, module_name, _ in pkgutil.iter_modules([str(package_path)]):
             module = importlib.import_module(f"app.tools.builtin.{module_name}")
             
-            # A tool is defined by a 'schema' and a 'handler' function.
             if hasattr(module, "schema") and hasattr(module, "handler"):
                 tool_name = module.schema.get("name")
-                if tool_name:
+                if tool_name and tool_name in _TOOL_SCHEMA_MAP:
                     self.tools[tool_name] = module.handler
-                    self.tool_schemas.append(module.schema)
+                    pydantic_model = _TOOL_SCHEMA_MAP[tool_name]
+                    schema = pydantic_model.model_json_schema()
+                    description = pydantic_model.__doc__
+                    
+                    properties = schema.get("properties", {})
+                    if "name" in properties:
+                        del properties["name"]
+
+                    for prop_schema in properties.values():
+                        if "title" in prop_schema:
+                            del prop_schema["title"]
+                    
+                    _convert_types_to_uppercase(properties)
+                    _remove_default_field(properties)
+                    _remove_anyof_field(properties)
+                        
+                    required = schema.get("required", [])
+                    if "name" in required:
+                        required.remove("name")
+
+                    parameters_schema = {
+                        "properties": properties,
+                        "required": required,
+                    }
+                    if not properties:
+                        del parameters_schema["properties"]
+                    if not required:
+                        del parameters_schema["required"]
+
+                    transformed_schema = {
+                        "name": tool_name,
+                        "description": description,
+                        "parameters": parameters_schema,
+                    }
+                    self.tool_schemas.append(transformed_schema)
                     print(f"Registered tool: {tool_name}")
 
     def get_all_schemas(self) -> List[Dict[str, Any]]:
@@ -38,20 +120,19 @@ class ToolRegistry:
 
     def execute_tool(self, name: str, args: Dict[str, Any]) -> Any:
         """
-        Executes a tool by its name with the given arguments.
-        
-        Args:
-            name: The name of the tool to execute.
-            args: A dictionary of arguments to pass to the tool's handler.
-            
-        Returns:
-            The result of the tool's execution.
-            
-        Raises:
-            ValueError: If the tool is not found.
+        Executes a tool by name with the given arguments.
         """
         if name not in self.tools:
             raise ValueError(f"Tool '{name}' not found.")
-        
+
+        pydantic_schema = _TOOL_SCHEMA_MAP.get(name)
+        if not pydantic_schema:
+            raise ValueError(f"Schema for tool '{name}' not found.")
+
+        try:
+            tool_model = pydantic_schema(**args)
+        except Exception as e:
+            raise ValueError(f"Invalid arguments for tool '{name}': {e}")
+
         handler = self.tools[name]
-        return handler(**args)
+        return handler(**tool_model.model_dump())
