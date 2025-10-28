@@ -21,7 +21,10 @@ class Session:
 
     def to_json(self) -> str:
         """Serializes the session to a JSON string."""
-        return json.dumps({"session_id": self.session_id, "history": [message.__dict__ for message in self.history]})
+        return json.dumps({
+            "session_id": self.session_id,
+            "history": [message.model_dump() for message in self.history]
+        })
 
     @classmethod
     def from_json(cls, json_str: str):

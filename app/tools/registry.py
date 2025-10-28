@@ -5,19 +5,6 @@ from typing import Dict, Any, Callable, List, Type
 from pydantic import BaseModel
 from app.tools import schemas as tool_schemas
 
-def _convert_types_to_uppercase(d: Any):
-    """Recursively traverses a dictionary or list and converts 'type' values to uppercase."""
-    if isinstance(d, dict):
-        for key, value in d.items():
-            if key == "type" and isinstance(value, str):
-                d[key] = value.upper()
-            else:
-                _convert_types_to_uppercase(value)
-    elif isinstance(d, list):
-        for item in d:
-            _convert_types_to_uppercase(item)
-
-
 def _remove_default_field(d: Any):
     """Recursively traverses a dictionary or list and removes the 'default' key."""
     if isinstance(d, dict):
@@ -30,18 +17,6 @@ def _remove_default_field(d: Any):
             _remove_default_field(item)
 
 
-def _remove_anyof_field(d: Any):
-    """Recursively traverses a dictionary or list and removes the 'anyOf' key."""
-    if isinstance(d, dict):
-        if "anyOf" in d:
-            del d["anyOf"]
-        for value in d.values():
-            _remove_anyof_field(value)
-    elif isinstance(d, list):
-        for item in d:
-            _remove_anyof_field(item)
-
-
 _TOOL_SCHEMA_MAP: Dict[str, Type[BaseModel]] = {
     "math.eval": tool_schemas.MathEval,
     "memory.upsert": tool_schemas.MemoryUpsert,
@@ -49,6 +24,7 @@ _TOOL_SCHEMA_MAP: Dict[str, Type[BaseModel]] = {
     "rng.roll": tool_schemas.RngRoll,
     "rules.resolve_action": tool_schemas.RulesResolveAction,
     "state.apply_patch": tool_schemas.StateApplyPatch,
+    "state.query": tool_schemas.StateQuery,
     "time.now": tool_schemas.TimeNow,
 }
 
@@ -89,9 +65,7 @@ class ToolRegistry:
                         if "title" in prop_schema:
                             del prop_schema["title"]
                     
-                    _convert_types_to_uppercase(properties)
                     _remove_default_field(properties)
-                    _remove_anyof_field(properties)
                         
                     required = schema.get("required", [])
                     if "name" in required:
@@ -135,4 +109,6 @@ class ToolRegistry:
             raise ValueError(f"Invalid arguments for tool '{name}': {e}")
 
         handler = self.tools[name]
-        return handler(**tool_model.model_dump())
+        handler_args = tool_model.model_dump()
+        handler_args.pop("name", None)
+        return handler(**handler_args)

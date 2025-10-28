@@ -44,7 +44,9 @@ class GeminiConnector(LLMConnector):
     def _convert_chat_history_to_contents(self, chat_history: List[Message]) -> List[types.Content]:
         contents = []
         for msg in chat_history:
-            role = "model" if msg.role == "assistant" or msg.role == "system" else msg.role
+            if msg.role == "system":
+                continue  # system_prompt is passed via system_instruction
+            role = "model" if msg.role == "assistant" else "user"
             contents.append(types.Content(role=role, parts=[types.Part.from_text(text=msg.content)]))
         return contents
 

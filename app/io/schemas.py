@@ -1,5 +1,8 @@
-from typing import List, Optional, Literal
+from typing import List, Optional, Literal, Any
 from pydantic import BaseModel, Field
+
+# A reusable JSON type to avoid recursion errors with Pydantic's schema generator.
+JSONValue = Any
 
 class ToolCall(BaseModel):
     name: str
@@ -12,7 +15,7 @@ class TurnPlan(BaseModel):
 class PatchOp(BaseModel):
     op: Literal["add", "remove", "replace"]
     path: str
-    value: Optional[str] = None
+    value: Optional[JSONValue] = None
 
 class Patch(BaseModel):
     entity_type: str

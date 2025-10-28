@@ -58,7 +58,7 @@ function Get-DirectoryTreeString {
 	"*__pycache__*",
     "*package-lock.json",
     "*.DS_Store", # macOS folder metadata file
-    "*Thumbs.db",   # Windows thumbnail cache file
+    "**.db",
     "*docs*"        # Exclude documentation directory
 )
 
