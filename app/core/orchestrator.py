@@ -10,20 +10,28 @@ from app.llm.gemini_connector import GeminiConnector
 from app.llm.openai_connector import OpenAIConnector
 from app.tools.registry import ToolRegistry
 from app.io.schemas import TurnPlan, NarrativeStep
+from app.models.message import Message
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
+MAX_HISTORY_MESSAGES = 20
 
 PLAN_TEMPLATE = """You are a roleplay engine. Your goal is to select and execute the most appropriate tools to respond to the user's input and advance the game state.
 Available tools (JSON Schemas):
 {tool_schemas}
 """
 
-NARRATIVE_TEMPLATE = """You are a roleplay engine. Write the next scene based on tool results.
+NARRATIVE_TEMPLATE = """You are a roleplay engine. Write the next scene based on the Planner's Intent and the tool results.
 Return a JSON object strictly matching the NarrativeStep schema.
+
+The Planner's Intent (your high-level goal for this turn):
+{planner_thought}
+
 Guidelines:
+- Your narration must align with the Planner's Intent.
 - Use second person ("You ...").
-- Respect tool outcomes; do not fabricate mechanics.
+- Respect tool outcomes; do not fabricate mechanics. If tool results are empty, rely primarily on the Planner's Intent.
 - Propose minimal patches and appropriate memory intents.
 
 Tool results:
@@ -49,6 +57,23 @@ class Orchestrator:
         else:
             raise ValueError(f"Unsupported LLM_PROVIDER: {provider}")
 
+    def _get_truncated_history(self) -> List[Message]:
+        """
+        Returns a truncated copy of the session history, preserving the system prompt.
+        """
+        if not self.session:
+            return []
+        
+        full_history = self.session.get_history()
+        if len(full_history) <= MAX_HISTORY_MESSAGES:
+            return full_history
+
+        # Preserve the first message (system prompt) and take the last X messages.
+        system_prompt = full_history[0]
+        recent_messages = full_history[-(MAX_HISTORY_MESSAGES - 1):]
+        
+        return [system_prompt] + recent_messages
+
     def plan_and_execute(self, session: "GameSession"):
         logger.debug("Starting plan_and_execute")
         user_input = self.view.get_input()
@@ -65,7 +90,7 @@ class Orchestrator:
             system_prompt_plan = PLAN_TEMPLATE.format(
                 tool_schemas=self.tool_registry.get_all_schemas()
             )
-            chat_history = self.session.get_history()
+            chat_history = self._get_truncated_history()
             plan_dict = self.llm_connector.get_structured_response(
                 system_prompt=system_prompt_plan,
                 chat_history=chat_history,
@@ -101,9 +126,10 @@ class Orchestrator:
         try:
             tool_results_str = str(tool_results)
             system_prompt_narrative = NARRATIVE_TEMPLATE.format(
+                planner_thought=plan.thought,
                 tool_results=tool_results_str
             )
-            chat_history = self.session.get_history()
+            chat_history = self._get_truncated_history()
             narrative_dict = self.llm_connector.get_structured_response(
                 system_prompt=system_prompt_narrative,
                 chat_history=chat_history,
