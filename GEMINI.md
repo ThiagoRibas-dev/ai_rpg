@@ -38,6 +38,7 @@ This project is documented across several files to keep the information organize
 - **[V1.7 TODO](docs/todos/v1.7_TODO.md)**
 - **[V2 TODO](docs/todos/v2_TODO.md)**
 - **[V3 TODO](docs/todos/v3_TODO.md)**
+- **[V4 TODO](docs/todos/v4_TODO.md)**
 
 ## Notes
 
