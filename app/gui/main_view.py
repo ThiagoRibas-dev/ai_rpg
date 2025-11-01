@@ -156,7 +156,17 @@ class MainView(ctk.CTk):
         self.game_state_inspector_tabs.add("Characters")
         self.game_state_inspector_tabs.add("Inventory")
         self.game_state_inspector_tabs.add("Quests")
+        self.game_state_inspector_tabs.add("Memories")
         self.game_state_inspector_tabs.add("Tool Events")
+
+        # Add memory inspector view
+        from app.gui.memory_inspector_view import MemoryInspectorView
+        self.memory_inspector = MemoryInspectorView(
+            self.game_state_inspector_tabs.tab("Memories"),
+            self.db_manager,
+            None  # orchestrator will be set later
+        )
+        self.memory_inspector.pack(fill="both", expand=True)
 
         # Add a textbox for tool events
         self.tool_events_textbox = ctk.CTkTextbox(
@@ -331,6 +341,10 @@ class MainView(ctk.CTk):
         self.selected_session = session
         self.load_game(session.id)
         self.send_button.configure(state="normal")
+        
+        # Set session for memory inspector
+        if hasattr(self, 'memory_inspector'):
+            self.memory_inspector.set_session(session.id)
         
         # Visually indicate selection
         for widget in self.session_scrollable_frame.winfo_children():

@@ -72,3 +72,24 @@ class StateQuery(BaseModel):
 class TimeNow(BaseModel):
     """Returns the current time."""
     name: Literal["time.now"] = "time.now"
+
+class MemoryQuery(BaseModel):
+    """Searches and retrieves memories based on filters."""
+    name: Literal["memory.query"] = "memory.query"
+    kind: Optional[str] = Field(None, description="Filter by memory kind: 'episodic', 'semantic', 'lore', or 'user_pref'")
+    tags: Optional[List[str]] = Field(None, description="Filter by tags (returns memories with any matching tag)")
+    query_text: Optional[str] = Field(None, description="Search for text within memory content")
+    limit: int = Field(5, description="Maximum number of memories to return (1-20)")
+
+class MemoryUpdate(BaseModel):
+    """Updates an existing memory's content, priority, or tags."""
+    name: Literal["memory.update"] = "memory.update"
+    memory_id: int = Field(..., description="The ID of the memory to update")
+    content: Optional[str] = Field(None, description="New content for the memory")
+    priority: Optional[int] = Field(None, description="New priority (1-5)", ge=1, le=5)
+    tags: Optional[List[str]] = Field(None, description="New tags list")
+
+class MemoryDelete(BaseModel):
+    """Deletes a memory that is no longer relevant."""
+    name: Literal["memory.delete"] = "memory.delete"
+    memory_id: int = Field(..., description="The ID of the memory to delete")

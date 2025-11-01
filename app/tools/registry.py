@@ -20,6 +20,9 @@ def _remove_default_field(d: Any):
 _TOOL_SCHEMA_MAP: Dict[str, Type[BaseModel]] = {
     "math.eval": tool_schemas.MathEval,
     "memory.upsert": tool_schemas.MemoryUpsert,
+    "memory.query": tool_schemas.MemoryQuery,
+    "memory.update": tool_schemas.MemoryUpdate,
+    "memory.delete": tool_schemas.MemoryDelete,
     "rag.search": tool_schemas.RagSearch,
     "rng.roll": tool_schemas.RngRoll,
     "rules.resolve_action": tool_schemas.RulesResolveAction,
@@ -92,9 +95,9 @@ class ToolRegistry:
         """Returns the JSON schemas of all registered tools."""
         return self.tool_schemas
 
-    def execute_tool(self, name: str, args: Dict[str, Any]) -> Any:
+    def execute_tool(self, name: str, args: Dict[str, Any], context: Dict[str, Any] | None = None) -> Any:
         """
-        Executes a tool by name with the given arguments.
+        Executes a tool by name with the given arguments and optional context.
         """
         if name not in self.tools:
             raise ValueError(f"Tool '{name}' not found.")
@@ -111,4 +114,9 @@ class ToolRegistry:
         handler = self.tools[name]
         handler_args = tool_model.model_dump()
         handler_args.pop("name", None)
+        
+        # Pass context to handler if provided
+        if context:
+            handler_args.update(context)
+        
         return handler(**handler_args)
