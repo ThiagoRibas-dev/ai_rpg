@@ -93,3 +93,9 @@ class MemoryDelete(BaseModel):
     """Deletes a memory that is no longer relevant."""
     name: Literal["memory.delete"] = "memory.delete"
     memory_id: int = Field(..., description="The ID of the memory to delete")
+
+class TimeAdvance(BaseModel):
+    """Advances the fictional game time."""
+    name: Literal["time.advance"] = "time.advance"
+    description: str = Field(..., description="Human-readable time advancement")
+    new_time: str = Field(..., description="The new fictional time")

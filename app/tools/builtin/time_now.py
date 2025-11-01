@@ -6,5 +6,5 @@ schema = {
     "parameters": {"type": "object", "properties": {}}
 }
 
-def handler() -> dict:
+def handler(**context) -> dict:
     return {"iso8601": datetime.now(timezone.utc).isoformat()}

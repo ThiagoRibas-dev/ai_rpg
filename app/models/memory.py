@@ -6,11 +6,12 @@ import json
 class Memory:
     id: int
     session_id: int
-    kind: str  # "episodic", "semantic", "lore", "user_pref"
+    kind: str
     content: str
-    priority: int  # 1-5
-    tags: str  # JSON array stored as string
+    priority: int
+    tags: str
     created_at: str
+    fictional_time: Optional[str] = None
     last_accessed: Optional[str] = None
     access_count: int = 0
     

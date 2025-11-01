@@ -51,7 +51,7 @@ schema = {
     }
 }
 
-def handler(action_id: str, actor_id: str, resolution_policy: Dict[str, Any]) -> Dict[str, Any]:
+def handler(action_id: str, actor_id: str, resolution_policy: Dict[str, Any], **context) -> Dict[str, Any]:
     """
     Executes the resolution policy provided by the LLM.
     """

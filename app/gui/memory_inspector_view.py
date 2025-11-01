@@ -242,6 +242,32 @@ class MemoryInspectorView(ctk.CTkFrame):
         )
         delete_btn.pack(side="right", padx=2)
     
+        # Created date (show both real and fictional)
+        try:
+            created = datetime.fromisoformat(memory.created_at)
+            date_str = created.strftime("%Y-%m-%d %H:%M")
+        except (ValueError, AttributeError):
+            date_str = memory.created_at
+        
+        # Show fictional time prominently
+        if memory.fictional_time:
+            time_display = f"🕐 {memory.fictional_time}"
+            fictional_label = ctk.CTkLabel(
+                card, 
+                text=time_display, 
+                text_color="#FFD700",  # Gold color for fictional time
+                font=("Arial", 11, "bold")
+            )
+            fictional_label.pack(anchor="w", padx=10, pady=2)
+        
+        date_label = ctk.CTkLabel(
+            card, 
+            text=f"Real: {date_str}", 
+            text_color="gray", 
+            font=("Arial", 9)
+        )
+        date_label.pack(anchor="w", padx=10, pady=2)
+    
     def on_filter_changed(self, value: str):
         """Handle filter dropdown change."""
         self.filter_kind = value

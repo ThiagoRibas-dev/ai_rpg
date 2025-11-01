@@ -99,6 +99,32 @@ class MainView(ctk.CTk):
         
         context_content = context_collapsible.get_content_frame()
 
+        # Game Time
+        game_time_label = ctk.CTkLabel(context_content, text="Current Game Time:")
+        game_time_label.pack(pady=(5, 0), padx=5, anchor="w")
+
+        self.game_time_entry = ctk.CTkEntry(context_content, placeholder_text="Day 1, Dawn")
+        self.game_time_entry.pack(pady=5, padx=5, fill="x")
+
+        # Add to save_context method:
+        def save_context(self):
+            """Save the current memory and author's note."""
+            if not self.selected_session:
+                return
+            
+            memory = self.memory_textbox.get("1.0", "end-1c")
+            authors_note = self.authors_note_textbox.get("1.0", "end-1c")
+            game_time = self.game_time_entry.get()
+            
+            self.selected_session.game_time = game_time
+            self.db_manager.update_session_context(
+                self.selected_session.id, 
+                memory, 
+                authors_note,
+                game_time
+            )
+            self.add_message("[Context saved]\n")
+
         # Memory
         memory_label = ctk.CTkLabel(context_content, text="Memory:")
         memory_label.pack(pady=(5, 0), padx=5, anchor="w")

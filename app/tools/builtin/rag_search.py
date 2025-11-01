@@ -14,7 +14,7 @@ schema = {
     }
 }
 
-def handler(query: str, k: int = 2, filters: dict[str, Any] | None = None) -> dict:
+def handler(query: str, k: int = 2, filters: dict[str, Any] | None = None, **context) -> dict:
     # MVP stub: return empty or canned examples
     chunks = []
     if "ambush" in query.lower():

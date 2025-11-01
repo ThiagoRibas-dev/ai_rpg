@@ -1,6 +1,5 @@
 import sqlite3
 from typing import List, Dict, Optional, Any
-from datetime import datetime
 from app.models.prompt import Prompt
 from app.models.game_session import GameSession
 from app.models.world_info import WorldInfo
@@ -37,6 +36,7 @@ class DBManager:
                     prompt_id INTEGER NOT NULL,
                     memory TEXT DEFAULT '',
                     authors_note TEXT DEFAULT '',
+                    game_time TEXT DEFAULT 'Day 1, Dawn',  -- NEW
                     FOREIGN KEY (prompt_id) REFERENCES prompts (id)
                 )
             """)
@@ -49,35 +49,35 @@ class DBManager:
                     FOREIGN KEY (prompt_id) REFERENCES prompts (id)
                 )
             """)
+            self.conn.execute("""
+                CREATE TABLE IF NOT EXISTS memories (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id INTEGER NOT NULL,
+                    kind TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    priority INTEGER NOT NULL DEFAULT 3,
+                    tags TEXT DEFAULT '[]',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    fictional_time TEXT DEFAULT NULL,  -- NEW: "Day 3, 14:30" or "3 hours into dungeon"
+                    last_accessed TIMESTAMP,
+                    access_count INTEGER DEFAULT 0,
+                    FOREIGN KEY (session_id) REFERENCES sessions (id) ON DELETE CASCADE
+                )
+            """)
         
-        self.conn.execute("""
-            CREATE TABLE IF NOT EXISTS memories (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                session_id INTEGER NOT NULL,
-                kind TEXT NOT NULL,
-                content TEXT NOT NULL,
-                priority INTEGER NOT NULL DEFAULT 3,
-                tags TEXT DEFAULT '[]',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                last_accessed TIMESTAMP,
-                access_count INTEGER DEFAULT 0,
-                FOREIGN KEY (session_id) REFERENCES sessions (id) ON DELETE CASCADE
-            )
-        """)
-        
-        # Create indexes for performance
-        self.conn.execute("""
-            CREATE INDEX IF NOT EXISTS idx_memories_session 
-            ON memories(session_id)
-        """)
-        self.conn.execute("""
-            CREATE INDEX IF NOT EXISTS idx_memories_kind 
-            ON memories(kind)
-        """)
-        self.conn.execute("""
-            CREATE INDEX IF NOT EXISTS idx_memories_priority 
-            ON memories(priority)
-        """)
+            # Create indexes for performance
+            self.conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_memories_session 
+                ON memories(session_id)
+            """)
+            self.conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_memories_kind 
+                ON memories(kind)
+            """)
+            self.conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_memories_priority 
+                ON memories(priority)
+            """)
 
     # ==================== Prompts ====================
     def create_prompt(self, name: str, content: str) -> Prompt:
@@ -203,7 +203,8 @@ class DBManager:
 
     # ==================== Memories ====================
     def create_memory(self, session_id: int, kind: str, content: str, 
-                    priority: int = 3, tags: List[str] | None = None) -> Memory:
+                    priority: int = 3, tags: List[str] | None = None,
+                    fictional_time: str | None = None) -> Memory:
         """Create a new memory entry."""
         import json
         tags_json = json.dumps(tags or [])
@@ -211,22 +212,22 @@ class DBManager:
         with self.conn:
             cursor = self.conn.execute(
                 """INSERT INTO memories 
-                (session_id, kind, content, priority, tags) 
-                VALUES (?, ?, ?, ?, ?)""",
-                (session_id, kind, content, priority, tags_json)
+                (session_id, kind, content, priority, tags, fictional_time) 
+                VALUES (?, ?, ?, ?, ?, ?)""",
+                (session_id, kind, content, priority, tags_json, fictional_time)
             )
             
-            return Memory(
-                id=cursor.lastrowid,
-                session_id=session_id,
-                kind=kind,
-                content=content,
-                priority=priority,
-                tags=tags_json,
-                created_at=datetime.now().isoformat(),
-                last_accessed=None,
-                access_count=0
+            # Get the created memory to return it with actual DB timestamp
+            memory_id = cursor.lastrowid
+            cursor = self.conn.execute(
+                """SELECT id, session_id, kind, content, priority, tags, 
+                        created_at, fictional_time, last_accessed, access_count 
+                FROM memories 
+                WHERE id = ?""",
+                (memory_id,)
             )
+            row = cursor.fetchone()
+            return Memory(**row)
 
     def get_memories_by_session(self, session_id: int) -> List[Memory]:
         """Get all memories for a session."""

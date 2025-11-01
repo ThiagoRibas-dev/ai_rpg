@@ -36,7 +36,7 @@ schema = {
 _STORE: dict[tuple[str, str], dict[str, Any]] = {}
 _VERS: dict[tuple[str, str], int] = {}
 
-def handler(entity_type: str, key: str, patch: list[dict]) -> dict:
+def handler(entity_type: str, key: str, patch: list[dict], **context) -> dict:
     ek = (entity_type, key)
     entity = _STORE.get(ek, {})
     for op in patch:

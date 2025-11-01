@@ -16,7 +16,7 @@ schema = {
 
 _dice_re = re.compile(r"^\s*(\d+)\s*d\s*(\d+)\s*([+-]\s*\d+)?\s*$", re.I)
 
-def handler(dice: str | None = None, dice_spec: str | None = None) -> dict:
+def handler(dice: str | None = None, dice_spec: str | None = None, **context) -> dict:
     spec = dice or dice_spec
     if not spec:
         raise ValueError("Missing dice specification.")

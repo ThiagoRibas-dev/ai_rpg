@@ -8,3 +8,4 @@ class GameSession:
     prompt_id: int
     memory: str = ""
     authors_note: str = ""
+    game_time: str = "Day 1, Dawn"

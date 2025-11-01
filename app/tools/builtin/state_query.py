@@ -1,4 +1,3 @@
-# app/tools/builtin/state_query.py
 from typing import Any, Dict
 from .state_apply_patch import _STORE
 
@@ -16,7 +15,7 @@ schema = {
     }
 }
 
-def handler(entity_type: str, key: str, json_path: str) -> Dict[str, Any]:
+def handler(entity_type: str, key: str, json_path: str, **context) -> Dict[str, Any]:
     entity = _STORE.get((entity_type, key), {})
     if json_path in ("", ".", "/"):
         return {"value": entity}

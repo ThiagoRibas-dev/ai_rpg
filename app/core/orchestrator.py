@@ -46,7 +46,6 @@ MEMORY NOTES:
 - Memories shown in context were automatically retrieved and have been marked as accessed
 - You don't need to create memory.upsert calls in tool results - those are handled by the Planner
 - Focus on using the retrieved memories to inform your narrative
-- If memories conflict with current events, the current events take precedence (and the Planner should update the memory)
 
 Guidelines:
 - Your narration must align with the Planner's Intent.
@@ -297,7 +296,8 @@ class Orchestrator:
                     # Pass context to tools that need it
                     context = {
                         "session_id": session.id,
-                        "db_manager": self.db_manager
+                        "db_manager": self.db_manager,
+                        "current_game_time": session.game_time
                     }
                     
                     result = self.tool_registry.execute_tool(tool_name, tool_args, context=context)
@@ -356,9 +356,13 @@ class Orchestrator:
         if narrative.memory_intents:
             for mem in narrative.memory_intents:
                 try:
-                    args = {"kind": mem.kind, "content": mem.content}
+                    args = {
+                        "kind": mem.kind, 
+                        "content": mem.content,
+                        "fictional_time": session.game_time  # Tag with current game time
+                    }
                     if mem.priority is not None:
-                        args["priority"] = mem.priority
+                        args["priority"] = f"{mem.priority}"
                     if mem.tags is not None:
                         args["tags"] = mem.tags
                     
