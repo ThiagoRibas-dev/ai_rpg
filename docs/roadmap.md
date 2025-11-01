@@ -7,19 +7,25 @@ This document outlines the planned features and development milestones for the A
 *   **Narrative Engine:** A robust core engine for managing the game's narrative, including a flexible LLM connector system to support various models.
 *   **Session Management:** The ability to save, load, and manage game sessions.
 *   **GUI:** A functional user interface for interacting with the game, including a chat-style interface for the narrative.
+
+## v2: Tool Infrastructure
+
 *   **Tool System:** A system that allows the LLM to use tools to perform deterministic actions, such as rolling dice, checking rules, or managing inventory.
 
-## v2: Simple Agentic Memory
+## v3: Simple Agentic Memory
 
 *   **Core Functionality:** Fully integrate the existing `memory.upsert` tool into the orchestrator, allowing the LLM to autonomously extract key information from the conversation and store it as memories.
 *   **Persistent Storage:** Upgrade the memory store from a temporary in-memory dictionary to a simple persistent solution (e.g., a JSON file or a lightweight database) so that memories are saved between game sessions.
 *   **Memory Retrieval:** Implement a corresponding tool (e.g., `memory.query`) that allows the LLM to search and retrieve relevant memories based on kinds or tags to inform its responses.
 *   **GUI Integration:** Add a new panel to the GUI that displays the list of created memories, allowing the user to see what the AI is remembering. This would provide the transparency you mentioned.
 
-## v3: Extensibility and Intelligence
+## v4: Advanced State Management and RAG
 
 *   **State Management:** A structured system for managing the game state, including character sheets, inventory, and world state.
 *   **RAG (Retrieval-Augmented Generation):** A system for retrieving information from a knowledge base, such as a rulebook or lore document, to provide more contextually relevant responses.
+
+## v5: Extensibility and Intelligence
+
 *   **Plugin Architecture:** A system that allows for the creation of third-party plugins to extend the game's functionality, such as new tools, content, or even core systems.
 *   **Advanced Agency:** Exploration of more advanced AI techniques, such as multi-agent systems (e.g., a separate "Game Master" agent) and more sophisticated planning capabilities.
 *   **Dynamic World:** Features that allow the game world to evolve and change in response to player actions, creating a more dynamic and immersive experience.
