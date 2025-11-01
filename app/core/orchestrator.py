@@ -9,7 +9,7 @@ from app.llm.llm_connector import LLMConnector
 from app.llm.gemini_connector import GeminiConnector
 from app.llm.openai_connector import OpenAIConnector
 from app.tools.registry import ToolRegistry
-from app.io.schemas import TurnPlan, NarrativeStep
+from app.io.schemas import TurnPlan, NarrativeStep, ActionChoices
 from app.models.message import Message
 
 logging.basicConfig(level=logging.DEBUG)
@@ -36,6 +36,23 @@ Guidelines:
 
 Tool results:
 {tool_results}
+"""
+
+CHOICE_GENERATION_TEMPLATE = """Based on the current game state and the narrative you just presented, generate exactly 3 concise action choices for the player.
+
+Each choice should be:
+- A short, actionable statement (preferably under 10 words)
+- Something the player can say or do
+- Relevant to the current situation
+- Distinct from the other choices
+
+Guidelines:
+- Think about what makes sense given the narrative context
+- Offer diverse options (e.g., combat, diplomacy, investigation)
+- Keep choices clear and direct
+
+Recent narrative context:
+{narrative}
 """
 
 class Orchestrator:
@@ -74,7 +91,43 @@ class Orchestrator:
         
         return [system_prompt] + recent_messages
 
-    def plan_and_execute(self, session: "GameSession"):
+    def _assemble_context(self, base_template: str, session: GameSession) -> str:
+        """
+        Assembles the final system prompt by combining Memory, World Info, base template, and Author's Note.
+        """
+        parts = []
+
+        # 1. Memory
+        if session.memory and session.memory.strip():
+            parts.append(f"=== MEMORY ===\n{session.memory.strip()}\n")
+
+        # 2. World Info (keyword matching)
+        if session.prompt_id:
+            world_infos = self.db_manager.get_world_info_by_prompt(session.prompt_id)
+            triggered_infos = []
+            
+            # Get recent user messages to check for keyword triggers
+            recent_history = self._get_truncated_history()
+            recent_text = " ".join([msg.content for msg in recent_history[-5:]])  # Last 5 messages
+            
+            for wi in world_infos:
+                keywords = [k.strip().lower() for k in wi.keywords.split(",")]
+                if any(keyword in recent_text.lower() for keyword in keywords):
+                    triggered_infos.append(wi.content)
+            
+            if triggered_infos:
+                parts.append("=== WORLD INFO ===\n" + "\n\n".join(triggered_infos) + "\n")
+
+        # 3. Base template
+        parts.append(f"=== INSTRUCTIONS ===\n{base_template}\n")
+
+        # 4. Author's Note
+        if session.authors_note and session.authors_note.strip():
+            parts.append(f"=== AUTHOR'S NOTE ===\n{session.authors_note.strip()}\n")
+
+        return "\n".join(parts)
+
+    def plan_and_execute(self, session: GameSession):
         logger.debug("Starting plan_and_execute")
         user_input = self.view.get_input()
         if not user_input or not self.session:
@@ -87,9 +140,11 @@ class Orchestrator:
 
         # 1) Plan
         try:
-            system_prompt_plan = PLAN_TEMPLATE.format(
+            base_plan_template = PLAN_TEMPLATE.format(
                 tool_schemas=self.tool_registry.get_all_schemas()
             )
+            system_prompt_plan = self._assemble_context(base_plan_template, session)
+            
             chat_history = self._get_truncated_history()
             plan_dict = self.llm_connector.get_structured_response(
                 system_prompt=system_prompt_plan,
@@ -109,8 +164,6 @@ class Orchestrator:
             for call in plan.tool_calls:
                 try:
                     tool_name = call.name
-                    # The model returns a JSON string for arguments, so we parse it.
-                    # Handle optional arguments, defaulting to an empty JSON object string.
                     tool_args_str = call.arguments or "{}"
                     tool_args = json.loads(tool_args_str)
                     self.view.add_message(f"[Tool: {tool_name}({tool_args})]\n")
@@ -125,10 +178,12 @@ class Orchestrator:
         # 3) Narrative + proposals
         try:
             tool_results_str = str(tool_results)
-            system_prompt_narrative = NARRATIVE_TEMPLATE.format(
+            base_narrative_template = NARRATIVE_TEMPLATE.format(
                 planner_thought=plan.thought,
                 tool_results=tool_results_str
             )
+            system_prompt_narrative = self._assemble_context(base_narrative_template, session)
+            
             chat_history = self._get_truncated_history()
             narrative_dict = self.llm_connector.get_structured_response(
                 system_prompt=system_prompt_narrative,
@@ -144,7 +199,7 @@ class Orchestrator:
         self.view.add_message(f"AI: {narrative.narrative}\n")
         self.session.add_message("assistant", narrative.narrative)
 
-        # 4) Apply patches and memories via tools (MVP handlers are in-memory)
+        # 4) Apply patches and memories
         if narrative.proposed_patches:
             for patch in narrative.proposed_patches:
                 try:
@@ -169,7 +224,29 @@ class Orchestrator:
                 except Exception as e:
                     self.view.add_message(f"[Memory Error: {mem.content[:32]}... -> {e}]\n")
 
-        # Persist session JSON with any changes (MVP: just the chat history)
+        # 5) Generate action choices
+        try:
+            choice_template = CHOICE_GENERATION_TEMPLATE.format(
+                narrative=narrative.narrative
+            )
+            system_prompt_choices = self._assemble_context(choice_template, session)
+            
+            chat_history = self._get_truncated_history()
+            choices_dict = self.llm_connector.get_structured_response(
+                system_prompt=system_prompt_choices,
+                chat_history=chat_history,
+                output_schema=ActionChoices
+            )
+            action_choices = ActionChoices.model_validate(choices_dict)
+            
+            # Display the choices in the UI
+            self.view.display_action_choices(action_choices.choices)
+        except Exception as e:
+            logger.error(f"Error generating action choices: {e}", exc_info=True)
+            # Don't fail the whole turn if choice generation fails
+            self.view.add_message(f"[Choice generation failed: {e}]\n")
+
+        # Persist session
         self.update_game(session)
 
     def run(self):
@@ -189,7 +266,7 @@ class Orchestrator:
         if game_session:
             self.session = Session.from_json(game_session.session_data)
 
-    def update_game(self, session: "GameSession"):
+    def update_game(self, session: GameSession):
         if not self.session:
             return
         session.session_data = self.session.to_json()

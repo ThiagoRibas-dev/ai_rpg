@@ -6,3 +6,5 @@ class GameSession:
     name: str
     session_data: str
     prompt_id: int
+    memory: str = ""
+    authors_note: str = ""

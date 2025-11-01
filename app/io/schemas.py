@@ -32,3 +32,10 @@ class NarrativeStep(BaseModel):
     narrative: str
     proposed_patches: List[Patch]
     memory_intents: List[MemoryIntent]
+
+class ActionChoices(BaseModel):
+    """
+    A set of 3 concise action choices for the user to select from.
+    Each choice should be a short, actionable statement that the player can say or do.
+    """
+    choices: List[str] = Field(..., description="A list of exactly 3 concise action options for the user.", min_length=3, max_length=3)
