@@ -260,7 +260,7 @@ class Orchestrator:
             return
 
         self.session.add_message("user", user_input)
-        self.view.add_message(f"You: {user_input}\n")
+        self.view.add_message_bubble("user", user_input)  # Use bubble
         self.view.clear_input()
 
         # 1) Plan
@@ -277,10 +277,10 @@ class Orchestrator:
                 output_schema=TurnPlan
             )
             plan = TurnPlan.model_validate(plan_dict)
-            self.view.add_message(f"\n[Thought: {plan.thought}]\n\n")
+            self.view.add_thought_bubble(plan.thought)  # Use thought bubble
         except Exception as e:
             logger.error(f"Error during planning: {e}", exc_info=True)
-            self.view.add_message(f"Error during planning: {e}\n")
+            self.view.add_message_bubble("system", f"Error during planning: {e}")
             return
 
         # 2) Execute tools
@@ -291,23 +291,28 @@ class Orchestrator:
                     tool_name = call.name
                     tool_args_str = call.arguments or "{}"
                     tool_args = json.loads(tool_args_str)
-                    self.view.add_message(f"[Tool: {tool_name}({tool_args})]\n")
+                    
+                    # Add to tool calls panel
+                    self.view.add_tool_call(tool_name, tool_args)
                     
                     # Pass context to tools that need it
                     context = {
                         "session_id": session.id,
-                        "db_manager": self.db_manager,
-                        "current_game_time": session.game_time
+                        "db_manager": self.db_manager
                     }
                     
                     result = self.tool_registry.execute_tool(tool_name, tool_args, context=context)
                     tool_results.append({"tool_name": tool_name, "arguments": tool_args, "result": result})
-                    self.view.add_message(f"[Result: {result}]\n")
+                    
+                    # Add result to tool calls panel
+                    self.view.add_tool_result(result, is_error=False)
                 except Exception as e:
                     logger.error(f"Error executing tool {tool_name}: {e}")
                     tool_results.append({"tool_name": tool_name, "arguments": call.arguments, "error": str(e)})
-                    self.view.add_message(f"[Error: {e}]\n")
-    
+                    
+                    # Add error to tool calls panel
+                    self.view.add_tool_result(str(e), is_error=True)
+
         # After executing tools, refresh memory inspector if a memory tool was used
         memory_tool_used = any(
             call.name in ["memory.upsert", "memory.update", "memory.delete", "memory.query"]
@@ -336,10 +341,10 @@ class Orchestrator:
             narrative = NarrativeStep.model_validate(narrative_dict)
         except Exception as e:
             logger.error(f"Error during narrative generation: {e}", exc_info=True)
-            self.view.add_message(f"Error during narrative: {e}\n")
+            self.view.add_message_bubble("system", f"Error during narrative: {e}")
             return
 
-        self.view.add_message(f"AI: {narrative.narrative}\n")
+        self.view.add_message_bubble("assistant", narrative.narrative)  # Use bubble
         self.session.add_message("assistant", narrative.narrative)
 
         # 4) Apply patches and memories
@@ -351,18 +356,14 @@ class Orchestrator:
                     if self.tool_event_callback:
                         self.tool_event_callback(f"state.apply_patch ✓ -> {result}")
                 except Exception as e:
-                    self.view.add_message(f"[Patch Error: {patch.key} -> {e}]\n")
+                    logger.error(f"Patch error: {e}")
 
         if narrative.memory_intents:
             for mem in narrative.memory_intents:
                 try:
-                    args = {
-                        "kind": mem.kind, 
-                        "content": mem.content,
-                        "fictional_time": session.game_time  # Tag with current game time
-                    }
+                    args = {"kind": mem.kind, "content": mem.content}
                     if mem.priority is not None:
-                        args["priority"] = f"{mem.priority}"
+                        args["priority"] = mem.priority
                     if mem.tags is not None:
                         args["tags"] = mem.tags
                     
@@ -375,7 +376,7 @@ class Orchestrator:
                     if self.tool_event_callback:
                         self.tool_event_callback(f"memory.upsert ✓ -> {result}")
                 except Exception as e:
-                    self.view.add_message(f"[Memory Error: {mem.content[:32]}... -> {e}]\n")
+                    logger.error(f"Memory error: {e}")
 
         # 5) Generate action choices
         try:
@@ -396,8 +397,6 @@ class Orchestrator:
             self.view.display_action_choices(action_choices.choices)
         except Exception as e:
             logger.error(f"Error generating action choices: {e}", exc_info=True)
-            # Don't fail the whole turn if choice generation fails
-            self.view.add_message(f"[Choice generation failed: {e}]\n")
 
         # Persist session
         self.update_game(session)

@@ -3,6 +3,12 @@ from datetime import datetime
 from typing import List
 from app.gui.collapsible_frame import CollapsibleFrame
 from app.gui.world_info_manager_view import WorldInfoManagerView
+from app.gui.styles import (
+    ACTIVE_THEME as Theme,
+    get_chat_bubble_style,
+    get_tool_call_style,
+    get_button_style,
+)
 
 class MainView(ctk.CTk):
     def __init__(self, db_manager):
@@ -12,7 +18,10 @@ class MainView(ctk.CTk):
         self.selected_prompt = None
         self.selected_session = None
         self.title("AI-RPG")
-        self.geometry("1200x800")
+        self.geometry(f"{Theme.dimensions.window_width}x{Theme.dimensions.window_height}")
+
+        # Track bubble content labels for resize updates
+        self.bubble_labels: List[ctk.CTkLabel] = []
 
         # Main layout
         self.grid_columnconfigure(0, weight=3)
@@ -20,36 +29,44 @@ class MainView(ctk.CTk):
         self.grid_rowconfigure(0, weight=1)
 
         # Main Panel
-        self.main_panel = ctk.CTkFrame(self, fg_color="#2B2B2B")
-        self.main_panel.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        self.main_panel = ctk.CTkFrame(self, fg_color=Theme.colors.bg_primary)
+        self.main_panel.grid(row=0, column=0, sticky="nsew", padx=Theme.spacing.padding_md, pady=Theme.spacing.padding_md)
         self.main_panel.grid_rowconfigure(0, weight=1)
         self.main_panel.grid_columnconfigure(0, weight=1)
 
-        self.chat_history = ctk.CTkTextbox(self.main_panel, state="disabled")
-        self.chat_history.grid(row=0, column=0, columnspan=2, sticky="nsew", padx=5, pady=5)
+        # Chat history - now a scrollable frame instead of textbox
+        self.chat_history_frame = ctk.CTkScrollableFrame(self.main_panel, fg_color=Theme.colors.bg_secondary)
+        self.chat_history_frame.grid(row=0, column=0, columnspan=2, sticky="nsew", 
+                                     padx=Theme.spacing.padding_sm, pady=Theme.spacing.padding_sm)
+
+        # Bind resize event to update bubble widths
+        self.chat_history_frame.bind("<Configure>", self._on_chat_frame_resize)
 
         # Choice buttons frame
         self.choice_button_frame = ctk.CTkFrame(self.main_panel)
-        self.choice_button_frame.grid(row=1, column=0, columnspan=2, sticky="ew", padx=5, pady=5)
-        self.choice_button_frame.grid_remove()  # Hidden by default
+        self.choice_button_frame.grid(row=1, column=0, columnspan=2, sticky="ew", 
+                                      padx=Theme.spacing.padding_sm, pady=Theme.spacing.padding_sm)
+        self.choice_button_frame.grid_remove()
 
-        self.user_input = ctk.CTkTextbox(self.main_panel, height=100)
-        self.user_input.grid(row=2, column=0, sticky="ew", padx=5, pady=5)
+        self.user_input = ctk.CTkTextbox(self.main_panel, height=Theme.spacing.input_height)
+        self.user_input.grid(row=2, column=0, sticky="ew", 
+                            padx=Theme.spacing.padding_sm, pady=Theme.spacing.padding_sm)
 
         button_frame = ctk.CTkFrame(self.main_panel)
-        button_frame.grid(row=2, column=1, sticky="ns", padx=5, pady=5)
+        button_frame.grid(row=2, column=1, sticky="ns", 
+                         padx=Theme.spacing.padding_sm, pady=Theme.spacing.padding_sm)
 
         self.send_button = ctk.CTkButton(button_frame, text="Send", state="disabled", command=self.handle_send_button)
-        self.send_button.pack(expand=True, fill="both", padx=2, pady=2)
+        self.send_button.pack(expand=True, fill="both", padx=Theme.spacing.padding_xs, pady=Theme.spacing.padding_xs)
 
         self.stop_button = ctk.CTkButton(button_frame, text="Stop")
-        self.stop_button.pack(expand=True, fill="both", padx=2, pady=2)
+        self.stop_button.pack(expand=True, fill="both", padx=Theme.spacing.padding_xs, pady=Theme.spacing.padding_xs)
 
         # Control Panel (scrollable)
-        self.control_panel = ctk.CTkScrollableFrame(self, fg_color="#2B2B2B")
-        self.control_panel.grid(row=0, column=1, sticky="nsew", padx=(0, 10), pady=10)
+        self.control_panel = ctk.CTkScrollableFrame(self, fg_color=Theme.colors.bg_primary)
+        self.control_panel.grid(row=0, column=1, sticky="nsew", 
+                               padx=(0, Theme.spacing.padding_md), pady=Theme.spacing.padding_md)
         
-        # Store references to collapsible frames for auto-collapse
         self.prompt_collapsible = None
         self.session_collapsible = None
         
@@ -58,122 +75,204 @@ class MainView(ctk.CTk):
         self.refresh_prompt_list()
         self.refresh_session_list()
 
+    def _calculate_bubble_width(self) -> int:
+        """Calculate the appropriate bubble width based on chat frame width."""
+        # Get the actual width of the chat frame
+        # We need to account for scrollbar and padding
+        frame_width = self.chat_history_frame.winfo_width()
+        
+        # If window hasn't been drawn yet, use a default
+        if frame_width <= 1:
+            frame_width = Theme.dimensions.window_width * 0.75  # Estimate based on window width
+        
+        # Subtract scrollbar width (approximately 15-20 pixels) and padding
+        usable_width = frame_width - 30
+        
+        # Calculate percentage-based width
+        bubble_width = int(usable_width * Theme.spacing.bubble_width_percent)
+        
+        # Ensure minimum width
+        bubble_width = max(bubble_width, Theme.spacing.bubble_min_width)
+        
+        return bubble_width
+
+    def _on_chat_frame_resize(self, event):
+        """Update all bubble widths when the chat frame is resized."""
+        new_width = self._calculate_bubble_width()
+        
+        # Update wraplength for all bubble content labels
+        for label in self.bubble_labels:
+            if label.winfo_exists():
+                label.configure(wraplength=new_width)
+
+    def add_message_bubble(self, role: str, content: str):
+        """Add a message as a chat bubble."""
+        style = get_chat_bubble_style(role)
+        
+        bubble_container = ctk.CTkFrame(self.chat_history_frame, fg_color="transparent")
+        bubble_container.pack(fill="x", padx=Theme.spacing.padding_md, pady=Theme.spacing.bubble_margin)
+        
+        bubble_kwargs = {
+            "fg_color": style["fg_color"],
+            "corner_radius": style["corner_radius"]
+        }
+        if "border_width" in style:
+            bubble_kwargs["border_width"] = style["border_width"]
+            bubble_kwargs["border_color"] = style["border_color"]
+        
+        bubble = ctk.CTkFrame(bubble_container, **bubble_kwargs)
+        bubble.pack(anchor=style["anchor"], padx=Theme.spacing.padding_sm)
+        
+        role_label = ctk.CTkLabel(
+            bubble,
+            text=style["label"],
+            font=Theme.fonts.body_small if role != "thought" else Theme.fonts.body_italic,
+            text_color=style["text_color"]
+        )
+        role_label.pack(anchor="w", padx=Theme.spacing.bubble_padding_x, 
+                       pady=(Theme.spacing.bubble_padding_y_top, 0))
+        
+        # Calculate dynamic width
+        bubble_width = self._calculate_bubble_width()
+        
+        content_label = ctk.CTkLabel(
+            bubble,
+            text=content,
+            font=Theme.fonts.body if role != "thought" else Theme.fonts.body_italic,
+            text_color=style["text_color"],
+            wraplength=bubble_width,  # Dynamic width
+            justify="left"
+        )
+        content_label.pack(anchor="w", padx=Theme.spacing.bubble_padding_x, 
+                          pady=(Theme.spacing.padding_xs, Theme.spacing.bubble_padding_y_bottom))
+        
+        # Store reference to the label for resize updates
+        self.bubble_labels.append(content_label)
+        
+        # Auto-scroll to bottom
+        self.chat_history_frame._parent_canvas.yview_moveto(1.0)
+
+    def add_thought_bubble(self, thought: str):
+        """Add an AI thought as a special bubble."""
+        self.add_message_bubble("thought", thought)
+
+    def clear_chat_history(self):
+        """Clear all chat bubbles."""
+        for widget in self.chat_history_frame.winfo_children():
+            widget.destroy()
+        self.bubble_labels.clear()  # Clear the label references too
+
+    # ... rest of the _create_right_panel_widgets and other methods ...
+    
     def _create_right_panel_widgets(self):
-        # ==================== Prompt Management (FIRST) ====================
+        # Use consistent spacing from theme
+        pack_config = {
+            "pady": Theme.spacing.padding_sm,
+            "padx": Theme.spacing.padding_sm,
+            "fill": "x",
+            "expand": False
+        }
+        
+        # ==================== Prompt Management ====================
         self.prompt_collapsible = CollapsibleFrame(self.control_panel, "Prompt Management")
-        self.prompt_collapsible.pack(pady=5, padx=5, fill="x", expand=False)
+        self.prompt_collapsible.pack(**pack_config)
         
         prompt_content = self.prompt_collapsible.get_content_frame()
         
-        self.prompt_scrollable_frame = ctk.CTkScrollableFrame(prompt_content, height=100)
-        self.prompt_scrollable_frame.pack(pady=5, padx=5, fill="x")
+        self.prompt_scrollable_frame = ctk.CTkScrollableFrame(
+            prompt_content, 
+            height=Theme.spacing.scrollable_frame_height
+        )
+        self.prompt_scrollable_frame.pack(**pack_config)
 
-        # Prompt CRUD buttons
         prompt_button_frame = ctk.CTkFrame(prompt_content)
-        prompt_button_frame.pack(pady=5, padx=5, fill="x")
+        prompt_button_frame.pack(**pack_config)
 
-        new_prompt_button = ctk.CTkButton(prompt_button_frame, text="New", command=self.new_prompt, width=60)
-        new_prompt_button.pack(side="left", padx=2)
+        new_prompt_button = ctk.CTkButton(
+            prompt_button_frame, text="New", command=self.new_prompt, 
+            width=Theme.dimensions.button_small
+        )
+        new_prompt_button.pack(side="left", padx=Theme.spacing.padding_xs)
 
-        edit_prompt_button = ctk.CTkButton(prompt_button_frame, text="Edit", command=self.edit_prompt, width=60)
-        edit_prompt_button.pack(side="left", padx=2)
+        edit_prompt_button = ctk.CTkButton(
+            prompt_button_frame, text="Edit", command=self.edit_prompt, 
+            width=Theme.dimensions.button_small
+        )
+        edit_prompt_button.pack(side="left", padx=Theme.spacing.padding_xs)
 
-        delete_prompt_button = ctk.CTkButton(prompt_button_frame, text="Delete", command=self.delete_prompt, width=60)
-        delete_prompt_button.pack(side="left", padx=2)
+        delete_prompt_button = ctk.CTkButton(
+            prompt_button_frame, text="Delete", command=self.delete_prompt, 
+            width=Theme.dimensions.button_small
+        )
+        delete_prompt_button.pack(side="left", padx=Theme.spacing.padding_xs)
 
-        # ==================== Game Sessions (SECOND) ====================
+        # ==================== Game Sessions ====================
         self.session_collapsible = CollapsibleFrame(self.control_panel, "Game Sessions")
-        self.session_collapsible.pack(pady=5, padx=5, fill="x", expand=False)
+        self.session_collapsible.pack(**pack_config)
         
         session_content = self.session_collapsible.get_content_frame()
         
-        self.session_scrollable_frame = ctk.CTkScrollableFrame(session_content, height=100)
-        self.session_scrollable_frame.pack(pady=5, padx=5, fill="x")
+        self.session_scrollable_frame = ctk.CTkScrollableFrame(
+            session_content, 
+            height=Theme.spacing.scrollable_frame_height
+        )
+        self.session_scrollable_frame.pack(**pack_config)
 
         new_game_button = ctk.CTkButton(session_content, text="New Game", command=self.new_game)
-        new_game_button.pack(pady=5, padx=5, fill="x")
+        new_game_button.pack(**pack_config)
 
         # ==================== Advanced Context ====================
         context_collapsible = CollapsibleFrame(self.control_panel, "Advanced Context")
-        context_collapsible.pack(pady=5, padx=5, fill="x", expand=False)
+        context_collapsible.pack(**pack_config)
         
         context_content = context_collapsible.get_content_frame()
 
-        # Game Time
-        game_time_label = ctk.CTkLabel(context_content, text="Current Game Time:")
-        game_time_label.pack(pady=(5, 0), padx=5, anchor="w")
-
-        self.game_time_entry = ctk.CTkEntry(context_content, placeholder_text="Day 1, Dawn")
-        self.game_time_entry.pack(pady=5, padx=5, fill="x")
-
-        # Add to save_context method:
-        def save_context(self):
-            """Save the current memory and author's note."""
-            if not self.selected_session:
-                return
-            
-            memory = self.memory_textbox.get("1.0", "end-1c")
-            authors_note = self.authors_note_textbox.get("1.0", "end-1c")
-            game_time = self.game_time_entry.get()
-            
-            self.selected_session.game_time = game_time
-            self.db_manager.update_session_context(
-                self.selected_session.id, 
-                memory, 
-                authors_note,
-                game_time
-            )
-            self.add_message("[Context saved]\n")
-
-        # Memory
         memory_label = ctk.CTkLabel(context_content, text="Memory:")
-        memory_label.pack(pady=(5, 0), padx=5, anchor="w")
+        memory_label.pack(pady=(Theme.spacing.padding_sm, 0), padx=Theme.spacing.padding_sm, anchor="w")
         
-        self.memory_textbox = ctk.CTkTextbox(context_content, height=80)
-        self.memory_textbox.pack(pady=5, padx=5, fill="x")
+        self.memory_textbox = ctk.CTkTextbox(context_content, height=Theme.spacing.textbox_small)
+        self.memory_textbox.pack(**pack_config)
 
-        # Author's Note
         authors_note_label = ctk.CTkLabel(context_content, text="Author's Note:")
-        authors_note_label.pack(pady=(5, 0), padx=5, anchor="w")
+        authors_note_label.pack(pady=(Theme.spacing.padding_sm, 0), padx=Theme.spacing.padding_sm, anchor="w")
         
-        self.authors_note_textbox = ctk.CTkTextbox(context_content, height=80)
-        self.authors_note_textbox.pack(pady=5, padx=5, fill="x")
+        self.authors_note_textbox = ctk.CTkTextbox(context_content, height=Theme.spacing.textbox_small)
+        self.authors_note_textbox.pack(**pack_config)
 
-        # World Info button
         world_info_button = ctk.CTkButton(context_content, text="Manage World Info", command=self.open_world_info_manager)
-        world_info_button.pack(pady=5, padx=5, fill="x")
+        world_info_button.pack(**pack_config)
 
-        # Save context button
         save_context_button = ctk.CTkButton(context_content, text="Save Context", command=self.save_context)
-        save_context_button.pack(pady=5, padx=5, fill="x")
+        save_context_button.pack(**pack_config)
 
         # ==================== LLM Parameters ====================
         llm_collapsible = CollapsibleFrame(self.control_panel, "LLM Parameters")
-        llm_collapsible.pack(pady=5, padx=5, fill="x", expand=False)
+        llm_collapsible.pack(**pack_config)
         
         llm_content = llm_collapsible.get_content_frame()
 
         provider_label = ctk.CTkLabel(llm_content, text="Provider:")
-        provider_label.pack(pady=(5, 0), padx=5, anchor="w")
+        provider_label.pack(pady=(Theme.spacing.padding_sm, 0), padx=Theme.spacing.padding_sm, anchor="w")
 
         self.provider_selector = ctk.CTkOptionMenu(llm_content, values=["Gemini", "OpenAI"])
-        self.provider_selector.pack(pady=5, padx=5, fill="x")
+        self.provider_selector.pack(**pack_config)
 
         temp_label = ctk.CTkLabel(llm_content, text="Temperature:")
-        temp_label.pack(pady=(5, 0), padx=5, anchor="w")
+        temp_label.pack(pady=(Theme.spacing.padding_sm, 0), padx=Theme.spacing.padding_sm, anchor="w")
 
         self.temperature_slider = ctk.CTkSlider(llm_content)
-        self.temperature_slider.pack(pady=5, padx=5, fill="x")
+        self.temperature_slider.pack(**pack_config)
 
         top_p_label = ctk.CTkLabel(llm_content, text="Top P:")
-        top_p_label.pack(pady=(5, 0), padx=5, anchor="w")
+        top_p_label.pack(pady=(Theme.spacing.padding_sm, 0), padx=Theme.spacing.padding_sm, anchor="w")
 
         self.top_p_slider = ctk.CTkSlider(llm_content)
-        self.top_p_slider.pack(pady=5, padx=5, fill="x")
+        self.top_p_slider.pack(**pack_config)
 
         # ==================== Game State Inspector ====================
         inspector_collapsible = CollapsibleFrame(self.control_panel, "Game State Inspector")
-        inspector_collapsible.pack(pady=5, padx=5, fill="both", expand=True)
+        inspector_collapsible.pack(pady=Theme.spacing.padding_sm, padx=Theme.spacing.padding_sm, 
+                                  fill="both", expand=True)
         
         inspector_content = inspector_collapsible.get_content_frame()
 
@@ -183,35 +282,88 @@ class MainView(ctk.CTk):
         self.game_state_inspector_tabs.add("Inventory")
         self.game_state_inspector_tabs.add("Quests")
         self.game_state_inspector_tabs.add("Memories")
-        self.game_state_inspector_tabs.add("Tool Events")
+        self.game_state_inspector_tabs.add("Tool Calls")
 
-        # Add memory inspector view
         from app.gui.memory_inspector_view import MemoryInspectorView
         self.memory_inspector = MemoryInspectorView(
             self.game_state_inspector_tabs.tab("Memories"),
             self.db_manager,
-            None  # orchestrator will be set later
+            None
         )
         self.memory_inspector.pack(fill="both", expand=True)
 
-        # Add a textbox for tool events
-        self.tool_events_textbox = ctk.CTkTextbox(
-            self.game_state_inspector_tabs.tab("Tool Events"), 
-            state="disabled"
+        self.tool_calls_frame = ctk.CTkScrollableFrame(
+            self.game_state_inspector_tabs.tab("Tool Calls"),
+            fg_color=Theme.colors.bg_secondary
         )
-        self.tool_events_textbox.pack(fill="both", expand=True)
+        self.tool_calls_frame.pack(fill="both", expand=True)
+
+    def add_tool_call(self, tool_name: str, args: dict):
+        """Add a tool call to the dedicated tool calls panel."""
+        style = get_tool_call_style()
+        
+        call_frame = ctk.CTkFrame(
+            self.tool_calls_frame, 
+            fg_color=style["fg_color"], 
+            corner_radius=style["corner_radius"]
+        )
+        call_frame.pack(fill="x", padx=style["padding"], pady=style["margin"])
+        
+        header = ctk.CTkLabel(
+            call_frame,
+            text=f"🔧 {tool_name}",
+            font=Theme.fonts.subheading,
+            text_color=style["header_color"]
+        )
+        header.pack(anchor="w", padx=Theme.spacing.padding_md, pady=(Theme.spacing.padding_sm, Theme.spacing.padding_xs))
+        
+        args_text = str(args)
+        if len(args_text) > 100:
+            args_text = args_text[:100] + "..."
+        
+        args_label = ctk.CTkLabel(
+            call_frame,
+            text=f"Args: {args_text}",
+            font=Theme.fonts.monospace,
+            text_color=style["text_color"],
+            wraplength=Theme.dimensions.wrap_tool,
+            justify="left"
+        )
+        args_label.pack(anchor="w", padx=Theme.spacing.padding_md, pady=(0, Theme.spacing.padding_sm))
+        
+        self.tool_calls_frame._parent_canvas.yview_moveto(1.0)
+
+    def add_tool_result(self, result: any, is_error: bool = False):
+        """Add a tool result to the dedicated tool calls panel."""
+        children = self.tool_calls_frame.winfo_children()
+        if not children:
+            return
+        
+        last_frame = children[-1]
+        style = get_tool_call_style()
+        
+        result_text = str(result)
+        if len(result_text) > 200:
+            result_text = result_text[:200] + "..."
+        
+        color = style["error_color"] if is_error else style["success_color"]
+        icon = "❌" if is_error else "✓"
+        
+        result_label = ctk.CTkLabel(
+            last_frame,
+            text=f"{icon} Result: {result_text}",
+            font=Theme.fonts.monospace,
+            text_color=color,
+            wraplength=Theme.dimensions.wrap_tool,
+            justify="left"
+        )
+        result_label.pack(anchor="w", padx=Theme.spacing.padding_md, pady=(0, Theme.spacing.padding_sm))
+        
+        self.tool_calls_frame._parent_canvas.yview_moveto(1.0)
 
     def log_tool_event(self, message: str):
-        self.tool_events_textbox.configure(state="normal")
-        self.tool_events_textbox.insert("end", message + "\n")
-        self.tool_events_textbox.configure(state="disabled")
-        self.tool_events_textbox.see("end")
-
-    def add_message(self, message: str):
-        self.chat_history.configure(state="normal")
-        self.chat_history.insert("end", message)
-        self.chat_history.configure(state="disabled")
-        self.chat_history.see("end")
+        """Legacy method - redirects to tool calls panel."""
+        pass
 
     def get_input(self) -> str:
         return self.user_input.get("1.0", "end-1c")
@@ -221,7 +373,6 @@ class MainView(ctk.CTk):
 
     def display_action_choices(self, choices: List[str]):
         """Display action choice buttons for the user to click."""
-        # Clear any existing choice buttons
         for widget in self.choice_button_frame.winfo_children():
             widget.destroy()
         
@@ -229,10 +380,8 @@ class MainView(ctk.CTk):
             self.choice_button_frame.grid_remove()
             return
         
-        # Show the choice frame
         self.choice_button_frame.grid()
         
-        # Create a button for each choice
         for i, choice in enumerate(choices):
             btn = ctk.CTkButton(
                 self.choice_button_frame,
@@ -243,14 +392,9 @@ class MainView(ctk.CTk):
 
     def select_choice(self, choice: str):
         """Handle when a user clicks an action choice."""
-        # Populate the input box with the choice
         self.user_input.delete("1.0", "end")
         self.user_input.insert("1.0", choice)
-        
-        # Hide the choice buttons
         self.choice_button_frame.grid_remove()
-        
-        # Trigger the send action
         self.handle_send_button()
 
     def new_game(self):
@@ -265,7 +409,6 @@ class MainView(ctk.CTk):
         self.refresh_session_list(self.selected_prompt.id)
 
     def handle_send_button(self):
-        # Clear choice buttons when sending a message
         for widget in self.choice_button_frame.winfo_children():
             widget.destroy()
         self.choice_button_frame.grid_remove()
@@ -275,15 +418,15 @@ class MainView(ctk.CTk):
 
     def load_game(self, session_id: int):
         self.orchestrator.load_game(session_id)
-        self.chat_history.configure(state="normal")
-        self.chat_history.delete("1.0", "end")
+        self.clear_chat_history()
+        
         history = self.orchestrator.session.get_history()
         for message in history:
-            if message.role != "system":
-                self.add_message(f"{message.role.capitalize()}: {message.content}\n")
-        self.chat_history.configure(state="disabled")
+            if message.role == "user":
+                self.add_message_bubble("user", message.content)
+            elif message.role == "assistant":
+                self.add_message_bubble("assistant", message.content)
         
-        # Load context
         self.load_context()
 
     def load_context(self):
@@ -308,11 +451,11 @@ class MainView(ctk.CTk):
         authors_note = self.authors_note_textbox.get("1.0", "end-1c")
         
         self.db_manager.update_session_context(self.selected_session.id, memory, authors_note)
-        self.add_message("[Context saved]\n")
+        self.add_message_bubble("system", "Context saved")
 
     def open_world_info_manager(self):
         if not self.selected_prompt:
-            self.add_message("[Please select a prompt first]\n")
+            self.add_message_bubble("system", "Please select a prompt first")
             return
         
         world_info_view = WorldInfoManagerView(self, self.db_manager, self.selected_prompt.id)
@@ -352,14 +495,15 @@ class MainView(ctk.CTk):
         self.send_button.configure(state="disabled")
         self.refresh_session_list(prompt.id)
         
-        # Visually indicate selection
+        button_styles = get_button_style()
+        selected_style = get_button_style("selected")
+        
         for widget in self.prompt_scrollable_frame.winfo_children():
             if widget.cget("text") == prompt.name:
-                widget.configure(fg_color="blue")
+                widget.configure(fg_color=selected_style["fg_color"])
             else:
-                widget.configure(fg_color=["#3a7ebf", "#1f538d"])
+                widget.configure(fg_color=button_styles["fg_color"])
         
-        # Auto-collapse the prompt panel to bring sessions into view
         if self.prompt_collapsible and not self.prompt_collapsible.is_collapsed:
             self.prompt_collapsible.toggle()
 
@@ -368,22 +512,21 @@ class MainView(ctk.CTk):
         self.load_game(session.id)
         self.send_button.configure(state="normal")
         
-        # Set session for memory inspector
         if hasattr(self, 'memory_inspector'):
             self.memory_inspector.set_session(session.id)
         
-        # Visually indicate selection
+        button_styles = get_button_style()
+        selected_style = get_button_style("selected")
+        
         for widget in self.session_scrollable_frame.winfo_children():
             if widget.cget("text") == session.name:
-                widget.configure(fg_color="blue")
+                widget.configure(fg_color=selected_style["fg_color"])
             else:
-                widget.configure(fg_color=["#3a7ebf", "#1f538d"])
+                widget.configure(fg_color=button_styles["fg_color"])
         
-        # Auto-collapse the session panel to bring Advanced Context into view
         if self.session_collapsible and not self.session_collapsible.is_collapsed:
             self.session_collapsible.toggle()
 
-    # Prompt CRUD methods
     def new_prompt(self):
         dialog = ctk.CTkInputDialog(text="Enter prompt name:", title="New Prompt")
         name = dialog.get_input()
