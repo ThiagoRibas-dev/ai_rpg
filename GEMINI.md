@@ -31,13 +31,13 @@ This project is documented across several files to keep the information organize
 
 ## Project TODOs
 
-- **[V0 TODO](todos/v0_TODO.md)**
-- **[V1 TODO](todos/v1_TODO.md)**
-- **[V1.5 TODO](todos/v1.5_TODO.md)**
-- **[V1.6 TODO](todos/v1.6_TODO.md)**
-- **[V1.7 TODO](todos/v1.7_TODO.md)**
-- **[V2 TODO](todos/v2_TODO.md)**
-- **[V2.1 TODO](todos/v2.1_TODO.md)**
+- **[V0 TODO](docs/todos/v0_TODO.md)**
+- **[V1 TODO](docs/todos/v1_TODO.md)**
+- **[V1.5 TODO](docs/todos/v1.5_TODO.md)**
+- **[V1.6 TODO](docs/todos/v1.6_TODO.md)**
+- **[V1.7 TODO](docs/todos/v1.7_TODO.md)**
+- **[V2 TODO](docs/todos/v2_TODO.md)**
+- **[V3 TODO](docs/todos/v3_TODO.md)**
 
 ## Notes
 
