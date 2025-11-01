@@ -97,7 +97,7 @@ class Orchestrator:
                 output_schema=TurnPlan
             )
             plan = TurnPlan.model_validate(plan_dict)
-            self.view.add_message(f"[Thought: {plan.thought}]\n")
+            self.view.add_message(f"\n[Thought: {plan.thought}]\n\n")
         except Exception as e:
             logger.error(f"Error during planning: {e}", exc_info=True)
             self.view.add_message(f"Error during planning: {e}\n")
