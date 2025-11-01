@@ -1,3 +1,4 @@
+import tkinter
 import customtkinter as ctk
 from datetime import datetime
 from typing import List
@@ -22,9 +23,10 @@ class MainView(ctk.CTk):
 
         # Track bubble content labels for resize updates
         self.bubble_labels: List[ctk.CTkLabel] = []
+        self._last_chat_width = 0  # Track width changes
 
         # Main layout
-        self.grid_columnconfigure(0, weight=3)
+        self.grid_columnconfigure(0, weight=8)
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
@@ -34,13 +36,13 @@ class MainView(ctk.CTk):
         self.main_panel.grid_rowconfigure(0, weight=1)
         self.main_panel.grid_columnconfigure(0, weight=1)
 
-        # Chat history - now a scrollable frame instead of textbox
+        # Chat history - scrollable frame
         self.chat_history_frame = ctk.CTkScrollableFrame(self.main_panel, fg_color=Theme.colors.bg_secondary)
         self.chat_history_frame.grid(row=0, column=0, columnspan=2, sticky="nsew", 
                                      padx=Theme.spacing.padding_sm, pady=Theme.spacing.padding_sm)
 
-        # Bind resize event to update bubble widths
-        self.chat_history_frame.bind("<Configure>", self._on_chat_frame_resize)
+        # Bind to main window resize instead of the scrollable frame
+        self.bind("<Configure>", self._on_window_resize)
 
         # Choice buttons frame
         self.choice_button_frame = ctk.CTkFrame(self.main_panel)
@@ -96,14 +98,30 @@ class MainView(ctk.CTk):
         
         return bubble_width
 
-    def _on_chat_frame_resize(self, event):
-        """Update all bubble widths when the chat frame is resized."""
-        new_width = self._calculate_bubble_width()
+    def _on_window_resize(self, event):
+        """Update all bubble widths when the window is resized."""
+        # Only update if the window width actually changed significantly
+        current_width = self.winfo_width()
         
-        # Update wraplength for all bubble content labels
-        for label in self.bubble_labels:
-            if label.winfo_exists():
-                label.configure(wraplength=new_width)
+        if abs(current_width - self._last_chat_width) > 50:  # Only update if changed by 50+ pixels
+            self._last_chat_width = current_width
+            new_width = self._calculate_bubble_width()
+            
+            # Update wraplength for all bubble content labels
+            for label in self.bubble_labels:
+                try:
+                    if label.winfo_exists():
+                        label.configure(wraplength=new_width)
+                except (tkinter.TclError, AttributeError, RuntimeError):
+                    # TclError: Widget was destroyed or Tcl operation failed
+                    # AttributeError: Label object doesn't have expected methods
+                    # RuntimeError: Widget is in an invalid state
+                    pass
+
+    def _scroll_to_bottom(self):
+        """Scroll the chat to the bottom."""
+        # Use after_idle to ensure the frame is updated before scrolling
+        self.after_idle(lambda: self.chat_history_frame._parent_canvas.yview_moveto(1.0))
 
     def add_message_bubble(self, role: str, content: str):
         """Add a message as a chat bubble."""
@@ -140,7 +158,7 @@ class MainView(ctk.CTk):
             text=content,
             font=Theme.fonts.body if role != "thought" else Theme.fonts.body_italic,
             text_color=style["text_color"],
-            wraplength=bubble_width,  # Dynamic width
+            wraplength=bubble_width,
             justify="left"
         )
         content_label.pack(anchor="w", padx=Theme.spacing.bubble_padding_x, 
@@ -149,8 +167,8 @@ class MainView(ctk.CTk):
         # Store reference to the label for resize updates
         self.bubble_labels.append(content_label)
         
-        # Auto-scroll to bottom
-        self.chat_history_frame._parent_canvas.yview_moveto(1.0)
+        # Auto-scroll to bottom (use our helper method)
+        self._scroll_to_bottom()
 
     def add_thought_bubble(self, thought: str):
         """Add an AI thought as a special bubble."""
@@ -160,12 +178,9 @@ class MainView(ctk.CTk):
         """Clear all chat bubbles."""
         for widget in self.chat_history_frame.winfo_children():
             widget.destroy()
-        self.bubble_labels.clear()  # Clear the label references too
+        self.bubble_labels.clear()
 
-    # ... rest of the _create_right_panel_widgets and other methods ...
-    
     def _create_right_panel_widgets(self):
-        # Use consistent spacing from theme
         pack_config = {
             "pady": Theme.spacing.padding_sm,
             "padx": Theme.spacing.padding_sm,
@@ -331,7 +346,8 @@ class MainView(ctk.CTk):
         )
         args_label.pack(anchor="w", padx=Theme.spacing.padding_md, pady=(0, Theme.spacing.padding_sm))
         
-        self.tool_calls_frame._parent_canvas.yview_moveto(1.0)
+        # Auto-scroll tool calls panel
+        self.after_idle(lambda: self.tool_calls_frame._parent_canvas.yview_moveto(1.0))
 
     def add_tool_result(self, result: any, is_error: bool = False):
         """Add a tool result to the dedicated tool calls panel."""
@@ -359,7 +375,8 @@ class MainView(ctk.CTk):
         )
         result_label.pack(anchor="w", padx=Theme.spacing.padding_md, pady=(0, Theme.spacing.padding_sm))
         
-        self.tool_calls_frame._parent_canvas.yview_moveto(1.0)
+        # Auto-scroll tool calls panel
+        self.after_idle(lambda: self.tool_calls_frame._parent_canvas.yview_moveto(1.0))
 
     def log_tool_event(self, message: str):
         """Legacy method - redirects to tool calls panel."""
