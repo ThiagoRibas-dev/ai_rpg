@@ -210,3 +210,4 @@ ai_rpg.db
 
 # Output of the script that exports the codebase as a single text file
 list_dirs_and_files.txt
+chroma_db/*

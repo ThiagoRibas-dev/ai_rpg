@@ -64,8 +64,30 @@ class DBManager:
                     FOREIGN KEY (session_id) REFERENCES sessions (id) ON DELETE CASCADE
                 )
             """)
-        
+            self.conn.execute("""
+                CREATE TABLE IF NOT EXISTS turn_metadata (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id INTEGER NOT NULL,
+                    prompt_id INTEGER NOT NULL,  -- 🆕 Add this
+                    round_number INTEGER NOT NULL,
+                    summary TEXT NOT NULL,
+                    tags TEXT DEFAULT '[]',
+                    importance INTEGER DEFAULT 3,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (session_id) REFERENCES sessions (id) ON DELETE CASCADE,
+                    FOREIGN KEY (prompt_id) REFERENCES prompts (id)  -- 🆕 Add this
+                )
+            """)
+            
             # Create indexes for performance
+            self.conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_turn_metadata_session 
+                ON turn_metadata(session_id)
+            """)
+            self.conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_turn_metadata_importance 
+                ON turn_metadata(importance)
+            """)
             self.conn.execute("""
                 CREATE INDEX IF NOT EXISTS idx_memories_session 
                 ON memories(session_id)
@@ -382,3 +404,64 @@ class DBManager:
                 "by_kind": by_kind,
                 "most_accessed": most_accessed
             }
+
+    # ==================== Turn Metadata ====================
+    # In db_manager.py, create_turn_metadata
+    def create_turn_metadata(self, session_id: int, prompt_id: int, round_number: int, 
+                            summary: str, tags: List[str], importance: int) -> int:
+        """Create a turn metadata entry and return its ID."""
+        import json
+        tags_json = json.dumps(tags)
+        
+        with self.conn:
+            cursor = self.conn.execute(
+                """INSERT INTO turn_metadata 
+                (session_id, prompt_id, round_number, summary, tags, importance) 
+                VALUES (?, ?, ?, ?, ?, ?)""",
+                (session_id, prompt_id, round_number, summary, tags_json, importance)
+            )
+            return cursor.lastrowid
+
+    def get_turn_metadata_range(self, session_id: int, start_round: int, end_round: int) -> List[Dict[str, Any]]:
+        """Get metadata for a range of rounds."""
+        import json
+        
+        with self.conn:
+            cursor = self.conn.execute(
+                """SELECT round_number, summary, tags, importance 
+                FROM turn_metadata 
+                WHERE session_id = ? AND round_number BETWEEN ? AND ?
+                ORDER BY round_number ASC""",
+                (session_id, start_round, end_round)
+            )
+            results = []
+            for row in cursor.fetchall():
+                results.append({
+                    "round_number": row["round_number"],
+                    "summary": row["summary"],
+                    "tags": json.loads(row["tags"]),
+                    "importance": row["importance"]
+                })
+            return results
+
+    def get_all_turn_metadata(self, session_id: int) -> List[Dict[str, Any]]:
+        """Get all metadata for a session."""
+        import json
+        
+        with self.conn:
+            cursor = self.conn.execute(
+                """SELECT round_number, summary, tags, importance 
+                FROM turn_metadata 
+                WHERE session_id = ?
+                ORDER BY round_number ASC""",
+                (session_id,)
+            )
+            results = []
+            for row in cursor.fetchall():
+                results.append({
+                    "round_number": row["round_number"],
+                    "summary": row["summary"],
+                    "tags": json.loads(row["tags"]),
+                    "importance": row["importance"]
+                })
+            return results

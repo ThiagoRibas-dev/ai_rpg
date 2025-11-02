@@ -12,6 +12,7 @@ from app.llm.openai_connector import OpenAIConnector
 from app.tools.registry import ToolRegistry
 from app.io.schemas import TurnPlan, NarrativeStep, ActionChoices
 from app.models.message import Message
+from app.core.vector_store import VectorStore
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -47,6 +48,15 @@ MEMORY NOTES:
 - You don't need to create memory.upsert calls in tool results - those are handled by the Planner
 - Focus on using the retrieved memories to inform your narrative
 
+TURN METADATA INSTRUCTIONS:
+- After writing your narrative, also provide:
+  * turn_summary: A one-sentence summary of what happened this turn
+  * turn_tags: 3-5 tags categorizing this turn (e.g., 'combat', 'dialogue', 'discovery', 'travel')
+  * turn_importance: Rate 1-5 how important this turn is to the overall story
+    - 1 = Minor detail, small talk
+    - 3 = Normal gameplay, advancing the scene
+    - 5 = Critical plot point, major revelation, dramatic turning point
+
 Guidelines:
 - Your narration must align with the Planner's Intent.
 - Use second person ("You ...").
@@ -81,6 +91,7 @@ class Orchestrator:
         self.tool_event_callback: Callable[[str], None] | None = None
         self.llm_connector = self._get_llm_connector()
         self.tool_registry = ToolRegistry()
+        self.vector_store = VectorStore()  # 🆕 Initialize vector store
         self.view.orchestrator = self
         self.session: Session | None = None
         self.view.memory_inspector.orchestrator = self
@@ -212,7 +223,8 @@ class Orchestrator:
 
     def _assemble_context(self, base_template: str, session: GameSession) -> str:
         """
-        Assembles the final system prompt by combining Memory, Memories, World Info, base template, and Author's Note.
+        Assembles the final system prompt by combining Memory, Memories, Turn Metadata, 
+        World Info, base template, and Author's Note.
         """
         parts = []
 
@@ -227,12 +239,24 @@ class Orchestrator:
             memories_section = self._format_memories_for_context(relevant_memories)
             parts.append(memories_section)
 
-        # 3. World Info (keyword matching)
+        # 🆕 3. Relevant Turn Metadata (semantic search of past events)
+        if session.id:
+            recent_text = " ".join([msg.content for msg in recent_history[-5:]])
+            relevant_turns = self.vector_store.search_relevant_turns(
+                session_id=session.id,
+                query_text=recent_text,
+                top_k=5,
+                min_importance=3  # Only include important turns
+            )
+            if relevant_turns:
+                turn_metadata_section = self._format_turn_metadata_for_context(relevant_turns)
+                parts.append(turn_metadata_section)
+
+        # 4. World Info (keyword matching)
         if session.prompt_id:
             world_infos = self.db_manager.get_world_info_by_prompt(session.prompt_id)
             triggered_infos = []
             
-            # Get recent user messages to check for keyword triggers
             recent_text = " ".join([msg.content for msg in recent_history[-5:]])
             
             for wi in world_infos:
@@ -243,10 +267,10 @@ class Orchestrator:
             if triggered_infos:
                 parts.append("=== WORLD INFO ===\n" + "\n\n".join(triggered_infos) + "\n")
 
-        # 4. Base template
+        # 5. Base template
         parts.append(f"=== INSTRUCTIONS ===\n{base_template}\n")
 
-        # 5. Author's Note
+        # 6. Author's Note
         if session.authors_note and session.authors_note.strip():
             parts.append(f"=== AUTHOR'S NOTE ===\n{session.authors_note.strip()}\n")
 
@@ -260,7 +284,7 @@ class Orchestrator:
             return
 
         self.session.add_message("user", user_input)
-        self.view.add_message_bubble("user", user_input)  # Use bubble
+        self.view.add_message_bubble("user", user_input)
         self.view.clear_input()
 
         # 1) Plan
@@ -323,6 +347,8 @@ class Orchestrator:
             # Schedule refresh on main thread
             self.view.after(100, self.view.memory_inspector.refresh_memories)
 
+        
+
         # 3) Narrative + proposals
         try:
             tool_results_str = str(tool_results)
@@ -344,8 +370,41 @@ class Orchestrator:
             self.view.add_message_bubble("system", f"Error during narrative: {e}")
             return
 
-        self.view.add_message_bubble("assistant", narrative.narrative)  # Use bubble
+        self.view.add_message_bubble("assistant", narrative.narrative)
         self.session.add_message("assistant", narrative.narrative)
+
+        # 🆕 Store turn metadata
+        if session.id:
+            try:
+                round_number = len(self.session.get_history()) // 2
+                
+                # Store in SQL database
+                self.db_manager.create_turn_metadata(
+                    session_id=session.id,
+                    round_number=round_number,
+                    summary=narrative.turn_summary,
+                    tags=narrative.turn_tags,
+                    importance=narrative.turn_importance
+                )
+                
+                # Store in vector database for semantic search
+                self.vector_store.add_turn(
+                    session_id=session.id,
+                    prompt_id=session.prompt_id,  # 🆕 Pass prompt_id
+                    round_number=round_number,
+                    summary=narrative.turn_summary,
+                    tags=narrative.turn_tags,
+                    importance=narrative.turn_importance
+                )
+                
+                logger.debug(f"Stored metadata for turn {round_number}")
+                
+                # 🆕 Check if we should create a rolling summary
+                if round_number % 50 == 0:
+                    self._create_rolling_summary(session)
+            
+            except Exception as e:
+                logger.error(f"Error storing turn metadata: {e}", exc_info=True)
 
         # 4) Apply patches and memories
         if narrative.proposed_patches:
@@ -423,3 +482,103 @@ class Orchestrator:
             return
         session.session_data = self.session.to_json()
         self.db_manager.update_session(session)
+
+
+    def _format_turn_metadata_for_context(self, turns: List[Dict[str, Any]]) -> str:
+        """Format turn metadata for inclusion in the system prompt."""
+        if not turns:
+            return ""
+        
+        lines = ["=== RELEVANT PAST EVENTS ==="]
+        
+        for turn in turns:
+            importance_stars = "★" * turn["importance"]
+            tags_str = f" [{', '.join(turn['tags'])}]" if turn['tags'] else ""
+            
+            lines.append(
+                f"Turn {turn['round_number']} ({importance_stars}){tags_str}\n"
+                f"   {turn['summary']}"
+            )
+        
+        lines.append("")  # Empty line after
+        return "\n".join(lines)
+
+    def _create_rolling_summary(self, session: GameSession):
+        """
+        Every 50 rounds, create a chapter summary from metadata.
+        """
+        if not session.id:
+            return
+        
+        # Calculate the current round number
+        current_round = len(self.session.get_history()) // 2
+        
+        # Only create summary at 50, 100, 150, etc.
+        if current_round % 50 != 0:
+            return
+        
+        chapter_num = current_round // 50
+        start_round = (chapter_num - 1) * 50 + 1
+        end_round = current_round
+        
+        logger.info(f"Creating rolling summary for rounds {start_round}-{end_round}")
+        
+        # Get all metadata from this chapter
+        chapter_metadata = self.db_manager.get_turn_metadata_range(
+            session.id, start_round, end_round
+        )
+        
+        if not chapter_metadata:
+            logger.warning("No metadata found for rolling summary")
+            return
+        
+        # Format metadata for the prompt
+        metadata_text = "\n".join([
+            f"Turn {m['round_number']} (Importance: {m['importance']}): {m['summary']}"
+            for m in chapter_metadata
+        ])
+        
+        # Create summary prompt
+        summary_prompt = f"""You are summarizing a chapter of an ongoing RPG story.
+
+        Rounds {start_round}-{end_round} Summaries:
+        {metadata_text}
+
+        Create a cohesive narrative summary (2-3 paragraphs) that captures:
+        - Major plot developments and story progression
+        - Key character moments and decisions
+        - Important discoveries, battles, or revelations
+        - How the situation has changed from start to end
+
+        Focus on the most important events (importance 4-5) but weave in context from other turns.
+        Write in past tense, third person, as a story recap.
+        """
+        
+        try:
+            # Generate summary (streaming to get plain text)
+            summary_parts = []
+            for chunk in self.llm_connector.get_streaming_response(
+                system_prompt="You are a narrative summarizer for an RPG game.",
+                chat_history=[Message(role="user", content=summary_prompt)]
+            ):
+                summary_parts.append(chunk)
+            
+            summary = "".join(summary_parts).strip()
+            
+            # Store as high-priority episodic memory
+            self.db_manager.create_memory(
+                session_id=session.id,
+                kind="episodic",
+                content=f"[Chapter {chapter_num} Summary - Rounds {start_round}-{end_round}]\n\n{summary}",
+                priority=5,
+                tags=[f"chapter_{chapter_num}", "summary", "chapter_summary"]
+            )
+            
+            logger.info(f"Created chapter {chapter_num} summary")
+            
+            # Optionally show in UI
+            if self.tool_event_callback:
+                self.tool_event_callback(f"📖 Chapter {chapter_num} summary created")
+        
+        except Exception as e:
+            logger.error(f"Error creating rolling summary: {e}", exc_info=True)

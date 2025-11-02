@@ -32,6 +32,11 @@ class NarrativeStep(BaseModel):
     narrative: str
     proposed_patches: List[Patch]
     memory_intents: List[MemoryIntent]
+    
+    # 🆕 Turn metadata (no extra LLM call!)
+    turn_summary: str = Field(..., description="One-sentence summary of what happened this turn")
+    turn_tags: List[str] = Field(..., description="3-5 tags categorizing this turn (e.g., 'combat', 'dialogue', 'discovery')")
+    turn_importance: int = Field(..., description="How important is this turn? (1=minor detail, 3=normal, 5=critical plot point)")
 
 class ActionChoices(BaseModel):
     """

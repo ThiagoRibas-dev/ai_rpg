@@ -7,9 +7,24 @@ google.genai
 grpcio
 grpcio-status
 pydantic
+pydantic-settings  # 🆕 Required by chromadb
 python-dotenv
 customtkinter
 requests
+
+# Vector store and embeddings
+chromadb
+
+# If Nvidia GPU
+#onnxruntime-gpu
+
+# If Windows on CPU
+onnxruntime-directml
+
+# If Linux on CPU
+#onnxruntime
+
+fastembed
 
 # Optional (uncomment if/when you add local RAG)
 # faiss-cpu
