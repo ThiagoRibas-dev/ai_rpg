@@ -55,22 +55,21 @@ def _remove_title_field(d: Any):
 
 def _remove_anyof_field(d: Any):
     """
-    Recursively simplifies 'anyOf' fields by picking the first non-null type.
+    Recursively simplifies union constructs (anyOf/oneOf/allOf) by choosing the first
+    non-null typed branch. This is a pragmatic simplification for tool arg schemas.
     """
     if isinstance(d, dict):
-        if 'anyOf' in d and isinstance(d['anyOf'], list):
-            non_null_schema = next((item for item in d['anyOf' if 'anyOf' in d else 'allOf'] if item.get('type') != 'null'), None)
-            if non_null_schema:
-                # Delete the anyOf key and update the dict with the first non-null schema
-                del d['anyOf' if 'anyOf' in d else 'allOf']
-                d.update(non_null_schema)
-        
-        for value in d.values():
-            _remove_anyof_field(value)
-
+        for key in ("anyOf", "oneOf", "allOf"):
+            if key in d and isinstance(d[key], list):
+                non_null = next((it for it in d[key] if it.get("type") and it.get("type") != "null"), None)
+                if non_null:
+                    d.pop(key, None)
+                    d.update(non_null)
+        for v in list(d.values()):
+            _remove_anyof_field(v)
     elif isinstance(d, list):
-        for item in d:
-            _remove_anyof_field(item)
+        for it in d:
+            _remove_anyof_field(it)
 
 def _map_json_type_to_pydantic(prop_schema: Dict[str, Any]) -> Any:
     """Maps a JSON schema type to a Pydantic type."""

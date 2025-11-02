@@ -22,8 +22,8 @@ class RagSearch(BaseModel):
     name: Literal["rag.search"] = "rag.search"
     query: str = Field(..., description="The query to search for.")
     k: int = Field(2, description="The number of chunks to return.")
-    # TODO: Define a structured Filter model instead of a list of strings.
-    filters: Optional[List[str]] = Field(None, description="A list of filters to apply, e.g., ['key:value'].")
+    # Free-form filter dict (kept simple for MVP).
+    filters: Optional[dict] = Field(None, description="Optional filter object, e.g., {'topic': 'ambush'}.")
 
 class RngRoll(BaseModel):
     """Rolls a dice."""

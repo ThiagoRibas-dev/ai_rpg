@@ -161,7 +161,7 @@ class MainView(ctk.CTk):
             wraplength=bubble_width,
             justify="left"
         )
-        content_label.pack(anchor="w", padx=Theme.spacing.bubble_padding_x, 
+        content_label.pack(anchor="w", padx=Theme.spacing.padding_md, 
                           pady=(Theme.spacing.padding_xs, Theme.spacing.bubble_padding_y_bottom))
         
         # Store reference to the label for resize updates
@@ -326,7 +326,7 @@ class MainView(ctk.CTk):
         
         header = ctk.CTkLabel(
             call_frame,
-            text=f"🔧 {tool_name}",
+            text=f"🛠 {tool_name}",
             font=Theme.fonts.subheading,
             text_color=style["header_color"]
         )

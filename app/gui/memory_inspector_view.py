@@ -180,7 +180,7 @@ class MemoryInspectorView(ctk.CTkFrame):
         # Access count
         access_label = ctk.CTkLabel(
             header, 
-            text=f"↻ {memory.access_count}",
+            text=f"↺ {memory.access_count}",
             text_color="gray"
         )
         access_label.pack(side="right", padx=5)

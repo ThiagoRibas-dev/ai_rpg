@@ -29,6 +29,7 @@ _TOOL_SCHEMA_MAP: Dict[str, Type[BaseModel]] = {
     "state.apply_patch": tool_schemas.StateApplyPatch,
     "state.query": tool_schemas.StateQuery,
     "time.now": tool_schemas.TimeNow,
+    "time.advance": tool_schemas.TimeAdvance,
 }
 
 class ToolRegistry:
@@ -75,13 +76,14 @@ class ToolRegistry:
                         required.remove("name")
 
                     parameters_schema = {
+                        "type": "object",
                         "properties": properties,
                         "required": required,
                     }
                     if not properties:
-                        del parameters_schema["properties"]
+                        parameters_schema.pop("properties", None)
                     if not required:
-                        del parameters_schema["required"]
+                        parameters_schema.pop("required", None)
 
                     transformed_schema = {
                         "name": tool_name,

@@ -110,7 +110,7 @@ class DBManager:
     def get_all_prompts(self) -> List[Prompt]:
         with self.conn:
             cursor = self.conn.execute("SELECT id, name, content FROM prompts")
-            return [Prompt(**row) for row in cursor.fetchall()]
+            return [Prompt(**dict(row)) for row in cursor.fetchall()]
 
     def update_prompt(self, prompt: Prompt):
         with self.conn:
@@ -157,22 +157,22 @@ class DBManager:
 
     def get_all_sessions(self) -> List[GameSession]:
         with self.conn:
-            cursor = self.conn.execute("SELECT id, name, session_data, prompt_id, memory, authors_note FROM sessions")
-            return [GameSession(**row) for row in cursor.fetchall()]
+            cursor = self.conn.execute("SELECT id, name, session_data, prompt_id, memory, authors_note, game_time FROM sessions")
+            return [GameSession(**dict(row)) for row in cursor.fetchall()]
 
     def get_sessions_by_prompt(self, prompt_id: int) -> List[GameSession]:
         with self.conn:
             cursor = self.conn.execute(
-                "SELECT id, name, session_data, prompt_id, memory, authors_note FROM sessions WHERE prompt_id = ?", 
+                "SELECT id, name, session_data, prompt_id, memory, authors_note, game_time FROM sessions WHERE prompt_id = ?", 
                 (prompt_id,)
             )
-            return [GameSession(**row) for row in cursor.fetchall()]
+            return [GameSession(**dict(row)) for row in cursor.fetchall()]
 
     def update_session(self, session: GameSession):
         with self.conn:
             self.conn.execute(
-                "UPDATE sessions SET name = ?, session_data = ?, prompt_id = ?, memory = ?, authors_note = ? WHERE id = ?",
-                (session.name, session.session_data, session.prompt_id, session.memory, session.authors_note, session.id)
+                "UPDATE sessions SET name = ?, session_data = ?, prompt_id = ?, memory = ?, authors_note = ?, game_time = ? WHERE id = ?",
+                (session.name, session.session_data, session.prompt_id, session.memory, session.authors_note, session.game_time, session.id)
             )
 
     def update_session_context(self, session_id: int, memory: str, authors_note: str):
@@ -181,6 +181,14 @@ class DBManager:
             self.conn.execute(
                 "UPDATE sessions SET memory = ?, authors_note = ? WHERE id = ?",
                 (memory, authors_note, session_id)
+            )
+
+    def update_session_game_time(self, session_id: int, game_time: str):
+        """Update only the fictional game_time field of a session."""
+        with self.conn:
+            self.conn.execute(
+                "UPDATE sessions SET game_time = ? WHERE id = ?",
+                (game_time, session_id)
             )
 
     def get_session_context(self, session_id: int) -> Optional[Dict[str, str]]:
@@ -210,7 +218,7 @@ class DBManager:
                 "SELECT id, prompt_id, keywords, content FROM world_info WHERE prompt_id = ?",
                 (prompt_id,)
             )
-            return [WorldInfo(**row) for row in cursor.fetchall()]
+            return [WorldInfo(**dict(row)) for row in cursor.fetchall()]
 
     def update_world_info(self, world_info: WorldInfo):
         with self.conn:
@@ -258,13 +266,13 @@ class DBManager:
         with self.conn:
             cursor = self.conn.execute(
                 """SELECT id, session_id, kind, content, priority, tags, 
-                        created_at, last_accessed, access_count 
+                        created_at, fictional_time, last_accessed, access_count 
                 FROM memories 
                 WHERE session_id = ? 
                 ORDER BY created_at DESC""",
                 (session_id,)
             )
-            return [Memory(**row) for row in cursor.fetchall()]
+            return [Memory(**dict(row)) for row in cursor.fetchall()]
 
     def query_memories(self, session_id: int, kind: str | None = None, 
                     tags: List[str] | None = None, query_text: str | None = None,
@@ -273,7 +281,7 @@ class DBManager:
         from app.models.memory import Memory
         
         query = """SELECT id, session_id, kind, content, priority, tags, 
-                        created_at, last_accessed, access_count 
+                        created_at, fictional_time, last_accessed, access_count 
                 FROM memories 
                 WHERE session_id = ?"""
         params = [session_id]
@@ -298,7 +306,7 @@ class DBManager:
         
         with self.conn:
             cursor = self.conn.execute(query, params)
-            return [Memory(**row) for row in cursor.fetchall()]
+            return [Memory(**dict(row)) for row in cursor.fetchall()]
 
     def update_memory_access(self, memory_id: int):
         """Update access timestamp and increment access count."""
@@ -353,14 +361,14 @@ class DBManager:
         with self.conn:
             cursor = self.conn.execute(
                 """SELECT id, session_id, kind, content, priority, tags, 
-                        created_at, last_accessed, access_count 
+                        created_at, fictional_time, last_accessed, access_count 
                 FROM memories 
                 WHERE id = ?""",
                 (memory_id,)
             )
             row = cursor.fetchone()
             if row:
-                return Memory(**row)
+                return Memory(**dict(row))
             return None
 
     def delete_memory(self, memory_id: int):

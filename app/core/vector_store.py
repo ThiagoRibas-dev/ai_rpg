@@ -54,7 +54,7 @@ class VectorStore:
              summary: str, tags: List[str], importance: int):
         """Add a turn's metadata to the vector store."""
         try:
-            embedding = list(self.embed_model.embed([summary]))[0].tolist()
+            embedding = next(self.embed_model.embed([summary]))
             
             doc_id = f"{session_id}_{round_number}"
             self.collection.add(
@@ -77,7 +77,7 @@ class VectorStore:
                              top_k: int = 10, min_importance: int = 2) -> List[Dict[str, Any]]:
         """Semantic search for relevant past turns."""
         # Generate query embedding
-        query_embedding = list(self.embed_model.embed([query_text]))[0].tolist()
+        query_embedding = next(self.embed_model.embed([query_text]))
         
         # Search with filters
         results = self.collection.query(

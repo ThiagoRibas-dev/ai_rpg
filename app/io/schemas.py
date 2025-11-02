@@ -10,7 +10,7 @@ class ToolCall(BaseModel):
 
 class TurnPlan(BaseModel):
     thought: str
-    tool_calls: List[ToolCall]
+    tool_calls: List[ToolCall] = Field(default_factory=list)
 
 class PatchOp(BaseModel):
     op: Literal["add", "remove", "replace"]
@@ -30,8 +30,8 @@ class MemoryIntent(BaseModel):
 
 class NarrativeStep(BaseModel):
     narrative: str
-    proposed_patches: List[Patch]
-    memory_intents: List[MemoryIntent]
+    proposed_patches: List[Patch] = Field(default_factory=list)
+    memory_intents: List[MemoryIntent] = Field(default_factory=list)
     
     # 🆕 Turn metadata (no extra LLM call!)
     turn_summary: str = Field(..., description="One-sentence summary of what happened this turn")
@@ -43,4 +43,4 @@ class ActionChoices(BaseModel):
     A set of 3 concise action choices for the user to select from.
     Each choice should be a short, actionable statement that the player can say or do.
     """
-    choices: List[str] = Field(..., description="A list of concise action options for the user.", min_length=3, max_length=3)
+    choices: List[str] = Field(..., description="A list of concise action options for the user.", min_length=3, max_length=5)

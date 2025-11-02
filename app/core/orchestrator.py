@@ -300,9 +300,10 @@ class Orchestrator:
         try:
             chat_history = self._get_truncated_history()
 
+            import json as _json
             base_plan_template = PLAN_TEMPLATE.format(
                 identity=chat_history[0].content,
-                tool_schemas=self.tool_registry.get_all_schemas()
+                tool_schemas=_json.dumps(self.tool_registry.get_all_schemas(), indent=2)
             )
             system_prompt_plan = self._assemble_context(base_plan_template, session)
             
@@ -311,6 +312,10 @@ class Orchestrator:
                 chat_history=chat_history,
                 output_schema=TurnPlan
             )
+            if plan_dict is None: # Add this check
+                logger.error("LLM returned no structured response for TurnPlan.")
+                self.view.add_message_bubble("system", "Error: AI failed to generate a valid plan.")
+                return
             plan = TurnPlan.model_validate(plan_dict)
             self.view.add_thought_bubble(plan.thought)  # Use thought bubble
         except Exception as e:
@@ -333,7 +338,8 @@ class Orchestrator:
                     # Pass context to tools that need it
                     context = {
                         "session_id": session.id,
-                        "db_manager": self.db_manager
+                        "db_manager": self.db_manager,
+                        "current_game_time": getattr(session, "game_time", None),
                     }
                     
                     result = self.tool_registry.execute_tool(tool_name, tool_args, context=context)
@@ -341,6 +347,13 @@ class Orchestrator:
                     
                     # Add result to tool calls panel
                     self.view.add_tool_result(result, is_error=False)
+                    # Persist game time updates (time.advance)
+                    if tool_name == "time.advance" and isinstance(result, dict) and "new_time" in result:
+                        try:
+                            self.db_manager.update_session_game_time(session.id, result["new_time"])
+                            session.game_time = result["new_time"]
+                        except Exception as _e:
+                            logger.error(f"Failed to update game time: {_e}")
                 except Exception as e:
                     logger.error(f"Error executing tool {tool_name}: {e}")
                     tool_results.append({"tool_name": tool_name, "arguments": call.arguments, "error": str(e)})
@@ -392,6 +405,7 @@ class Orchestrator:
                 # Store in SQL database
                 self.db_manager.create_turn_metadata(
                     session_id=session.id,
+                    prompt_id=session.prompt_id,
                     round_number=round_number,
                     summary=narrative.turn_summary,
                     tags=narrative.turn_tags,
@@ -518,11 +532,14 @@ class Orchestrator:
         """
         Every 50 rounds, create a chapter summary from metadata.
         """
+        if not self.session: # Add this check
+            logger.warning("No active session for rolling summary.")
+            return
         if not session.id:
             return
         
         # Calculate the current round number
-        current_round = len(self.session.get_history()) // 2
+        current_round: int = len(self.session.get_history()) // 2
         
         # Only create summary at 50, 100, 150, etc.
         if current_round % 50 != 0:
