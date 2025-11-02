@@ -474,8 +474,9 @@ class MainView(ctk.CTk):
         if not self.selected_prompt:
             self.add_message_bubble("system", "Please select a prompt first")
             return
-        
-        world_info_view = WorldInfoManagerView(self, self.db_manager, self.selected_prompt.id)
+
+        # Pass vector store through orchestrator
+        world_info_view = WorldInfoManagerView(self, self.db_manager, self.selected_prompt.id, getattr(self.orchestrator, "vector_store", None))
         world_info_view.grab_set()
 
     def refresh_session_list(self, prompt_id: int | None = None):

@@ -44,3 +44,9 @@ class ActionChoices(BaseModel):
     Each choice should be a short, actionable statement that the player can say or do.
     """
     choices: List[str] = Field(..., description="A list of concise action options for the user.", min_length=3, max_length=5)
+
+class AuditResult(BaseModel):
+    ok: bool = True
+    notes: Optional[str] = None
+    proposed_patches: Optional[List[Patch]] = Field(default_factory=list)
+    memory_updates: Optional[List[MemoryIntent]] = Field(default_factory=list)

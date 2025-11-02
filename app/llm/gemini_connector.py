@@ -3,7 +3,7 @@ from google import genai
 from google.genai import types
 from pydantic import BaseModel
 
-from typing import Dict, Any, Type, List, Generator
+from typing import Type, List, Generator
 from app.llm.llm_connector import LLMConnector
 from app.models.message import Message
 

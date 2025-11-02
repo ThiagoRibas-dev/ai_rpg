@@ -2,10 +2,11 @@ import customtkinter as ctk
 from app.models.world_info import WorldInfo
 
 class WorldInfoManagerView(ctk.CTkToplevel):
-    def __init__(self, master, db_manager, prompt_id: int):
+    def __init__(self, master, db_manager, prompt_id: int, vector_store=None):
         super().__init__(master)
         self.db_manager = db_manager
         self.prompt_id = prompt_id
+        self.vector_store = vector_store
         self.selected_world_info = None
 
         self.title("World Info Manager")
@@ -100,6 +101,11 @@ class WorldInfoManagerView(ctk.CTkToplevel):
     def new_world_info(self):
         """Create a new world info entry."""
         wi = self.db_manager.create_world_info(self.prompt_id, "New Entry", "")
+        if self.vector_store:
+            try:
+                self.vector_store.upsert_world_info(self.prompt_id, wi.id, wi.content)
+            except Exception:
+                pass
         self.refresh_list()
         self.select_world_info(wi)
 
@@ -115,6 +121,11 @@ class WorldInfoManagerView(ctk.CTkToplevel):
         self.selected_world_info.content = content
 
         self.db_manager.update_world_info(self.selected_world_info)
+        if self.vector_store:
+            try:
+                self.vector_store.upsert_world_info(self.prompt_id, self.selected_world_info.id, content)
+            except Exception:
+                pass
         self.refresh_list()
 
     def delete_world_info(self):
@@ -123,6 +134,11 @@ class WorldInfoManagerView(ctk.CTkToplevel):
             return
 
         self.db_manager.delete_world_info(self.selected_world_info.id)
+        if self.vector_store:
+            try:
+                self.vector_store.delete_world_info(self.prompt_id, self.selected_world_info.id)
+            except Exception:
+                pass
         self.selected_world_info = None
         
         self.keywords_entry.delete(0, "end")

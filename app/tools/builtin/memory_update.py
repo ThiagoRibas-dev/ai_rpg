@@ -30,6 +30,14 @@ def handler(memory_id: int, content: str | None = None, priority: int | None = N
         raise ValueError(f"Memory {memory_id} not found in current session")
     
     updated = db_manager.update_memory(memory_id, content=content, priority=priority, tags=tags)
+
+    # Update embedding if available
+    vs = context.get("vector_store")
+    try:
+        if vs:
+            vs.upsert_memory(session_id, updated.id, updated.content, updated.kind, updated.tags_list(), updated.priority)
+    except Exception:
+        pass
     
     return {
         "id": updated.id,

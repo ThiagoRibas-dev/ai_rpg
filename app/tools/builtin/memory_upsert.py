@@ -26,10 +26,20 @@ def handler(kind: str, content: str, priority: int = 3, tags: list[str] | None =
         raise ValueError("Missing session context")
     
     memory = db_manager.create_memory(session_id, kind, content, priority, tags or [])
-    
+
+    # If a vector store is available, embed
+    vs = context.get("vector_store")
+    try:
+        if vs:
+            vs.upsert_memory(session_id, memory.id, content, kind, tags or [], priority)
+    except Exception:
+        pass
+
     return {
         "id": memory.id,
         "created": True,
         "kind": kind,
-        "priority": priority
+        "priority": priority,
+        "content": content,
+        "tags": tags or [],
     }

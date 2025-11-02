@@ -34,6 +34,7 @@ class VectorStore:
             path=persist_directory,
             settings=Settings(anonymized_telemetry=False)
         )
+        # Turn summaries collection
         self.collection = self.client.get_or_create_collection(
             name="turn_metadata",
             metadata={"hnsw:space": "cosine"}
@@ -49,12 +50,22 @@ class VectorStore:
             logger.error(f"Failed to load embedding model '{model_name}': {e}")
             logger.info("Falling back to default model: BAAI/bge-small-en-v1.5")
             self.embed_model = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
+
+        # New collections: per-memory embeddings and world info
+        self.memories_col = self.client.get_or_create_collection(
+            name="memories",
+            metadata={"hnsw:space": "cosine"}
+        )
+        self.world_info_col = self.client.get_or_create_collection(
+            name="world_info",
+            metadata={"hnsw:space": "cosine"}
+        )
     
     def add_turn(self, session_id: int, prompt_id: int, round_number: int, 
              summary: str, tags: List[str], importance: int):
         """Add a turn's metadata to the vector store."""
         try:
-            embedding = next(self.embed_model.embed([summary]))
+            embedding = list(self.embed_model.embed([summary]))[0]
             
             doc_id = f"{session_id}_{round_number}"
             self.collection.add(
@@ -77,7 +88,7 @@ class VectorStore:
                              top_k: int = 10, min_importance: int = 2) -> List[Dict[str, Any]]:
         """Semantic search for relevant past turns."""
         # Generate query embedding
-        query_embedding = next(self.embed_model.embed([query_text]))
+        query_embedding = list(self.embed_model.embed([query_text]))[0]
         
         # Search with filters
         results = self.collection.query(
@@ -92,7 +103,7 @@ class VectorStore:
         )
         
         # Format results
-        if not results['ids'] or not results['ids'][0]:
+        if not results.get('ids') or not results['ids'] or not results['ids'][0]:
             return []
         
         formatted_results = []
@@ -116,3 +127,105 @@ class VectorStore:
         if all_items['ids']:
             self.collection.delete(ids=all_items['ids'])
             logger.info(f"Deleted {len(all_items['ids'])} turns from vector store for session {session_id}")
+
+    # ===== Memories embeddings =====
+    def upsert_memory(self, session_id: int, memory_id: int, text: str,
+                      kind: str, tags: List[str], priority: int):
+        try:
+            emb = list(self.embed_model.embed([text]))[0]
+            doc_id = f"{session_id}:{memory_id}"
+            self.memories_col.upsert(
+                ids=[doc_id],
+                embeddings=[emb],
+                metadatas=[{
+                    "session_id": session_id,
+                    "memory_id": memory_id,
+                    "kind": kind,
+                    "tags": ",".join(tags or []),
+                    "priority": int(priority),
+                }]
+            )
+        except Exception as e:
+            logger.error(f"upsert_memory failed: {e}", exc_info=True)
+
+    def delete_memory(self, session_id: int, memory_id: int):
+        doc_id = f"{session_id}:{memory_id}"
+        try:
+            self.memories_col.delete(ids=[doc_id])
+        except Exception as e:
+            logger.error(f"delete_memory failed: {e}", exc_info=True)
+
+    def search_memories(self, session_id: int, query_text: str, k: int = 8,
+                        min_priority: int = 1) -> List[Dict[str, Any]]:
+        if not query_text.strip():
+            return []
+        emb = list(self.embed_model.embed([query_text]))[0]
+        res = self.memories_col.query(
+            query_embeddings=[emb],
+            n_results=k,
+            where={
+                "$and": [
+                    {"session_id": {"$eq": session_id}},
+                    {"priority": {"$gte": int(min_priority)}},
+                ]
+            }
+        )
+        if not res.get("ids") or not res["ids"] or not res["ids"][0]:
+            return []
+        out = []
+        for i, md in enumerate(res["metadatas"][0]):
+            out.append({
+                "session_id": md["session_id"],
+                "memory_id": md["memory_id"],
+                "kind": md.get("kind"),
+                "tags": (md.get("tags") or "").split(",") if md.get("tags") else [],
+                "priority": md.get("priority", 3),
+                "distance": res["distances"][0][i] if "distances" in res else None
+            })
+        return out
+
+    # ===== World info embeddings =====
+    def upsert_world_info(self, prompt_id: int, world_info_id: int, text: str, tags: List[str] | None = None):
+        try:
+            emb = list(self.embed_model.embed([text]))[0]
+            doc_id = f"{prompt_id}:{world_info_id}"
+            self.world_info_col.upsert(
+                ids=[doc_id],
+                embeddings=[emb],
+                metadatas=[{
+                    "prompt_id": prompt_id,
+                    "world_info_id": world_info_id,
+                    "tags": ",".join(tags or []),
+                    "text": text[:4000],
+                }]
+            )
+        except Exception as e:
+            logger.error(f"upsert_world_info failed: {e}", exc_info=True)
+
+    def delete_world_info(self, prompt_id: int, world_info_id: int):
+        doc_id = f"{prompt_id}:{world_info_id}"
+        try:
+            self.world_info_col.delete(ids=[doc_id])
+        except Exception as e:
+            logger.error(f"delete_world_info failed: {e}", exc_info=True)
+
+    def search_world_info(self, prompt_id: int, query_text: str, k: int = 4) -> List[Dict[str, Any]]:
+        if not query_text.strip():
+            return []
+        emb = list(self.embed_model.embed([query_text]))[0]
+        res = self.world_info_col.query(
+            query_embeddings=[emb],
+            n_results=k,
+            where={"prompt_id": {"$eq": prompt_id}}
+        )
+        if not res.get("ids") or not res["ids"] or not res["ids"][0]:
+            return []
+        out = []
+        for i, md in enumerate(res["metadatas"][0]):
+            out.append({
+                "world_info_id": md["world_info_id"],
+                "text": md.get("text", ""),
+                "tags": (md.get("tags") or "").split(",") if md.get("tags") else [],
+                "distance": res["distances"][0][i] if "distances" in res else None
+            })
+        return out

@@ -80,6 +80,7 @@ class MemoryQuery(BaseModel):
     tags: Optional[List[str]] = Field(None, description="Filter by tags (returns memories with any matching tag)")
     query_text: Optional[str] = Field(None, description="Search for text within memory content")
     limit: int = Field(5, description="Maximum number of memories to return (1-20)")
+    semantic: Optional[bool] = Field(False, description="Use semantic retrieval when true (blended with filters).")
 
 class MemoryUpdate(BaseModel):
     """Updates an existing memory's content, priority, or tags."""

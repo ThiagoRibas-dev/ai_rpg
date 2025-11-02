@@ -26,5 +26,12 @@ def handler(memory_id: int, **context) -> dict:
         raise ValueError(f"Memory {memory_id} not found in current session")
     
     db_manager.delete_memory(memory_id)
-    
+    # Remove from embeddings if available
+    vs = context.get("vector_store")
+    try:
+        if vs:
+            vs.delete_memory(session_id, memory_id)
+    except Exception:
+        pass
+
     return {"id": memory_id, "deleted": True}

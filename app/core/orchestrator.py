@@ -18,12 +18,20 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 MAX_HISTORY_MESSAGES = 20
+TOOL_BUDGET = 4
 
 PLAN_TEMPLATE = """
 {identity}
 
 # PLANNING STEP
 Your goal is to select and execute the most appropriate tools to respond to the user's input and advance the game state.
+
+CHECKLIST (answer briefly before any tool calls):
+- Is the player’s requested action possible right now? If trivial, describe outcome and avoid tools.
+- If uncertain about facts, call state.query first.
+- If mechanics apply, state DC rationale and which rolls are needed.
+- Specify exactly which tools you’ll call and why (max {tool_budget}).
+- Specify intended state/memory changes.
 
 MEMORY MANAGEMENT GUIDELINES:
 - Before making important decisions, use memory.query to check if you have relevant past information
@@ -70,7 +78,7 @@ Guidelines:
 - Your narration must align with the Planner's Intent.
 - Use second person ("You ...").
 - Respect tool outcomes; do not fabricate mechanics. If tool results are empty, rely primarily on the Planner's Intent.
-- Propose minimal patches and appropriate memory intents.
+- Consistency checks: do not contradict state.query results. If you detect an inconsistency, propose a minimal patch.
 
 Tool results:
 {tool_results}
@@ -101,6 +109,7 @@ class Orchestrator:
         self.llm_connector = self._get_llm_connector()
         self.tool_registry = ToolRegistry()
         self.vector_store = VectorStore()  # 🆕 Initialize vector store
+        self._indexed_world_prompts: set[int] = set()
         self.view.orchestrator = self
         self.session: Session | None = None
         self.view.memory_inspector.orchestrator = self
@@ -162,7 +171,15 @@ class Orchestrator:
         if not all_memories:
             return []
         
-        # Score each memory
+        # Semantic top-k (blend with keyword/priority)
+        semantic_hits = []
+        try:
+            semantic_hits = self.vector_store.search_memories(session.id, recent_text, k=min(12, limit * 2), min_priority=1)
+        except Exception:
+            semantic_hits = []
+        hit_ids = {h["memory_id"] for h in semantic_hits}
+
+        # Score each memory (existing SQL list)
         scored_memories = []
         for mem in all_memories:
             score = 0
@@ -189,6 +206,9 @@ class Orchestrator:
             except (ValueError, AttributeError):
                 pass
             
+            # Boost if semantic match
+            if mem.id in hit_ids:
+                score += 50
             scored_memories.append((score, mem))
         
         # Sort by score and take top N
@@ -264,20 +284,20 @@ class Orchestrator:
                 turn_metadata_section = self._format_turn_metadata_for_context(relevant_turns)
                 parts.append(turn_metadata_section)
 
-        # 5. World Info (keyword matching)
+        # 5. World Info (semantic RAG, lazy indexing)
         if session.prompt_id:
-            world_infos = self.db_manager.get_world_info_by_prompt(session.prompt_id)
-            triggered_infos = []
-            
-            recent_text = " ".join([msg.content for msg in recent_history[-5:]])
-            
-            for wi in world_infos:
-                keywords = [k.strip().lower() for k in wi.keywords.split(",")]
-                if any(keyword in recent_text.lower() for keyword in keywords):
-                    triggered_infos.append(wi.content)
-            
-            if triggered_infos:
-                parts.append("### WORLD INFO\n" + "\n\n".join(triggered_infos) + "\n")
+            try:
+                if session.prompt_id not in self._indexed_world_prompts:
+                    # Index all WI for this prompt once
+                    for wi in self.db_manager.get_world_info_by_prompt(session.prompt_id):
+                        self.vector_store.upsert_world_info(session.prompt_id, wi.id, wi.content)
+                    self._indexed_world_prompts.add(session.prompt_id)
+                recent_text = " ".join([msg.content for msg in recent_history[-5:]])
+                wi_hits = self.vector_store.search_world_info(session.prompt_id, recent_text, k=4)
+                if wi_hits:
+                    parts.append("### WORLD INFO\n" + "\n\n".join([h["text"] for h in wi_hits]) + "\n")
+            except Exception:
+                pass
 
         # 6. Author's Note
         if session.authors_note and session.authors_note.strip():
@@ -303,7 +323,8 @@ class Orchestrator:
             import json as _json
             base_plan_template = PLAN_TEMPLATE.format(
                 identity=chat_history[0].content,
-                tool_schemas=_json.dumps(self.tool_registry.get_all_schemas(), indent=2)
+                tool_schemas=_json.dumps(self.tool_registry.get_all_schemas(), indent=2),
+                tool_budget=TOOL_BUDGET,
             )
             system_prompt_plan = self._assemble_context(base_plan_template, session)
             
@@ -323,10 +344,10 @@ class Orchestrator:
             self.view.add_message_bubble("system", f"Error during planning: {e}")
             return
 
-        # 2) Execute tools
+        # 2) Execute tools (enforce a small budget)
         tool_results: List[Dict[str, Any]] = []
         if plan.tool_calls:
-            for call in plan.tool_calls:
+            for call in plan.tool_calls[:TOOL_BUDGET]:
                 try:
                     tool_name = call.name
                     tool_args_str = call.arguments or "{}"
@@ -340,6 +361,7 @@ class Orchestrator:
                         "session_id": session.id,
                         "db_manager": self.db_manager,
                         "current_game_time": getattr(session, "game_time", None),
+                        "vector_store": self.vector_store,
                     }
                     
                     result = self.tool_registry.execute_tool(tool_name, tool_args, context=context)
@@ -371,6 +393,27 @@ class Orchestrator:
             # Schedule refresh on main thread
             self.view.after(100, self.view.memory_inspector.refresh_memories)
 
+        # 2.5) Consistency audit (quick pass)
+        try:
+            audit_messages = self._get_truncated_history()
+            audit_prompt = "You are a consistency auditor. In <=3 bullets, list contradictions between planned tool results and likely world state; else say OK. If patches are needed, propose minimal JSON patches."
+            from app.io.schemas import AuditResult
+            audit_dict = self.llm_connector.get_structured_response(
+                system_prompt=audit_prompt,
+                chat_history=audit_messages + [Message(role="system", content=str(tool_results))],
+                output_schema=AuditResult
+            )
+            audit = AuditResult.model_validate(audit_dict)
+            if not audit.ok:
+                for patch in audit.proposed_patches or []:
+                    args = {"entity_type": patch.entity_type, "key": patch.key, "patch": [op.model_dump() for op in patch.ops]}
+                    _ = self.tool_registry.execute_tool("state.apply_patch", args, context={"session_id": session.id, "db_manager": self.db_manager})
+                for mem in audit.memory_updates or []:
+                    args = {"kind": mem.kind, "content": mem.content, "priority": mem.priority, "tags": mem.tags}
+                    _ = self.tool_registry.execute_tool("memory.upsert", args, context={"session_id": session.id, "db_manager": self.db_manager, "vector_store": self.vector_store})
+        except Exception as e:
+            logger.debug(f"Audit skipped: {e}")
+
         # 3) Narrative + proposals
         try:
             chat_history = self._get_truncated_history()
@@ -397,7 +440,7 @@ class Orchestrator:
         self.view.add_message_bubble("assistant", narrative.narrative)
         self.session.add_message("assistant", narrative.narrative)
 
-        # 🆕 Store turn metadata
+        # Store turn metadata
         if session.id:
             try:
                 round_number = len(self.session.get_history()) // 2
@@ -425,8 +468,9 @@ class Orchestrator:
                 logger.debug(f"Stored metadata for turn {round_number}")
                 
                 # 🆕 Check if we should create a rolling summary
-                if round_number % 50 == 0:
+                if round_number % 20 == 0:
                     self._create_rolling_summary(session)
+                    self._optimize_procedural_memory(session)
             
             except Exception as e:
                 logger.error(f"Error storing turn metadata: {e}", exc_info=True)
@@ -453,7 +497,8 @@ class Orchestrator:
                     
                     context = {
                         "session_id": session.id,
-                        "db_manager": self.db_manager
+                        "db_manager": self.db_manager,
+                        "vector_store": self.vector_store,
                     }
                     
                     result = self.tool_registry.execute_tool("memory.upsert", args, context=context)

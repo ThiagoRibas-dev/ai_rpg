@@ -1,7 +1,7 @@
 import os
 import json
 import openai
-from typing import Dict, Any, Type, List, Generator
+from typing import Dict, Type, List, Generator
 from pydantic import BaseModel
 from app.llm.llm_connector import LLMConnector
 from app.models.message import Message

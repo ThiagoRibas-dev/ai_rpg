@@ -1,9 +1,12 @@
 import importlib
 import pkgutil
 from pathlib import Path
+import logging
 from typing import Dict, Any, Callable, List, Type
 from pydantic import BaseModel
 from app.tools import schemas as tool_schemas
+
+logger = logging.getLogger(__name__)
 
 def _remove_default_field(d: Any):
     """Recursively traverses a dictionary or list and removes the 'default' key."""
@@ -116,9 +119,48 @@ class ToolRegistry:
         handler = self.tools[name]
         handler_args = tool_model.model_dump()
         handler_args.pop("name", None)
-        
+
+        # Optional pre-processing (e.g., dedup for memory.upsert)
+        if name == "memory.upsert" and context and "vector_store" in context and "db_manager" in context and "session_id" in context:
+            try:
+                vs = context["vector_store"]
+                session_id = context["session_id"]
+                content = handler_args.get("content", "")
+                kind = handler_args.get("kind", "")
+                tags = handler_args.get("tags") or []
+                # Find near-duplicates
+                sem = vs.search_memories(session_id, content, k=5)
+                db = context["db_manager"]
+                for hit in sem:
+                    mid = int(hit["memory_id"])
+                    existing = db.get_memory_by_id(mid)
+                    if not existing:
+                        continue
+                    # cosine distance ~ 0 => very similar; treat <=0.10 as duplicate
+                    dist = hit.get("distance") or 0.0
+                    if dist <= 0.10 and existing.kind == kind:
+                        # Turn into update: merge tags and bump priority (clamped)
+                        merged_tags = sorted(set((existing.tags_list() or []) + (tags or [])))
+                        new_priority = min(5, max(existing.priority, handler_args.get("priority", 3)))
+                        update_args = {
+                            "memory_id": existing.id,
+                            "content": content if content and content != existing.content else None,
+                            "priority": new_priority,
+                            "tags": merged_tags,
+                        }
+                        # Re-route to memory.update handler
+                        from app.tools.schemas import MemoryUpdate # Import here to avoid circular dependency
+                        upd_model = MemoryUpdate(**update_args)
+                        upd_args = upd_model.model_dump()
+                        upd_handler = self.tools["memory.update"]
+                        if context:
+                            upd_args.update(context)
+                        return upd_handler(**upd_args)
+            except Exception as e:
+                logger.debug(f"Memory dedup failed: {e}", exc_info=True)
+
         # Pass context to handler if provided
         if context:
             handler_args.update(context)
-        
+
         return handler(**handler_args)
