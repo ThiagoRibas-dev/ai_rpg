@@ -26,7 +26,7 @@ class MainView(ctk.CTk):
         self._last_chat_width = 0  # Track width changes
 
         # Main layout
-        self.grid_columnconfigure(0, weight=8)
+        self.grid_columnconfigure(0, weight=6)
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
