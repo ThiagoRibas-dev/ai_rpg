@@ -78,7 +78,7 @@ class GeminiConnector(LLMConnector):
 
     def get_structured_response(
         self, system_prompt: str, chat_history: List[Message], output_schema: Type[BaseModel]
-    ) -> Dict[str, Any]:
+    ) -> BaseModel:
         # We intentionally do NOT pass tools here, because Gemini FunctionDeclarations
         # are picky and don't allow $ref/anyOf/etc. We stick to Structured Output.
         contents = self._convert_chat_history_to_contents(chat_history)

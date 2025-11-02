@@ -19,7 +19,11 @@ logger = logging.getLogger(__name__)
 
 MAX_HISTORY_MESSAGES = 20
 
-PLAN_TEMPLATE = """You are a roleplay engine. Your goal is to select and execute the most appropriate tools to respond to the user's input and advance the game state.
+PLAN_TEMPLATE = """
+{identity}
+
+# PLANNING STEP
+Your goal is to select and execute the most appropriate tools to respond to the user's input and advance the game state.
 
 MEMORY MANAGEMENT GUIDELINES:
 - Before making important decisions, use memory.query to check if you have relevant past information
@@ -37,7 +41,12 @@ Available tools (JSON Schemas):
 {tool_schemas}
 """
 
-NARRATIVE_TEMPLATE = """You are a roleplay engine. Write the next scene based on the Planner's Intent and the tool results.
+NARRATIVE_TEMPLATE = """
+{identity}
+
+# Narrative Step
+
+Write the next scene based on the Planner's Intent and the tool results.
 Return a JSON object strictly matching the NarrativeStep schema.
 
 The Planner's Intent (your high-level goal for this turn):
@@ -67,7 +76,7 @@ Tool results:
 {tool_results}
 """
 
-CHOICE_GENERATION_TEMPLATE = """Based on the current game state and the narrative you just presented, generate exactly 3 concise action choices for the player.
+CHOICE_GENERATION_TEMPLATE = """Based on the current game state and the narrative you just presented, generate between 3 and 5 concise action choices written from the Player's own perspective.
 
 Each choice should be:
 - A short, actionable statement (preferably under 10 words)
@@ -199,7 +208,7 @@ class Orchestrator:
         if not memories:
             return ""
         
-        lines = ["=== RELEVANT MEMORIES ==="]
+        lines = ["# RELEVANT MEMORIES #"]
         
         kind_emoji = {
             "episodic": "📖",
@@ -228,18 +237,21 @@ class Orchestrator:
         """
         parts = []
 
-        # 1. Memory (persistent high-level context)
-        if session.memory and session.memory.strip():
-            parts.append(f"=== MEMORY ===\n{session.memory.strip()}\n")
+        # 1. Base template
+        parts.append(f"### INSTRUCTIONS\n{base_template}\n\n")
 
-        # 2. Relevant Memories (AI-managed knowledge base)
+        # 2. Memory (persistent high-level context)
+        if session.memory and session.memory.strip():
+            parts.append(f"### MEMORIES\n{session.memory.strip()}\n")
+
+        # 3. Relevant Memories (AI-managed knowledge base)
         recent_history = self._get_truncated_history()
         relevant_memories = self._get_relevant_memories(session, recent_history, limit=10)
         if relevant_memories:
             memories_section = self._format_memories_for_context(relevant_memories)
             parts.append(memories_section)
 
-        # 🆕 3. Relevant Turn Metadata (semantic search of past events)
+        # 4. Relevant Turn Metadata (semantic search of past events)
         if session.id:
             recent_text = " ".join([msg.content for msg in recent_history[-5:]])
             relevant_turns = self.vector_store.search_relevant_turns(
@@ -252,7 +264,7 @@ class Orchestrator:
                 turn_metadata_section = self._format_turn_metadata_for_context(relevant_turns)
                 parts.append(turn_metadata_section)
 
-        # 4. World Info (keyword matching)
+        # 5. World Info (keyword matching)
         if session.prompt_id:
             world_infos = self.db_manager.get_world_info_by_prompt(session.prompt_id)
             triggered_infos = []
@@ -265,14 +277,11 @@ class Orchestrator:
                     triggered_infos.append(wi.content)
             
             if triggered_infos:
-                parts.append("=== WORLD INFO ===\n" + "\n\n".join(triggered_infos) + "\n")
-
-        # 5. Base template
-        parts.append(f"=== INSTRUCTIONS ===\n{base_template}\n")
+                parts.append("### WORLD INFO\n" + "\n\n".join(triggered_infos) + "\n")
 
         # 6. Author's Note
         if session.authors_note and session.authors_note.strip():
-            parts.append(f"=== AUTHOR'S NOTE ===\n{session.authors_note.strip()}\n")
+            parts.append(f"### AUTHOR'S NOTE\n{session.authors_note.strip()}\n")
 
         return "\n".join(parts)
 
@@ -289,12 +298,14 @@ class Orchestrator:
 
         # 1) Plan
         try:
+            chat_history = self._get_truncated_history()
+
             base_plan_template = PLAN_TEMPLATE.format(
+                identity=chat_history[0].content,
                 tool_schemas=self.tool_registry.get_all_schemas()
             )
             system_prompt_plan = self._assemble_context(base_plan_template, session)
             
-            chat_history = self._get_truncated_history()
             plan_dict = self.llm_connector.get_structured_response(
                 system_prompt=system_prompt_plan,
                 chat_history=chat_history,
@@ -347,18 +358,18 @@ class Orchestrator:
             # Schedule refresh on main thread
             self.view.after(100, self.view.memory_inspector.refresh_memories)
 
-        
-
         # 3) Narrative + proposals
         try:
+            chat_history = self._get_truncated_history()
+
             tool_results_str = str(tool_results)
             base_narrative_template = NARRATIVE_TEMPLATE.format(
+                identity=chat_history[0].content,
                 planner_thought=plan.thought,
                 tool_results=tool_results_str
             )
             system_prompt_narrative = self._assemble_context(base_narrative_template, session)
             
-            chat_history = self._get_truncated_history()
             narrative_dict = self.llm_connector.get_structured_response(
                 system_prompt=system_prompt_narrative,
                 chat_history=chat_history,
@@ -489,7 +500,7 @@ class Orchestrator:
         if not turns:
             return ""
         
-        lines = ["=== RELEVANT PAST EVENTS ==="]
+        lines = ["# RELEVANT PAST EVENTS #"]
         
         for turn in turns:
             importance_stars = "★" * turn["importance"]

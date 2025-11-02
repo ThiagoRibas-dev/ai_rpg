@@ -1,4 +1,4 @@
-# Gemini-Aided Development Guide
+# AI-Aided Development Guide
 
 This file serves as a central rules and filedocument index and guide for AI-aided development within the AI-RPG project. It outlines the overall development workflow, provides a high-level specification of the project, and indexes key documentation files and TODO lists to facilitate efficient development.
 

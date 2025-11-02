@@ -9,5 +9,5 @@ class LLMConnector(ABC):
         pass
 
     @abstractmethod
-    def get_structured_response(self, system_prompt: str, chat_history: List[Message], output_schema: Type[BaseModel]) -> Dict[str, Any]:
+    def get_structured_response(self, system_prompt: str, chat_history: List[Message], output_schema: Type[BaseModel]) -> BaseModel:
         pass

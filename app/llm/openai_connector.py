@@ -38,7 +38,7 @@ class OpenAIConnector(LLMConnector):
             if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
                 yield chunk.choices[0].delta.content
 
-    def get_structured_response(self, system_prompt: str, chat_history: List[Message], output_schema: Type[BaseModel]) -> Dict[str, Any]:
+    def get_structured_response(self, system_prompt: str, chat_history: List[Message], output_schema: Type[BaseModel]) -> BaseModel:
         messages = [
             {
                 "role": "system",
