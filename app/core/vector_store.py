@@ -146,14 +146,18 @@ class VectorStore:
                 }]
             )
         except Exception as e:
-            logger.error(f"upsert_memory failed: {e}", exc_info=True)
+            # ✅ FIX: Log the error
+            logger.error(f"upsert_memory failed for memory {memory_id}: {e}", exc_info=True)
+            raise  # Re-raise so caller knows it failed
 
     def delete_memory(self, session_id: int, memory_id: int):
         doc_id = f"{session_id}:{memory_id}"
         try:
             self.memories_col.delete(ids=[doc_id])
         except Exception as e:
-            logger.error(f"delete_memory failed: {e}", exc_info=True)
+            # ✅ FIX: Log the error
+            logger.error(f"delete_memory failed for memory {memory_id}: {e}", exc_info=True)
+            raise
 
     def search_memories(self, session_id: int, query_text: str, k: int = 8,
                         min_priority: int = 1) -> List[Dict[str, Any]]:
@@ -200,14 +204,18 @@ class VectorStore:
                 }]
             )
         except Exception as e:
-            logger.error(f"upsert_world_info failed: {e}", exc_info=True)
+            # ✅ FIX: Log the error
+            logger.error(f"upsert_world_info failed for WI {world_info_id}: {e}", exc_info=True)
+            raise
 
     def delete_world_info(self, prompt_id: int, world_info_id: int):
         doc_id = f"{prompt_id}:{world_info_id}"
         try:
             self.world_info_col.delete(ids=[doc_id])
         except Exception as e:
-            logger.error(f"delete_world_info failed: {e}", exc_info=True)
+            # ✅ FIX: Log the error
+            logger.error(f"delete_world_info failed for WI {world_info_id}: {e}", exc_info=True)
+            raise
 
     def search_world_info(self, prompt_id: int, query_text: str, k: int = 4) -> List[Dict[str, Any]]:
         if not query_text.strip():

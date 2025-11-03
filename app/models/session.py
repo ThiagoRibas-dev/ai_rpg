@@ -1,5 +1,5 @@
 import json
-from typing import List
+from typing import List, Optional
 from app.models.message import Message
 
 class Session:
@@ -9,6 +9,7 @@ class Session:
 
     def __init__(self, session_id: str, system_prompt: str = "You are a helpful assistant."):
         self.session_id = session_id
+        self.id: Optional[int] = None  # ⬅️ Add database ID attribute
         self.history: List[Message] = [Message(role="system", content=system_prompt)]
 
     def add_message(self, role: str, content: str):

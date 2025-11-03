@@ -1,6 +1,9 @@
 import customtkinter as ctk
 import json
+import logging
 from app.gui.styles import Theme
+
+logger = logging.getLogger(__name__)
 
 class CharacterInspectorView(ctk.CTkFrame):
     """Display character stats from game state."""
@@ -8,6 +11,22 @@ class CharacterInspectorView(ctk.CTkFrame):
     def __init__(self, parent, orchestrator):
         super().__init__(parent)
         self.orchestrator = orchestrator
+        
+        # ✅ FIX: Initialize missing attributes
+        self.all_characters = {}
+        self.current_character_key = "player"  # Default to player
+        
+        # ✅ FIX: Add character selector dropdown
+        selector_frame = ctk.CTkFrame(self)
+        selector_frame.pack(fill="x", padx=5, pady=5)
+        
+        ctk.CTkLabel(selector_frame, text="Character:").pack(side="left", padx=5)
+        self.character_selector = ctk.CTkOptionMenu(
+            selector_frame,
+            values=["player"],
+            command=self._on_character_selected
+        )
+        self.character_selector.pack(side="left", padx=5, fill="x", expand=True)
         
         # Scrollable content
         self.scroll_frame = ctk.CTkScrollableFrame(self, fg_color=Theme.colors.bg_secondary)
@@ -25,31 +44,75 @@ class CharacterInspectorView(ctk.CTkFrame):
         self.character_data = {}
     
     def refresh(self):
-        """Query state and update display."""
-        if not self.orchestrator or not self.orchestrator.session:
+        """Query all characters and update display."""
+        print("🔍 CharacterInspectorView.refresh() called")
+        
+        if not self.orchestrator:
+            print("❌ No orchestrator!")
+            self._show_error("No orchestrator connected")
             return
+        
+        if not self.orchestrator.session:
+            print("❌ No session loaded!")
+            self._show_error("No session loaded")
+            return
+        
+        session_id = self.orchestrator.session.id
+        print(f"✅ Session ID: {session_id}")
         
         try:
             from app.tools.registry import ToolRegistry
             registry = ToolRegistry()
             
-            # ✅ Pass proper context
             context = {
-                "session_id": self.orchestrator.session.id if self.orchestrator.session else None,
+                "session_id": session_id,
                 "db_manager": self.orchestrator.db_manager
             }
             
+            print(f"🔧 Querying state with context: {context}")
+            
+            # Query ALL characters using wildcard
             result = registry.execute_tool(
                 "state.query",
-                {"entity_type": "character", "key": "player", "json_path": "."},
+                {"entity_type": "character", "key": "*", "json_path": "."},
                 context=context
             )
             
-            self.character_data = result.get("value", {})
-            self._render_character()
-
-        except Exception:
-            self._show_error("No character data found.\n\nThe AI hasn't created a character yet.\nStart playing to generate state!")
+            print(f"📦 Query result: {result}")
+            
+            self.all_characters = result.get("value", {})
+            
+            print(f"👤 Found {len(self.all_characters)} characters: {list(self.all_characters.keys())}")
+            
+            if not self.all_characters:
+                print("⚠️ No characters found, showing empty state")
+                self._show_empty()
+                return
+            
+            # ✅ FIX: Update dropdown with found characters
+            char_keys = list(self.all_characters.keys())
+            self.character_selector.configure(values=char_keys)
+            
+            # Select first character by default if current selection not in list
+            if self.current_character_key not in char_keys:
+                self.current_character_key = char_keys[0]
+            
+            print(f"📋 Selected character: {self.current_character_key}")
+            
+            self.character_selector.set(self.current_character_key)
+            self._on_character_selected(self.current_character_key)
+        
+        except Exception as e:
+            print(f"💥 Exception in refresh: {e}")
+            import traceback
+            traceback.print_exc()
+            self._show_error(f"Error loading characters: {e}")
+    
+    def _on_character_selected(self, character_key: str):
+        """Handle character selection from dropdown."""
+        self.current_character_key = character_key
+        self.character_data = self.all_characters.get(character_key, {})
+        self._render_character()
     
     def _render_character(self):
         """Render character data as a card."""
@@ -185,6 +248,22 @@ class InventoryInspectorView(ctk.CTkFrame):
         super().__init__(parent)
         self.orchestrator = orchestrator
         
+        # ✅ FIX: Initialize missing attributes
+        self.all_inventories = {}
+        self.current_owner_key = "inventory:player"  # Default key
+        
+        # ✅ FIX: Add inventory selector dropdown
+        selector_frame = ctk.CTkFrame(self)
+        selector_frame.pack(fill="x", padx=5, pady=5)
+        
+        ctk.CTkLabel(selector_frame, text="Owner:").pack(side="left", padx=5)
+        self.owner_selector = ctk.CTkOptionMenu(
+            selector_frame,
+            values=["inventory:player"],
+            command=self._on_owner_selected
+        )
+        self.owner_selector.pack(side="left", padx=5, fill="x", expand=True)
+        
         # Header with capacity
         self.header_label = ctk.CTkLabel(
             self,
@@ -222,31 +301,83 @@ class InventoryInspectorView(ctk.CTkFrame):
         self.inventory_data = {}
     
     def refresh(self):
-        """Query inventory state."""
-        if not self.orchestrator or not self.orchestrator.session:
+        """Query all inventories."""
+        print("🔍 InventoryInspectorView.refresh() called")
+        
+        if not self.orchestrator:
+            print("❌ No orchestrator!")
+            self._show_error("No orchestrator connected")
             return
+        
+        if not self.orchestrator.session:
+            print("❌ No session loaded!")
+            self._show_error("No session loaded")
+            return
+        
+        session_id = self.orchestrator.session.id
+        print(f"✅ Session ID: {session_id}")
         
         try:
             from app.tools.registry import ToolRegistry
             registry = ToolRegistry()
             
-            # ✅ Pass proper context
             context = {
-                "session_id": self.orchestrator.session.id if self.orchestrator.session else None,
+                "session_id": session_id,
                 "db_manager": self.orchestrator.db_manager
             }
             
-            result = registry.execute_tool(
-                "state.query",
-                {"entity_type": "inventory", "key": "player", "json_path": "."},
-                context=context
-            )
+            print(f"🔧 Querying inventories with context: {context}")
             
-            self.inventory_data = result.get("value", {})
-            self._render_inventory()
+            # Try both "inventory" and "item" entity types
+            inventories = {}
+            
+            for entity_type in ["inventory", "item"]:
+                print(f"   Querying entity_type: {entity_type}")
+                result = registry.execute_tool(
+                    "state.query",
+                    {"entity_type": entity_type, "key": "*", "json_path": "."},
+                    context=context
+                )
+                
+                entities = result.get("value", {})
+                print(f"   Found {len(entities)} entities of type {entity_type}")
+                
+                if entities:
+                    for key, data in entities.items():
+                        inventories[f"{entity_type}:{key}"] = data
+            
+            self.all_inventories = inventories
+            
+            print(f"🎒 Total inventories: {len(self.all_inventories)}, keys: {list(self.all_inventories.keys())}")
+            
+            if not self.all_inventories:
+                print("⚠️ No inventories found")
+                self._show_empty()
+                return
+            
+            # ✅ FIX: Update dropdown with found inventories
+            inv_keys = list(self.all_inventories.keys())
+            self.owner_selector.configure(values=inv_keys)
+            
+            if self.current_owner_key not in inv_keys:
+                self.current_owner_key = inv_keys[0]
+            
+            print(f"📋 Selected inventory: {self.current_owner_key}")
+            
+            self.owner_selector.set(self.current_owner_key)
+            self._on_owner_selected(self.current_owner_key)
         
-        except Exception:
-            self._show_empty()
+        except Exception as e:
+            print(f"💥 Exception in refresh: {e}")
+            import traceback
+            traceback.print_exc()
+            self._show_error(f"Error loading inventory: {e}")
+    
+    def _on_owner_selected(self, owner_key: str):
+        """Handle owner selection from dropdown."""
+        self.current_owner_key = owner_key
+        self.inventory_data = self.all_inventories.get(owner_key, {})
+        self._render_inventory()
     
     def _render_inventory(self):
         """Render inventory items."""
@@ -409,33 +540,53 @@ class QuestInspectorView(ctk.CTkFrame):
         self.quests_data = {}
     
     def refresh(self):
-        """Query quest state."""
-        if not self.orchestrator or not self.orchestrator.session:
+        """Query all quests."""
+        print("🔍 QuestInspectorView.refresh() called")
+        
+        if not self.orchestrator:
+            print("❌ No orchestrator!")
+            self._show_error("No orchestrator connected")
             return
+        
+        if not self.orchestrator.session:
+            print("❌ No session loaded!")
+            self._show_error("No session loaded")
+            return
+        
+        session_id = self.orchestrator.session.id
+        print(f"✅ Session ID: {session_id}")
         
         try:
             from app.tools.registry import ToolRegistry
             registry = ToolRegistry()
             
-            # ✅ Pass proper context
             context = {
-                "session_id": self.orchestrator.session.id if self.orchestrator.session else None,
+                "session_id": session_id,
                 "db_manager": self.orchestrator.db_manager
             }
             
-            # Quests are stored as multiple entities (quest_001, quest_002, etc.)
-            # For now, we'll try to query a "quests" collection at root
+            print(f"🔧 Querying quests with context: {context}")
+            
+            # Query all quests using wildcard
             result = registry.execute_tool(
                 "state.query",
-                {"entity_type": "quests", "key": "*", "json_path": "."},  # ✅ Use wildcard
+                {"entity_type": "quest", "key": "*", "json_path": "."},
                 context=context
             )
             
+            print(f"📦 Query result: {result}")
+            
             self.quests_data = result.get("value", {})
+            
+            print(f"📜 Found {len(self.quests_data)} quests: {list(self.quests_data.keys())}")
+            
             self._render_quests()
         
-        except Exception:
-            self._show_empty()
+        except Exception as e:
+            print(f"💥 Exception in refresh: {e}")
+            import traceback
+            traceback.print_exc()
+            self._show_error(f"Error loading quests: {e}")
     
     def _render_quests(self):
         """Render quest cards."""

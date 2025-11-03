@@ -131,16 +131,20 @@ class MainView(ctk.CTk):
             self._last_chat_width = current_width
             new_width = self._calculate_bubble_width()
             
-            # Update wraplength for all bubble content labels
+            # ✅ FIX: Clean up destroyed widgets while updating
+            active_labels = []
             for label in self.bubble_labels:
                 try:
                     if label.winfo_exists():
                         label.configure(wraplength=new_width)
+                        active_labels.append(label)  # Keep only active widgets
+                    # If winfo_exists() is False, widget is destroyed - don't add to list
                 except (tkinter.TclError, AttributeError, RuntimeError):
-                    # TclError: Widget was destroyed or Tcl operation failed
-                    # AttributeError: Label object doesn't have expected methods
-                    # RuntimeError: Widget is in an invalid state
+                    # Widget is destroyed or invalid - skip it
                     pass
+            
+            # ✅ FIX: Replace list with only active widgets
+            self.bubble_labels = active_labels
 
     def _scroll_to_bottom(self):
         """Scroll the chat to the bottom."""
@@ -202,6 +206,7 @@ class MainView(ctk.CTk):
         """Clear all chat bubbles."""
         for widget in self.chat_history_frame.winfo_children():
             widget.destroy()
+        # ✅ FIX: Clear the bubble_labels list immediately
         self.bubble_labels.clear()
 
     def _create_right_panel_widgets(self):
@@ -567,6 +572,17 @@ class MainView(ctk.CTk):
         if hasattr(self, 'memory_inspector'):
             self.memory_inspector.set_session(session.id)
         
+        # ✅ Refresh all inspectors
+        if hasattr(self, 'character_inspector'):
+            self.character_inspector.refresh()
+        
+        if hasattr(self, 'inventory_inspector'):
+            self.inventory_inspector.refresh()
+        
+        if hasattr(self, 'quest_inspector'):
+            self.quest_inspector.refresh()
+        
+        # ... rest of button styling code ...
         button_styles = get_button_style()
         selected_style = get_button_style("selected")
         
@@ -615,9 +631,19 @@ class MainView(ctk.CTk):
     def set_orchestrator(self, orchestrator):
         """Called from main.py after orchestrator is created."""
         self.orchestrator = orchestrator
-        self.character_inspector.orchestrator = orchestrator
-        self.inventory_inspector.orchestrator = orchestrator
-        self.quest_inspector.orchestrator = orchestrator
+        
+        # Connect orchestrator to all inspectors
+        if hasattr(self, 'character_inspector'):
+            self.character_inspector.orchestrator = orchestrator
+        
+        if hasattr(self, 'inventory_inspector'):
+            self.inventory_inspector.orchestrator = orchestrator
+        
+        if hasattr(self, 'quest_inspector'):
+            self.quest_inspector.orchestrator = orchestrator
+        
+        if hasattr(self, 'memory_inspector'):
+            self.memory_inspector.orchestrator = orchestrator
 
     def open_state_viewer(self):
         if not self.selected_session:
