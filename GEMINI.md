@@ -40,6 +40,8 @@ This project is documented across several files to keep the information organize
 - **[V3 TODO](docs/todos/v3_TODO.md)**
 - **[V4 TODO](docs/todos/v4_TODO.md)**
 - **[V5 TODO](docs/todos/v5_TODO.md)**
+- **[V6 TODO](docs/todos/v6_TODO.md)**
+
 
 ## Notes
 

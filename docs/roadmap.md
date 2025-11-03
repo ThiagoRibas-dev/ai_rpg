@@ -37,8 +37,12 @@ This document outlines the planned features and development milestones for the A
 *   **State Management:** A structured system for managing the game state, including character sheets, inventory, and world state.
 *   **RAG (Retrieval-Augmented Generation):** A system for retrieving information from a knowledge base, such as a rulebook or lore document, to provide more contextually relevant responses.
 
-## v6: Extensibility and Intelligence
+## v6: Dynamic AI-Defined Game Mechanics
 
-*   **Plugin Architecture:** A system that allows for the creation of third-party plugins to extend the game's functionality, such as new tools, content, or even core systems.
-*   **Advanced Agency:** Exploration of more advanced AI techniques, such as multi-agent systems (e.g., a separate "Game Master" agent) and more sophisticated planning capabilities.
-*   **Dynamic World:** Features that allow the game world to evolve and change in response to player actions, creating a more dynamic and immersive experience.sh
+**Project Goal:** Evolve the AI-RPG engine from fixed rules to dynamic, AI-defined mechanics through collaborative "Session Zero" worldbuilding, combined with async UX improvements and robust schema validation.
+
+**Key Phases:**
+*   **Phase 1: Foundation** (Hybrid Schema + Session Zero)
+*   **Phase 2: Async UX** (Responsive UI)
+*   **Phase 3: High-Level Tools** (Schema-Aware Operations)
+*   **Phase 4: Polish** (Export, Validation, UI)
