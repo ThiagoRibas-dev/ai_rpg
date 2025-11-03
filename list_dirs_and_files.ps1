@@ -49,7 +49,7 @@ function Get-DirectoryTreeString {
     "*.json",
     "*.ico",
     "*LICENSE",
-    "*chroma_db",
+    "*chroma_db*",
     "*pnpm-lock.yaml",
     "*campaign_load.log*",
     "*.pyc",
