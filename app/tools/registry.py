@@ -33,6 +33,8 @@ _TOOL_SCHEMA_MAP: Dict[str, Type[BaseModel]] = {
     "state.query": tool_schemas.StateQuery,
     "time.now": tool_schemas.TimeNow,
     "time.advance": tool_schemas.TimeAdvance,
+    "schema.define_property": tool_schemas.SchemaDefineProperty,
+    "schema.finalize": tool_schemas.SchemaFinalize,
 }
 
 class ToolRegistry:

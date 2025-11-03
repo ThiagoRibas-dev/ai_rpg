@@ -78,7 +78,30 @@ class DBManager:
                     FOREIGN KEY (prompt_id) REFERENCES prompts (id)  -- 🆕 Add this
                 )
             """)
+
+            # ==================== Schema Extensions ====================
+            self.conn.execute("""
+                CREATE TABLE IF NOT EXISTS schema_extensions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id INTEGER NOT NULL,
+                    entity_type TEXT NOT NULL,
+                    property_name TEXT NOT NULL,
+                    definition TEXT NOT NULL,  -- JSON of PropertyDefinition
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (session_id) REFERENCES sessions (id) ON DELETE CASCADE,
+                    UNIQUE(session_id, entity_type, property_name)
+                )
+            """)
+            self.conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_schema_extensions ON schema_extensions(session_id, entity_type)
+            """)
             
+            # Migration for game_mode column
+            try:
+                self.conn.execute("SELECT game_mode FROM sessions LIMIT 1")
+            except sqlite3.OperationalError:
+                self.conn.execute("ALTER TABLE sessions ADD COLUMN game_mode TEXT DEFAULT 'SETUP'")
+
             # Create indexes for performance
             self.conn.execute("""
                 CREATE INDEX IF NOT EXISTS idx_turn_metadata_session 
@@ -165,13 +188,14 @@ class DBManager:
                 session_data=session_data, 
                 prompt_id=prompt_id,
                 memory="",
-                authors_note=""
+                authors_note="",
+                game_mode="SETUP" # Default for new sessions
             )
 
     def load_session(self, session_id: int) -> GameSession | None:
         with self.conn:
             cursor = self.conn.execute(
-                "SELECT id, name, session_data, prompt_id, memory, authors_note, game_time FROM sessions WHERE id = ?",  # ✅ Added game_time
+                "SELECT id, name, session_data, prompt_id, memory, authors_note, game_time, game_mode FROM sessions WHERE id = ?",
                 (session_id,)
             )
             row = cursor.fetchone()
@@ -183,19 +207,20 @@ class DBManager:
                     prompt_id=row["prompt_id"],
                     memory=row["memory"] or "",
                     authors_note=row["authors_note"] or "",
-                    game_time=row["game_time"] or "Day 1, Dawn"  # ✅ Added with fallback
+                    game_time=row["game_time"] or "Day 1, Dawn",
+                    game_mode=row["game_mode"] or "SETUP" # Added with fallback
                 )
             return None
 
     def get_all_sessions(self) -> List[GameSession]:
         with self.conn:
-            cursor = self.conn.execute("SELECT id, name, session_data, prompt_id, memory, authors_note, game_time FROM sessions")
+            cursor = self.conn.execute("SELECT id, name, session_data, prompt_id, memory, authors_note, game_time, game_mode FROM sessions")
             return [GameSession(**dict(row)) for row in cursor.fetchall()]
 
     def get_sessions_by_prompt(self, prompt_id: int) -> List[GameSession]:
         with self.conn:
             cursor = self.conn.execute(
-                "SELECT id, name, session_data, prompt_id, memory, authors_note, game_time FROM sessions WHERE prompt_id = ?", 
+                "SELECT id, name, session_data, prompt_id, memory, authors_note, game_time, game_mode FROM sessions WHERE prompt_id = ?", 
                 (prompt_id,)
             )
             return [GameSession(**dict(row)) for row in cursor.fetchall()]
@@ -203,8 +228,8 @@ class DBManager:
     def update_session(self, session: GameSession):
         with self.conn:
             self.conn.execute(
-                "UPDATE sessions SET name = ?, session_data = ?, prompt_id = ?, memory = ?, authors_note = ?, game_time = ? WHERE id = ?",
-                (session.name, session.session_data, session.prompt_id, session.memory, session.authors_note, session.game_time, session.id)
+                "UPDATE sessions SET name = ?, session_data = ?, prompt_id = ?, memory = ?, authors_note = ?, game_time = ?, game_mode = ? WHERE id = ?",
+                (session.name, session.session_data, session.prompt_id, session.memory, session.authors_note, session.game_time, session.game_mode, session.id)
             )
 
     def update_session_context(self, session_id: int, memory: str, authors_note: str):
@@ -316,7 +341,7 @@ class DBManager:
                         created_at, fictional_time, last_accessed, access_count 
                 FROM memories 
                 WHERE session_id = ?"""
-        params = [session_id]
+        params: List[Any] = [session_id] # Changed to List[Any]
         
         if kind:
             query += " AND kind = ?"
@@ -352,12 +377,12 @@ class DBManager:
             )
 
     def update_memory(self, memory_id: int, kind: str | None = None, content: str | None = None, 
-                  priority: int | None = None, tags: List[str] | None = None) -> Memory:
+                  priority: int | None = None, tags: List[str] | None = None) -> Optional[Memory]: # Changed return type
         """Update a memory's kind, content, priority, or tags."""
         import json
         
         updates = []
-        params = []
+        params: List[Any] = [] # Changed to List[Any]
         
         if kind is not None:
             updates.append("kind = ?")
@@ -386,7 +411,7 @@ class DBManager:
         
         return self.get_memory_by_id(memory_id)
 
-    def get_memory_by_id(self, memory_id: int) -> Memory | None:
+    def get_memory_by_id(self, memory_id: int) -> Optional[Memory]: # Changed return type
         """Get a single memory by ID."""
         from app.models.memory import Memory
         
@@ -532,7 +557,7 @@ class DBManager:
                 (session_id,)
             )
             
-            state = {}
+            state: Dict[str, Dict[str, Any]] = {} # Added type annotation
             for row in cursor.fetchall():
                 entity_type = row["entity_type"]
                 entity_key = row["entity_key"]
@@ -583,6 +608,56 @@ class DBManager:
                 "DELETE FROM game_state WHERE session_id = ?",
                 (session_id,)
             )
+
+    # ==================== Schema Extensions ====================
+    def create_schema_extension(self, session_id: int, entity_type: str, property_name: str, definition_dict: Dict[str, Any]):
+        """Create a new schema extension definition."""
+        import json
+        definition_json = json.dumps(definition_dict)
+        with self.conn:
+            self.conn.execute(
+                """INSERT INTO schema_extensions (session_id, entity_type, property_name, definition)
+                   VALUES (?, ?, ?, ?)""",
+                (session_id, entity_type, property_name, definition_json)
+            )
+
+    def get_schema_extensions(self, session_id: int, entity_type: str) -> Dict[str, Dict[str, Any]]:
+        """Get all schema extensions for a given session and entity type."""
+        import json
+        with self.conn:
+            cursor = self.conn.execute(
+                """SELECT property_name, definition FROM schema_extensions
+                   WHERE session_id = ? AND entity_type = ?""",
+                (session_id, entity_type)
+            )
+            return {row["property_name"]: json.loads(row["definition"]) for row in cursor.fetchall()}
+
+    def delete_schema_extension(self, session_id: int, entity_type: str, property_name: str):
+        """Delete a specific schema extension."""
+        with self.conn:
+            self.conn.execute(
+                """DELETE FROM schema_extensions
+                   WHERE session_id = ? AND entity_type = ? AND property_name = ?""",
+                (session_id, entity_type, property_name)
+            )
+
+    def get_all_schema_extensions(self, session_id: int) -> Dict[str, Dict[str, Dict[str, Any]]]:
+        """Get all schema extensions for a session, organized by entity type."""
+        import json
+        with self.conn:
+            cursor = self.conn.execute(
+                """SELECT entity_type, property_name, definition FROM schema_extensions
+                   WHERE session_id = ?
+                   ORDER BY entity_type, property_name""",
+                (session_id,)
+            )
+            results = {}
+            for row in cursor.fetchall():
+                entity_type = row["entity_type"]
+                if entity_type not in results:
+                    results[entity_type] = {}
+                results[entity_type][row["property_name"]] = json.loads(row["definition"])
+            return results
 
     # ==================== Turn Metadata ====================
     # In db_manager.py, create_turn_metadata

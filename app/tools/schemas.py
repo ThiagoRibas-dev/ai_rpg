@@ -100,3 +100,32 @@ class TimeAdvance(BaseModel):
     name: Literal["time.advance"] = "time.advance"
     description: str = Field(..., description="Human-readable time advancement")
     new_time: str = Field(..., description="The new fictional time")
+
+class SchemaDefineProperty(BaseModel):
+    """
+    Defines a new custom attribute (property) for game entities (character, item, or location).
+    This tool is used during Session Zero to establish dynamic game mechanics.
+    """
+    name: Literal["schema.define_property"] = "schema.define_property"
+    property_name: str = Field(..., description="The programmatic name of the property (e.g., 'Sanity', 'Mana').")
+    description: str = Field(..., description="A human-readable description of what the property represents.")
+    entity_type: Literal["character", "item", "location"] = Field("character", description="The type of entity this property applies to.")
+    template: Optional[Literal["resource", "stat", "reputation", "flag", "enum", "string"]] = Field(None, description="A predefined template to use (e.g., 'resource', 'stat', 'reputation', 'flag', 'enum', 'string'). If provided, other parameters will override template defaults.")
+    type: Optional[Literal["integer", "string", "boolean", "enum", "resource"]] = Field(None, description="The data type of the property. Required if no template is used.")
+    default_value: Optional[Any] = Field(None, description="The initial value for this property. Required if no template is used.")
+    has_max: Optional[bool] = Field(None, description="For 'resource' types, indicates if there's a maximum value.")
+    min_value: Optional[int] = Field(None, description="Minimum allowed integer value for 'integer' or 'resource' types.")
+    max_value: Optional[int] = Field(None, description="Maximum allowed integer value for 'integer' or 'resource' types.")
+    allowed_values: Optional[List[str]] = Field(None, description="For 'enum' types, a list of allowed string values.")
+    display_category: Optional[str] = Field(None, description="Category for UI display (e.g., 'Resources', 'Stats').")
+    icon: Optional[str] = Field(None, description="An emoji or short string to use as an icon in the UI.")
+    display_format: Optional[Literal["number", "bar", "badge"]] = Field(None, description="How the property should be displayed in the UI.")
+    regenerates: Optional[bool] = Field(None, description="For 'resource' types, indicates if the property regenerates over time.")
+    regeneration_rate: Optional[int] = Field(None, description="For 'resource' types, the rate at which it regenerates per game turn.")
+
+class SchemaFinalize(BaseModel):
+    """
+    Signals the end of the Session Zero setup phase.
+    Call this tool when all custom properties have been defined and the game is ready to begin.
+    """
+    name: Literal["schema.finalize"] = "schema.finalize"

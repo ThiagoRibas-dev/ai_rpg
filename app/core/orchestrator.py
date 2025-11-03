@@ -1,7 +1,7 @@
 import os
 import json as _json
 import logging
-from typing import Callable
+from typing import Callable, List, Dict, Any # Added List, Dict, Any
 from app.gui.main_view import MainView
 from app.models.session import Session
 from app.models.game_session import GameSession
@@ -81,11 +81,29 @@ class Orchestrator:
         self.view.add_message_bubble("user", user_input)
         self.view.clear_input()
 
+        # Determine game mode and available tools
+        current_game_mode = session.game_mode
+        available_tool_schemas: List[Dict[str, Any]]
+        system_prompt_template: str
+
+        if current_game_mode == "SETUP":
+            system_prompt_template = self.context_builder.get_session_zero_prompt_template() # New method
+            # Filter tools for Session Zero
+            setup_tool_names = ["schema.define_property", "schema.finalize"]
+            available_tool_schemas = [
+                s for s in self.tool_registry.get_all_schemas() if s["name"] in setup_tool_names
+            ]
+            logger.debug(f"SETUP mode: Available tools: {[s['name'] for s in available_tool_schemas]}")
+        else: # GAMEPLAY mode
+            system_prompt_template = PLAN_TEMPLATE # Use existing PLAN_TEMPLATE
+            available_tool_schemas = self.tool_registry.get_all_schemas()
+            logger.debug("GAMEPLAY mode: All tools available.")
+
         # Step 1: Plan
         chat_history = self.context_builder.get_truncated_history(self.session, MAX_HISTORY_MESSAGES)
-        base_plan_template = PLAN_TEMPLATE.format(
+        base_plan_template = system_prompt_template.format(
             identity=chat_history[0].content if chat_history else "",
-            tool_schemas=_json.dumps(self.tool_registry.get_all_schemas(), indent=2),
+            tool_schemas=_json.dumps(available_tool_schemas, indent=2), # Pass filtered schemas
             tool_budget=TOOL_BUDGET,
         )
         system_prompt_plan = self.context_builder.assemble(base_plan_template, session, chat_history)
@@ -101,66 +119,79 @@ class Orchestrator:
         if memory_tool_used and hasattr(self.view, 'memory_inspector'):
             self.view.after(100, self.view.memory_inspector.refresh_memories)
 
-        # Step 2.5: Audit
-        audit_history = self.context_builder.get_truncated_history(self.session, MAX_HISTORY_MESSAGES)
-        audit = self.auditor.audit(audit_history, tool_results)
-        if audit and not audit.ok:
-            self.auditor.apply_remediations(audit, session)
+        # Check for schema.finalize tool call and update game mode
+        for result in tool_results:
+            if result.get("tool_name") == "schema.finalize" and result.get("result", {}).get("setup_complete"):
+                session.game_mode = "GAMEPLAY"
+                self.db_manager.update_session(session)
+                self.view.add_message_bubble("system", "✅ Session Zero complete! Game starting...")
+                logger.info("Session Zero finalized. Transitioning to GAMEPLAY mode.")
+                # If we finalize, we might want to skip the rest of the turn and start fresh
+                self.update_game(session)
+                return # End turn after finalizing setup
 
-        # Step 3: Narrative
-        chat_history = self.context_builder.get_truncated_history(self.session, MAX_HISTORY_MESSAGES)
-        base_narr_template = NARRATIVE_TEMPLATE.format(
-            identity=chat_history[0].content if chat_history else "",
-            planner_thought=plan.thought,
-            tool_results=str(tool_results)
-        )
-        system_prompt_narr = self.context_builder.assemble(base_narr_template, session, chat_history)
-        narrative = self.narrator.write_step(system_prompt_narr, chat_history)
-        if not narrative:
-            logger.error("LLM returned no structured response for NarrativeStep.")
-            self.view.add_message_bubble("system", "Error: AI failed to generate a valid narrative.")
-            return
+        # Step 2.5: Audit (only in GAMEPLAY mode)
+        if current_game_mode == "GAMEPLAY":
+            audit_history = self.context_builder.get_truncated_history(self.session, MAX_HISTORY_MESSAGES)
+            audit = self.auditor.audit(audit_history, tool_results)
+            if audit and not audit.ok:
+                self.auditor.apply_remediations(audit, session)
 
-        self.view.add_message_bubble("assistant", narrative.narrative)
-        self.session.add_message("assistant", narrative.narrative)
-
-        # Step 3.5: Turn metadata
-        if session.id:
-            round_number = len(self.session.get_history()) // 2
-            self.turnmeta.persist(
-                session_id=session.id,
-                prompt_id=session.prompt_id,
-                round_number=round_number,
-                summary=narrative.turn_summary,
-                tags=narrative.turn_tags,
-                importance=narrative.turn_importance
+        # Step 3: Narrative (only in GAMEPLAY mode, or if setup tools didn't finalize)
+        if current_game_mode == "GAMEPLAY" or not any(r.get("tool_name") == "schema.finalize" for r in tool_results):
+            chat_history = self.context_builder.get_truncated_history(self.session, MAX_HISTORY_MESSAGES)
+            base_narr_template = NARRATIVE_TEMPLATE.format(
+                identity=chat_history[0].content if chat_history else "",
+                planner_thought=plan.thought,
+                tool_results=str(tool_results)
             )
-            logger.debug(f"Stored metadata for turn {round_number}")
+            system_prompt_narr = self.context_builder.assemble(base_narr_template, session, chat_history)
+            narrative = self.narrator.write_step(system_prompt_narr, chat_history)
+            if not narrative:
+                logger.error("LLM returned no structured response for NarrativeStep.")
+                self.view.add_message_bubble("system", "Error: AI failed to generate a valid narrative.")
+                return
 
-        # Step 4: Apply patches and memory intents
-        if narrative.proposed_patches:
-            for patch in narrative.proposed_patches:
-                try:
-                    args = {"entity_type": patch.entity_type, "key": patch.key, "patch": [op.model_dump() for op in patch.ops]}
-                    result = self.tool_registry.execute_tool("state.apply_patch", args, context={"session_id": session.id, "db_manager": self.db_manager})
-                    if self.tool_event_callback:
-                        self.tool_event_callback(f"state.apply_patch ✓ -> {result}")
-                except Exception as e:
-                    logger.error(f"Patch error: {e}")
+            self.view.add_message_bubble("assistant", narrative.narrative)
+            self.session.add_message("assistant", narrative.narrative)
 
-        self.mem_intents.apply(narrative.memory_intents, session, tool_event_callback=self.tool_event_callback)
+            # Step 3.5: Turn metadata
+            if session.id:
+                round_number = len(self.session.get_history()) // 2
+                self.turnmeta.persist(
+                    session_id=session.id,
+                    prompt_id=session.prompt_id,
+                    round_number=round_number,
+                    summary=narrative.turn_summary,
+                    tags=narrative.turn_tags,
+                    importance=narrative.turn_importance
+                )
+                logger.debug(f"Stored metadata for turn {round_number}")
 
-        # Step 5: Action choices
-        try:
-            choice_template = CHOICE_GENERATION_TEMPLATE.format(narrative=narrative.narrative)
-            system_prompt_choices = self.context_builder.assemble(choice_template, session, chat_history)
-            choices = self.choices.generate(system_prompt_choices, chat_history)
-            if choices and choices.choices:
-                self.view.display_action_choices(choices.choices)
-            else:
-                logger.warning("Failed to generate action choices")
-        except Exception as e:
-            logger.error(f"Error generating action choices: {e}", exc_info=True)
+            # Step 4: Apply patches and memory intents
+            if narrative.proposed_patches:
+                for patch in narrative.proposed_patches:
+                    try:
+                        args = {"entity_type": patch.entity_type, "key": patch.key, "patch": [op.model_dump() for op in patch.ops]}
+                        result = self.tool_registry.execute_tool("state.apply_patch", args, context={"session_id": session.id, "db_manager": self.db_manager})
+                        if self.tool_event_callback:
+                            self.tool_event_callback(f"state.apply_patch ✓ -> {result}")
+                    except Exception as e:
+                        logger.error(f"Patch error: {e}")
+
+            self.mem_intents.apply(narrative.memory_intents, session, tool_event_callback=self.tool_event_callback)
+
+            # Step 5: Action choices
+            try:
+                choice_template = CHOICE_GENERATION_TEMPLATE.format(narrative=narrative.narrative)
+                system_prompt_choices = self.context_builder.assemble(choice_template, session, chat_history)
+                choices = self.choices.generate(system_prompt_choices, chat_history)
+                if choices and choices.choices:
+                    self.view.display_action_choices(choices.choices)
+                else:
+                    logger.warning("Failed to generate action choices")
+            except Exception as e:
+                logger.error(f"Error generating action choices: {e}", exc_info=True)
 
         # Persist session
         self.update_game(session)

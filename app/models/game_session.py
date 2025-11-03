@@ -9,3 +9,4 @@ class GameSession:
     memory: str = ""
     authors_note: str = ""
     game_time: str = "Day 1, Dawn"
+    game_mode: str = "SETUP" # Added for Session Zero
