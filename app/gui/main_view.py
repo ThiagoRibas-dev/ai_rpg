@@ -10,6 +10,7 @@ from app.gui.styles import (
     get_tool_call_style,
     get_button_style,
 )
+from app.gui.state_inspector_views import CharacterInspectorView, InventoryInspectorView, QuestInspectorView
 
 class MainView(ctk.CTk):
     def __init__(self, db_manager):
@@ -33,12 +34,35 @@ class MainView(ctk.CTk):
         # Main Panel
         self.main_panel = ctk.CTkFrame(self, fg_color=Theme.colors.bg_primary)
         self.main_panel.grid(row=0, column=0, sticky="nsew", padx=Theme.spacing.padding_md, pady=Theme.spacing.padding_md)
-        self.main_panel.grid_rowconfigure(0, weight=1)
+        self.main_panel.grid_rowconfigure(1, weight=1) # chat takes the space
         self.main_panel.grid_columnconfigure(0, weight=1)
+
+        # Game time header bar
+        self.game_time_frame = ctk.CTkFrame(self.main_panel, fg_color=Theme.colors.bg_tertiary, height=40)
+        self.game_time_frame.grid(row=0, column=0, columnspan=2, sticky="ew", 
+                                  padx=Theme.spacing.padding_sm, pady=(Theme.spacing.padding_sm, 0))
+        self.game_time_frame.grid_propagate(False)
+
+        self.game_time_label = ctk.CTkLabel(
+            self.game_time_frame,
+            text="🕐 Day 1, Dawn",
+            font=Theme.fonts.subheading,
+            text_color=Theme.colors.text_gold
+        )
+        self.game_time_label.pack(side="left", padx=Theme.spacing.padding_md, pady=Theme.spacing.padding_sm)
+
+        # Session name label (bonus feature)
+        self.session_name_label = ctk.CTkLabel(
+            self.game_time_frame,
+            text="No session loaded",
+            font=Theme.fonts.body_small,
+            text_color=Theme.colors.text_muted
+        )
+        self.session_name_label.pack(side="right", padx=Theme.spacing.padding_md, pady=Theme.spacing.padding_sm)
 
         # Chat history - scrollable frame
         self.chat_history_frame = ctk.CTkScrollableFrame(self.main_panel, fg_color=Theme.colors.bg_secondary)
-        self.chat_history_frame.grid(row=0, column=0, columnspan=2, sticky="nsew", 
+        self.chat_history_frame.grid(row=1, column=0, columnspan=2, sticky="nsew", 
                                      padx=Theme.spacing.padding_sm, pady=Theme.spacing.padding_sm)
 
         # Bind to main window resize instead of the scrollable frame
@@ -46,16 +70,16 @@ class MainView(ctk.CTk):
 
         # Choice buttons frame
         self.choice_button_frame = ctk.CTkFrame(self.main_panel)
-        self.choice_button_frame.grid(row=1, column=0, columnspan=2, sticky="ew", 
+        self.choice_button_frame.grid(row=2, column=0, columnspan=2, sticky="ew", 
                                       padx=Theme.spacing.padding_sm, pady=Theme.spacing.padding_sm)
         self.choice_button_frame.grid_remove()
 
         self.user_input = ctk.CTkTextbox(self.main_panel, height=Theme.spacing.input_height)
-        self.user_input.grid(row=2, column=0, sticky="ew", 
+        self.user_input.grid(row=3, column=0, sticky="ew", 
                             padx=Theme.spacing.padding_sm, pady=Theme.spacing.padding_sm)
 
         button_frame = ctk.CTkFrame(self.main_panel)
-        button_frame.grid(row=2, column=1, sticky="ns", 
+        button_frame.grid(row=3, column=1, sticky="ns", 
                          padx=Theme.spacing.padding_sm, pady=Theme.spacing.padding_sm)
 
         self.send_button = ctk.CTkButton(button_frame, text="Send", state="disabled", command=self.handle_send_button)
@@ -260,29 +284,6 @@ class MainView(ctk.CTk):
         save_context_button = ctk.CTkButton(context_content, text="Save Context", command=self.save_context)
         save_context_button.pack(**pack_config)
 
-        # ==================== LLM Parameters ====================
-        llm_collapsible = CollapsibleFrame(self.control_panel, "LLM Parameters")
-        llm_collapsible.pack(**pack_config)
-        
-        llm_content = llm_collapsible.get_content_frame()
-
-        provider_label = ctk.CTkLabel(llm_content, text="Provider:")
-        provider_label.pack(pady=(Theme.spacing.padding_sm, 0), padx=Theme.spacing.padding_sm, anchor="w")
-
-        self.provider_selector = ctk.CTkOptionMenu(llm_content, values=["Gemini", "OpenAI"])
-        self.provider_selector.pack(**pack_config)
-
-        temp_label = ctk.CTkLabel(llm_content, text="Temperature:")
-        temp_label.pack(pady=(Theme.spacing.padding_sm, 0), padx=Theme.spacing.padding_sm, anchor="w")
-
-        self.temperature_slider = ctk.CTkSlider(llm_content)
-        self.temperature_slider.pack(**pack_config)
-
-        top_p_label = ctk.CTkLabel(llm_content, text="Top P:")
-        top_p_label.pack(pady=(Theme.spacing.padding_sm, 0), padx=Theme.spacing.padding_sm, anchor="w")
-
-        self.top_p_slider = ctk.CTkSlider(llm_content)
-        self.top_p_slider.pack(**pack_config)
 
         # ==================== Game State Inspector ====================
         inspector_collapsible = CollapsibleFrame(self.control_panel, "Game State Inspector")
@@ -298,6 +299,26 @@ class MainView(ctk.CTk):
         self.game_state_inspector_tabs.add("Quests")
         self.game_state_inspector_tabs.add("Memories")
         self.game_state_inspector_tabs.add("Tool Calls")
+        self.game_state_inspector_tabs.add("State Viewer") # Add new tab
+
+        # Add the actual views:
+        self.character_inspector = CharacterInspectorView(
+            self.game_state_inspector_tabs.tab("Characters"),
+            None  # Will be set when orchestrator is ready
+        )
+        self.character_inspector.pack(fill="both", expand=True)
+
+        self.inventory_inspector = InventoryInspectorView(
+            self.game_state_inspector_tabs.tab("Inventory"),
+            None
+        )
+        self.inventory_inspector.pack(fill="both", expand=True)
+
+        self.quest_inspector = QuestInspectorView(
+            self.game_state_inspector_tabs.tab("Quests"),
+            None
+        )
+        self.quest_inspector.pack(fill="both", expand=True)
 
         from app.gui.memory_inspector_view import MemoryInspectorView
         self.memory_inspector = MemoryInspectorView(
@@ -312,6 +333,15 @@ class MainView(ctk.CTk):
             fg_color=Theme.colors.bg_secondary
         )
         self.tool_calls_frame.pack(fill="both", expand=True)
+
+        # Add button to open the viewer
+        state_viewer_frame = self.game_state_inspector_tabs.tab("State Viewer")
+        ctk.CTkButton(
+            state_viewer_frame,
+            text="🔍 Open State Viewer",
+            command=self.open_state_viewer,
+            height=50
+        ).pack(expand=True)
 
     def add_tool_call(self, tool_name: str, args: dict):
         """Add a tool call to the dedicated tool calls panel."""
@@ -530,6 +560,10 @@ class MainView(ctk.CTk):
         self.load_game(session.id)
         self.send_button.configure(state="normal")
         
+        # ✅ Update header
+        self.session_name_label.configure(text=session.name)
+        self.game_time_label.configure(text=f"🕐 {session.game_time}")
+        
         if hasattr(self, 'memory_inspector'):
             self.memory_inspector.set_session(session.id)
         
@@ -577,3 +611,18 @@ class MainView(ctk.CTk):
         self.db_manager.delete_prompt(self.selected_prompt.id)
         self.selected_prompt = None
         self.refresh_prompt_list()
+
+    def set_orchestrator(self, orchestrator):
+        """Called from main.py after orchestrator is created."""
+        self.orchestrator = orchestrator
+        self.character_inspector.orchestrator = orchestrator
+        self.inventory_inspector.orchestrator = orchestrator
+        self.quest_inspector.orchestrator = orchestrator
+
+    def open_state_viewer(self):
+        if not self.selected_session:
+            return
+        
+        from app.gui.state_viewer_dialog import StateViewerDialog
+        viewer = StateViewerDialog(self, self.db_manager, self.selected_session.id)
+        viewer.grab_set()

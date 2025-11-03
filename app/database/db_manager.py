@@ -100,6 +100,37 @@ class DBManager:
                 CREATE INDEX IF NOT EXISTS idx_memories_priority 
                 ON memories(priority)
             """)
+            
+            # ==================== Game State ====================
+            self.conn.execute("""
+                CREATE TABLE IF NOT EXISTS game_state (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id INTEGER NOT NULL,
+                    entity_type TEXT NOT NULL,
+                    entity_key TEXT NOT NULL,
+                    state_data TEXT NOT NULL,
+                    version INTEGER DEFAULT 1,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (session_id) REFERENCES sessions (id) ON DELETE CASCADE,
+                    UNIQUE(session_id, entity_type, entity_key)
+                )
+            """)
+            
+            self.conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_game_state_session 
+                ON game_state(session_id)
+            """)
+            
+            self.conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_game_state_entity_type 
+                ON game_state(entity_type)
+            """)
+            
+            self.conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_game_state_lookup 
+                ON game_state(session_id, entity_type, entity_key)
+            """)
 
     # ==================== Prompts ====================
     def create_prompt(self, name: str, content: str) -> Prompt:
@@ -413,6 +444,145 @@ class DBManager:
                 "by_kind": by_kind,
                 "most_accessed": most_accessed
             }
+
+    # ==================== Game State ====================
+    def get_game_state_entity(self, session_id: int, entity_type: str, entity_key: str) -> dict:
+        """Retrieve a single entity's state."""
+        import json
+        
+        with self.conn:
+            cursor = self.conn.execute(
+                """SELECT state_data FROM game_state 
+                   WHERE session_id = ? AND entity_type = ? AND entity_key = ?""",
+                (session_id, entity_type, entity_key)
+            )
+            row = cursor.fetchone()
+            
+            if row and row["state_data"]:
+                try:
+                    return json.loads(row["state_data"])
+                except json.JSONDecodeError:
+                    return {}
+            return {}
+    
+    def set_game_state_entity(self, session_id: int, entity_type: str, entity_key: str, 
+                             state_data: dict) -> int:
+        """Create or update an entity's state. Returns version number."""
+        import json
+        
+        state_json = json.dumps(state_data)
+        
+        with self.conn:
+            cursor = self.conn.execute(
+                """INSERT INTO game_state (session_id, entity_type, entity_key, state_data, version)
+                   VALUES (?, ?, ?, ?, 1)
+                   ON CONFLICT(session_id, entity_type, entity_key) 
+                   DO UPDATE SET 
+                       state_data = excluded.state_data,
+                       version = version + 1,
+                       updated_at = CURRENT_TIMESTAMP
+                   RETURNING version""",
+                (session_id, entity_type, entity_key, state_json)
+            )
+            row = cursor.fetchone()
+            return row["version"] if row else 1
+    
+    def get_all_entities_by_type(self, session_id: int, entity_type: str) -> dict:
+        """Get all entities of a specific type for a session. Returns {key: data} dict."""
+        import json
+        
+        with self.conn:
+            cursor = self.conn.execute(
+                """SELECT entity_key, state_data FROM game_state 
+                   WHERE session_id = ? AND entity_type = ?
+                   ORDER BY entity_key""",
+                (session_id, entity_type)
+            )
+            
+            results = {}
+            for row in cursor.fetchall():
+                key = row["entity_key"]
+                try:
+                    data = json.loads(row["state_data"])
+                    results[key] = data
+                except json.JSONDecodeError:
+                    continue
+            
+            return results
+    
+    def delete_game_state_entity(self, session_id: int, entity_type: str, entity_key: str):
+        """Delete a specific entity."""
+        with self.conn:
+            self.conn.execute(
+                """DELETE FROM game_state 
+                   WHERE session_id = ? AND entity_type = ? AND entity_key = ?""",
+                (session_id, entity_type, entity_key)
+            )
+    
+    def get_all_game_state(self, session_id: int) -> dict:
+        """Get all game state for a session, organized by entity type."""
+        import json
+        
+        with self.conn:
+            cursor = self.conn.execute(
+                """SELECT entity_type, entity_key, state_data, version, updated_at
+                   FROM game_state 
+                   WHERE session_id = ?
+                   ORDER BY entity_type, entity_key""",
+                (session_id,)
+            )
+            
+            state = {}
+            for row in cursor.fetchall():
+                entity_type = row["entity_type"]
+                entity_key = row["entity_key"]
+                
+                if entity_type not in state:
+                    state[entity_type] = {}
+                
+                try:
+                    data = json.loads(row["state_data"])
+                    state[entity_type][entity_key] = {
+                        "data": data,
+                        "version": row["version"],
+                        "updated_at": row["updated_at"]
+                    }
+                except json.JSONDecodeError:
+                    continue
+            
+            return state
+    
+    def get_game_state_statistics(self, session_id: int) -> dict:
+        """Get statistics about game state for a session."""
+        with self.conn:
+            cursor = self.conn.execute(
+                """SELECT entity_type, COUNT(*) as count 
+                   FROM game_state 
+                   WHERE session_id = ? 
+                   GROUP BY entity_type""",
+                (session_id,)
+            )
+            
+            by_type = {row["entity_type"]: row["count"] for row in cursor.fetchall()}
+            
+            cursor = self.conn.execute(
+                "SELECT COUNT(*) as total FROM game_state WHERE session_id = ?",
+                (session_id,)
+            )
+            total = cursor.fetchone()["total"]
+            
+            return {
+                "total_entities": total,
+                "by_type": by_type
+            }
+    
+    def clear_game_state(self, session_id: int):
+        """Delete all game state for a session (use with caution!)."""
+        with self.conn:
+            self.conn.execute(
+                "DELETE FROM game_state WHERE session_id = ?",
+                (session_id,)
+            )
 
     # ==================== Turn Metadata ====================
     # In db_manager.py, create_turn_metadata

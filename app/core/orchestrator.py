@@ -260,7 +260,12 @@ class Orchestrator:
         # 1. Base template
         parts.append(f"### INSTRUCTIONS\n{base_template}\n\n")
 
-        # 2. Memory (persistent high-level context)
+        # 🆕 2. Current State (Character, Inventory, Quests)
+        state_context = self._get_state_context()
+        if state_context:
+            parts.append(f"### CURRENT STATE\n{state_context}\n")
+
+        # 3. Memory (persistent high-level context)
         if session.memory and session.memory.strip():
             parts.append(f"### MEMORIES\n{session.memory.strip()}\n")
 
@@ -374,6 +379,8 @@ class Orchestrator:
                         try:
                             self.db_manager.update_session_game_time(session.id, result["new_time"])
                             session.game_time = result["new_time"]
+                            # ✅ Update UI
+                            self.view.game_time_label.configure(text=f"🕐 {result['new_time']}")
                         except Exception as _e:
                             logger.error(f"Failed to update game time: {_e}")
                 except Exception as e:
@@ -760,3 +767,98 @@ class Orchestrator:
         
         except Exception as e:
             logger.error(f"Error optimizing procedural memory: {e}", exc_info=True)
+
+    def _get_state_context(self) -> str:
+        """Format character, inventory, and quest state for system prompt."""
+        lines = []
+        
+        if not self.session:
+            return ""
+        
+        try:
+            context = {
+                "session_id": self.session.id,
+                "db_manager": self.db_manager
+            }
+            
+            # Query character
+            char_result = self.tool_registry.execute_tool(
+                "state.query",
+                {"entity_type": "character", "key": "player", "json_path": "."},
+                context=context
+            )
+            char = char_result.get("value", {})
+            
+            if char:
+                name = char.get("name", "Player")
+                race = char.get("race", "")
+                char_class = char.get("class", "")
+                level = char.get("level", 1)
+                
+                lines.append(f"**Character**: {name} ({race} {char_class}, Level {level})")
+                
+                attrs = char.get("attributes", {})
+                if attrs:
+                    hp = f"{attrs.get('hp_current', '?')}/{attrs.get('hp_max', '?')}"
+                    lines.append(f"- HP: {hp}")
+                
+                conditions = char.get("conditions", [])
+                if conditions:
+                    lines.append(f"- Conditions: {', '.join(conditions)}")
+                
+                location = char.get("location")
+                if location:
+                    lines.append(f"- Location: {location}")
+                
+                lines.append("")  # Blank line
+            
+            # Query inventory
+            inv_result = self.tool_registry.execute_tool(
+                "state.query",
+                {"entity_type": "inventory", "key": "player", "json_path": "."},
+                context=context
+            )
+            inv = inv_result.get("value", {})
+            
+            if inv:
+                slots = f"{inv.get('slots_used', 0)}/{inv.get('slots_max', 10)}"
+                lines.append(f"**Inventory** ({slots} slots):")
+                
+                items = inv.get("items", [])
+                if items:
+                    for item in items[:5]:  # Show max 5 items
+                        name = item.get("name", "Unknown")
+                        qty = item.get("quantity", 1)
+                        equipped = " (equipped)" if item.get("equipped") else ""
+                        qty_str = f" x{qty}" if qty > 1 else ""
+                        lines.append(f"- {name}{qty_str}{equipped}")
+                
+                currency = inv.get("currency", {})
+                if currency:
+                    curr_str = ", ".join([f"{v} {k}" for k, v in currency.items()])
+                    lines.append(f"- Currency: {curr_str}")
+                
+                lines.append("")
+            
+            # Query quests - use wildcard to get all
+            quest_result = self.tool_registry.execute_tool(
+                "state.query",
+                {"entity_type": "quests", "key": "*", "json_path": "."},
+                context=context
+            )
+            quests = quest_result.get("value", {})
+            
+            if quests and isinstance(quests, dict):
+                lines.append("**Active Quests**:")
+                for quest_id, quest in list(quests.items())[:3]:  # Max 3 quests
+                    title = quest.get("title", "Unknown")
+                    quest_type = quest.get("type", "side")
+                    progress = quest.get("progress", "")
+                    type_label = "[Main]" if quest_type == "main" else "[Side]"
+                    lines.append(f"- {type_label} {title} ({progress})")
+                lines.append("")
+        
+        except Exception as e:
+            logger.debug(f"Could not retrieve state context: {e}")
+        
+        return "\n".join(lines) if lines else ""
