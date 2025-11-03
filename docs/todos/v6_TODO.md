@@ -6,7 +6,7 @@
 
 ## 📊 Progress Overview
 
-- [ ] **Phase 1:** Foundation (Hybrid Schema + Session Zero) - 0/12 tasks
+- [x] **Phase 1:** Foundation (Hybrid Schema + Session Zero) - 12/12 tasks
 - [ ] **Phase 2:** Async UX (Responsive UI) - 0/8 tasks
 - [ ] **Phase 3:** High-Level Tools (Schema-Aware Operations) - 0/10 tasks
 - [ ] **Phase 4:** Polish (Export, Validation, UI) - 0/8 tasks
@@ -51,15 +51,15 @@
 ### Data Models & Schema Storage
 
 #### Task 1.1: Create Entity Models with Properties Field
-- [ ] **Create** `app/models/entities.py`
-  - [ ] Define `CharacterAttributes` Pydantic model
+- [x] **Create** `app/models/entities.py`
+  - [x] Define `CharacterAttributes` Pydantic model
     ```python
     class CharacterAttributes(BaseModel):
         hp_current: int
         hp_max: int
         # Add other core stats as needed
     ```
-  - [ ] Define `Character` Pydantic model with `properties: Dict[str, Any]`
+  - [x] Define `Character` Pydantic model with `properties: Dict[str, Any]`
     ```python
     class Character(BaseModel):
         key: str
@@ -70,8 +70,8 @@
         inventory_key: str
         properties: Dict[str, Any] = Field(default_factory=dict)
     ```
-  - [ ] Define `Item` model with `properties` field
-  - [ ] Define `Location` model with `properties` field
+  - [x] Define `Item` model with `properties` field
+  - [x] Define `Location` model with `properties` field
   
   **Acceptance Criteria:**
   - Models pass Pydantic validation
@@ -83,8 +83,8 @@
 ---
 
 #### Task 1.2: Create PropertyDefinition Schema
-- [ ] **Create** `app/models/property_definition.py`
-  - [ ] Define `PropertyDefinition` Pydantic model
+- [x] **Create** `app/models/property_definition.py`
+  - [x] Define `PropertyDefinition` Pydantic model
     ```python
     class PropertyDefinition(BaseModel):
         name: str
@@ -101,7 +101,7 @@
         regenerates: bool = False
         regeneration_rate: Optional[int] = None
     ```
-  - [ ] Add validation logic (e.g., `min_value < max_value`)
+  - [x] Add validation logic (e.g., `min_value < max_value`)
   
   **Acceptance Criteria:**
   - Can create definitions for all types (integer, resource, enum, etc.)
@@ -113,8 +113,8 @@
 ---
 
 #### Task 1.3: Add schema_extensions Table
-- [ ] **Modify** `app/database/db_manager.py`
-  - [ ] Add table creation in `create_tables()`:
+- [x] **Modify** `app/database/db_manager.py`
+  - [x] Add table creation in `create_tables()`:
     ```sql
     CREATE TABLE IF NOT EXISTS schema_extensions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -127,7 +127,7 @@
         UNIQUE(session_id, entity_type, property_name)
     )
     ```
-  - [ ] Add index: `CREATE INDEX IF NOT EXISTS idx_schema_extensions ON schema_extensions(session_id, entity_type)`
+  - [x] Add index: `CREATE INDEX IF NOT EXISTS idx_schema_extensions ON schema_extensions(session_id, entity_type)`
   
   **Acceptance Criteria:**
   - Table created on first run
@@ -139,11 +139,11 @@
 ---
 
 #### Task 1.4: Implement Schema Extension DB Methods
-- [ ] **Modify** `app/database/db_manager.py`
-  - [ ] Add `create_schema_extension(session_id, entity_type, property_name, definition_dict)`
-  - [ ] Add `get_schema_extensions(session_id, entity_type) -> Dict[str, PropertyDefinition]`
-  - [ ] Add `delete_schema_extension(session_id, entity_type, property_name)`
-  - [ ] Add `get_all_schema_extensions(session_id) -> Dict[str, Dict[str, PropertyDefinition]]`
+- [x] **Modify** `app/database/db_manager.py`
+  - [x] Add `create_schema_extension(session_id, entity_type, property_name, definition_dict)`
+  - [x] Add `get_schema_extensions(session_id, entity_type) -> Dict[str, PropertyDefinition]`
+  - [x] Add `delete_schema_extension(session_id, entity_type, property_name)`
+  - [x] Add `get_all_schema_extensions(session_id) -> Dict[str, Dict[str, PropertyDefinition]]`
     - Returns `{"character": {"Sanity": {...}}, "item": {...}}`
   
   **Acceptance Criteria:**
@@ -182,8 +182,8 @@
 ### Session Zero Tools & Orchestrator Logic
 
 #### Task 1.5: Create Property Templates
-- [ ] **Create** `app/tools/builtin/property_templates.py`
-  - [ ] Define `PROPERTY_TEMPLATES` dict:
+- [x] **Create** `app/tools/builtin/property_templates.py`
+  - [x] Define `PROPERTY_TEMPLATES` dict:
     ```python
     PROPERTY_TEMPLATES = {
         "resource": PropertyDefinition(
@@ -198,7 +198,7 @@
         "flag": PropertyDefinition(...)
     }
     ```
-  - [ ] Add helper function `apply_template(template_name: str, overrides: dict) -> PropertyDefinition`
+  - [x] Add helper function `apply_template(template_name: str, overrides: dict) -> PropertyDefinition`
 
   **Acceptance Criteria:**
   - 4 templates defined (resource, stat, reputation, flag)
@@ -209,9 +209,9 @@
 ---
 
 #### Task 1.6: Implement schema.define_property Tool
-- [ ] **Create** `app/tools/builtin/schema_define_property.py`
-  - [ ] Define schema dict with parameters
-  - [ ] Implement handler:
+- [x] **Create** `app/tools/builtin/schema_define_property.py`
+  - [x] Define schema dict with parameters
+  - [x] Implement handler:
     ```python
     def handler(
         name: str,
@@ -251,9 +251,9 @@
 ---
 
 #### Task 1.7: Implement schema.finalize Tool
-- [ ] **Create** `app/tools/builtin/schema_finalize.py`
-  - [ ] Simple handler that returns `{"setup_complete": True}`
-  - [ ] No database changes needed (orchestrator listens for this result)
+- [x] **Create** `app/tools/builtin/schema_finalize.py`
+  - [x] Simple handler that returns `{"setup_complete": True}`
+  - [x] No database changes needed (orchestrator listens for this result)
   
   **Acceptance Criteria:**
   - Returns success flag
@@ -264,10 +264,10 @@
 ---
 
 #### Task 1.8: Add Pydantic Schemas for New Tools
-- [ ] **Modify** `app/tools/schemas.py`
-  - [ ] Add `SchemaDefineProperty(BaseModel)` class
-  - [ ] Add `SchemaFinalize(BaseModel)` class
-  - [ ] Update `_TOOL_SCHEMA_MAP` in `app/tools/registry.py`
+- [x] **Modify** `app/tools/schemas.py`
+  - [x] Add `SchemaDefineProperty(BaseModel)` class
+  - [x] Add `SchemaFinalize(BaseModel)` class
+  - [x] Update `_TOOL_SCHEMA_MAP` in `app/tools/registry.py`
 
   **Acceptance Criteria:**
   - Schemas validate tool arguments
@@ -278,15 +278,15 @@
 ---
 
 #### Task 1.9: Add game_mode Field to GameSession
-- [ ] **Modify** `app/models/game_session.py`
-  - [ ] Add `game_mode: str = "SETUP"` field
+- [x] **Modify** `app/models/game_session.py`
+  - [x] Add `game_mode: str = "SETUP"` field
   
-- [ ] **Modify** `app/database/db_manager.py`
-  - [ ] Add `game_mode` column to sessions table:
+- [x] **Modify** `app/database/db_manager.py`
+  - [x] Add `game_mode` column to sessions table:
     ```sql
     ALTER TABLE sessions ADD COLUMN game_mode TEXT DEFAULT 'SETUP'
     ```
-  - [ ] Update `load_session()`, `save_session()`, `update_session()` to handle field
+  - [x] Update `load_session()`, `save_session()`, `update_session()` to handle field
 
   **Acceptance Criteria:**
   - New sessions default to "SETUP"
@@ -309,8 +309,8 @@
 ---
 
 #### Task 1.10: Implement Mode-Switching in Orchestrator
-- [ ] **Modify** `app/core/orchestrator.py`
-  - [ ] In `plan_and_execute()`, add mode check:
+- [x] **Modify** `app/core/orchestrator.py`
+  - [x] In `plan_and_execute()`, add mode check:
     ```python
     if session.game_mode == "SETUP":
         system_prompt = self._build_session_zero_prompt()
@@ -319,7 +319,7 @@
         system_prompt = self._build_gameplay_prompt(session)
         available_tools = self.tool_registry.get_all_schemas()
     ```
-  - [ ] Listen for `schema.finalize` in tool results:
+  - [x] Listen for `schema.finalize` in tool results:
     ```python
     for result in tool_results:
         if result["tool_name"] == "schema.finalize":
@@ -341,8 +341,8 @@
 ### Context Injection & Testing
 
 #### Task 1.11: Create Session Zero System Prompt
-- [ ] **Modify** `app/core/llm/prompts.py`
-  - [ ] Add `SESSION_ZERO_TEMPLATE`:
+- [x] **Modify** `app/core/llm/prompts.py`
+  - [x] Add `SESSION_ZERO_TEMPLATE`:
     ```python
     SESSION_ZERO_TEMPLATE = """
     You are a collaborative Game Master helping design a custom RPG system.
@@ -419,8 +419,8 @@
 ---
 
 #### Task 1.12: Inject Custom Rules into Gameplay Prompts
-- [ ] **Modify** `app/core/context/context_builder.py`
-  - [ ] Add method `_get_formatted_custom_rules(session_id) -> str`
+- [x] **Modify** `app/core/context/context_builder.py`
+  - [x] Add method `_get_formatted_custom_rules(session_id) -> str`
     ```python
     def _get_formatted_custom_rules(self, session_id: int) -> str:
         if not session_id:
@@ -458,7 +458,7 @@
         return "\n".join(lines)
     ```
   
-  - [ ] Modify `assemble()` to inject rules after base template:
+  - [x] Modify `assemble()` to inject rules after base template:
     ```python
     def assemble(self, base_template: str, session, chat_history):
         sections = [base_template]
@@ -482,14 +482,14 @@
 ---
 
 #### Task 1.13: End-to-End Session Zero Test
-- [ ] **Create** `tests/test_session_zero.py`
-  - [ ] Test creates new session
-  - [ ] Verifies `game_mode == "SETUP"`
-  - [ ] Calls `schema.define_property` with "Sanity" resource
-  - [ ] Verifies definition saved to DB
-  - [ ] Calls `schema.finalize`
-  - [ ] Verifies `game_mode == "GAMEPLAY"`
-  - [ ] Verifies custom rules appear in next prompt
+- [x] **Create** `tests/test_session_zero.py`
+  - [x] Test creates new session
+  - [x] Verifies `game_mode == "SETUP"`
+  - [x] Calls `schema.define_property` with "Sanity" resource
+  - [x] Verifies definition saved to DB
+  - [x] Calls `schema.finalize`
+  - [x] Verifies `game_mode == "GAMEPLAY"`
+  - [x] Verifies custom rules appear in next prompt
 
   **Acceptance Criteria:**
   - All steps pass without errors
