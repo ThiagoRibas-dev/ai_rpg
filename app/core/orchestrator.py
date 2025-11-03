@@ -468,9 +468,15 @@ class Orchestrator:
                 logger.debug(f"Stored metadata for turn {round_number}")
                 
                 # 🆕 Check if we should create a rolling summary
-                if round_number % 20 == 0:
+                if round_number % 50 == 0:
                     self._create_rolling_summary(session)
+                    
+                    # Show memory stats before/after
+                    stats_before = self.db_manager.get_memory_statistics(session.id)
                     self._optimize_procedural_memory(session)
+                    stats_after = self.db_manager.get_memory_statistics(session.id)
+                    
+                    logger.info(f"Memory count: {stats_before['total']} → {stats_after['total']}")
             
             except Exception as e:
                 logger.error(f"Error storing turn metadata: {e}", exc_info=True)
@@ -489,11 +495,13 @@ class Orchestrator:
         if narrative.memory_intents:
             for mem in narrative.memory_intents:
                 try:
-                    args = {"kind": mem.kind, "content": mem.content}
+                    args: Dict[str, Any] = {"kind": mem.kind, "content": mem.content}
                     if mem.priority is not None:
-                        args["priority"] = mem.priority
+                        args["priority"] = int(mem.priority)  # Ensure it's an int
                     if mem.tags is not None:
-                        args["tags"] = mem.tags
+                        args["tags"] = list(mem.tags)  # Ensure it's a list of strings
+                    else:
+                        args["tags"] = [] # Default to empty list if None
                     
                     context = {
                         "session_id": session.id,
@@ -655,3 +663,100 @@ class Orchestrator:
         
         except Exception as e:
             logger.error(f"Error creating rolling summary: {e}", exc_info=True)
+
+    def _optimize_procedural_memory(self, session: GameSession):
+        """
+        Clean up low-value memories to prevent database bloat.
+        Called every 50 rounds along with rolling summaries.
+        
+        Strategy:
+        - Keep all high-priority memories (4-5)
+        - Keep recently accessed memories (last 20 rounds)
+        - Delete old, low-priority, rarely-accessed memories
+        - Keep at least 50 memories (safety buffer)
+        """
+        if not session.id:
+            return
+        
+        try:
+            all_memories = self.db_manager.get_memories_by_session(session.id)
+            
+            # Need at least some memories to optimize
+            if len(all_memories) < 100:
+                logger.debug(f"Only {len(all_memories)} memories, skipping optimization")
+                return
+            
+            candidates_for_deletion = []
+            
+            for mem in all_memories:
+                # Always keep high-priority memories
+                if mem.priority >= 4:
+                    continue
+                
+                # Always keep recently accessed
+                if mem.access_count > 0 and mem.last_accessed:
+                    try:
+                        from datetime import datetime, timedelta
+                        last_access = datetime.fromisoformat(mem.last_accessed)
+                        if datetime.now() - last_access < timedelta(hours=1):
+                            continue
+                    except (ValueError, AttributeError):
+                        pass
+                
+                # Calculate a "staleness" score
+                age_rounds = 999  # Default for old memories
+                try:
+                    from datetime import datetime
+                    created = datetime.fromisoformat(mem.created_at)
+                    age_days = (datetime.now() - created).days
+                    age_rounds = age_days * 10  # Rough estimate
+                except (ValueError, AttributeError):
+                    pass
+                
+                # Delete if:
+                # - Low priority (1-2)
+                # - Never or rarely accessed (< 3 times)
+                # - Created more than 10 rounds ago
+                if (mem.priority <= 2 and 
+                    mem.access_count < 3 and 
+                    age_rounds > 10):
+                    candidates_for_deletion.append(mem)
+            
+            # Safety: never delete more than 30% of memories at once
+            max_deletions = len(all_memories) // 3
+            to_delete = candidates_for_deletion[:max_deletions]
+            
+            # Safety: keep at least 50 memories
+            if len(all_memories) - len(to_delete) < 50:
+                keep_count = len(all_memories) - 50
+                to_delete = to_delete[:max(0, keep_count)]
+            
+            if not to_delete:
+                logger.debug("No memories need optimization")
+                return
+            
+            # Delete the memories
+            deleted_count = 0
+            for mem in to_delete:
+                try:
+                    self.db_manager.delete_memory(mem.id)
+                    
+                    # Also remove from vector store
+                    if self.vector_store:
+                        try:
+                            self.vector_store.delete_memory(session.id, mem.id)
+                        except Exception:
+                            pass
+                    
+                    deleted_count += 1
+                except Exception as e:
+                    logger.error(f"Failed to delete memory {mem.id}: {e}")
+            
+            logger.info(f"Memory optimization: deleted {deleted_count} low-value memories (kept {len(all_memories) - deleted_count})")
+            
+            # Optionally notify user
+            if self.tool_event_callback:
+                self.tool_event_callback(f"🧹 Optimized {deleted_count} old memories")
+        
+        except Exception as e:
+            logger.error(f"Error optimizing procedural memory: {e}", exc_info=True)

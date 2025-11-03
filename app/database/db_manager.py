@@ -140,7 +140,7 @@ class DBManager:
     def load_session(self, session_id: int) -> GameSession | None:
         with self.conn:
             cursor = self.conn.execute(
-                "SELECT id, name, session_data, prompt_id, memory, authors_note FROM sessions WHERE id = ?", 
+                "SELECT id, name, session_data, prompt_id, memory, authors_note, game_time FROM sessions WHERE id = ?",  # ✅ Added game_time
                 (session_id,)
             )
             row = cursor.fetchone()
@@ -151,7 +151,8 @@ class DBManager:
                     session_data=row["session_data"],
                     prompt_id=row["prompt_id"],
                     memory=row["memory"] or "",
-                    authors_note=row["authors_note"] or ""
+                    authors_note=row["authors_note"] or "",
+                    game_time=row["game_time"] or "Day 1, Dawn"  # ✅ Added with fallback
                 )
             return None
 
