@@ -3,8 +3,9 @@ import json as _json
 import logging
 import queue
 import threading
-from typing import Callable, List, Dict, Any # Added List, Dict, Any
-from app.database.db_manager import DBManager # Added for thread-local DB
+from typing import Callable, List, Dict, Any, Type
+from pydantic import BaseModel
+from app.database.db_manager import DBManager
 from app.gui.main_view import MainView
 from app.models.session import Session
 from app.models.game_session import GameSession
@@ -17,7 +18,7 @@ from app.core.context.state_context import StateContextBuilder
 from app.core.context.memory_retriever import MemoryRetriever
 from app.core.context.world_info_service import WorldInfoService
 from app.core.context.context_builder import ContextBuilder
-from app.core.llm.prompts import PLAN_TEMPLATE, NARRATIVE_TEMPLATE, CHOICE_GENERATION_TEMPLATE
+from app.core.llm.prompts import PLAN_TEMPLATE, NARRATIVE_TEMPLATE, CHOICE_GENERATION_TEMPLATE, TOOL_USAGE_GUIDELINES
 from app.core.llm.planner_service import PlannerService
 from app.core.llm.narrator_service import NarratorService
 from app.core.llm.choices_service import ChoicesService
@@ -25,6 +26,7 @@ from app.core.llm.auditor_service import AuditorService
 from app.core.tools.executor import ToolExecutor
 from app.core.metadata.turn_metadata_service import TurnMetadataService
 from app.core.memory.memory_intents_service import MemoryIntentsService
+from app.tools.schemas import StateApplyPatch, Patch
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -116,20 +118,26 @@ class Orchestrator:
 
                 # Determine game mode and available tools
                 current_game_mode = game_session.game_mode
-                available_tool_schemas: List[Dict[str, Any]]
+                available_tool_models: List[Type[BaseModel]]
+                available_tool_schemas_json: List[Dict[str, Any]]
                 system_prompt_template: str
 
                 if current_game_mode == "SETUP":
                     system_prompt_template = context_builder.get_session_zero_prompt_template()
                     setup_tool_names = ["schema.define_property", "schema.finalize"]
-                    available_tool_schemas = [
-                        s for s in self.tool_registry.get_all_schemas() if s["name"] in setup_tool_names
+                    available_tool_models = self.tool_registry.get_tool_models(setup_tool_names)
+                    available_tool_schemas_json = [
+                        s for s in self.tool_registry.get_all_schemas() 
+                        if s["name"] in setup_tool_names
                     ]
-                    logger.debug(f"SETUP mode: Available tools: {[s['name'] for s in available_tool_schemas]}")
-                else: # GAMEPLAY mode
+                    logger.debug(f"SETUP mode: Available tools: {setup_tool_names}")
+                    
+                else:  # GAMEPLAY mode
                     system_prompt_template = PLAN_TEMPLATE
-                    available_tool_schemas = self.tool_registry.get_all_schemas()
-                    logger.debug("GAMEPLAY mode: All tools available.")
+                    # Just get all types and all schemas directly
+                    available_tool_models = self.tool_registry.get_all_tool_types()
+                    available_tool_schemas_json = self.tool_registry.get_all_schemas()
+                    logger.debug(f"GAMEPLAY mode: {len(available_tool_models)} tools available.")
 
                 # Step 1: Plan
                 # Load the in-memory Session object from game_session.session_data
@@ -139,15 +147,23 @@ class Orchestrator:
                 chat_history = context_builder.get_truncated_history(session_in_thread, MAX_HISTORY_MESSAGES)
                 base_plan_template = system_prompt_template.format(
                     identity=chat_history[0].content if chat_history else "",
-                    tool_schemas=_json.dumps(available_tool_schemas, indent=2),
+                    tool_schemas=_json.dumps(available_tool_schemas_json, indent=2), # Use JSON schemas for prompt
                     tool_budget=TOOL_BUDGET,
+                    tool_usage_guidelines=TOOL_USAGE_GUIDELINES,
                 )
                 system_prompt_plan = context_builder.assemble(base_plan_template, game_session, chat_history)
-                plan = self.planner.plan(system_prompt_plan, chat_history, available_tool_schemas) # Pass available_tool_schemas
+                plan = self.planner.plan(system_prompt_plan, chat_history, available_tool_models)
                 if not plan:
                     logger.error("LLM returned no structured response for TurnPlan.")
                     self.ui_queue.put({"type": "error", "message": "AI failed to generate a valid plan."})
                     return
+
+                # Add validation check
+                if plan.tool_calls:
+                    logger.debug(f"Plan contains {len(plan.tool_calls)} tool calls:")
+                    for i, call in enumerate(plan.tool_calls):
+                        logger.debug(f"  {i}: {type(call).__name__}")
+
                 self.ui_queue.put({"type": "thought_bubble", "content": plan.thought})
 
                 # Step 2: Execute tools
@@ -207,10 +223,17 @@ class Orchestrator:
                     if narrative.proposed_patches:
                         for patch in narrative.proposed_patches:
                             try:
-                                args = {"entity_type": patch.entity_type, "key": patch.key, "patch": [op.model_dump() for op in patch.ops]}
-                                result = self.tool_registry.execute_tool("state.apply_patch", args, context={"session_id": game_session.id, "db_manager": thread_db_manager})
+                                patch_call = StateApplyPatch(
+                                    entity_type=patch.entity_type,
+                                    key=patch.key,
+                                    patch=[Patch(**op.model_dump()) for op in patch.ops]
+                                )
+                                result = self.tool_registry.execute(
+                                    patch_call, 
+                                    context={"session_id": game_session.id, "db_manager": thread_db_manager}
+                                )
                                 if self.tool_event_callback:
-                                    self.ui_queue.put({"type": "tool_event", "message": f"state.apply_patch ✓ -> {result}"})
+                                    self.ui_queue.put({"type": "tool_event", "message": f"state.apply_patch ✓ → {result}"})
                             except Exception as e:
                                 logger.error(f"Patch error: {e}")
                                 self.ui_queue.put({"type": "error", "message": f"Patch error: {e}"})

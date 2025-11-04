@@ -4,6 +4,11 @@ from typing import List, Optional, Literal, Any
 # A reusable JSON type to avoid recursion errors with Pydantic's schema generator.
 JSONValue = Any
 
+class UpdatePair(BaseModel):
+    """A key-value pair for updating attributes or properties."""
+    key: str = Field(..., description="The name of the attribute or property to update.")
+    value: Any = Field(..., description="The new value for the attribute or property.")
+
 class MathEval(BaseModel):
     """Evaluates a math expression."""
     name: Literal["math.eval"] = "math.eval"
@@ -129,3 +134,9 @@ class SchemaFinalize(BaseModel):
     Call this tool when all custom properties have been defined and the game is ready to begin.
     """
     name: Literal["schema.finalize"] = "schema.finalize"
+
+class CharacterUpdate(BaseModel):
+    """Update character attributes and properties with validation."""
+    name: Literal["character.update"] = "character.update"
+    character_key: str = Field(..., description="Character ID (e.g., 'player')")
+    updates: List[UpdatePair] = Field(..., description="A list of key-value pairs representing fields to update. Can include core attributes (hp_current) or custom properties (Sanity).")

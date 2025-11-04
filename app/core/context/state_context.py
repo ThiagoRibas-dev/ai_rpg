@@ -1,6 +1,7 @@
 import logging
 from typing import List
 from app.tools.registry import ToolRegistry
+from app.tools.schemas import StateQuery
 
 class StateContextBuilder:
     """Builds the CURRENT STATE section by querying game state via tools."""
@@ -20,11 +21,13 @@ class StateContextBuilder:
 
         try:
             # Character
-            char_result = self.tools.execute_tool(
-                "state.query",
-                {"entity_type": "character", "key": "player", "json_path": "."},
-                context=ctx
+            char_query = StateQuery(
+                entity_type="character",
+                key="player",
+                json_path="."
             )
+            char_result = self.tools.execute(char_query, context=ctx)
+            
             char = char_result.get("value", {}) or {}
             if char:
                 name = char.get("name", "Player")
@@ -45,11 +48,13 @@ class StateContextBuilder:
                 lines.append("")
 
             # Inventory
-            inv_result = self.tools.execute_tool(
-                "state.query",
-                {"entity_type": "inventory", "key": "player", "json_path": "."},
-                context=ctx
+            inv_query = StateQuery(
+                entity_type="inventory",
+                key="player",
+                json_path="."
             )
+            inv_result = self.tools.execute(inv_query, context=ctx)
+            
             inv = inv_result.get("value", {}) or {}
             if inv:
                 slots = f"{inv.get('slots_used', 0)}/{inv.get('slots_max', 10)}"
@@ -69,11 +74,13 @@ class StateContextBuilder:
                 lines.append("")
 
             # Quests
-            quest_result = self.tools.execute_tool(
-                "state.query",
-                {"entity_type": "quests", "key": "*", "json_path": "."},
-                context=ctx
+            quest_query = StateQuery(
+                entity_type="quests",
+                key="*",
+                json_path="."
             )
+            quest_result = self.tools.execute(quest_query, context=ctx)
+            
             quests = quest_result.get("value", {}) or {}
             if quests and isinstance(quests, dict):
                 lines.append("**Active Quests**:")

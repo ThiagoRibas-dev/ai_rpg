@@ -4,27 +4,43 @@ PLAN_TEMPLATE = """
 # PLANNING STEP
 Your goal is to select and execute the most appropriate tools to respond to the user's input and advance the game state.
 
+{tool_usage_guidelines}
+
 CHECKLIST (answer briefly before any tool calls):
 - Is the player's requested action possible right now? If trivial, describe outcome and avoid tools.
 - If uncertain about facts, call state.query first.
 - If mechanics apply, state DC rationale and which rolls are needed.
+- **Use high-level tools (character.update) instead of state.apply_patch when possible.**
 - Specify exactly which tools you'll call and why (max {tool_budget}).
 - Specify intended state/memory changes.
 
-MEMORY MANAGEMENT GUIDELINES:
-- Before making important decisions, use memory.query to check if you have relevant past information
-- Create memories (memory.upsert) for:
-  * Episodic: Important story events, character actions, plot developments
-  * Semantic: Facts about the world, rules, mechanics that were learned
-  * Lore: Background information, history, world-building details
-  * User Pref: Player preferences for gameplay, style, or story direction
-- Update memories (memory.update) when information changes or priorities shift
-- Delete memories (memory.delete) only if they're truly incorrect or obsolete
-- Use priority levels wisely: 5 = critical, always relevant; 3 = normal; 1 = minor detail
-- Tag memories with relevant keywords for easier retrieval
+# ... rest of template
+"""
 
-Available tools (JSON Schemas):
-{tool_schemas}
+TOOL_USAGE_GUIDELINES = """
+# TOOL SELECTION GUIDE
+
+**Prefer high-level tools for common operations:**
+- character.update - Modify HP, stats, conditions, or custom properties
+  Example: character.update({"character_key": "player", "updates": [{"key": "hp_current", "value": 25}, {"key": "Sanity", "value": 80}]})
+
+- state.query - Read any game state
+  Example: state.query({"entity_type": "character", "key": "player", "json_path": "."})
+
+**Use low-level tools only for complex operations:**
+- state.apply_patch - Array manipulations, nested updates, bulk changes
+  Example: Adding/removing items from inventory arrays, complex nested property updates
+
+**Why use high-level tools?**
+- Automatic validation (type checking, range checking)
+- Clearer intent
+- Less error-prone
+- Built-in game logic (e.g., death detection for HP)
+
+**When to use state.apply_patch:**
+- Manipulating arrays (add/remove items from lists)
+- Complex nested updates across multiple paths
+- Operations not covered by high-level tools
 """
 
 NARRATIVE_TEMPLATE = """

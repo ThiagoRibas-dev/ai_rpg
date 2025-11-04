@@ -1,6 +1,7 @@
 # Connectors
 
 Connectors are responsible for communicating with the underlying LLM APIs.
+A couple of general rules when crafting response schemas that need to be followed are : Not using Dict or dict; Using clear, strict, scperific pydantic classes; Making sure that the LLM can only generate the desired results; 
 
 ## Interface (`app.llm.llm_connector.LLMConnector`)
 

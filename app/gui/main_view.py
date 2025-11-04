@@ -21,6 +21,7 @@ class MainView(ctk.CTk):
         super().__init__()
 
         self.db_manager = db_manager
+        self.logger = logging.getLogger(__name__)
         self.selected_prompt = None
         self.selected_session = None
         self.title("AI-RPG")
@@ -172,19 +173,25 @@ class MainView(ctk.CTk):
     def _process_ui_queue(self):
         """Process messages from the orchestrator's UI queue."""
         try:
+            processed = 0
             while True:  # Process all pending messages
                 msg = self.orchestrator.ui_queue.get_nowait()
                 self._handle_ui_message(msg)
+                processed += 1
         except queue.Empty:
             pass
         finally:
+            if processed > 0:
+                self.logger.debug(f"📬 Processed {processed} UI messages")  # âœ… Add this
             # Re-schedule polling
             self.after(100, self._process_ui_queue)
 
     def _handle_ui_message(self, msg: dict):
         """Handle a single UI message from the orchestrator."""
         msg_type = msg.get("type")
-        
+
+        self.logger.debug(f"📨 UI message received: {msg_type}") 
+
         if msg_type == "thought_bubble":
             # Show loading frame using grid
             self.loading_frame.grid(row=2, column=0, columnspan=2, sticky="ew", padx=Theme.spacing.padding_sm, pady=Theme.spacing.padding_sm)
@@ -194,6 +201,7 @@ class MainView(ctk.CTk):
             self.add_message_bubble(msg["role"], msg["content"])
         
         elif msg_type == "tool_call":
+            self.logger.debug(f"🔧 Adding tool call to panel: {msg.get('name')}")
             self.add_tool_call(msg["name"], msg["args"])
         
         elif msg_type == "tool_result":
@@ -429,6 +437,8 @@ class MainView(ctk.CTk):
 
     def add_tool_call(self, tool_name: str, args: dict):
         """Add a tool call to the dedicated tool calls panel."""
+        self.logger.debug(f"🛠️ add_tool_call called: {tool_name}")
+        self.logger.debug(f"   tool_calls_frame exists: {hasattr(self, 'tool_calls_frame')}")
         style = get_tool_call_style()
         
         call_frame = ctk.CTkFrame(

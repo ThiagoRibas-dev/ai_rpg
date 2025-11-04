@@ -69,7 +69,7 @@ def handler(entity_type: str, key: str, patch: list[dict], **context) -> dict:
             if path in ("", "/"):
                 entity = value if isinstance(value, dict) else entity
             else:
-                _set_path(entity, path, value, create=False)
+                _set_path(entity, path, value, create=True)
         
         elif o == "remove":
             _del_path(entity, path)

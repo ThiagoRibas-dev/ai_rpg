@@ -1,6 +1,7 @@
 import logging
-from typing import List, Dict, Any
+from typing import List
 from app.io.schemas import MemoryIntent
+from app.tools.schemas import MemoryUpsert
 
 class MemoryIntentsService:
     """Applies memory intents using the tools registry."""
@@ -15,12 +16,14 @@ class MemoryIntentsService:
             return
         for mem in memory_intents:
             try:
-                args: Dict[str, Any] = {"kind": mem.kind, "content": mem.content}
-                if mem.priority is not None:
-                    args["priority"] = int(mem.priority)
-                args["tags"] = list(mem.tags) if mem.tags is not None else []
+                mem_call = MemoryUpsert(
+                    kind=mem.kind,
+                    content=mem.content,
+                    priority=int(mem.priority) if mem.priority is not None else 3,
+                    tags=list(mem.tags) if mem.tags is not None else []
+                )
                 ctx = {"session_id": session.id, "db_manager": self.db, "vector_store": self.vs}
-                result = self.tools.execute_tool("memory.upsert", args, context=ctx)
+                result = self.tools.execute(mem_call, context=ctx)
                 if tool_event_callback:
                     tool_event_callback(f"memory.upsert ✓ -> {result}")
             except Exception as e:

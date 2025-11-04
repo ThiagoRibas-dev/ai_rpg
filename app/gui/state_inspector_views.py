@@ -1,7 +1,9 @@
 import customtkinter as ctk
 import json
 import logging
+import time
 from app.gui.styles import Theme
+from app.tools.schemas import StateQuery, StateApplyPatch, Patch
 
 logger = logging.getLogger(__name__)
 
@@ -73,11 +75,12 @@ class CharacterInspectorView(ctk.CTkFrame):
             print(f"🔧 Querying state with context: {context}")
             
             # Query ALL characters using wildcard
-            result = registry.execute_tool(
-                "state.query",
-                {"entity_type": "character", "key": "*", "json_path": "."},
-                context=context
+            query = StateQuery(
+                entity_type="character",
+                key="*",
+                json_path="."
             )
+            result = registry.execute(query, context=context)
             
             print(f"📦 Query result: {result}")
             
@@ -185,6 +188,32 @@ class CharacterInspectorView(ctk.CTkFrame):
                 anchor="w"
             )
             loc_label.pack(fill="x", padx=10, pady=5)
+
+        # Inventory
+        inventory = self.character_data.get("inventory_key")
+        if inventory:
+            inv_label = ctk.CTkLabel(
+                self.scroll_frame,
+                text=f"🎒 Inventory: {inventory}",
+                anchor="w"
+            )
+            inv_label.pack(fill="x", padx=10, pady=5)
+
+        # Custom properties section
+        properties = self.character_data.get("properties", {})
+        if properties:
+            prop_frame = ctk.CTkFrame(self.scroll_frame)
+            prop_frame.pack(fill="x", padx=10, pady=5)
+
+            ctk.CTkLabel(
+                prop_frame,
+                text="⚙️ Custom Properties",
+                font=Theme.fonts.body,
+                anchor="w"
+            ).pack(fill="x", padx=5, pady=5)
+
+            for key, value in properties.items():
+                self._add_key_value(prop_frame, key, str(value))
         
         # Raw JSON view (collapsible)
         json_btn = ctk.CTkButton(
@@ -334,12 +363,12 @@ class InventoryInspectorView(ctk.CTkFrame):
             inventories = {}
             
             for entity_type in ["inventory", "item"]:
-                print(f"   Querying entity_type: {entity_type}")
-                result = registry.execute_tool(
-                    "state.query",
-                    {"entity_type": entity_type, "key": "*", "json_path": "."},
-                    context=context
+                query = StateQuery(
+                    entity_type=entity_type,
+                    key="*",
+                    json_path="."
                 )
+                result = registry.execute(query, context=context)
                 
                 entities = result.get("value", {})
                 print(f"   Found {len(entities)} entities of type {entity_type}")
@@ -473,41 +502,43 @@ class InventoryInspectorView(ctk.CTkFrame):
         if not item_name:
             return
         
+        if not self.orchestrator or not self.orchestrator.session:
+            self._show_error("No active session")
+            return
+        
+        session_id = self.orchestrator.session.id
+        
         try:
             from app.tools.registry import ToolRegistry
             registry = ToolRegistry()
             
             # Generate a simple ID
-            import time
             item_id = f"item_{int(time.time())}"
             
             # Add to inventory state
-            registry.execute_tool(
-                "state.apply_patch",
-                {
-                    "entity_type": "inventory",
-                    "key": "player",
-                    "patch": [
-                        {
-                            "op": "add",
-                            "path": "/items/-",
-                            "value": {
-                                "id": item_id,
-                                "name": item_name,
-                                "quantity": 1,
-                                "equipped": False
-                            }
+            patch_call = StateApplyPatch(
+                entity_type="inventory",
+                key="player",
+                patch=[
+                    Patch(
+                        op="add",
+                        path="/items/-",
+                        value={
+                            "id": item_id,
+                            "name": item_name,
+                            "quantity": 1,
+                            "equipped": False
                         }
-                    ]
-                },
-                context={}
+                    )
+                ]
             )
+            registry.execute(patch_call, context={"session_id": session_id, "db_manager": self.db_manager})
             
             self.refresh()
         
         except Exception as e:
-            print(f"Error adding item: {e}")
-            self._show_error(f"Error adding item: {e}") # Call _show_error here
+            logger.error(f"Error adding item: {e}", exc_info=True)
+            self._show_error(f"Error adding item: {e}")
     
     def _show_empty(self):
         """Show empty state."""
@@ -586,11 +617,12 @@ class QuestInspectorView(ctk.CTkFrame):
             print(f"🔧 Querying quests with context: {context}")
             
             # Query all quests using wildcard
-            result = registry.execute_tool(
-                "state.query",
-                {"entity_type": "quest", "key": "*", "json_path": "."},
-                context=context
+            query = StateQuery(
+                entity_type="quest",
+                key="*",
+                json_path="."
             )
+            result = registry.execute(query, context=context)
             
             print(f"📦 Query result: {result}")
             

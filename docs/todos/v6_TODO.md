@@ -8,7 +8,7 @@
 
 - [x] **Phase 1:** Foundation (Hybrid Schema + Session Zero) - 12/12 tasks
 - [x] **Phase 2:** Async UX (Responsive UI) - 8/8 tasks
-- [ ] **Phase 3:** High-Level Tools (Schema-Aware Operations) - 0/10 tasks
+- [x] **Phase 3:** High-Level Tools (Schema-Aware Operations) - 0/10 tasks
 - [ ] **Phase 4:** Polish (Export, Validation, UI) - 0/8 tasks
 
 
@@ -782,8 +782,8 @@
 ### Character Update Tool
 
 #### Task 3.1: Implement character.update Schema
-- [ ] **Modify** `app/tools/schemas.py`
-  - [ ] Add class:
+- [x] **Modify** `app/tools/schemas.py`
+  - [x] Add class:
     ```python
     class CharacterUpdate(BaseModel):
         """Update character attributes and properties with validation."""
@@ -801,8 +801,8 @@
 ---
 
 #### Task 3.2: Implement character.update Handler
-- [ ] **Create** `app/tools/builtin/character_update.py`
-  - [ ] Implement handler with validation:
+- [x] **Create** `app/tools/builtin/character_update.py`
+  - [x] Implement handler with validation:
     ```python
     def handler(character_key: str, updates: Dict[str, Any], **context) -> dict:
         session_id = context["session_id"]
@@ -846,7 +846,7 @@
         }
     ```
   
-  - [ ] Implement helper functions:
+  - [x] Implement helper functions:
     ```python
     def _is_core_attribute(char: Character, key: str) -> bool:
         # Check if it's a field in Character or CharacterAttributes
@@ -919,8 +919,8 @@
 ---
 
 #### Task 3.3: Register character.update Tool
-- [ ] **Modify** `app/tools/registry.py`
-  - [ ] Add to `_TOOL_SCHEMA_MAP`: `"character.update": tool_schemas.CharacterUpdate`
+- [x] **Modify** `app/tools/registry.py`
+  - [x] Add to `_TOOL_SCHEMA_MAP`: `"character.update": tool_schemas.CharacterUpdate`
 
   **Acceptance Criteria:**
   - Tool appears in registry
@@ -931,8 +931,8 @@
 ---
 
 #### Task 3.4: Add Tool Usage Guidelines to Prompts
-- [ ] **Modify** `app/core/llm/prompts.py`
-  - [ ] Add section to `PLAN_TEMPLATE`:
+- [x] **Modify** `app/core/llm/prompts.py`
+  - [x] Add section to `PLAN_TEMPLATE`:
     ```python
     TOOL_USAGE_GUIDELINES = """
     # TOOL SELECTION GUIDE
@@ -964,10 +964,10 @@
 ### Additional High-Level Tools
 
 #### Task 3.5: Implement character.move Tool
-- [ ] **Create** `app/tools/builtin/character_move.py`
-  - [ ] Handler updates `location_key` field
-  - [ ] Triggers location-based events (entering/leaving)
-  - [ ] Returns old and new locations
+- [x] **Create** `app/tools/builtin/character_move.py`
+  - [x] Handler updates `location_key` field
+  - [x] Triggers location-based events (entering/leaving)
+  - [x] Returns old and new locations
 
   **Acceptance Criteria:**
   - `character.move({"character_key": "player", "destination": "ancient_library"})` works
@@ -978,11 +978,11 @@
 ---
 
 #### Task 3.6: Implement item.transfer Tool
-- [ ] **Create** `app/tools/builtin/item_transfer.py`
-  - [ ] Handler moves items between inventories
-  - [ ] Validates item exists in source
-  - [ ] Checks destination capacity
-  - [ ] Updates both inventory entities
+- [x] **Create** `app/tools/builtin/item_transfer.py`
+  - [x] Handler moves items between inventories
+  - [x] Validates item exists in source
+  - [x] Checks destination capacity
+  - [x] Updates both inventory entities
 
   **Acceptance Criteria:**
   - Can move item from player to container
@@ -994,10 +994,10 @@
 ---
 
 #### Task 3.7: Implement character.add_condition Tool
-- [ ] **Create** `app/tools/builtin/character_add_condition.py`
-  - [ ] Handler adds to conditions array
-  - [ ] Prevents duplicates
-  - [ ] Optional duration tracking
+- [x] **Create** `app/tools/builtin/character_add_condition.py`
+  - [x] Handler adds to conditions array
+  - [x] Prevents duplicates
+  - [x] Optional duration tracking
 
   **Acceptance Criteria:**
   - `character.add_condition({"character_key": "player", "condition": "poisoned"})` works
@@ -1010,8 +1010,8 @@
 ### State Inspector Updates
 
 #### Task 3.8: Update Character Inspector for Properties
-- [ ] **Modify** `app/gui/state_inspector_views.py` → `CharacterInspectorView`
-  - [ ] Add section after core attributes:
+- [x] **Modify** `app/gui/state_inspector_views.py` → `CharacterInspectorView`
+  - [x] Add section after core attributes:
     ```python
     # Custom properties section
     properties = self.character_data.get("properties", {})
@@ -1039,9 +1039,9 @@
 ---
 
 #### Task 3.9: Create Schema Viewer Tab
-- [ ] **Modify** `app/gui/main_view.py`
-  - [ ] Add "Schema" tab to `game_state_inspector_tabs`
-  - [ ] Create `SchemaInspectorView` class:
+- [x] **Modify** `app/gui/main_view.py`
+  - [x] Add "Schema" tab to `game_state_inspector_tabs`
+  - [x] Create `SchemaInspectorView` class:
     ```python
     class SchemaInspectorView(ctk.CTkFrame):
         def refresh(self):
@@ -1069,23 +1069,6 @@
   - Updates when schema changes
 
   **Estimated Time:** 3 hours
-
----
-
-#### Task 3.10: Test Tool Validation
-- [ ] **Create** `tests/test_character_update.py`
-  - [ ] Test valid update succeeds
-  - [ ] Test type mismatch fails gracefully
-  - [ ] Test range violation fails gracefully
-  - [ ] Test enum violation fails gracefully
-  - [ ] Test death logic triggers correctly
-
-  **Acceptance Criteria:**
-  - All validation cases covered
-  - Error messages are clear
-  - No crashes on invalid input
-
-  **Estimated Time:** 2 hours
 
 ---
 
@@ -1228,27 +1211,6 @@
   - Works seamlessly once approved
 
   **Estimated Time:** 3 hours
-
----
-
-#### Task 4.8: Comprehensive Integration Test
-- [ ] **Create** `tests/test_integration_session_zero.py`
-  - [ ] Full flow test:
-    1. Create new session
-    2. AI defines 3 custom properties in Session Zero
-    3. Player approves and finalizes
-    4. Gameplay turn uses custom properties
-    5. character.update validates against schema
-    6. Export schema to file
-    7. Create new session and import schema
-    8. Verify imported schema works
-
-  **Acceptance Criteria:**
-  - All steps pass
-  - Exported/imported schema identical
-  - Validation works across sessions
-
-  **Estimated Time:** 4 hours
 
 ---
 

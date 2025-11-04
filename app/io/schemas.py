@@ -5,8 +5,8 @@ from pydantic import BaseModel, Field
 JSONValue = Any
 
 class ToolCall(BaseModel):
-    name: str
-    arguments: Optional[str] = None
+    name: str = Field(..., description="The name of the tool to call.")
+    arguments: str = Field(..., description="The JSON-formatted string arguments for the tool.")
 
 class TurnPlan(BaseModel):
     thought: str

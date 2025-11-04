@@ -3,6 +3,8 @@ from typing import List, Dict, Any
 from app.models.message import Message
 from app.llm.llm_connector import LLMConnector
 from app.io.schemas import AuditResult
+from app.tools.schemas import StateApplyPatch, Patch
+from app.tools.schemas import MemoryUpsert
 
 AUDIT_PROMPT = "You are a consistency auditor. In <=3 bullets, list contradictions between planned tool results and likely world state; else say OK. If patches are needed, propose minimal JSON patches."
 
@@ -33,20 +35,28 @@ class AuditorService:
         # Apply patches
         for patch in audit.proposed_patches or []:
             try:
-                args = {
-                    "entity_type": patch.entity_type,
-                    "key": patch.key,
-                    "patch": [op.model_dump() for op in patch.ops]
-                }
-                _ = self.tools.execute_tool("state.apply_patch", args, context={"session_id": session.id, "db_manager": self.db})
+                patch_call = StateApplyPatch(
+                    entity_type=patch.entity_type,
+                    key=patch.key,
+                    patch=[Patch(**op.model_dump()) for op in patch.ops]
+                )
+                _ = self.tools.execute(
+                    patch_call, 
+                    context={"session_id": session.id, "db_manager": self.db}
+                )
             except Exception as e:
                 self.logger.error(f"Patch error during audit: {e}")
         # Memory updates
         for mem in audit.memory_updates or []:
             try:
-                args = {"kind": mem.kind, "content": mem.content, "priority": mem.priority, "tags": mem.tags}
-                _ = self.tools.execute_tool(
-                    "memory.upsert", args,
+                mem_call = MemoryUpsert(
+                    kind=mem.kind,
+                    content=mem.content,
+                    priority=mem.priority if mem.priority is not None else 3,
+                    tags=mem.tags
+                )
+                _ = self.tools.execute(
+                    mem_call,
                     context={"session_id": session.id, "db_manager": self.db, "vector_store": self.vs}
                 )
             except Exception as e:

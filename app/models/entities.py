@@ -4,7 +4,6 @@ from typing import List, Dict, Any
 class CharacterAttributes(BaseModel):
     hp_current: int
     hp_max: int
-    # Other core stats (strength, dexterity, etc.) can be added here.
 
 class Character(BaseModel):
     # --- CORE SCHEMA ---
