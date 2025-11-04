@@ -10,7 +10,11 @@ from app.gui.styles import (
     get_tool_call_style,
     get_button_style,
 )
+import queue # Added for UI queue
+import logging # Added for logging
 from app.gui.state_inspector_views import CharacterInspectorView, InventoryInspectorView, QuestInspectorView
+
+logger = logging.getLogger(__name__)
 
 class MainView(ctk.CTk):
     def __init__(self, db_manager):
@@ -88,6 +92,19 @@ class MainView(ctk.CTk):
         self.stop_button = ctk.CTkButton(button_frame, text="Stop")
         self.stop_button.pack(expand=True, fill="both", padx=Theme.spacing.padding_xs, pady=Theme.spacing.padding_xs)
 
+        # Loading indicator
+        self.loading_frame = ctk.CTkFrame(self.main_panel, fg_color=Theme.colors.bg_tertiary)
+        self.loading_label = ctk.CTkLabel(
+            self.loading_frame,
+            text="🤔 AI is thinking...",
+            font=Theme.fonts.subheading,
+            text_color=Theme.colors.text_gold
+        )
+        self.loading_label.pack(pady=10)
+        # Don't grid frame yet - show/hide on demand
+        # self.loading_frame.grid(row=2, column=0, columnspan=2, sticky="ew", padx=Theme.spacing.padding_sm, pady=Theme.spacing.padding_sm)
+        # It will be gridded dynamically in _handle_ui_message
+
         # Control Panel (scrollable)
         self.control_panel = ctk.CTkScrollableFrame(self, fg_color=Theme.colors.bg_primary)
         self.control_panel.grid(row=0, column=1, sticky="nsew", 
@@ -100,6 +117,7 @@ class MainView(ctk.CTk):
 
         self.refresh_prompt_list()
         self.refresh_session_list()
+        self.after(100, self._process_ui_queue) # Start UI queue polling
 
     def _calculate_bubble_width(self) -> int:
         """Calculate the appropriate bubble width based on chat frame width."""
@@ -151,6 +169,71 @@ class MainView(ctk.CTk):
         # Use after_idle to ensure the frame is updated before scrolling
         self.after_idle(lambda: self.chat_history_frame._parent_canvas.yview_moveto(1.0))
 
+    def _process_ui_queue(self):
+        """Process messages from the orchestrator's UI queue."""
+        try:
+            while True:  # Process all pending messages
+                msg = self.orchestrator.ui_queue.get_nowait()
+                self._handle_ui_message(msg)
+        except queue.Empty:
+            pass
+        finally:
+            # Re-schedule polling
+            self.after(100, self._process_ui_queue)
+
+    def _handle_ui_message(self, msg: dict):
+        """Handle a single UI message from the orchestrator."""
+        msg_type = msg.get("type")
+        
+        if msg_type == "thought_bubble":
+            # Show loading frame using grid
+            self.loading_frame.grid(row=2, column=0, columnspan=2, sticky="ew", padx=Theme.spacing.padding_sm, pady=Theme.spacing.padding_sm)
+            self.add_message_bubble("thought", msg["content"])
+        
+        elif msg_type == "message_bubble":
+            self.add_message_bubble(msg["role"], msg["content"])
+        
+        elif msg_type == "tool_call":
+            self.add_tool_call(msg["name"], msg["args"])
+        
+        elif msg_type == "tool_result":
+            self.add_tool_result(msg["result"], msg.get("is_error", False))
+        
+        elif msg_type == "narrative": # This type is now handled by message_bubble with role "assistant"
+            self.add_message_bubble("assistant", msg["content"])
+        
+        elif msg_type == "choices":
+            self.display_action_choices(msg["choices"])
+        
+        elif msg_type == "error":
+            self.add_message_bubble("system", f"❌ Error: {msg['message']}")
+        
+        elif msg_type == "turn_complete":
+            self.loading_frame.grid_remove() # Hide loading
+            self.send_button.configure(state="normal") # Re-enable
+            # Refresh inspectors if needed
+            if hasattr(self, 'character_inspector'):
+                self.character_inspector.refresh()
+            if hasattr(self, 'inventory_inspector'):
+                self.inventory_inspector.refresh()
+            if hasattr(self, 'quest_inspector'):
+                self.quest_inspector.refresh()
+        
+        elif msg_type == "refresh_memory_inspector":
+            if hasattr(self, 'memory_inspector'):
+                self.memory_inspector.refresh_memories()
+        
+        elif msg_type == "update_game_time":
+            self.game_time_label.configure(text=f"🕐 {msg['new_time']}")
+
+        elif msg_type == "tool_event":
+            # This is for the legacy tool_event_callback, now routed through queue
+            logger.info(f"Tool Event: {msg['message']}")
+            # Optionally display this in a specific debug area or log
+        
+        else:
+            logger.warning(f"Unknown UI message type: {msg_type}")
+
     def add_message_bubble(self, role: str, content: str):
         """Add a message as a chat bubble."""
         style = get_chat_bubble_style(role)
@@ -197,10 +280,6 @@ class MainView(ctk.CTk):
         
         # Auto-scroll to bottom (use our helper method)
         self._scroll_to_bottom()
-
-    def add_thought_bubble(self, thought: str):
-        """Add an AI thought as a special bubble."""
-        self.add_message_bubble("thought", thought)
 
     def clear_chat_history(self):
         """Clear all chat bubbles."""
@@ -309,19 +388,19 @@ class MainView(ctk.CTk):
         # Add the actual views:
         self.character_inspector = CharacterInspectorView(
             self.game_state_inspector_tabs.tab("Characters"),
-            None  # Will be set when orchestrator is ready
+            self.db_manager # Pass db_manager directly
         )
         self.character_inspector.pack(fill="both", expand=True)
 
         self.inventory_inspector = InventoryInspectorView(
             self.game_state_inspector_tabs.tab("Inventory"),
-            None
+            self.db_manager # Pass db_manager directly
         )
         self.inventory_inspector.pack(fill="both", expand=True)
 
         self.quest_inspector = QuestInspectorView(
             self.game_state_inspector_tabs.tab("Quests"),
-            None
+            self.db_manager # Pass db_manager directly
         )
         self.quest_inspector.pack(fill="both", expand=True)
 
@@ -414,8 +493,11 @@ class MainView(ctk.CTk):
         self.after_idle(lambda: self.tool_calls_frame._parent_canvas.yview_moveto(1.0))
 
     def log_tool_event(self, message: str):
-        """Legacy method - redirects to tool calls panel."""
-        pass
+        """Legacy method - now sends tool events to the UI queue."""
+        if hasattr(self, 'orchestrator') and self.orchestrator:
+            self.orchestrator.ui_queue.put({"type": "tool_event", "message": message})
+        else:
+            logger.warning(f"Orchestrator not set, cannot log tool event: {message}")
 
     def get_input(self) -> str:
         return self.user_input.get("1.0", "end-1c")
@@ -461,12 +543,19 @@ class MainView(ctk.CTk):
         self.refresh_session_list(self.selected_prompt.id)
 
     def handle_send_button(self):
+        if not self.selected_session:
+            return
+        
+        # Disable to prevent concurrent turns
+        self.send_button.configure(state="disabled")
+        
+        # Clear previous choices
         for widget in self.choice_button_frame.winfo_children():
             widget.destroy()
         self.choice_button_frame.grid_remove()
         
-        if self.selected_session:
-            self.orchestrator.plan_and_execute(self.selected_session)
+        # Start turn (non-blocking)
+        self.orchestrator.plan_and_execute(self.selected_session)
 
     def load_game(self, session_id: int):
         self.orchestrator.load_game(session_id)
@@ -478,6 +567,8 @@ class MainView(ctk.CTk):
                 self.add_message_bubble("user", message.content)
             elif message.role == "assistant":
                 self.add_message_bubble("assistant", message.content)
+            elif message.role == "system": # Also display system messages from history
+                self.add_message_bubble("system", message.content)
         
         self.load_context()
 

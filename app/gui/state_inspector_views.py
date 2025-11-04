@@ -8,11 +8,12 @@ logger = logging.getLogger(__name__)
 class CharacterInspectorView(ctk.CTkFrame):
     """Display character stats from game state."""
     
-    def __init__(self, parent, orchestrator):
+    def __init__(self, parent, db_manager): # Changed to db_manager
         super().__init__(parent)
-        self.orchestrator = orchestrator
+        self.db_manager = db_manager # Store db_manager directly
+        self.orchestrator = None # Orchestrator will be set later
         
-        # ✅ FIX: Initialize missing attributes
+        # Initialize missing attributes
         self.all_characters = {}
         self.current_character_key = "player"  # Default to player
         
@@ -66,7 +67,7 @@ class CharacterInspectorView(ctk.CTkFrame):
             
             context = {
                 "session_id": session_id,
-                "db_manager": self.orchestrator.db_manager
+                "db_manager": self.db_manager # Use direct db_manager
             }
             
             print(f"🔧 Querying state with context: {context}")
@@ -244,11 +245,12 @@ class CharacterInspectorView(ctk.CTkFrame):
 class InventoryInspectorView(ctk.CTkFrame):
     """Display and interact with inventory."""
     
-    def __init__(self, parent, orchestrator):
+    def __init__(self, parent, db_manager): # Changed to db_manager
         super().__init__(parent)
-        self.orchestrator = orchestrator
+        self.db_manager = db_manager # Store db_manager directly
+        self.orchestrator = None # Orchestrator will be set later
         
-        # ✅ FIX: Initialize missing attributes
+        # Initialize missing attributes
         self.all_inventories = {}
         self.current_owner_key = "inventory:player"  # Default key
         
@@ -323,7 +325,7 @@ class InventoryInspectorView(ctk.CTkFrame):
             
             context = {
                 "session_id": session_id,
-                "db_manager": self.orchestrator.db_manager
+                "db_manager": self.db_manager # Use direct db_manager
             }
             
             print(f"🔧 Querying inventories with context: {context}")
@@ -505,6 +507,7 @@ class InventoryInspectorView(ctk.CTkFrame):
         
         except Exception as e:
             print(f"Error adding item: {e}")
+            self._show_error(f"Error adding item: {e}") # Call _show_error here
     
     def _show_empty(self):
         """Show empty state."""
@@ -517,13 +520,28 @@ class InventoryInspectorView(ctk.CTkFrame):
             text_color=Theme.colors.text_muted
         ).pack(expand=True, pady=50)
 
+    def _show_error(self, message):
+        """Show error message."""
+        for widget in self.items_frame.winfo_children():
+            widget.destroy()
+        
+        label = ctk.CTkLabel(
+            self.items_frame,
+            text=message,
+            text_color=Theme.colors.text_muted,
+            font=Theme.fonts.body,
+            wraplength=400
+        )
+        label.pack(expand=True, pady=50)
+
 
 class QuestInspectorView(ctk.CTkFrame):
     """Display active quests."""
     
-    def __init__(self, parent, orchestrator):
+    def __init__(self, parent, db_manager): # Changed to db_manager
         super().__init__(parent)
-        self.orchestrator = orchestrator
+        self.db_manager = db_manager # Store db_manager directly
+        self.orchestrator = None # Orchestrator will be set later
         
         # Scrollable quest list
         self.scroll_frame = ctk.CTkScrollableFrame(self, fg_color=Theme.colors.bg_secondary)
@@ -562,7 +580,7 @@ class QuestInspectorView(ctk.CTkFrame):
             
             context = {
                 "session_id": session_id,
-                "db_manager": self.orchestrator.db_manager
+                "db_manager": self.db_manager # Use direct db_manager
             }
             
             print(f"🔧 Querying quests with context: {context}")
@@ -660,3 +678,17 @@ class QuestInspectorView(ctk.CTkFrame):
             text="No active quests.\n\nQuests will appear as the story progresses.",
             text_color=Theme.colors.text_muted
         ).pack(expand=True, pady=50)
+
+    def _show_error(self, message):
+        """Show error message."""
+        for widget in self.scroll_frame.winfo_children():
+            widget.destroy()
+        
+        label = ctk.CTkLabel(
+            self.scroll_frame,
+            text=message,
+            text_color=Theme.colors.text_muted,
+            font=Theme.fonts.body,
+            wraplength=400
+        )
+        label.pack(expand=True, pady=50)

@@ -1,0 +1,20 @@
+ # Can be GEMINI or OPENAI
+LLM_PROVIDER=GEMINI
+
+GEMINI_API_KEY=gemini-api-key
+GEMINI_API_MODEL=gemini-flash-latest
+
+# For OpenAI-compatible APIs (like llama.cpp server)
+OPENAI_API_BASE_URL=http://localhost:8080/v1
+OPENAI_API_KEY=sk-no-key-required
+OPENAI_API_MODEL=qwen-30B-A3B-thinking
+
+# 🆕 Embedding Model Configuration
+# Options (from fastembed):
+#   - BAAI/bge-small-en-v1.5 (default, 384 dims, ~50MB, fast)
+#   - sentence-transformers/all-MiniLM-L6-v2 (384 dims, ~80MB, very popular)
+#   - BAAI/bge-base-en-v1.5 (768 dims, ~200MB, more accurate)
+#   - BAAI/bge-small-en (384 dims, ~50MB, older version)
+#
+# See all: https://qdrant.github.io/fastembed/examples/Supported_Models/
+EMBEDDING_MODEL=BAAI/bge-small-en-v1.5

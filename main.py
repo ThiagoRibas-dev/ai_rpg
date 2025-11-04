@@ -10,7 +10,7 @@ def main():
     with DBManager(DB_PATH) as db_manager:
         db_manager.create_tables()
         view = MainView(db_manager)
-        orchestrator = Orchestrator(view, db_manager)
+        orchestrator = Orchestrator(view, DB_PATH) # Pass DB_PATH instead of db_manager
         view.set_orchestrator(orchestrator)
         orchestrator.tool_event_callback = view.log_tool_event
         orchestrator.run()

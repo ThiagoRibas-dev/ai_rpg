@@ -7,7 +7,7 @@
 ## 📊 Progress Overview
 
 - [x] **Phase 1:** Foundation (Hybrid Schema + Session Zero) - 12/12 tasks
-- [ ] **Phase 2:** Async UX (Responsive UI) - 0/8 tasks
+- [x] **Phase 2:** Async UX (Responsive UI) - 8/8 tasks
 - [ ] **Phase 3:** High-Level Tools (Schema-Aware Operations) - 0/10 tasks
 - [ ] **Phase 4:** Polish (Export, Validation, UI) - 0/8 tasks
 
@@ -507,10 +507,10 @@
 ### Threading Infrastructure
 
 #### Task 2.1: Add UI Queue to Orchestrator
-- [ ] **Modify** `app/core/orchestrator.py`
-  - [ ] Import `import queue, threading`
-  - [ ] Add in `__init__`: `self.ui_queue = queue.Queue()`
-  - [ ] Replace direct UI calls with queue messages:
+- [x] **Modify** `app/core/orchestrator.py`
+  - [x] Import `import queue, threading`
+  - [x] Add in `__init__`: `self.ui_queue = queue.Queue()`
+  - [x] Replace direct UI calls with queue messages:
     ```python
     # OLD:
     self.view.add_thought_bubble(plan.thought)
@@ -518,7 +518,7 @@
     # NEW:
     self.ui_queue.put({"type": "thought_bubble", "content": plan.thought})
     ```
-  - [ ] Define message types: `thought_bubble`, `tool_call`, `tool_result`, `narrative`, `choices`, `error`, `turn_complete`
+  - [x] Define message types: `thought_bubble`, `tool_call`, `tool_result`, `narrative`, `choices`, `error`, `turn_complete`
 
   **Acceptance Criteria:**
   - All UI updates go through queue
@@ -529,8 +529,8 @@
 ---
 
 #### Task 2.2: Refactor Orchestrator for Thread-Local DB
-- [ ] **Modify** `app/core/orchestrator.py`
-  - [ ] Change `__init__` signature:
+- [x] **Modify** `app/core/orchestrator.py`
+  - [x] Change `__init__` signature:
     ```python
     def __init__(self, view: MainView, db_path: str):  # Store path, not manager
         self.view = view
@@ -538,7 +538,7 @@
         self.ui_queue = queue.Queue()
         # ... services that don't need DB ...
     ```
-  - [ ] Create `_background_execute()`:
+  - [x] Create `_background_execute()`:
     ```python
     def _background_execute(self, session_snapshot):
         try:
@@ -574,9 +574,9 @@
 ---
 
 #### Task 2.3: Create plan_and_execute Wrapper
-- [ ] **Modify** `app/core/orchestrator.py`
-  - [ ] Refactor existing logic into `_plan_and_execute_impl(session, context)`
-  - [ ] New public method:
+- [x] **Modify** `app/core/orchestrator.py`
+  - [x] Refactor existing logic into `_plan_and_execute_impl(session, context)`
+  - [x] New public method:
     ```python
     def plan_and_execute(self, session):
         # Create snapshot (avoid shared state issues)
@@ -603,8 +603,8 @@
 ---
 
 #### Task 2.4: Update Main Entry Point
-- [ ] **Modify** `main.py`
-  - [ ] Change orchestrator initialization:
+- [x] **Modify** `main.py`
+  - [x] Change orchestrator initialization:
     ```python
     # OLD:
     orchestrator = Orchestrator(view, db_manager)
@@ -624,8 +624,8 @@
 ### UI Queue Processing & Feedback
 
 #### Task 2.5: Implement UI Queue Polling
-- [ ] **Modify** `app/gui/main_view.py`
-  - [ ] Add method:
+- [x] **Modify** `app/gui/main_view.py`
+  - [x] Add method:
     ```python
     def _process_ui_queue(self):
         try:
@@ -638,7 +638,7 @@
             # Re-schedule polling
             self.after(100, self._process_ui_queue)
     ```
-  - [ ] Start polling in `__init__`:
+  - [x] Start polling in `__init__`:
     ```python
     def __init__(self, db_manager):
         super().__init__()
@@ -656,8 +656,8 @@
 ---
 
 #### Task 2.6: Implement Message Handler
-- [ ] **Modify** `app/gui/main_view.py`
-  - [ ] Add method:
+- [x] **Modify** `app/gui/main_view.py`
+  - [x] Add method:
     ```python
     def _handle_ui_message(self, msg: dict):
         msg_type = msg.get("type")
@@ -696,8 +696,8 @@
 ---
 
 #### Task 2.7: Add Turn State Management
-- [ ] **Modify** `app/gui/main_view.py`
-  - [ ] Modify `handle_send_button`:
+- [x] **Modify** `app/gui/main_view.py`
+  - [x] Modify `handle_send_button`:
     ```python
     def handle_send_button(self):
         if not self.selected_session:
@@ -725,8 +725,8 @@
 ---
 
 #### Task 2.8: Add Loading Indicator
-- [ ] **Modify** `app/gui/main_view.py`
-  - [ ] Add to `__init__`:
+- [x] **Modify** `app/gui/main_view.py`
+  - [x] Add to `__init__`:
     ```python
     self.loading_frame = ctk.CTkFrame(self.main_panel, fg_color=Theme.colors.bg_tertiary)
     self.loading_label = ctk.CTkLabel(
@@ -738,7 +738,7 @@
     # Don't pack frame yet - show/hide on demand
     ```
   
-  - [ ] Modify `_handle_ui_message`:
+  - [x] Modify `_handle_ui_message`:
     ```python
     if msg_type == "thought_bubble":
         self.loading_frame.pack(fill="x", pady=5)  # Show loading
@@ -759,12 +759,12 @@
 ---
 
 #### Task 2.9: Test Responsiveness
-- [ ] **Manual Testing**
-  - [ ] Start a turn, try to resize window (should be smooth)
-  - [ ] Start a turn, try to scroll chat history (should work)
-  - [ ] Start a turn, try to switch sessions (should be prevented or warned)
-  - [ ] Trigger error mid-turn, verify error message appears
-  - [ ] Send 3 rapid turns, verify they don't overlap
+- [x] **Manual Testing**
+  - [x] Start a turn, try to resize window (should be smooth)
+  - [x] Start a turn, try to scroll chat history (should work)
+  - [x] Start a turn, try to switch sessions (should be prevented or warned)
+  - [x] Trigger error mid-turn, verify error message appears
+  - [x] Send 3 rapid turns, verify they don't overlap
 
   **Acceptance Criteria:**
   - Window never freezes
