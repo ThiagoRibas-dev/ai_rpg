@@ -4,7 +4,7 @@ from typing import List
 from app.models.session import Session
 from app.models.game_session import GameSession
 from app.models.message import Message
-from app.core.llm.prompts import TOOL_USAGE_GUIDELINES, SESSION_ZERO_TEMPLATE
+from app.core.llm.prompts import SESSION_ZERO_TEMPLATE
 
 class ContextBuilder:
     """Builds static and dynamic prompt components for caching optimization."""
@@ -20,8 +20,7 @@ class ContextBuilder:
         self.logger = logger or logging.getLogger(__name__)
 
     def build_static_system_instruction(self, game_session: GameSession, 
-                                        tool_schemas: List[dict],
-                                        tool_usage_note: str) -> str:
+                                    tool_schemas: List[dict]) -> str:
         """
         Build the cacheable system instruction.
         Call this when:
@@ -34,20 +33,15 @@ class ContextBuilder:
         
         # 1. User's game prompt (from Session.system_prompt, NOT history)
         session_data = Session.from_json(game_session.session_data)
-        user_game_prompt = session_data.get_system_prompt()  # ✅ Use getter
+        user_game_prompt = session_data.get_system_prompt()
         sections.append(user_game_prompt)
         
-        # 2. Tool schemas (static per game mode)
-        sections.append("# AVAILABLE TOOLS #")
-        sections.append(json.dumps(tool_schemas, indent=2))
+        # 2. Tool schemas (only if tools are available)
+        if tool_schemas:
+            sections.append("# AVAILABLE TOOLS #")
+            sections.append(json.dumps(tool_schemas, indent=2))
         
-        # 3. Tool usage guidelines
-        sections.append(TOOL_USAGE_GUIDELINES)
-        
-        # 4. Tool usage note (dynamic based on game mode)
-        sections.append(tool_usage_note)
-
-        # 5. Author's note (if exists)
+        # 3. Author's note (if exists)
         if game_session.authors_note:
             sections.append("# AUTHOR'S NOTE #")
             sections.append(game_session.authors_note)

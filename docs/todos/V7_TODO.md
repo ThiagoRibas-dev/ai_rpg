@@ -95,38 +95,13 @@ This document tracks the implementation of prompt caching optimization and workf
 - [x] **`app/gui/styles.py`**: (Optional) Add game mode colors
   - [x] Add `mode_setup` and `mode_gameplay` color definitions
 
-## Documentation
+## Tool Schema Refactor and Prompt Simplification
 
-- [x] **`README.md`**: Comprehensive update with prompt caching documentation
-  - [x] Add "Prompt Caching & Performance" section explaining the technique
-  - [x] Update "How a Turn Works" with detailed three-phase breakdown
-  - [x] Document static vs dynamic content separation
-  - [x] Explain cache invalidation conditions
-  - [x] Add performance metrics (~16x speedup)
-  - [x] Document first-person phase prompt approach
-  - [x] Add troubleshooting section for caching issues
-  - [x] Update architecture overview
-
-- [x] **`GEMINI.md`**: Update AI development guide
-  - [x] Add "Turn Workflow Optimization" section
-  - [x] Document static instruction caching strategy
-  - [x] Explain response prefilling technique
-  - [x] Document first-person phase prompts rationale
-  - [x] Add note about considering caching in new features
-
-## Testing & Validation
-
-- [x] **Manual Testing**: Verify the new workflow works end-to-end
-  - [x] Test Session Zero → GAMEPLAY transition
-  - [x] Verify game mode indicator updates correctly
-  - [x] Confirm cache hit/miss logging appears correctly
-  - [x] Test with both Gemini and OpenAI connectors
-  - [x] Verify tool calls are validated and invalid ones filtered
-  - [x] Confirm no duplicate system messages sent to API
-  - [x] Verify no duplicate assistant messages between phases
-
-- [x] **Error Handling**: Test edge cases
-  - [x] LLM returns empty tool_calls array `[]` - should work
-  - [x] LLM returns invalid tool_calls `[{}]` - should filter out
-  - [x] Author's note edited mid-session - should invalidate cache
-  - [x] Mode change (SETUP → GAMEPLAY) - should rebuild static instruction
+- [x] **Enriched Tool Schemas (`app/tools/schemas.py`)**
+    - Added detailed usage guidance, examples, and best practices directly into each tool's Pydantic model docstring and field descriptions.
+- [x] **Removed `TOOL_USAGE_GUIDELINES` (`app/core/llm/prompts.py`)**
+    - Eliminated the separate `TOOL_USAGE_GUIDELINES` section from the prompt templates.
+- [x] **Simplified Static Instruction (`app/core/context/context_builder.py`)**
+    - Updated the `build_static_system_instruction` method to no longer include the `TOOL_USAGE_GUIDELINES` section, resulting in a cleaner prompt structure.
+- [x] **Tighter Phase Templates (`app/core/orchestrator.py`)**
+    - Ensured `SESSION_ZERO_TEMPLATE` is correctly imported, aligning with the simplified prompt structure and removing any references to the deleted guidelines.

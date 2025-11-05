@@ -48,8 +48,8 @@ This document outlines the planned features and development milestones for the A
 *   **Phase 4: Polish** (Export, Validation, UI)
 
 
-## v6: Prompt Caching Optimization using Response Sufixes
+## v7: Prompt Caching Optimization using Response Sufixes
 
 *   **Separation od Static and Dynamic prompts using Response Prefix:** Implemente a complete prompt caching optimization system that separates static (cacheable) content from dynamic (per-turn) content, using response prefilling/suffixes to inject phase-specific instructions and context.
-
-*   **Addition of Stage indicatior to the UI::** Added an indicator at the top of the Chat UI to display the current game stage (SETUP, GAMEPLAY).
+*   **Addition of Stage indicatior to the UI:** Added an indicator at the top of the Chat UI to display the current game stage (SETUP, GAMEPLAY).
+*   **Tool Schema Refactor and Prompt Simplification:** Enriched tool schemas, remove redundant guidelines, and simplify prompt structures.

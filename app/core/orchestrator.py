@@ -128,23 +128,10 @@ class Orchestrator:
                         if s["name"] in setup_tool_names
                     ]
                     logger.debug(f"SETUP mode: Available tools: {setup_tool_names}")
-                    # ✅ Add explicit note about tool_calls validation
-                    tool_usage_note = """
-NOTE: When providing tool_calls in your response:
-- If no tools are needed, use an empty array: "tool_calls": []
-- If tools are needed, each object MUST have a "name" field matching an available tool
-- Never include empty objects {} in the tool_calls array
-"""
                 else:  # GAMEPLAY mode
                     available_tool_models = self.tool_registry.get_all_tool_types()
                     available_tool_schemas_json = self.tool_registry.get_all_schemas()
                     logger.debug(f"GAMEPLAY mode: {len(available_tool_models)} tools available.")
-                    tool_usage_note = """
-NOTE: When providing tool_calls in your response:
-- If no tools are needed, use an empty array: "tool_calls": []
-- If tools are needed, each object MUST have a "name" field matching an available tool
-- Never include empty objects {} in the tool_calls array
-"""
 
                 # ===== BUILD STATIC SYSTEM INSTRUCTION (CACHED) =====
                 cache_key = (game_session.game_mode, game_session.authors_note)
@@ -152,8 +139,7 @@ NOTE: When providing tool_calls in your response:
                 game_session._cache_key != cache_key:
                     game_session._cached_instruction = context_builder.build_static_system_instruction(
                         game_session, 
-                        available_tool_schemas_json,
-                        tool_usage_note # Pass the new note
+                        available_tool_schemas_json  # ✅ No tool_usage_note parameter
                     )
                     game_session._cache_key = cache_key
                     logger.debug("Built new static system instruction (cache miss)")
@@ -217,7 +203,7 @@ NOTE: When providing tool_calls in your response:
                         if hasattr(game_session, '_cached_instruction'):
                             delattr(game_session, '_cached_instruction')
                         
-                        # ✅ Notify UI of mode change
+                        # Notify UI of mode change
                         self.ui_queue.put({"type": "update_game_mode", "new_mode": "GAMEPLAY"})
                         
                         self.ui_queue.put({"type": "message_bubble", "role": "system", "content": "✅ Session Zero complete! Game starting..."})
@@ -237,7 +223,7 @@ NOTE: When providing tool_calls in your response:
                     # Rebuild dynamic context (state may have changed after tools)
                     dynamic_context = context_builder.build_dynamic_context(game_session, chat_history)
                     
-                    phase_template = NARRATIVE_TEMPLATE  # No formatting needed, it's in the prefill
+                    phase_template = NARRATIVE_TEMPLATE
                     
                     narrative = self.narrator.write_step(
                         system_instruction=static_instruction,
@@ -245,7 +231,7 @@ NOTE: When providing tool_calls in your response:
                         dynamic_context=dynamic_context,
                         plan_thought=plan.thought,           # ✅ Pass prior phase context
                         tool_results=str(tool_results),      # ✅ Pass prior phase context
-                        chat_history=chat_history            # ✅ Same chat_history (no updates yet)
+                        chat_history=chat_history    
                     )
                     
                     if not narrative:
@@ -258,7 +244,7 @@ NOTE: When providing tool_calls in your response:
 
                     # ===== STEP 3.5: Turn metadata =====
                     if game_session.id:
-                        round_number = len(session_in_thread.get_history()) // 2 + 1  # +1 because we haven't added this turn yet
+                        round_number = len(session_in_thread.get_history()) // 2 + 1
                         turnmeta.persist(
                             session_id=game_session.id,
                             prompt_id=game_session.prompt_id,
@@ -292,13 +278,13 @@ NOTE: When providing tool_calls in your response:
 
                     # ===== STEP 5: Action choices =====
                     try:
-                        phase_template = CHOICE_GENERATION_TEMPLATE  # No formatting needed
+                        phase_template = CHOICE_GENERATION_TEMPLATE
                         
                         choices = self.choices.generate(
                             system_instruction=static_instruction,
                             phase_template=phase_template,
-                            narrative_text=narrative.narrative,  # ✅ Pass prior phase context
-                            chat_history=chat_history            # ✅ Still same chat_history
+                            narrative_text=narrative.narrative,
+                            chat_history=chat_history
                         )
                         if choices and choices.choices:
                             self.ui_queue.put({"type": "choices", "choices": choices.choices})
