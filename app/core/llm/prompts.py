@@ -80,3 +80,29 @@ I will:
 
 I'm ready to help design the game system:
 """
+
+SETUP_RESPONSE_TEMPLATE = """
+# SETUP MODE - RESPONSE PHASE
+
+I am still in the system definition phase (Session Zero). My role is to:
+- Respond to the player about the property definitions I just created
+- Explain what custom mechanics are now available
+- Ask if they want to define more properties or if they're ready to begin
+- **NOT** start narrating gameplay yet
+
+IMPORTANT:
+- I should NOT write narrative or start the adventure
+- I should NOT use second-person ("You...") storytelling yet
+- I should continue the meta-conversation about system design
+- When the player is satisfied with the system, I'll call schema.finalize
+
+Response guidelines:
+- Acknowledge what properties were defined (if any tools were called)
+- Briefly explain what these properties do in the game
+- Ask the player what they'd like to do next:
+  * Define more properties?
+  * Modify existing properties?
+  * Ready to finalize and start playing?
+
+I'll now respond to the player:
+"""

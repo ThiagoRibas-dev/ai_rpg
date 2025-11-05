@@ -17,7 +17,12 @@ from app.core.context.state_context import StateContextBuilder
 from app.core.context.memory_retriever import MemoryRetriever
 from app.core.context.world_info_service import WorldInfoService
 from app.core.context.context_builder import ContextBuilder
-from app.core.llm.prompts import PLAN_TEMPLATE, NARRATIVE_TEMPLATE, CHOICE_GENERATION_TEMPLATE
+from app.core.llm.prompts import (
+    PLAN_TEMPLATE, 
+    NARRATIVE_TEMPLATE, 
+    CHOICE_GENERATION_TEMPLATE, 
+    SETUP_RESPONSE_TEMPLATE
+)
 from app.core.llm.planner_service import PlannerService
 from app.core.llm.narrator_service import NarratorService
 from app.core.llm.choices_service import ChoicesService
@@ -218,20 +223,24 @@ class Orchestrator:
                     if audit and not audit.ok:
                         auditor.apply_remediations(audit, game_session)
 
-                # ===== STEP 3: NARRATIVE (only in GAMEPLAY mode, or if setup tools didn't finalize) =====
+                # ===== STEP 3: NARRATIVE/RESPONSE (only in GAMEPLAY mode, or if setup tools didn't finalize) =====
                 if current_game_mode == "GAMEPLAY" or not any(r.get("tool_name") == "schema.finalize" for r in tool_results):
                     # Rebuild dynamic context (state may have changed after tools)
                     dynamic_context = context_builder.build_dynamic_context(game_session, chat_history)
                     
-                    phase_template = NARRATIVE_TEMPLATE
+                    # ✅ Choose appropriate template based on game mode
+                    if current_game_mode == "SETUP":
+                        phase_template = SETUP_RESPONSE_TEMPLATE
+                    else:  # GAMEPLAY
+                        phase_template = NARRATIVE_TEMPLATE
                     
                     narrative = self.narrator.write_step(
                         system_instruction=static_instruction,
                         phase_template=phase_template,
                         dynamic_context=dynamic_context,
-                        plan_thought=plan.thought,           # ✅ Pass prior phase context
-                        tool_results=str(tool_results),      # ✅ Pass prior phase context
-                        chat_history=chat_history    
+                        plan_thought=plan.thought,
+                        tool_results=str(tool_results),
+                        chat_history=chat_history
                     )
                     
                     if not narrative:
@@ -240,10 +249,10 @@ class Orchestrator:
                         return
 
                     self.ui_queue.put({"type": "message_bubble", "role": "assistant", "content": narrative.narrative})
-                    # ❌ DON'T add to chat_history yet - need to finish all phases first
 
                     # ===== STEP 3.5: Turn metadata =====
-                    if game_session.id:
+                    # ✅ Only store turn metadata in GAMEPLAY mode
+                    if current_game_mode == "GAMEPLAY" and game_session.id:
                         round_number = len(session_in_thread.get_history()) // 2 + 1
                         turnmeta.persist(
                             session_id=game_session.id,
@@ -277,22 +286,24 @@ class Orchestrator:
                     mem_intents.apply(narrative.memory_intents, session_in_thread, tool_event_callback=self.tool_event_callback)
 
                     # ===== STEP 5: Action choices =====
-                    try:
-                        phase_template = CHOICE_GENERATION_TEMPLATE
-                        
-                        choices = self.choices.generate(
-                            system_instruction=static_instruction,
-                            phase_template=phase_template,
-                            narrative_text=narrative.narrative,
-                            chat_history=chat_history
-                        )
-                        if choices and choices.choices:
-                            self.ui_queue.put({"type": "choices", "choices": choices.choices})
-                        else:
-                            logger.warning("Failed to generate action choices")
-                    except Exception as e:
-                        logger.error(f"Error generating action choices: {e}", exc_info=True)
-                        self.ui_queue.put({"type": "error", "message": f"Error generating action choices: {e}"})
+                    # ✅ Only generate choices in GAMEPLAY mode
+                    if current_game_mode == "GAMEPLAY":
+                        try:
+                            phase_template = CHOICE_GENERATION_TEMPLATE
+                            
+                            choices = self.choices.generate(
+                                system_instruction=static_instruction,
+                                phase_template=phase_template,
+                                narrative_text=narrative.narrative,
+                                chat_history=chat_history
+                            )
+                            if choices and choices.choices:
+                                self.ui_queue.put({"type": "choices", "choices": choices.choices})
+                            else:
+                                logger.warning("Failed to generate action choices")
+                        except Exception as e:
+                            logger.error(f"Error generating action choices: {e}", exc_info=True)
+                            self.ui_queue.put({"type": "error", "message": f"Error generating action choices: {e}"})
 
                     # ===== NOW add narrative to chat history (all phases complete) =====
                     session_in_thread.add_message("assistant", narrative.narrative)
