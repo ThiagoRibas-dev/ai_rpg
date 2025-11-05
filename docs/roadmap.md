@@ -39,10 +39,17 @@ This document outlines the planned features and development milestones for the A
 
 ## v6: Dynamic AI-Defined Game Mechanics
 
-**Project Goal:** Evolve the AI-RPG engine from fixed rules to dynamic, AI-defined mechanics through collaborative "Session Zero" worldbuilding, combined with async UX improvements and robust schema validation.
+**Goal:** Evolve the AI-RPG engine from fixed rules to dynamic, AI-defined mechanics through collaborative "Session Zero" worldbuilding, combined with async UX improvements and robust schema validation.
 
 **Key Phases:**
 *   **Phase 1: Foundation** (Hybrid Schema + Session Zero)
 *   **Phase 2: Async UX** (Responsive UI)
 *   **Phase 3: High-Level Tools** (Schema-Aware Operations)
 *   **Phase 4: Polish** (Export, Validation, UI)
+
+
+## v6: Prompt Caching Optimization using Response Sufixes
+
+*   **Separation od Static and Dynamic prompts using Response Prefix:** Implemente a complete prompt caching optimization system that separates static (cacheable) content from dynamic (per-turn) content, using response prefilling/suffixes to inject phase-specific instructions and context.
+
+*   **Addition of Stage indicatior to the UI::** Added an indicator at the top of the Chat UI to display the current game stage (SETUP, GAMEPLAY).

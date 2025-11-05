@@ -2,153 +2,402 @@
 
 AI-driven, tool-using text RPG with:
 - Pluggable LLM providers (Gemini and OpenAI-compatible servers, e.g., llama.cpp)
+- **Prompt caching optimization** for fast, cost-efficient multi-phase turns
 - Strict structured outputs + deterministic tools (dice, rules checks, state patches)
 - Versioned, validated game state (SQLite) and semantic memory (ChromaDB + fastembed)
 - CustomTkinter GUI with live tool log, inspectors, and world info manager
 
-Table of Contents
-- Features
-- Architecture at a Glance
-- Requirements
-- Install
-- Configure
-- Run
-- First-Run Walkthrough
-- How a Turn Works
-- GUI Tour
-- Data & Storage
-- Available Tools
-- Troubleshooting
-- Tests
-- Project Structure
-- Roadmap
-- Contributing
+## Table of Contents
+- [Features](#features)
+- [Architecture at a Glance](#architecture-at-a-glance)
+- [Requirements](#requirements)
+- [Install](#install)
+- [Configure](#configure)
+- [Run](#run)
+- [First-Run Walkthrough](#first-run-walkthrough)
+- [How a Turn Works](#how-a-turn-works)
+- [Prompt Caching & Performance](#prompt-caching--performance)
+- [GUI Tour](#gui-tour)
+- [Data & Storage](#data--storage)
+- [Available Tools](#available-tools-high-level)
+- [Troubleshooting](#troubleshooting)
+- [Tests](#tests)
+- [Project Structure](#project-structure)
+- [Roadmap](#roadmap)
 
-Features
-- Two LLM backends: Gemini and OpenAI-compatible
-- Session Zero flow: define custom game mechanics via schema tools, then auto-switch to gameplay
-- Deterministic tools with Pydantic-validated inputs (e.g., rng.roll, state.apply_patch, character.update)
-- Memory system: upsert/query/update/delete + semantic retrieval
-- World Info (per-prompt lore) + vector search
-- Turn metadata storage + semantic turn search
-- GUI: Chat bubbles, tool call/result panel, state inspectors, world info manager, memory inspector, action choices
+## Features
+- **Two LLM backends**: Gemini and OpenAI-compatible
+- **Session Zero flow**: Define custom game mechanics via schema tools, then auto-switch to gameplay
+- **Prompt caching**: Static game prompt cached across all turn phases for 16x speedup
+- **Deterministic tools** with Pydantic-validated inputs (e.g., `rng.roll`, `state.apply_patch`, `character.update`)
+- **Memory system**: Upsert/query/update/delete + semantic retrieval
+- **World Info** (per-prompt lore) + vector search
+- **Turn metadata** storage + semantic turn search
+- **GUI**: Chat bubbles, tool call/result panel, state inspectors, world info manager, memory inspector, action choices
 
-Architecture at a Glance
-- Orchestrator: Plans → executes tools → audits → narrates → writes metadata → suggests actions
-- State: SQLite tables for sessions, game_state, memories, world_info, turn_metadata
-- Embeddings: ChromaDB + fastembed (pluggable model via EMBEDDING_MODEL)
-- Tools: Auto-discovered from app/tools/builtin with strict Pydantic schemas (discriminated unions)
-- GUI: CustomTkinter app with collapsible panels and inspectors
+## Architecture at a Glance
+- **Orchestrator**: Coordinates a three-phase turn workflow (Plan → Narrate → Choices) with shared cached context
+- **Context Builder**: Separates static (cacheable) from dynamic (per-turn) content
+- **Response Prefilling**: Injects dynamic context and phase instructions via assistant message prefill
+- **State**: SQLite tables for sessions, game_state, memories, world_info, turn_metadata
+- **Embeddings**: ChromaDB + fastembed (pluggable model via `EMBEDDING_MODEL`)
+- **Tools**: Auto-discovered from `app/tools/builtin` with strict Pydantic schemas (discriminated unions)
+- **GUI**: CustomTkinter app with collapsible panels and inspectors
 
-Requirements
+## Requirements
 - Python 3.11+
 - Windows (PowerShell) is the primary dev target, but Linux/macOS should work too
 - Internet access for LLMs and embedding model downloads (unless running local LLM)
 
-Install
-- Create and activate a virtual environment (Windows PowerShell):
-  - python -m venv .venv
-  - .\.venv\Scripts\Activate
-- Install dependencies:
-  - python -m pip install --upgrade pip
-  - pip install -r requirements.txt
+## Install
 
-Configure
-- Copy example env and edit:
-  - PowerShell: Copy-Item .exampleenv .env
-- Set environment variables in .env:
-  - LLM_PROVIDER=GEMINI or OPENAI
+### 1. Create and activate a virtual environment (Windows PowerShell):
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate
+```
 
-Gemini
-- GEMINI_API_KEY=your-key
-- GEMINI_API_MODEL=gemini-2.5-flash (or similar)
+### 2. Install dependencies:
+```powershell
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
 
-OpenAI-compatible (e.g., llama.cpp server)
-- OPENAI_API_BASE_URL=http://localhost:8080/v1
-- OPENAI_API_KEY=sk-local-or-placeholder
-- OPENAI_API_MODEL=your-model-name
+## Configure
 
-Embeddings (fastembed)
-- EMBEDDING_MODEL=BAAI/bge-small-en-v1.5 (default; fast and light)
+### 1. Copy example env and edit:
+```powershell
+Copy-Item .exampleenv .env
+```
 
-Run
-- python main.py
+### 2. Set environment variables in `.env`:
 
-First-Run Walkthrough
-1) Launch the app.
-2) Prompts panel → create a “Game Master” system prompt (your GM persona + style).
-3) Sessions panel → New Game.
-4) Type an action in the input box and click Send.
-5) Watch:
-   - Thought bubble (planner intent)
-   - Tool Calls panel (tools executed and results)
-   - Assistant narrative and suggested action buttons
-   - Inspectors update (Characters, Inventory, Quests, Memories)
+**LLM Provider:**
+```
+LLM_PROVIDER=GEMINI  # or OPENAI
+```
 
-How a Turn Works
-- Plan: PlannerService generates a TurnPlan (strictly typed against available tool models).
-- Execute: ToolExecutor runs tool calls (with UI logging).
-- Audit: Optional consistency check; may apply patches/memory updates.
-- Narrate: LLM writes the next scene + turn metadata (summary, tags, importance).
-- Choices: LLM suggests 3–5 concise next actions for the player.
+**Gemini:**
+```
+GEMINI_API_KEY=your-key
+GEMINI_API_MODEL=gemini-2.5-flash
+```
 
-GUI Tour
-- Chat (left): User/AI/system bubbles + “AI Thinking” thoughts.
-- Tool Calls tab: Every tool invocation + result (success/error).
-- Inspectors (right):
-  - Characters: live character data (attributes, conditions, properties).
-  - Inventory: items, currency, capacity; quick “drop item” helper.
-  - Quests: active quests with progress/objectives.
-  - Memories: browse, filter, search; create/edit/delete; import/export.
-  - State Viewer: view/refresh raw state JSON; copy; clear all (debug).
-- Advanced Context:
-  - Memory and Author’s Note fields persist per session.
-  - World Info Manager to add/edit lore snippets per prompt.
+**OpenAI-compatible (e.g., llama.cpp server):**
+```
+OPENAI_API_BASE_URL=http://localhost:8080/v1
+OPENAI_API_KEY=sk-local-or-placeholder
+OPENAI_API_MODEL=your-model-name
+```
 
-Data & Storage
-- SQLite DB: ai_rpg.db
-  - sessions, game_state, memories, world_info, turn_metadata, schema_extensions
-- Vector store: ./chroma_db (ChromaDB persistent store)
-- Turn metadata embeddings: semantic search of prior turns
-- Memory embeddings: semantic search for planning/context
+**Embeddings (fastembed):**
+```
+EMBEDDING_MODEL=BAAI/bge-small-en-v1.5  # default; fast and light
+```
 
-Available Tools (high level)
-- rng.roll: “2d6+1” style dice
-- math.eval: safe arithmetic evaluation
-- time.now / time.advance: timestamps and fictional time updates
-- state.query / state.apply_patch: read/write structured state
-- character.update: validated updates (core + custom properties) with game-logic hooks
-- memory.upsert / memory.query / memory.update / memory.delete
-- rag.search: stubbed lore chunks (example)
-- rules.resolve_action: compute final formula/DC with LLM-provided policy
+See `.exampleenv` for more embedding model options.
 
-Troubleshooting
-- LLM credentials:
-  - “GEMINI_API_KEY not set” or “OPENAI_API_* not set” → check .env
-- Embedding model download fails:
-  - Ensure internet access, or set a different EMBEDDING_MODEL
-  - Windows CPU: requirements include onnxruntime-directml; adjust to onnxruntime if needed
-- Blank UI or tool logs don’t update:
-  - Check terminal logs; UI uses a queue and polls every 100ms
-- Vector store corruption:
-  - Delete ./chroma_db (will rebuild) if testing and you want a clean slate
+## Run
+```powershell
+python main.py
+```
 
-Tests
-- Install pytest: pip install pytest
-- Run core tests:
-  - pytest tests/test_character_update.py
-- Ad-hoc state test:
-  - python test_state.py
+## First-Run Walkthrough
+1. **Launch the app** via `python main.py`
+2. **Prompts panel** → Create a "Game Master" system prompt (your GM persona + style)
+3. **Sessions panel** → Click "New Game"
+4. **Type an action** in the input box and click "Send"
+5. **Watch the turn execute:**
+   - 💭 Thought bubble (planner's internal reasoning)
+   - 🛠️ Tool Calls panel (tools executed and results)
+   - 📖 Assistant narrative (what happens in the game)
+   - 🎯 Action choice buttons (suggested next steps)
+   - 📊 Inspectors update (Characters, Inventory, Quests, Memories)
 
-Project Structure
-- app/core: Orchestrator, LLM services, context building, vector store
-- app/gui: CustomTkinter UI (main view, inspectors, world info manager, styles)
-- app/tools: Pydantic tool schemas + builtin tool handlers (auto-discovered)
-- app/models: Typed entities, sessions, memory, prompts, etc.
-- app/database: DBManager (SQLite schema + CRUD)
-- docs: Architecture, connectors, GUI, roadmap (if present)
-- chroma_db: ChromaDB persistent store
+## How a Turn Works
 
-Roadmap
-- See docs/roadmap.md for planned milestones (v1–v6), including:
-  - Session Zero, advanced context, memory, RAG, schema-aware mechanics, polish
+Each turn executes in **three phases**, all sharing the same **cached static prompt** for optimal performance:
+
+### Phase 1: Planning
+**Service:** `PlannerService`  
+**Goal:** Decide which tools to call and why
+
+**Prompt Structure:**
+```
+[Static System Instruction - CACHED]
+- Game prompt (user's GM identity)
+- Tool schemas
+- Tool usage guidelines
+- Author's note
+
+[Chat History - Appended]
+- Previous turns (user/assistant)
+
+[Assistant Prefill - Dynamic]
+- Planning phase instructions
+- Current game state
+- Retrieved memories
+- World info
+"Based on the above, here is my structured plan:"
+```
+
+**Output:** `TurnPlan` with thought process and tool calls
+
+---
+
+### Phase 2: Tool Execution
+**Service:** `ToolExecutor`  
+**Goal:** Run the planned tools and collect results
+
+- Executes each tool call with type-based dispatch
+- Validates arguments against Pydantic schemas
+- Updates UI with tool call/result events
+- Tracks memory tool usage for inspector refresh
+
+---
+
+### Phase 3: Narrative
+**Service:** `NarratorService`  
+**Goal:** Write what happens based on planning + tool results
+
+**Prompt Structure:**
+```
+[Static System Instruction - CACHED ✅]
+- Same cached prompt as Planning phase!
+
+[Chat History - Appended]
+- Same history (no updates yet)
+
+[Assistant Prefill - Dynamic]
+- "[Planning Phase] My plan was: ..."
+- "[Tool Results] What happened: ..."
+- Narrative phase instructions
+- Current game state (post-tools)
+- Retrieved memories
+"Here's what happens:"
+```
+
+**Output:** `NarrativeStep` with:
+- Second-person narrative ("You...")
+- Turn metadata (summary, tags, importance)
+- Proposed patches (if inconsistencies detected)
+- Memory intents (optional)
+
+---
+
+### Phase 4: Action Choices
+**Service:** `ChoicesService`  
+**Goal:** Suggest 3-5 next actions for the player
+
+**Prompt Structure:**
+```
+[Static System Instruction - CACHED ✅]
+- Same cached prompt again!
+
+[Chat History - Appended]
+- Still same history
+
+[Assistant Prefill - Dynamic]
+- "[Narrative Phase] I just wrote: ..."
+- Choice generation instructions
+"Here are the action choices:"
+```
+
+**Output:** `ActionChoices` with 3-5 short, actionable options
+
+---
+
+### Phase 5: Finalization
+- Apply any patches from the narrative
+- Apply memory intents
+- **Add narrative to chat history** (now all phases complete)
+- Persist session to database
+- Refresh UI inspectors
+
+## Prompt Caching & Performance
+
+### How It Works
+The system separates prompt content into two categories:
+
+**Static (Cached):**
+- User's game prompt
+- Tool schemas
+- Tool usage guidelines
+- Author's note
+
+This content is sent once and **cached by the LLM API**, then reused across all three phases (Planning, Narrative, Choices) in the same turn, and across subsequent turns.
+
+**Dynamic (Appended via Prefill):**
+- Phase-specific instructions
+- Current game state
+- Retrieved memories
+- World info
+- Prior phase outputs (plan → narrative → choices)
+
+This content changes every phase/turn and is injected via **assistant message prefill** (response suffixing).
+
+### Benefits
+- **~16x speedup** in prompt processing (only dynamic content processed)
+- **~16x cost reduction** on APIs that charge for input tokens
+- **Consistent context** across all phases (no prompt variation)
+
+### Cache Invalidation
+The cache is rebuilt only when:
+- Game mode changes (SETUP → GAMEPLAY)
+- Author's note is edited
+- Tool availability changes
+
+Otherwise, the same static instruction is reused indefinitely.
+
+### First-Person Phase Prompts
+Because we use assistant prefill, phase instructions are written from the AI's perspective:
+
+```
+# PLANNING PHASE
+I am now in the planning phase. My role is to...
+```
+
+Instead of traditional second-person instructions:
+```
+Your goal is to select appropriate tools...
+```
+
+This creates a natural "AI talking to itself" flow that works well with prefill.
+
+## GUI Tour
+
+### Left Panel: Chat Window
+- **User messages** (blue, right-aligned)
+- **AI messages** (green, left-aligned)
+- **System messages** (gray, left-aligned)
+- **Thought bubbles** (gold border, center) - AI's internal planning
+
+### Right Panel: Control & Inspectors
+
+#### Prompt Management
+- Create/edit/delete game master prompts
+- Click to select active prompt
+
+#### Game Sessions
+- Create new game sessions
+- Load existing sessions
+- Session name and game time displayed in header
+
+#### Advanced Context
+- **Memory field**: Persistent notes for the AI
+- **Author's Note**: Style/tone instructions
+- **World Info Manager**: Add lore snippets (per-prompt)
+
+#### Game State Inspector (Tabs)
+1. **Characters**: Live character data (HP, stats, conditions, custom properties)
+2. **Inventory**: Items, currency, capacity; quick actions
+3. **Quests**: Active quests with progress tracking
+4. **Memories**: Browse/filter/search; create/edit/delete; import/export
+5. **Tool Calls**: Real-time log of every tool execution
+6. **State Viewer**: Raw JSON state viewer (debug tool)
+
+### Action Choices
+- Appear below the chat after AI narrates
+- Click to auto-fill input and send
+
+## Data & Storage
+
+### SQLite Database: `ai_rpg.db`
+- `sessions` - Game sessions with mode tracking (SETUP/GAMEPLAY)
+- `game_state` - Versioned entity storage (characters, inventory, quests, etc.)
+- `memories` - Memory entries with kind, priority, tags, fictional time
+- `world_info` - Lore snippets linked to prompts
+- `turn_metadata` - Turn summaries with importance ratings
+- `schema_extensions` - Custom property definitions (Session Zero)
+
+### Vector Store: `./chroma_db`
+- **Turn embeddings** - Semantic search of past turns by importance
+- **Memory embeddings** - Semantic retrieval for context
+- **World info embeddings** - Lazy-indexed lore retrieval
+
+### Embedding Model
+Configured via `EMBEDDING_MODEL` environment variable. Default: `BAAI/bge-small-en-v1.5` (384 dims, ~50MB, fast).
+
+See `.exampleenv` for other options (better accuracy vs. speed trade-offs).
+
+## Available Tools (High Level)
+
+### Dice & Math
+- `rng.roll` - Roll dice (e.g., "2d6+3")
+- `math.eval` - Evaluate math expressions
+
+### Time
+- `time.now` - Get current timestamp
+- `time.advance` - Advance fictional game time
+
+### State Management
+- `state.query` - Read any game state entity
+- `state.apply_patch` - Apply JSON patches to state
+- `character.update` - High-level character updates with validation
+
+### Memory
+- `memory.upsert` - Create/update memories (auto-deduplicates)
+- `memory.query` - Search memories by kind/tags/text
+- `memory.update` - Modify existing memory
+- `memory.delete` - Remove memory
+
+### Schema Definition (Session Zero)
+- `schema.define_property` - Define custom game mechanics
+- `schema.finalize` - Complete setup and start gameplay
+
+### Rules & Actions
+- `rules.resolve_action` - Compute DC/formula with LLM policy
+- `rag.search` - Retrieve lore chunks (stub)
+
+## Troubleshooting
+
+### LLM Credentials
+**Error:** `"GEMINI_API_KEY not set"` or `"OPENAI_API_* not set"`  
+**Fix:** Check your `.env` file and ensure variables are set correctly
+
+### Embedding Model Download
+**Error:** Model download fails  
+**Fix:** Ensure internet access. Try a different `EMBEDDING_MODEL` in `.env`
+
+**Windows CPU users:** `requirements.txt` includes `onnxruntime-directml`. Change to `onnxruntime` if needed.
+
+### UI Not Updating
+**Symptom:** Tool calls don't appear, or UI freezes  
+**Fix:** Check terminal logs. UI uses a queue polled every 100ms. Restart the app.
+
+### Vector Store Issues
+**Symptom:** Embedding errors or corrupted ChromaDB  
+**Fix:** Delete `./chroma_db` folder (will rebuild on next run)
+
+### Empty Tool Calls
+**Symptom:** Error: `'BaseModel' object has no attribute '__private_attributes__'`  
+**Cause:** LLM returned `[{}]` instead of `[]` for empty tool calls  
+**Fix:** Updated validators now filter out invalid tool calls automatically
+
+### Cache Not Working
+**Symptom:** Slow API responses every phase  
+**Check:** 
+- Ensure Author's Note isn't changing between turns
+- Verify game mode isn't flipping (check logs for "cache miss")
+- Some local models don't support prompt caching (expected behavior)
+
+## Tests
+
+### Install pytest
+```powershell
+pip install pytest
+```
+
+### Run core tests
+```powershell
+pytest tests/test_character_update.py
+```
+
+### Ad-hoc state test
+```powershell
+python test_state.py
+```
+
+---
+
+**License:** AGPLv3

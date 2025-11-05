@@ -56,7 +56,16 @@ class MainView(ctk.CTk):
         )
         self.game_time_label.pack(side="left", padx=Theme.spacing.padding_md, pady=Theme.spacing.padding_sm)
 
-        # Session name label (bonus feature)
+        # ✅ Center: Game mode indicator
+        self.game_mode_label = ctk.CTkLabel(
+            self.game_time_frame,
+            text="📋 SETUP",
+            font=Theme.fonts.subheading,
+            text_color=Theme.colors.text_secondary
+        )
+        self.game_mode_label.pack(side="left", expand=True, padx=Theme.spacing.padding_md, pady=Theme.spacing.padding_sm)
+
+        # Right: Session name
         self.session_name_label = ctk.CTkLabel(
             self.game_time_frame,
             text="No session loaded",
@@ -233,6 +242,11 @@ class MainView(ctk.CTk):
         
         elif msg_type == "update_game_time":
             self.game_time_label.configure(text=f"🕐 {msg['new_time']}")
+    
+        # ✅ Add new case for game mode updates
+        elif msg_type == "update_game_mode":
+            mode_text, mode_color = self._get_mode_display(msg['new_mode'])
+            self.game_mode_label.configure(text=mode_text, text_color=mode_color)
 
         elif msg_type == "tool_event":
             # This is for the legacy tool_event_callback, now routed through queue
@@ -666,9 +680,13 @@ class MainView(ctk.CTk):
         self.load_game(session.id)
         self.send_button.configure(state="normal")
         
-        # ✅ Update header
+        # ✅ Update header with session info
         self.session_name_label.configure(text=session.name)
         self.game_time_label.configure(text=f"🕐 {session.game_time}")
+        
+        # ✅ Update game mode indicator
+        mode_text, mode_color = self._get_mode_display(session.game_mode)
+        self.game_mode_label.configure(text=mode_text, text_color=mode_color)
         
         if hasattr(self, 'memory_inspector'):
             self.memory_inspector.set_session(session.id)
@@ -753,3 +771,17 @@ class MainView(ctk.CTk):
         from app.gui.state_viewer_dialog import StateViewerDialog
         viewer = StateViewerDialog(self, self.db_manager, self.selected_session.id)
         viewer.grab_set()
+
+    def _get_mode_display(self, game_mode: str) -> tuple[str, str]:
+        """
+        Get display text and color for game mode.
+        
+        Returns:
+            tuple: (display_text, color)
+        """
+        if game_mode == "SETUP":
+            return ("📋 SETUP", Theme.colors.text_gold)  # Gold for setup
+        elif game_mode == "GAMEPLAY":
+            return ("⚔️ GAMEPLAY", Theme.colors.text_tool_success)  # Green for active gameplay
+        else:
+            return (f"❓ {game_mode}", Theme.colors.text_muted)  # Gray for unknown

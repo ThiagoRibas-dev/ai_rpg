@@ -1,22 +1,77 @@
-# AI-Aided Development Guide
-
-This file serves as a central rules and filedocument index and guide for AI-aided development within the AI-RPG project. It outlines the overall development workflow, provides a high-level specification of the project, and indexes key documentation files and TODO lists to facilitate efficient development.
-
-# Development Workflow
-
-This workflow is designed to leverage AI agent capabilities while maintaining project-specific quality standards and clear human oversight.
-The development environment is Windows and the Shell is Powershell.
-
-1.  **Task Ingestion & Contextual Analysis:** Perform an initial examination of the request and analyze relevant project context (e.g., file structure, existing documentation, previous TODOs).
-2.  **Strategic Plan Formulation & Presentation:** Formulate a detailed step-by-step plan, including the 'what, where, how, why' of the implementation, breaking it into components, and considering potential downstream effects. Include code snippet examples where appropriate, then present this detailed plan to the user.
-3.  **User Approval & Task Kick-off:** Request and wait for user permission to execute the plan. Upon approval, create a temporary TODO file (e.g., `vX_TODO.md`) to track the implementation steps.
-4.  **Iterative Execution & Progress Tracking:** Execute the plan, performing implementation tasks (reading files, creating/editing/deleting code, etc.) in an iterative manner. Continuously update the temporary TODO file to reflect progress, marking completed steps and adding new ones as needed.
-5.  **Automated Quality & Integrity Checks:** Perform project-specific quality checks: Check the work for missing or incomplete implementations. Run `ruff check --fix .` to ensure code quality and adherence to style guidelines. Run the game or relevant tests to check for functional errors.
-6.  **Finalization, Documentation & Handoff:** Summarize the changes made, update relevant project files (e.g., indexes, main TODOs, `GEMINI.md`), and provide a concise summary of the completed work. Ask for the next step, signaling readiness for a new task or further instructions.
-
 ## High-Level Specification
 
-An advanced, text-based RPG engine powered by Large Language Models (LLMs). The engine will dynamically generate narrative, manage game state, and respond to player actions by intelligently retrieving and managing context. The core design focuses on a modular architecture that separates state management, decision logic, and LLM interaction, allowing for support of multiple LLM backends like Gemini and OpenAI.
+An advanced, text-based RPG engine powered by Large Language Models (LLMs). The engine dynamically generates narrative, manages game state, and responds to player actions by intelligently retrieving and managing context. The core design focuses on:
+
+- **Modular architecture** separating state management, decision logic, and LLM interaction
+- **Multi-backend support** for LLMs (Gemini, OpenAI-compatible APIs)
+- **Prompt caching optimization** using static/dynamic content separation and response prefilling
+- **Three-phase turn workflow** (Planning → Narrative → Choices) sharing a cached system prompt
+- **Type-safe tool execution** with Pydantic discriminated unions
+- **Semantic memory and turn search** via ChromaDB vector store
+
+### Turn Workflow Optimization
+
+Each turn executes three phases that **share the same cached static prompt**:
+
+#### Static System Instruction (Cached)
+Rebuilt only when game mode changes or author's note is edited:
+- User's game prompt (identity/style)
+- Tool schemas (available tools JSON)
+- Tool usage guidelines
+- Author's note (style instructions)
+
+#### Dynamic Context (Injected via Prefill)
+Changes every turn and is appended via **assistant message prefill**:
+- Phase-specific instructions (planning/narrative/choices)
+- Current game state (queried from database)
+- Retrieved memories (semantic + keyword search)
+- World info (contextual lore)
+- Prior phase outputs (plan thought → tool results → narrative)
+
+#### Benefits
+- **Speedup** on prompt processing (only dynamic content processed)
+- **Cost reduction** on token-charged APIs
+- **Partial cache breaks** between phases (same static instruction)
+- **Consistent context** across all phases
+
+#### Implementation Details
+1. **Session.system_prompt**: Stored separately from chat history (not in messages array)
+2. **ContextBuilder.build_static_system_instruction()**: Builds cacheable prompt once per session/mode
+3. **ContextBuilder.build_dynamic_context()**: Builds fresh context every turn
+4. **Services use assistant prefill**: Each phase injects instructions + context as assistant message
+5. **Chat history updated once**: After all phases complete, narrative is added to history
+
+### First-Person Phase Prompts
+
+Because we use assistant message prefill (the AI "continues" from a partial message), phase instructions are written from the AI's perspective:
+
+**Planning Phase:**
+```
+I am now in the planning phase. My role is to:
+- Analyze the player's action for feasibility...
+```
+
+**Narrative Phase:**
+```
+[Planning Phase - My Internal Reasoning]
+{plan.thought}
+
+[Tool Execution - What Actually Happened]
+{tool_results}
+
+I am now in the narrative phase. My role is to:
+- Write the scene based on my planning intent...
+```
+
+**Choices Phase:**
+```
+[Narrative Phase - What I Just Wrote]
+{narrative.narrative}
+
+I am now generating 3-5 action choices for the player...
+```
+
+This creates a natural "AI talking to itself about what it needs to do" flow.
 
 ## Detailed Specification & Documentation
 
@@ -41,7 +96,7 @@ This project is documented across several files to keep the information organize
 - **[V4 TODO](docs/todos/v4_TODO.md)**
 - **[V5 TODO](docs/todos/v5_TODO.md)**
 - **[V6 TODO](docs/todos/v6_TODO.md)**
-
+- **[V7 TODO](docs/todos/v7_TODO.md)**
 
 ## Notes
 
@@ -52,3 +107,5 @@ This project is documented across several files to keep the information organize
 **Ruff Linter:** During Execution, after performing a batch of changes, always run `ruff check . --fix` to ensure things are in order.
 
 **Logging:** All code will contain tracking logs that output to the console so that errors are easier to debug.
+
+**Prompt Caching:** When implementing new features, consider whether new prompt content should be static (cached) or dynamic (per-turn). Static content should go in `build_static_system_instruction()`, dynamic content in `build_dynamic_context()` or phase-specific prefills.

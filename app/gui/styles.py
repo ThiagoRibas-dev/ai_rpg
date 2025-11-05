@@ -43,6 +43,10 @@ class ColorScheme:
     text_tool_success: str = "#90EE90"
     text_gold: str = "#FFD700"
     
+    # Game mode indicators
+    mode_setup: str = "#FFD700"      # Gold for setup
+    mode_gameplay: str = "#90EE90"   # Light green for gameplay
+    
     # Buttons
     button_default: tuple = ("#3a7ebf", "#1f538d")  # (light, dark)
     button_selected: str = "blue"
