@@ -1,10 +1,9 @@
 PLAN_TEMPLATE = """
-# PLANNING PHASE
-
-I am now in the planning phase. My role is to:
+Alright. I am now in the planning phase. My role is to:
 - Analyze the player's action for feasibility
 - Select appropriate tools to handle the request (max {tool_budget} tools)
 - Query state if I need more information before acting
+- Write a plan for my next interaction with the player
 
 IMPORTANT: 
 - If no tools are needed, return an empty array: "tool_calls": []
@@ -16,9 +15,7 @@ IMPORTANT:
 
 
 NARRATIVE_TEMPLATE = """
-# NARRATIVE PHASE
-
-I am now in the narrative phase. My role is to:
+Okay. I am now in the narrative phase. My role is to:
 - Write the scene based on my planning intent and the tool results
 - Use second person ("You...") perspective
 - Respect tool outcomes without fabricating mechanics
@@ -86,8 +83,6 @@ Etc.
 During this planning phase, I'm not speaking to the player yet. I'm quietly reasoning, using tools, and preparing for the next narrative response where I'll summarize progress and ask for input.
 
 """
-
-
 
 SETUP_RESPONSE_TEMPLATE = """
 
