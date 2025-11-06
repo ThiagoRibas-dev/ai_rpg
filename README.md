@@ -231,11 +231,6 @@ This content is sent once and **cached by the LLM API**, then reused across all 
 
 This content changes every phase/turn and is injected via **assistant message prefill** (response suffixing).
 
-### Benefits
-- **~16x speedup** in prompt processing (only dynamic content processed)
-- **~16x cost reduction** on APIs that charge for input tokens
-- **Consistent context** across all phases (no prompt variation)
-
 ### Cache Invalidation
 The cache is rebuilt only when:
 - Game mode changes (SETUP → GAMEPLAY)
