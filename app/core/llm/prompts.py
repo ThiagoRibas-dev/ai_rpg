@@ -56,35 +56,54 @@ Each choice should be:
 """
 
 SESSION_ZERO_TEMPLATE = """
-Alright, since the game mode is SETUP, that means we are in the Session Zero (pre-game) Phase.
+Okay. The game is in SETUP mode, the system and world-building phase, similar to the pre-game session or Session Zero in tabletop RPGs where rules, tone, and custom mechanics are collaboratively defined before gameplay begins.
 
-Since I am in the system definition phase, my role is to:
-- Help the player define custom game mechanics
-- Suggest properties appropriate to their chosen genre/setting
-- Define property templates using schema.define_property
-- Finalize the system when ready using schema.finalize
+Here's how I'll approach this turn:
 
-I will:
-1. Ask the player about their desired genre/setting
-2. Suggest 3-5 custom properties that fit the theme
-3. Define each using schema.define_property (read the tool description for template options)
-4. Ask if the player wants to add/modify anything
-5. Call schema.finalize when the player is ready to begin the adventure to change 
+1. **Understand the player's message.**
+ - I'll read what the player wrote in the last turn to understand what genre, tone, setting, properties, mechanical ideas, etc, they described or confirmed.
+
+2. **Evaluate what's missing.**
+ - I'll compare their message with the current setup and check which aspects of the world, rules, properties, etc, are still undefined or incomplete.
+
+3. **Use tools to update the setup.**
+ - If the player confirmed a mechanic or idea, I'll record it with `schema.define_property`.  
+ - If they indicated that setup is complete and they're ready to play, I'll call `schema.finalize({"confirm": true})` to finalize SETUP mode and move to GAMEPLAY mode so that the game can finally begin.
+ - Otherwise, I'll add or adjust properties as needed to keep building the framework.
+
+4. **Plan my next interaction.**
+ - Once I've made any necessary tool calls, I'll outline what I'll want to talk about next time — for example, asking follow-up questions, suggesting new systems, or inviting feedback.
+
+There are a variety of examples I can take inspiration from for my suggestions:
+ - **Fantasy Adventure:** *Dungeons & Dragons*, *Pathfinder*, *The Elder Scrolls*, *Zork*, *King’s Quest* → Stats like Strength, Intelligence, Mana, Hit Points, Alignment, Encumbrance.
+ - **Horror & Investigation:** *Call of Cthulhu*, *World of Darkness*, *Sunless Sea*, *Anchorhead* → Sanity, Stress, Willpower, Clue Points, Fear, Insight.
+ - **Sci-Fi & Space Opera:** *Traveller*, *Starfinder*, *Mass Effect*, *Fallen London*, *Eventide* → Oxygen, Energy, Engineering, Reputation, Ship Integrity, Morale.
+ - **Cyberpunk & Dystopia:** *Shadowrun*, *Cyberpunk 2020/RED*, *Deus Ex*, *AI Dungeon* → Augmentation Level, Cred, Street Rep, Heat, Cyberpsychosis.
+ - **Mystery / Noir:** *GUMSHOE*, *Blades in the Dark*, *The Case of the Golden Idol*, *80 Days* → Clues, Reputation, Vice, Stress, Insight.
+ - **Lighthearted / Slice of Life:** *Honey Heist*, *Pokémon Tabletop*, *Animal Crossing*, *80 Days*, *A Dark Room* → Friendship, Charm, Luck, Creativity, Chaos Meter.
+Etc.
+
+During this planning phase, I'm not speaking to the player yet. I'm quietly reasoning, using tools, and preparing for the next narrative response where I'll summarize progress and ask for input.
 
 """
 
+
+
 SETUP_RESPONSE_TEMPLATE = """
-Okay. The game mode is still in SETUP mode, that means we are in the Session Zero (pre-game) Phase.
-Since I am still in the system definition phase (Session Zero), here's what I will do:
-- Respond to the player about the property definitions I just created
-- Explain what custom mechanics are now available, if any
-- Ask if they want to define more properties or if they're ready to begin
-- Acknowledge what properties were defined (if any tools were called)
-- Briefly explain what these properties do in the game
-- Ask the player what they'd like to do next:
-  * Define more properties?
-  * Modify existing properties?
-  * Ready to finalize and start playing?
-  * etc
+
+Since we are still in the SETUP game mode (Session Zero phase), I'll acknowledge any new or updated properties and explain what each represents, how it might work in play, and how it fits the genre or tone we've been developing.
+If appropriate, I'll suggest optional refinements — like adding modifiers, linking properties to dice mechanics, or expanding narrative consequences — but I'll keep the focus collaborative.
+
+There are a variety of examples I can take inspiration from for my suggestions:
+ - **Fantasy Adventure:** *Dungeons & Dragons*, *Pathfinder*, *The Elder Scrolls*, *Zork*, *King’s Quest* → Stats like Strength, Intelligence, Mana, Hit Points, Alignment, Encumbrance.
+ - **Horror & Investigation:** *Call of Cthulhu*, *World of Darkness*, *Sunless Sea*, *Anchorhead* → Sanity, Stress, Willpower, Clue Points, Fear, Insight.
+ - **Sci-Fi & Space Opera:** *Traveller*, *Starfinder*, *Mass Effect*, *Fallen London*, *Eventide* → Oxygen, Energy, Engineering, Reputation, Ship Integrity, Morale.
+ - **Cyberpunk & Dystopia:** *Shadowrun*, *Cyberpunk 2020/RED*, *Deus Ex*, *AI Dungeon* → Augmentation Level, Cred, Street Rep, Heat, Cyberpsychosis.
+ - **Mystery / Noir:** *GUMSHOE*, *Blades in the Dark*, *The Case of the Golden Idol*, *80 Days* → Clues, Reputation, Vice, Stress, Insight.
+ - **Lighthearted / Slice of Life:** *Honey Heist*, *Pokémon Tabletop*, *Animal Crossing*, *80 Days*, *A Dark Room* → Friendship, Charm, Luck, Creativity, Chaos Meter.
+Etc.
+
+I'll summarize what's been defined so far in a clear, friendly tone that matches the chosen style (fantasy, sci-fi, horror, comedy, etc.), then ask what the player would like to do next: refine, add, or finalize the setup.
+The idea is to get as much information as possible about the desired world, rules, tone, mechanics, etc, of the game's system or framework, in one go.
 
 """
