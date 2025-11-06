@@ -27,7 +27,7 @@ function Get-DirectoryTreeString {
 
 [string[]]$excludeFolderList = @( # Exclusion list
     "*list_dirs_and_files*",
-    "*node_modules*",
+    "*\node_modules*",
     "*.git*",
     "*.clinerules",
     "*.mypy_cache*",
@@ -35,10 +35,10 @@ function Get-DirectoryTreeString {
     "*.vscode",
     "*.gitkeep",
     "*.ruff_cache*",
-    "*output*",
-    "*dist*",
-    "*build*",
-    "*temp*",
+    "*\output*",
+    "*\dist*",
+    "*\build*",
+    "*\temp*",
     "*.log",
     "*.map",
     "*.bak",
@@ -49,18 +49,18 @@ function Get-DirectoryTreeString {
     "*.json",
     "*.ico",
     "*LICENSE",
-    "*chroma_db*",
+    "*\chroma_db*",
     "*pnpm-lock.yaml",
     "*campaign_load.log*",
     "*.pyc",
     "*.md",
     "*.roo*",
-	"*examples*",
+	"*\examples*",
 	"*__pycache__*",
     "*package-lock.json",
     "*.DS_Store", # macOS folder metadata file
     "**.db",
-    "*docs*"        # Exclude documentation directory
+    "*\docs*"        # Exclude documentation directory
 )
 
 $directoryToCrawl = ".\" #  <---  Set your directory path here
@@ -101,3 +101,5 @@ $outputContent | Out-File -FilePath $outputFilePath -Encoding UTF8 # Write accum
 
 Write-Host "Output written to: $($outputFilePath)" -ForegroundColor Cyan 
 Write-Host "Run script with -Verbose to see 'Ignoring' messages." -ForegroundColor DarkGray # Inform user about -Verbose
+
+pause

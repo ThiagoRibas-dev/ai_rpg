@@ -12,7 +12,6 @@ IMPORTANT:
 - Never include empty objects {{}} in the tool_calls array
 - Read tool descriptions carefully to choose the right tool for the job
 
-I'll now provide my structured plan:
 """
 
 
@@ -40,7 +39,6 @@ After writing the narrative, I'll provide:
   * 3 = Normal gameplay, advancing the scene
   * 5 = Critical plot point, major revelation, dramatic turning point
 
-I'll now write what happens:
 """
 
 CHOICE_GENERATION_TEMPLATE = """
@@ -55,54 +53,38 @@ Each choice should be:
 - Distinct from other choices
 - Offering diverse options (e.g., combat, diplomacy, investigation, stealth)
 
-I'll now provide the action choices:
 """
 
 SESSION_ZERO_TEMPLATE = """
-# SESSION ZERO - SYSTEM DEFINITION PHASE
+Alright, since the game mode is SETUP, that means we are in the Session Zero (pre-game) Phase.
 
-I am in the system definition phase. My role is to:
+Since I am in the system definition phase, my role is to:
 - Help the player define custom game mechanics
 - Suggest properties appropriate to their chosen genre/setting
 - Define property templates using schema.define_property
 - Finalize the system when ready using schema.finalize
-
-IMPORTANT: I can ONLY use the tools listed in the "AVAILABLE TOOLS" section above. I cannot invent tools like `ask_player` or `narrate`. My output must be either valid tool calls or narrative responses to the player.
-
-# WORKFLOW
 
 I will:
 1. Ask the player about their desired genre/setting
 2. Suggest 3-5 custom properties that fit the theme
 3. Define each using schema.define_property (read the tool description for template options)
 4. Ask if the player wants to add/modify anything
-5. Call schema.finalize when the player is ready to begin the adventure
+5. Call schema.finalize when the player is ready to begin the adventure to change 
 
-I'm ready to help design the game system:
 """
 
 SETUP_RESPONSE_TEMPLATE = """
-# SETUP MODE - RESPONSE PHASE
-
-I am still in the system definition phase (Session Zero). My role is to:
+Okay. The game mode is still in SETUP mode, that means we are in the Session Zero (pre-game) Phase.
+Since I am still in the system definition phase (Session Zero), here's what I will do:
 - Respond to the player about the property definitions I just created
-- Explain what custom mechanics are now available
+- Explain what custom mechanics are now available, if any
 - Ask if they want to define more properties or if they're ready to begin
-- **NOT** start narrating gameplay yet
-
-IMPORTANT:
-- I should NOT write narrative or start the adventure
-- I should NOT use second-person ("You...") storytelling yet
-- I should continue the meta-conversation about system design
-- When the player is satisfied with the system, I'll call schema.finalize
-
-Response guidelines:
 - Acknowledge what properties were defined (if any tools were called)
 - Briefly explain what these properties do in the game
 - Ask the player what they'd like to do next:
   * Define more properties?
   * Modify existing properties?
   * Ready to finalize and start playing?
+  * etc
 
-I'll now respond to the player:
 """

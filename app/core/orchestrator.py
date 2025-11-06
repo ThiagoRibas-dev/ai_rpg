@@ -203,7 +203,6 @@ class Orchestrator:
                 for result in tool_results:
                     if result.get("tool_name") == "schema.finalize" and result.get("result", {}).get("setup_complete"):
                         game_session.game_mode = "GAMEPLAY"
-                        thread_db_manager.update_session(game_session)
                         # Invalidate cache since mode changed
                         if hasattr(game_session, '_cached_instruction'):
                             delattr(game_session, '_cached_instruction')
@@ -213,7 +212,7 @@ class Orchestrator:
                         
                         self.ui_queue.put({"type": "message_bubble", "role": "system", "content": "✅ Session Zero complete! Game starting..."})
                         logger.info("Session Zero finalized. Transitioning to GAMEPLAY mode.")
-                        self._update_game_in_thread(game_session, thread_db_manager)
+                        self._update_game_in_thread(game_session, thread_db_manager, session_in_thread)
                         return
 
                 # ===== STEP 2.5: AUDIT (only in GAMEPLAY mode) =====
@@ -307,9 +306,10 @@ class Orchestrator:
 
                     # ===== NOW add narrative to chat history (all phases complete) =====
                     session_in_thread.add_message("assistant", narrative.narrative)
+                    logger.debug(f"DEBUG: Added AI response to chat history: {narrative.narrative}")
 
-                # Persist session
-                self._update_game_in_thread(game_session, thread_db_manager)
+                # Persist session, passing the final state from the thread
+                self._update_game_in_thread(game_session, thread_db_manager, session_in_thread)
 
         except Exception as e:
             logger.error(f"Turn failed: {e}", exc_info=True)
@@ -317,15 +317,20 @@ class Orchestrator:
         finally:
             self.ui_queue.put({"type": "turn_complete"})
 
-    def _update_game_in_thread(self, session: GameSession, db_manager: DBManager):
-        """Helper to update the game session in the database from a background thread."""
-        if not session:
+    def _update_game_in_thread(self, game_session: GameSession, db_manager: DBManager, final_session_state: Session):
+        """
+        Helper to update the game session in the database from a background thread.
+        This now requires the final state of the session from the thread to ensure correctness.
+        """
+        if not game_session:
             return
-        session.session_data = self.session.to_json() # Use self.session (in-memory) for latest history
-        db_manager.update_session(session)
-        # Update the main orchestrator's session object as well
-        self.session = Session.from_json(session.session_data) # Re-create self.session from updated GameSession
-        self.session.id = session.id # Ensure ID is set for the main orchestrator's session
+        # The source of truth is the session object from the background thread
+        game_session.session_data = final_session_state.to_json()
+        db_manager.update_session(game_session)
+
+        # Update the main orchestrator's session object as well, so the UI can reflect history
+        self.session = final_session_state
+        self.session.id = game_session.id # Ensure ID is set
 
     def run(self):
         self.view.mainloop()
