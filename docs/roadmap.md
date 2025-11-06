@@ -47,9 +47,13 @@ This document outlines the planned features and development milestones for the A
 *   **Phase 3: High-Level Tools** (Schema-Aware Operations)
 *   **Phase 4: Polish** (Export, Validation, UI)
 
-
 ## v7: Prompt Caching Optimization using Response Sufixes
 
-*   **Separation od Static and Dynamic prompts using Response Prefix:** Implemente a complete prompt caching optimization system that separates static (cacheable) content from dynamic (per-turn) content, using response prefilling/suffixes to inject phase-specific instructions and context.
-*   **Addition of Stage indicatior to the UI:** Added an indicator at the top of the Chat UI to display the current game stage (SETUP, GAMEPLAY).
-*   **Tool Schema Refactor and Prompt Simplification:** Enriched tool schemas, remove redundant guidelines, and simplify prompt structures.
+*   **Separation of Static and Dynamic prompts using Response Prefix:** Implemente a complete prompt caching optimization system that separates static (cacheable) content from dynamic (per-turn) content, using response prefilling/suffixes to inject phase-specific instructions and context.
+*   **Addition of Stage indicatior to the UI:** Add an indicator at the top of the Chat UI to display the current game stage (SETUP, GAMEPLAY).
+*   **Tool Schema Refactor and Prompt Simplification:** Enrich tool schemas, remove redundant guidelines, and simplify prompt structures.
+
+## v8: Game Prompt creation and SETUP game mode (Session Zero) refinements
+
+*   **Initial message with new Game Prompt creation UI:** Implement a bespoke Game Prompt creation window with 3 fields, Prompt Name, System Prompt, and Initial Message.
+*   **Default SETUP game mold scaffolding (structure + HP attributes):** Creates a default skeleton for the SETUP game mode with some default attributes/properties.

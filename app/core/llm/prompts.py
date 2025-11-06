@@ -13,7 +13,6 @@ IMPORTANT:
 
 """
 
-
 NARRATIVE_TEMPLATE = """
 Okay. I am now in the narrative phase. My role is to:
 - Write the scene based on my planning intent and the tool results
