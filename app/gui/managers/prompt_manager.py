@@ -84,57 +84,53 @@ class PromptManager:
     
     def new_prompt(self):
         """
-        Create a new prompt via dialog.
-        
-        MIGRATION NOTES:
-        - Extracted from: MainView.new_prompt() lines 621-632
-        - Uses self.db_manager instead of self.db_manager (no change)
-        - Calls self.refresh_list (was self.refresh_prompt_list)
+        Create a new prompt via 3-field dialog.
         """
-        # Prompt for name
-        dialog = ctk.CTkInputDialog(text="Enter prompt name:", title="New Prompt")
-        name = dialog.get_input()
+        from app.gui.panels.prompt_dialog import PromptDialog
         
-        if name:
-            # Prompt for content
-            content_dialog = ctk.CTkInputDialog(text="Enter prompt content:", title="New Prompt")
-            content = content_dialog.get_input()
+        dialog = PromptDialog(self.prompt_scrollable_frame.winfo_toplevel(), title="New Prompt")
+        self.prompt_scrollable_frame.wait_window(dialog)  # Wait for dialog to close
+        
+        result = dialog.get_result()
+        if result:
+            name, content, initial_message = result
             
-            if content:
-                # Create in database
-                self.db_manager.create_prompt(name, content)
-                # Refresh list
-                self.refresh_list()
+            # Create in database
+            self.db_manager.create_prompt(name, content, initial_message)
+            
+            # Refresh list
+            self.refresh_list()
     
     def edit_prompt(self):
         """
-        Edit the selected prompt via dialog.
-        
-        MIGRATION NOTES:
-        - Extracted from: MainView.edit_prompt() lines 633-645
-        - Changed: Uses self._selected_prompt instead of parameter
-        - Calls self.refresh_list (was self.refresh_prompt_list)
+        Edit the selected prompt via 3-field dialog.
         """
         if not self._selected_prompt:
             return
         
-        # Prompt for new name
-        name_dialog = ctk.CTkInputDialog(text="Enter new name:", title="Edit Prompt")
-        name = name_dialog.get_input()
+        from app.gui.panels.prompt_dialog import PromptDialog
         
-        if name:
-            # Prompt for new content
-            content_dialog = ctk.CTkInputDialog(text="Enter new content:", title="Edit Prompt")
-            content = content_dialog.get_input()
+        dialog = PromptDialog(
+            self.prompt_scrollable_frame.winfo_toplevel(), 
+            title="Edit Prompt",
+            existing_prompt=self._selected_prompt
+        )
+        self.prompt_scrollable_frame.wait_window(dialog)  # Wait for dialog to close
+        
+        result = dialog.get_result()
+        if result:
+            name, content, initial_message = result
             
-            if content:
-                # Update prompt object
-                self._selected_prompt.name = name
-                self._selected_prompt.content = content
-                # Save to database
-                self.db_manager.update_prompt(self._selected_prompt)
-                # Refresh list
-                self.refresh_list()
+            # Update prompt object
+            self._selected_prompt.name = name
+            self._selected_prompt.content = content
+            self._selected_prompt.initial_message = initial_message
+            
+            # Save to database
+            self.db_manager.update_prompt(self._selected_prompt)
+            
+            # Refresh list
+            self.refresh_list()
     
     def delete_prompt(self):
         """

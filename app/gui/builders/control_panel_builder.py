@@ -154,16 +154,7 @@ class ControlPanelBuilder:
         
         context_content = context_collapsible.get_content_frame()
         
-        # Memory textbox
-        # MIGRATED FROM: lines 355-360
-        ctk.CTkLabel(context_content, text="Memory:").pack(
-            pady=(Theme.spacing.padding_sm, 0), 
-            padx=Theme.spacing.padding_sm, 
-            anchor="w"
-        )
-        memory_textbox = ctk.CTkTextbox(context_content, height=Theme.spacing.textbox_small)
-        memory_textbox.pack(**pack_config)
-        
+                
         # Author's Note textbox
         # MIGRATED FROM: lines 362-367
         ctk.CTkLabel(context_content, text="Author's Note:").pack(
@@ -227,7 +218,7 @@ class ControlPanelBuilder:
             'session_collapsible': session_collapsible,
             'session_scrollable_frame': session_scrollable_frame,
             'session_new_button': session_new_button,  # NEW: For rewiring
-            'memory_textbox': memory_textbox,
+
             'authors_note_textbox': authors_note_textbox,
             'game_state_inspector_tabs': game_state_inspector_tabs,
         }

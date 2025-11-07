@@ -92,15 +92,12 @@ class SessionManager:
     
     def new_game(self, selected_prompt):
         """
-        Create a new game session.
+        Create a new game session with initial GM message and scaffolding.
         
-        MIGRATION NOTES:
-        - Extracted from: MainView.new_game() lines 501-510
-        - Changed: Direct orchestrator method calls (no self. prefix change)
-        - Changed: self.refresh_session_list → self.refresh_session_list (no change)
-        
-        Args:
-            selected_prompt: The prompt to use for this session
+        UPDATED:
+        - Adds initial_message from prompt as first assistant message
+        - Injects SETUP scaffolding into game state
+        - Displays initial message in chat immediately
         """
         if not selected_prompt:
             return
@@ -111,10 +108,50 @@ class SessionManager:
 
         # Create session via orchestrator
         self.orchestrator.new_session(selected_prompt.content)
+        
+        # Add initial message if it exists
+        if selected_prompt.initial_message and selected_prompt.initial_message.strip():
+            self.orchestrator.session.add_message("assistant", selected_prompt.initial_message)
+        
+        # Save to get session ID
         self.orchestrator.save_game(session_name, selected_prompt.id)
+        
+        # ✅ NEW: Inject SETUP scaffolding
+        if self.orchestrator.session.id:
+            self._inject_setup_scaffolding(self.orchestrator.session.id, selected_prompt.content)
         
         # Refresh session list to show new session
         self.refresh_session_list(selected_prompt.id)
+
+    def _inject_setup_scaffolding(self, session_id: int, prompt_content: str):
+        """
+        Inject initial scaffolding structure for SETUP mode.
+        
+        Args:
+            session_id: Current session ID
+            prompt_content: The prompt content (used for genre detection)
+        """
+        from app.core.scaffolding_templates import get_setup_scaffolding, detect_genre_from_prompt, get_genre_specific_scaffolding
+        
+        # Detect genre and get appropriate scaffolding
+        genre = detect_genre_from_prompt(prompt_content)
+        
+        if genre != "generic":
+            scaffolding = get_genre_specific_scaffolding(genre)
+        else:
+            scaffolding = get_setup_scaffolding()
+        
+        # Inject scaffolding into database
+        for entity_type, entities in scaffolding.items():
+            for entity_key, entity_data in entities.items():
+                self.db_manager.set_game_state_entity(
+                    session_id, 
+                    entity_type, 
+                    entity_key, 
+                    entity_data
+                )
+        
+        logger.info(f"Injected {genre} scaffolding for session {session_id}")
     
     def load_game(self, session_id: int, bubble_manager):
         """
@@ -232,7 +269,7 @@ class SessionManager:
                 )
                 btn.pack(pady=2, padx=5, fill="x")
     
-    def load_context(self, memory_textbox: ctk.CTkTextbox, authors_note_textbox: ctk.CTkTextbox):
+    def load_context(self, authors_note_textbox: ctk.CTkTextbox):
         """
         Load memory and author's note for the current session.
         
@@ -252,9 +289,7 @@ class SessionManager:
         context = self.db_manager.get_session_context(self._selected_session.id)
         
         if context:
-            # Populate memory textbox
-            memory_textbox.delete("1.0", "end")
-            memory_textbox.insert("1.0", context.get("memory", ""))
+            
             
             # Populate author's note textbox
             authors_note_textbox.delete("1.0", "end")
@@ -262,34 +297,25 @@ class SessionManager:
     
     def save_context(
         self, 
-        memory_textbox: ctk.CTkTextbox, 
         authors_note_textbox: ctk.CTkTextbox,
         bubble_manager
     ):
         """
-        Save the current memory and author's note.
+        Save the author's note.
         
         MIGRATION NOTES:
-        - Extracted from: MainView.save_context() lines 596-605
-        - Changed: Requires textbox and bubble_manager parameters
-        - Changed: self.add_message_bubble → bubble_manager.add_message
-        
-        Args:
-            memory_textbox: Textbox containing memory content
-            authors_note_textbox: Textbox containing author's note
-            bubble_manager: ChatBubbleManager for showing confirmation
+        - Removed memory field (deprecated)
         """
         if not self._selected_session:
             return
         
-        # Get content from textboxes
-        memory = memory_textbox.get("1.0", "end-1c")
+        # Get content from textbox
         authors_note = authors_note_textbox.get("1.0", "end-1c")
         
-        # Save to database
+        # Save to database (memory field = empty string)
         self.db_manager.update_session_context(
             self._selected_session.id, 
-            memory, 
+            "",
             authors_note
         )
         

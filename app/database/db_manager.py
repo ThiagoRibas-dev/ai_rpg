@@ -72,9 +72,9 @@ class DBManager:
     # These methods maintain the old API for existing code
     
     # Prompts
-    def create_prompt(self, name: str, content: str) -> Prompt:
+    def create_prompt(self, name: str, content: str, initial_message: str = "") -> Prompt:
         with self.conn:
-            return self.prompts.create(name, content)
+            return self.prompts.create(name, content, initial_message)
     
     def get_all_prompts(self) -> List[Prompt]:
         with self.conn:
@@ -240,12 +240,12 @@ class DBManager:
     # Private table creation methods
     def _create_prompts_table(self):
         self.conn.execute("""
-            CREATE TABLE IF NOT EXISTS prompts (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                content TEXT NOT NULL
-            )
-        """)
+                    CREATE TABLE IF NOT EXISTS prompts (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        initial_message TEXT DEFAULT ''
+                    )        """)
     
     def _create_sessions_table(self):
         self.conn.execute("""

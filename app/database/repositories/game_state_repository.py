@@ -36,8 +36,8 @@ class GameStateRepository(BaseRepository):
                RETURNING version''',
             (session_id, entity_type, entity_key, state_json)
         )
-        self._commit()
         row = cursor.fetchone()
+        self._commit()
         return row["version"] if row else 1
     
     def get_all_entities_by_type(self, session_id: int, entity_type: str) -> dict:

@@ -70,7 +70,7 @@ class MainView(ctk.CTk):
         self.session_collapsible = None
         self.session_scrollable_frame = None
         self.session_new_button = None
-        self.memory_textbox = None
+
         self.authors_note_textbox = None
         self.game_state_inspector_tabs = None
         
@@ -148,7 +148,7 @@ class MainView(ctk.CTk):
         self.session_collapsible = control_widgets['session_collapsible']
         self.session_scrollable_frame = control_widgets['session_scrollable_frame']
         self.session_new_button = control_widgets['session_new_button']
-        self.memory_textbox = control_widgets['memory_textbox']
+
         self.authors_note_textbox = control_widgets['authors_note_textbox']
         self.game_state_inspector_tabs = control_widgets['game_state_inspector_tabs']
     
@@ -335,7 +335,6 @@ class MainView(ctk.CTk):
         """
         if self.session_manager:
             self.session_manager.save_context(
-                self.memory_textbox,
                 self.authors_note_textbox,
                 self.bubble_manager
             )

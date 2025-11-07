@@ -97,6 +97,7 @@ This project is documented across several files to keep the information organize
 - **[V5 TODO](docs/todos/v5_TODO.md)**
 - **[V6 TODO](docs/todos/v6_TODO.md)**
 - **[V7 TODO](docs/todos/v7_TODO.md)**
+- **[V8 TODO](docs/todos/v8_TODO.md)**
 
 ## Notes
 
