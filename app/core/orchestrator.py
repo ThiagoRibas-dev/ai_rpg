@@ -138,20 +138,11 @@ class Orchestrator:
                     available_tool_schemas_json = self.tool_registry.get_all_schemas()
                     logger.debug(f"GAMEPLAY mode: {len(available_tool_models)} tools available.")
 
-                # ===== BUILD STATIC SYSTEM INSTRUCTION (CACHED) =====
-                cache_key = (game_session.game_mode, game_session.authors_note)
-                if not hasattr(game_session, '_cached_instruction') or \
-                game_session._cache_key != cache_key:
-                    game_session._cached_instruction = context_builder.build_static_system_instruction(
+                # ===== BUILD STATIC SYSTEM INSTRUCTION =====
+                static_instruction = context_builder.build_static_system_instruction(
                         game_session, 
-                        available_tool_schemas_json  # ✅ No tool_usage_note parameter
+                        available_tool_schemas_json 
                     )
-                    game_session._cache_key = cache_key
-                    logger.debug("Built new static system instruction (cache miss)")
-                else:
-                    logger.debug("Reusing cached static system instruction (cache hit)")
-
-                static_instruction = game_session._cached_instruction
 
                 # ===== BUILD CHAT HISTORY (ONCE, before all phases) =====
                 session_in_thread = Session.from_json(game_session.session_data)

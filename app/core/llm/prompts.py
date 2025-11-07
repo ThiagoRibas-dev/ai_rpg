@@ -52,16 +52,10 @@ Each choice should be:
 """
 
 SESSION_ZERO_TEMPLATE = """
-Okay. The game is in SETUP mode, the system and world-building phase, similar to the pre-game session or Session Zero in tabletop RPGs where rules, tone, and custom mechanics are collaboratively defined before gameplay begins.
+Okay. Let me check the current game mode:
+ - CURRENT GAME MODE: SETUP (Session Zero)
 
-There are a variety of examples I can take inspiration from for my suggestions:
- - **Fantasy Adventure:** *Dungeons & Dragons*, *Pathfinder*, *The Elder Scrolls*, *Zork*, *King's Quest* → Stats like Strength, Intelligence, Mana, Hit Points, Alignment, Encumbrance.
- - **Horror & Investigation:** *Call of Cthulhu*, *World of Darkness*, *Sunless Sea*, *Anchorhead* → Sanity, Stress, Willpower, Clue Points, Fear, Insight.
- - **Sci-Fi & Space Opera:** *Traveller*, *Starfinder*, *Mass Effect*, *Fallen London*, *Eventide* → Oxygen, Energy, Engineering, Reputation, Ship Integrity, Morale.
- - **Cyberpunk & Dystopia:** *Shadowrun*, *Cyberpunk 2020/RED*, *Deus Ex*, *AI Dungeon* → Augmentation Level, Cred, Street Rep, Heat, Cyberpsychosis.
- - **Mystery / Noir:** *GUMSHOE*, *Blades in the Dark*, *The Case of the Golden Idol*, *80 Days* → Clues, Reputation, Vice, Stress, Insight.
- - **Lighthearted / Slice of Life:** *Honey Heist*, *Pokémon Tabletop*, *Animal Crossing*, *80 Days*, *A Dark Room* → Friendship, Charm, Luck, Creativity, Chaos Meter.
-Etc.
+Alright, so we are in the systems and world-building phase, similar to the pre-game session or Session Zero in tabletop RPGs where rules, tone, and  mechanics are collaboratively defined before gameplay begins.
 
 Here's how I'll approach this turn:
 1. **Understand the player's message.**
@@ -78,13 +72,16 @@ Here's how I'll approach this turn:
 
 4. **Plan my next interaction.**
    - Once I've made any necessary tool calls, I'll outline what I'll want to talk about next time, for example, asking follow-up questions, suggesting new systems, or inviting feedback.
-
+   
 During this planning phase, I'm not speaking to the player yet. I'm quietly reasoning, using tools, and preparing for the next narrative response where I'll summarize progress and ask for input.
 
 """
 
 SETUP_RESPONSE_TEMPLATE = """
-Okay. Since we are still in the SETUP game mode (Session Zero phase), I'll acknowledge any new or updated properties and explain what each represents, how it might work in play, and how it fits the genre or tone we've been developing.
+Alright. Let me check the current game mode:
+ - CURRENT GAME MODE: SETUP (Session Zero)
+
+Since we are still in the SETUP game mode (Session Zero phase), I'll acknowledge any new or updated properties and explain what each represents, how it might work in play, and how it fits the genre or tone we've been developing.
 I'll suggest optional refinements, like adding modifiers, linking properties to dice mechanics, or expanding narrative consequences, but I'll keep the focus collaborative.
 
 There are a variety of examples I can take inspiration from for my suggestions:

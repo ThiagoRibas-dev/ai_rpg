@@ -122,13 +122,6 @@ class UIQueueHandler:
         """
         Handle a single UI message from the orchestrator.
         
-        MIGRATION NOTES:
-        - Extracted from: MainView._handle_ui_message() lines 196-280
-        - Changed: Direct method calls → delegate to managers
-        - Changed: self.add_message_bubble → self.bubble_manager.add_message
-        - Changed: self.add_tool_call → self.tool_viz_manager.add_tool_call
-        - Changed: display_action_choices logic → create_choice_buttons
-        
         Message routing table:
         - thought_bubble → bubble_manager.add_message
         - message_bubble → bubble_manager.add_message
@@ -148,7 +141,6 @@ class UIQueueHandler:
         logger.debug(f"📨 UI message received: {msg_type}")
         
         # === Thought Bubble ===
-        # MIGRATED FROM: lines 201-204
         if msg_type == "thought_bubble":
             # Show loading frame
             self.loading_frame.grid(row=2, column=0, columnspan=2, sticky="ew", 
@@ -157,26 +149,26 @@ class UIQueueHandler:
             self.bubble_manager.add_message("thought", msg["content"])
         
         # === Message Bubble ===
-        # MIGRATED FROM: lines 206-207
         elif msg_type == "message_bubble":
             # CHANGED: self.add_message_bubble → self.bubble_manager.add_message
             self.bubble_manager.add_message(msg["role"], msg["content"])
         
         # === Tool Call ===
-        # MIGRATED FROM: lines 209-211
         elif msg_type == "tool_call":
-            logger.debug(f"🔧 Adding tool call to panel: {msg.get('name')}")
+            logger.debug(f"🔧 Processing tool_call: {msg.get('name')} with args: {msg.get('args')}")
             # CHANGED: self.add_tool_call → self.tool_viz_manager.add_tool_call
-            self.tool_viz_manager.add_tool_call(msg["name"], msg["args"])
+            try:
+                self.tool_viz_manager.add_tool_call(msg["name"], msg["args"])
+                logger.debug("✅ Tool call added to visualization")
+            except Exception as e:
+                logger.error(f"❌ Failed to add tool call to panel: {e}", exc_info=True)
         
         # === Tool Result ===
-        # MIGRATED FROM: lines 213-214
         elif msg_type == "tool_result":
             # CHANGED: self.add_tool_result → self.tool_viz_manager.add_tool_result
             self.tool_viz_manager.add_tool_result(msg["result"], msg.get("is_error", False))
         
         # === Choices ===
-        # MIGRATED FROM: lines 216-219
         elif msg_type == "choices":
             if self.on_choice_selected:
                 # CHANGED: self.display_action_choices → create_choice_buttons (ui_helpers)

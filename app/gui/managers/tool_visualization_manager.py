@@ -41,16 +41,11 @@ class ToolVisualizationManager:
     def add_tool_call(self, tool_name: str, args: dict):
         """
         Add a tool call to the dedicated tool calls panel.
-        
-        MIGRATION NOTES:
-        - Extracted from: MainView.add_tool_call() lines 451-480
-        - Changed: self.tool_calls_frame → self.tool_calls_frame (no change in name)
-        - No logic changes
-        
-        Args:
-            tool_name: Name of the tool being called
-            args: Dictionary of tool arguments
         """
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.debug(f"🔧 ToolVisualizationManager.add_tool_call: {tool_name}")
+        
         style = get_tool_call_style()
         
         # Create tool call card
@@ -69,7 +64,7 @@ class ToolVisualizationManager:
             text_color=style["header_color"]
         )
         header.pack(anchor="w", padx=Theme.spacing.padding_md, 
-                   pady=(Theme.spacing.padding_sm, Theme.spacing.padding_xs))
+                pady=(Theme.spacing.padding_sm, Theme.spacing.padding_xs))
         
         # Arguments (truncated if too long)
         args_text = str(args)
@@ -85,20 +80,22 @@ class ToolVisualizationManager:
             justify="left"
         )
         args_label.pack(anchor="w", padx=Theme.spacing.padding_md, 
-                       pady=(0, Theme.spacing.padding_sm))
+                    pady=(0, Theme.spacing.padding_sm))
+        
+        logger.debug("✅ Tool call card created and packed")
         
         # Auto-scroll tool calls panel
-        self.tool_calls_frame.after_idle(
-            lambda: self.tool_calls_frame._parent_canvas.yview_moveto(1.0)
-        )
+        try:
+            self.tool_calls_frame.after_idle(
+                lambda: self.tool_calls_frame._parent_canvas.yview_moveto(1.0)
+            )
+            logger.debug("🔽 Scrolled to bottom")
+        except Exception as e:
+            logger.warning(f"Auto-scroll failed: {e}")
     
     def add_tool_result(self, result: any, is_error: bool = False):
         """
         Add a tool result to the most recent tool call card.
-        
-        MIGRATION NOTES:
-        - Extracted from: MainView.add_tool_result() lines 481-500
-        - No changes to logic
         
         Args:
             result: Tool execution result

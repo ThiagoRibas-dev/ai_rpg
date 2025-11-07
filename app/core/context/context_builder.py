@@ -43,7 +43,7 @@ class ContextBuilder:
         
         # 3. Author's note (if exists)
         if game_session.authors_note:
-            sections.append("# AUTHOR'S NOTE #")
+            sections.append("# NOTE #")
             sections.append(game_session.authors_note)
         
         return "\n\n".join(sections)

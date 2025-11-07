@@ -197,7 +197,6 @@ class MainView(ctk.CTk):
         self.orchestrator = orchestrator
         
         # Initialize session manager (needs orchestrator)
-        # REPLACES: Session methods (lines 501-620)
         self.session_manager = SessionManager(
             orchestrator,
             self.db_manager,  # ✅ ADD THIS
@@ -227,7 +226,6 @@ class MainView(ctk.CTk):
         )
         
         # Initialize UI queue handler (needs orchestrator)
-        # REPLACES: UI queue methods (lines 181-280)
         self.ui_queue_handler = UIQueueHandler(
             orchestrator,
             self.bubble_manager,
@@ -251,7 +249,6 @@ class MainView(ctk.CTk):
         self.inspector_manager.set_orchestrator(orchestrator)
         
         # Rewire button callbacks (from stubs to actual manager methods)
-        # NEW: Replace stub callbacks with real ones
         self.prompt_new_button.configure(command=self.prompt_manager.new_prompt)
         self.prompt_edit_button.configure(command=self.prompt_manager.edit_prompt)
         self.prompt_delete_button.configure(command=self.prompt_manager.delete_prompt)
@@ -260,9 +257,50 @@ class MainView(ctk.CTk):
         )
         
         # Start UI queue polling
-        # REPLACES: self.after(100, self._process_ui_queue) (line 112)
         self.ui_queue_handler.start_polling()
+
+        # ✅ NEW: Wire state viewer button
+        self._wire_state_viewer_button()
     
+
+    def _wire_state_viewer_button(self):
+        """
+        Wire the State Viewer button to actually open the dialog.
+        
+        - Replaces the stub in InspectorManager
+        - Checks for active session before opening
+        """
+        # Find the State Viewer tab and replace button command
+        state_viewer_frame = self.inspector_manager.tabs.tab("State Viewer")
+        
+        # Clear existing widgets (the stub button)
+        for widget in state_viewer_frame.winfo_children():
+            widget.destroy()
+        
+        # Create properly wired button
+        ctk.CTkButton(
+            state_viewer_frame,
+            text="🔍 Open State Viewer",
+            command=self._open_state_viewer,
+            height=50
+        ).pack(expand=True)
+
+    def _open_state_viewer(self):
+        """
+        Open the state viewer dialog with current session.
+        
+        - Checks for active session
+        - Passes session_id and parent to InspectorManager
+        """
+        if not self.session_manager or not self.session_manager.selected_session:
+            self.bubble_manager.add_message("system", "⚠️ Please load a game session first")
+            return
+        
+        self.inspector_manager.open_state_viewer(
+            self.session_manager.selected_session.id,
+            self  # parent window
+        )
+
     # ==================== Stub methods for callbacks ====================
     # These are used during UI construction (before managers exist)
     # They are replaced in set_orchestrator() with actual manager methods
