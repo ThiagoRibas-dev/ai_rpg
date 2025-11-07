@@ -55,5 +55,12 @@ This document outlines the planned features and development milestones for the A
 
 ## v8: Game Prompt creation and SETUP game mode (Session Zero) refinements
 
-*   **Initial message with new Game Prompt creation UI:** Implement a bespoke Game Prompt creation window with 3 fields, Prompt Name, System Prompt, and Initial Message.
-*   **Default SETUP game mold scaffolding (structure + HP attributes):** Creates a default skeleton for the SETUP game mode with some default attributes/properties.
+*   **Database Schema Extension for Initial Messages:** Add `initial_message` column to the prompts table, update the Prompt model and all repository CRUD methods to support storing and retrieving a pre-written opening message that the Game Master will use when starting new sessions.
+
+*   **Removal of Deprecated Memory Field from UI:** Remove the Memory textbox from the Advanced Context panel (a legacy field replaced by the dynamic memory retrieval system), update all related UI builders, managers, and session context methods to use only the Author's Note field.
+
+*   **Three-Field Prompt Creation Dialog:** Replace simple input dialogs with a proper modal form (`PromptDialog`) containing Name, Content (system prompt), and Initial Message fields, providing better UX and validation for prompt creation and editing workflows.
+
+*   **Initial Message Injection on Session Creation:** Automatically add the prompt's `initial_message` as the first assistant message when creating a new game session, ensuring players immediately see the Game Master's opening setup question in the chat history.
+
+*   **SETUP Mode Scaffolding System:** Implement automatic injection of initial JSON structure (character/inventory/location templates) when a new game enters SETUP mode, providing the AI with a foundation to build upon rather than creating entities from scratch, with optional genre-specific suggestions (fantasy/sci-fi/horror/cyberpunk).

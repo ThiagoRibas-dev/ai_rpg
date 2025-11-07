@@ -211,13 +211,5 @@ ai_rpg.db
 # Output of the script that exports the codebase as a single text file
 list_dirs_and_files.txt
 chroma_db/*
-.VSCodeCounter/2025-11-07_09-29-23/details.md
-.VSCodeCounter/2025-11-07_09-29-23/diff-details.md
-.VSCodeCounter/2025-11-07_09-29-23/diff.csv
-.VSCodeCounter/2025-11-07_09-29-23/diff.md
-.VSCodeCounter/2025-11-07_09-29-23/diff.txt
-.VSCodeCounter/2025-11-07_09-29-23/results.csv
-.VSCodeCounter/2025-11-07_09-29-23/results.json
-.VSCodeCounter/2025-11-07_09-29-23/results.md
-.VSCodeCounter/2025-11-07_09-29-23/results.txt
+.VSCodeCounter/*
 docs/assistant prompt.txt
