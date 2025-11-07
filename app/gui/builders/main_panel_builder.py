@@ -1,16 +1,6 @@
 """
 Builds the main (left) panel of the application.
 
-MIGRATION SOURCE: main_view.py lines 61-120
-Extracted methods:
-- Window grid configuration (lines 61-65)
-- Main panel frame creation (lines 66-72)
-- Game time header setup (lines 73-95)
-- Chat history frame (lines 96-100)
-- Choice button frame (lines 101-110)
-- Loading indicator (lines 111-120)
-- User input and buttons (lines 121-140)
-
 New responsibilities:
 - Create all main panel widgets
 - Return widget references as dictionary
@@ -34,11 +24,6 @@ class MainPanelBuilder:
         """
         Build the main panel and return widget references.
         
-        MIGRATION NOTES:
-        - Extracted from: MainView.__init__() lines 61-140
-        - send_callback: Replaces direct self.handle_send_button reference
-        - Grid configuration moved to MainView._setup_window()
-        
         Args:
             parent: The main window to attach widgets to
             send_callback: Callback for the send button
@@ -61,7 +46,6 @@ class MainPanelBuilder:
             }
         """
         # === Main Panel Frame ===
-        # MIGRATED FROM: lines 66-72
         main_panel = ctk.CTkFrame(parent, fg_color=Theme.colors.bg_primary)
         main_panel.grid(row=0, column=0, sticky="nsew", 
                        padx=Theme.spacing.padding_md, pady=Theme.spacing.padding_md)
@@ -69,7 +53,6 @@ class MainPanelBuilder:
         main_panel.grid_columnconfigure(0, weight=1)
         
         # === Game Time Header Bar ===
-        # MIGRATED FROM: lines 73-95
         game_time_frame = ctk.CTkFrame(
             main_panel, 
             fg_color=Theme.colors.bg_tertiary, 
@@ -81,7 +64,6 @@ class MainPanelBuilder:
         game_time_frame.grid_propagate(False)
         
         # Left: Game time label
-        # MIGRATED FROM: lines 76-82
         game_time_label = ctk.CTkLabel(
             game_time_frame,
             text="🕐 Day 1, Dawn",
@@ -92,7 +74,6 @@ class MainPanelBuilder:
                             pady=Theme.spacing.padding_sm)
         
         # Center: Game mode indicator
-        # MIGRATED FROM: lines 84-89
         game_mode_label = ctk.CTkLabel(
             game_time_frame,
             text="📋 SETUP",
@@ -104,7 +85,6 @@ class MainPanelBuilder:
                             pady=Theme.spacing.padding_sm)
         
         # Right: Session name
-        # MIGRATED FROM: lines 91-95
         session_name_label = ctk.CTkLabel(
             game_time_frame,
             text="No session loaded",
@@ -115,7 +95,6 @@ class MainPanelBuilder:
                                 pady=Theme.spacing.padding_sm)
         
         # === Chat History Frame ===
-        # MIGRATED FROM: lines 97-102
         chat_history_frame = ctk.CTkScrollableFrame(
             main_panel, 
             fg_color=Theme.colors.bg_secondary
@@ -125,7 +104,6 @@ class MainPanelBuilder:
                                pady=Theme.spacing.padding_sm)
         
         # === Choice Button Frame ===
-        # MIGRATED FROM: lines 105-110
         choice_button_frame = ctk.CTkFrame(main_panel)
         choice_button_frame.grid(row=2, column=0, columnspan=2, sticky="ew", 
                                 padx=Theme.spacing.padding_sm, 
@@ -133,7 +111,6 @@ class MainPanelBuilder:
         choice_button_frame.grid_remove()  # Hidden by default
         
         # === Loading Indicator ===
-        # MIGRATED FROM: lines 112-120
         loading_frame = ctk.CTkFrame(main_panel, fg_color=Theme.colors.bg_tertiary)
         loading_label = ctk.CTkLabel(
             loading_frame,
@@ -145,14 +122,12 @@ class MainPanelBuilder:
         # Note: Don't grid yet - will be shown/hidden by UIQueueHandler
         
         # === User Input ===
-        # MIGRATED FROM: lines 122-125
         user_input = ctk.CTkTextbox(main_panel, height=Theme.spacing.input_height)
         user_input.grid(row=3, column=0, sticky="ew", 
                        padx=Theme.spacing.padding_sm, 
                        pady=Theme.spacing.padding_sm)
         
         # === Button Frame ===
-        # MIGRATED FROM: lines 127-140
         button_frame = ctk.CTkFrame(main_panel)
         button_frame.grid(row=3, column=1, sticky="ns", 
                          padx=Theme.spacing.padding_sm, 

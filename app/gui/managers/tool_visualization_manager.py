@@ -1,11 +1,6 @@
 """
 Manages tool call visualization in the dedicated panel.
 
-MIGRATION SOURCE: main_view.py lines 451-500
-Extracted methods:
-- add_tool_call() (lines 451-480)
-- add_tool_result() (lines 481-500)
-
 New responsibilities:
 - Display tool calls with arguments
 - Display tool results (success/error)
@@ -19,19 +14,11 @@ from app.gui.styles import Theme, get_tool_call_style
 class ToolVisualizationManager:
     """
     Manages the tool calls visualization panel.
-    
-    MIGRATION NOTES:
-    - Extracted from: MainView (tool visualization methods lines 451-500)
-    - No state management (stateless display only)
     """
     
     def __init__(self, tool_calls_frame: ctk.CTkScrollableFrame):
         """
         Initialize the tool visualization manager.
-        
-        MIGRATION NOTES:
-        - tool_calls_frame: Previously self.tool_calls_frame
-        - Created by InspectorManager, passed to this manager
         
         Args:
             tool_calls_frame: Scrollable frame for displaying tool calls

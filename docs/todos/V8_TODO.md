@@ -161,7 +161,6 @@ def create_prompt(self, name: str, content: str, initial_message: str = "") -> P
 
 ```python
 # Memory textbox
-# MIGRATED FROM: lines 355-360
 ctk.CTkLabel(context_content, text="Memory:").pack(
     pady=(Theme.spacing.padding_sm, 0), 
     padx=Theme.spacing.padding_sm, 

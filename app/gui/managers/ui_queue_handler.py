@@ -1,12 +1,6 @@
 """
 Handles UI queue processing and message routing.
 
-MIGRATION SOURCE: main_view.py lines 181-280
-Extracted methods:
-- _process_ui_queue() → _process_queue() (lines 181-195)
-- _handle_ui_message() → _handle_message() (lines 196-280)
-- after(100, self._process_ui_queue) startup (line 112)
-
 New responsibilities:
 - Poll UI queue on main thread
 - Route messages to appropriate handlers
@@ -26,11 +20,6 @@ logger = logging.getLogger(__name__)
 class UIQueueHandler:
     """
     Processes messages from the orchestrator's UI queue.
-    
-    MIGRATION NOTES:
-    - Extracted from: MainView (UI queue methods lines 181-280)
-    - Polling loop moved from MainView.__init__ (line 112)
-    - Message routing logic centralized here
     """
     
     def __init__(
@@ -48,13 +37,6 @@ class UIQueueHandler:
     ):
         """
         Initialize the UI queue handler.
-        
-        MIGRATION NOTES:
-        - All parameters previously accessed via self.* in MainView
-        - orchestrator: Previously self.orchestrator
-        - bubble_manager: New (extracted from MainView)
-        - tool_viz_manager: New (extracted from MainView)
-        - inspectors: Previously accessed via self.character_inspector, etc.
         
         Args:
             orchestrator: Orchestrator instance
@@ -80,28 +62,17 @@ class UIQueueHandler:
         self.inspectors = inspectors
         
         # Callback for choice selection (set externally by MainView)
-        # MIGRATION NOTE: Previously self.select_choice
         self.on_choice_selected = None
     
     def start_polling(self):
         """
         Start polling the UI queue.
-        
-        MIGRATION NOTES:
-        - Extracted from: MainView.__init__() line 112
-        - Original: self.after(100, self._process_ui_queue)
-        - Changed: Uses orchestrator.view instead of self
         """
         self._process_queue()
     
     def _process_queue(self):
         """
         Process messages from the orchestrator's UI queue.
-        
-        MIGRATION NOTES:
-        - Extracted from: MainView._process_ui_queue() lines 181-195
-        - Changed: self.orchestrator.ui_queue → self.orchestrator.ui_queue (no change)
-        - Changed: self.after → self.orchestrator.view.after
         """
         try:
             processed = 0
@@ -179,13 +150,11 @@ class UIQueueHandler:
                 )
         
         # === Error ===
-        # MIGRATED FROM: lines 221-222
         elif msg_type == "error":
             # CHANGED: self.add_message_bubble → self.bubble_manager.add_message
             self.bubble_manager.add_message("system", f"❌ Error: {msg['message']}")
         
         # === Turn Complete ===
-        # MIGRATED FROM: lines 224-234
         elif msg_type == "turn_complete":
             self.loading_frame.grid_remove()  # Hide loading
             self.send_button.configure(state="normal")  # Re-enable
@@ -200,30 +169,25 @@ class UIQueueHandler:
                 self.inspectors['quest'].refresh()
         
         # === Refresh Memory Inspector ===
-        # MIGRATED FROM: lines 236-238
         elif msg_type == "refresh_memory_inspector":
             if 'memory' in self.inspectors and self.inspectors['memory']:
                 self.inspectors['memory'].refresh_memories()
         
         # === Update Game Time ===
-        # MIGRATED FROM: lines 240-241
         elif msg_type == "update_game_time":
             self.game_time_label.configure(text=f"🕐 {msg['new_time']}")
         
         # === Update Game Mode ===
-        # MIGRATED FROM: lines 243-245
         elif msg_type == "update_game_mode":
             # CHANGED: self._get_mode_display → get_mode_display (ui_helpers)
             mode_text, mode_color = get_mode_display(msg['new_mode'])
             self.game_mode_label.configure(text=mode_text, text_color=mode_color)
         
         # === Tool Event (Legacy) ===
-        # MIGRATED FROM: lines 247-250
         elif msg_type == "tool_event":
             logger.info(f"Tool Event: {msg['message']}")
             # Optionally display this in a specific debug area or log
         
         # === Unknown Message Type ===
-        # MIGRATED FROM: lines 252-253
         else:
             logger.warning(f"Unknown UI message type: {msg_type}")

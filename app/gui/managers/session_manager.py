@@ -1,15 +1,6 @@
 """
 Manages game session CRUD operations and UI.
 
-MIGRATION SOURCE: main_view.py lines 501-620
-Extracted methods:
-- new_game() (lines 501-510)
-- load_game() (lines 511-525)
-- on_session_select() (lines 526-565)
-- refresh_session_list() (lines 566-580)
-- load_context() (lines 581-595)
-- save_context() (lines 596-605)
-
 New responsibilities:
 - Create/load/save game sessions
 - Handle session selection
@@ -31,11 +22,6 @@ logger = logging.getLogger(__name__)
 class SessionManager:
     """
     Manages game session operations and selection.
-    
-    MIGRATION NOTES:
-    - Extracted from: MainView (session-related methods lines 501-620)
-    - Requires orchestrator, bubble_manager for coordination
-    - Manages session list UI and selection state
     """
     
     def __init__(
@@ -51,13 +37,6 @@ class SessionManager:
     ):
         """
         Initialize the session manager.
-        
-        MIGRATION NOTES:
-        - All parameters previously accessed via self.* in MainView
-        - orchestrator: Previously self.orchestrator
-        - db_manager: Previously self.db_manager  # ✅ ADD THIS LINE
-        - session_scrollable_frame: Previously self.session_scrollable_frame
-        - Labels/buttons: Previously self.* references
         
         Args:
             orchestrator: Orchestrator instance
@@ -83,10 +62,6 @@ class SessionManager:
     def selected_session(self) -> Optional[GameSession]:
         """
         Get the currently selected session.
-        
-        MIGRATION NOTES:
-        - Previously: MainView.selected_session (line 29)
-        - Now: Property on SessionManager
         """
         return self._selected_session
     
@@ -157,12 +132,6 @@ class SessionManager:
         """
         Load a saved game session.
         
-        MIGRATION NOTES:
-        - Extracted from: MainView.load_game() lines 511-525
-        - Changed: Requires bubble_manager parameter (was self.bubble_manager)
-        - Changed: self.clear_chat_history → bubble_manager.clear_history
-        - Changed: self.add_message_bubble → bubble_manager.add_message
-        
         Args:
             session_id: ID of the session to load
             bubble_manager: ChatBubbleManager instance for displaying history
@@ -187,12 +156,6 @@ class SessionManager:
         """
         Handle session selection.
         
-        MIGRATION NOTES:
-        - Extracted from: MainView.on_session_select() lines 526-565
-        - Changed: Requires bubble_manager and inspectors parameters
-        - Changed: self._get_mode_display → get_mode_display (ui_helpers)
-        - Changed: Inspector access via dict instead of self.*
-        
         Args:
             session: Selected session
             bubble_manager: ChatBubbleManager instance
@@ -203,29 +166,24 @@ class SessionManager:
         self.send_button.configure(state="normal")
         
         # Update header with session info
-        # MIGRATED FROM: lines 535-537
         self.session_name_label.configure(text=session.name)
         self.game_time_label.configure(text=f"🕐 {session.game_time}")
         
         # Update game mode indicator
-        # MIGRATED FROM: lines 539-541
         # CHANGED: self._get_mode_display → get_mode_display
         mode_text, mode_color = get_mode_display(session.game_mode)
         self.game_mode_label.configure(text=mode_text, text_color=mode_color)
         
         # Update memory inspector if available
-        # MIGRATED FROM: lines 543-545
         if 'memory' in inspectors and inspectors['memory']:
             inspectors['memory'].set_session(session.id)
         
         # Refresh all inspectors
-        # MIGRATED FROM: lines 547-553
         for inspector_name in ['character', 'inventory', 'quest']:
             if inspector_name in inspectors and inspectors[inspector_name]:
                 inspectors[inspector_name].refresh()
         
         # Update button styles
-        # MIGRATED FROM: lines 555-562
         button_styles = get_button_style()
         selected_style = get_button_style("selected")
         
@@ -236,18 +194,12 @@ class SessionManager:
                 widget.configure(fg_color=button_styles["fg_color"])
         
         # Collapse the session panel
-        # MIGRATED FROM: lines 564-565
         if self.session_collapsible and not self.session_collapsible.is_collapsed:
             self.session_collapsible.toggle()
     
     def refresh_session_list(self, prompt_id: int | None = None):
         """
         Refresh the session list UI.
-        
-        MIGRATION NOTES:
-        - Extracted from: MainView.refresh_session_list() lines 566-580
-        - Changed: self._on_button_click needs to be wired externally
-        - Uses stored reference to session_scrollable_frame
         
         Args:
             prompt_id: Filter sessions by prompt ID (optional)
@@ -273,11 +225,6 @@ class SessionManager:
         """
         Load memory and author's note for the current session.
         
-        MIGRATION NOTES:
-        - Extracted from: MainView.load_context() lines 581-595
-        - Changed: Requires textbox parameters (was self.*)
-        - Uses orchestrator.db_manager instead of self.db_manager
-        
         Args:
             memory_textbox: Textbox for memory content
             authors_note_textbox: Textbox for author's note
@@ -302,9 +249,6 @@ class SessionManager:
     ):
         """
         Save the author's note.
-        
-        MIGRATION NOTES:
-        - Removed memory field (deprecated)
         """
         if not self._selected_session:
             return
@@ -325,10 +269,5 @@ class SessionManager:
     def _on_button_click(self, session: GameSession):
         """
         Internal handler for session button clicks.
-        
-        MIGRATION NOTES:
-        - New method to handle button callbacks
-        - Needs to be wired externally (bubble_manager, inspectors not available here)
-        - MainView will provide a wrapper that calls on_session_select
         """
         logger.warning("Session button clicked but dependencies not wired yet")

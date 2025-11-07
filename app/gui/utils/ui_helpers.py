@@ -1,11 +1,6 @@
 """
 Utility functions for UI operations.
 
-MIGRATION SOURCE: main_view.py lines 731-753
-Extracted methods:
-- _get_mode_display() → get_mode_display() (lines 731-740)
-- display_action_choices() logic → create_choice_buttons() (lines 741-753)
-
 New responsibilities:
 - Stateless utility functions
 - No dependencies on MainView
@@ -19,11 +14,6 @@ from app.gui.styles import Theme
 def get_mode_display(game_mode: str) -> Tuple[str, str]:
     """
     Get display text and color for game mode.
-    
-    MIGRATION NOTES:
-    - Extracted from: MainView._get_mode_display() lines 731-740
-    - Made standalone (no self parameter)
-    - Added type hints
     
     Args:
         game_mode: Current game mode string ("SETUP" or "GAMEPLAY")
@@ -50,11 +40,6 @@ def create_choice_buttons(
 ) -> None:
     """
     Creates action choice buttons in the parent frame.
-    
-    MIGRATION NOTES:
-    - Extracted from: MainView.display_action_choices() lines 741-753
-    - Made standalone (operates on passed frame)
-    - Simplified interface
     
     Args:
         parent_frame: Frame to place buttons in

@@ -1,15 +1,6 @@
 """
 Manages chat bubble rendering and display.
 
-MIGRATION SOURCE: main_view.py lines 121-180
-Extracted methods:
-- add_message_bubble() → add_message() (lines 141-175)
-- clear_chat_history() → clear_history() (lines 176-180)
-- _calculate_bubble_width() (lines 125-135)
-- _on_window_resize() (lines 136-145)
-- _scroll_to_bottom() (lines 146-150)
-- bubble_labels tracking (lines 50-51)
-
 New responsibilities:
 - Manage chat bubble lifecycle
 - Handle dynamic width calculations
@@ -26,21 +17,11 @@ from app.gui.styles import Theme, get_chat_bubble_style
 class ChatBubbleManager:
     """
     Manages the chat history display with dynamic bubble sizing.
-    
-    MIGRATION NOTES:
-    - Extracted from: MainView (chat-related methods lines 121-180)
-    - Original bubble_labels list → self.bubble_labels
-    - Original _last_chat_width → self._last_chat_width
-    - Window resize binding moved here from __init__
     """
     
     def __init__(self, chat_frame: ctk.CTkScrollableFrame, window: ctk.CTk):
         """
         Initialize the chat bubble manager.
-        
-        MIGRATION NOTES:
-        - chat_frame: Previously self.chat_history_frame
-        - window: Previously self (MainView instance)
         
         Args:
             chat_frame: Scrollable frame to display chat bubbles in
@@ -50,32 +31,21 @@ class ChatBubbleManager:
         self.window = window
         
         # Track bubble content labels for resize updates
-        # MIGRATED FROM: MainView.__init__ lines 50-51
         self.bubble_labels: List[ctk.CTkLabel] = []
         self._last_chat_width = 0  # Track width changes
         
         # Setup resize handler
-        # MIGRATED FROM: MainView.__init__ line 102 (bind call)
         self.setup_resize_handler()
     
     def setup_resize_handler(self):
         """
         Bind window resize event to update bubble widths.
-        
-        MIGRATION NOTES:
-        - Extracted from: MainView.__init__() line 102
-        - Replaces: self.bind("&lt;Configure&gt;", self._on_window_resize)
         """
         self.window.bind("&lt;Configure&gt;", self._on_window_resize)
     
     def add_message(self, role: str, content: str):
         """
         Add a message as a chat bubble.
-        
-        MIGRATION NOTES:
-        - Extracted from: MainView.add_message_bubble() lines 141-175
-        - Renamed: add_message_bubble → add_message (clearer intent)
-        - No changes to logic, only context (self.chat_frame instead of self.chat_history_frame)
         
         Args:
             role: Message role ("user", "assistant", "system", "thought")
@@ -133,11 +103,6 @@ class ChatBubbleManager:
     def clear_history(self):
         """
         Clear all chat bubbles.
-        
-        MIGRATION NOTES:
-        - Extracted from: MainView.clear_chat_history() lines 176-180
-        - Renamed: clear_chat_history → clear_history (shorter)
-        - Added immediate clearing of bubble_labels list
         """
         for widget in self.chat_frame.winfo_children():
             widget.destroy()
@@ -147,11 +112,6 @@ class ChatBubbleManager:
     def _calculate_bubble_width(self) -> int:
         """
         Calculate the appropriate bubble width based on chat frame width.
-        
-        MIGRATION NOTES:
-        - Extracted from: MainView._calculate_bubble_width() lines 125-135
-        - Changed: self.chat_history_frame → self.chat_frame
-        - Changed: self.winfo_width() → self.window.winfo_width()
         - No logic changes
         
         Returns:
@@ -178,11 +138,6 @@ class ChatBubbleManager:
     def _on_window_resize(self, event):
         """
         Update all bubble widths when the window is resized.
-        
-        MIGRATION NOTES:
-        - Extracted from: MainView._on_window_resize() lines 136-145
-        - Changed: self.winfo_width() → self.window.winfo_width()
-        - Added widget cleanup logic (removes destroyed widgets)
         
         Args:
             event: Tkinter resize event
@@ -211,11 +166,6 @@ class ChatBubbleManager:
     def _scroll_to_bottom(self):
         """
         Scroll the chat to the bottom.
-        
-        MIGRATION NOTES:
-        - Extracted from: MainView._scroll_to_bottom() lines 146-150
-        - Changed: self.chat_history_frame → self.chat_frame
-        - Changed: self.after_idle → self.window.after_idle
         """
         # Use after_idle to ensure the frame is updated before scrolling
         self.window.after_idle(lambda: self.chat_frame._parent_canvas.yview_moveto(1.0))

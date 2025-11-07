@@ -1,14 +1,6 @@
 """
 Builds the control (right) panel of the application.
 
-MIGRATION SOURCE: main_view.py lines 281-450 (_create_right_panel_widgets)
-Extracted sections:
-- Control panel frame (lines 285-290)
-- Prompt Management section (lines 295-325)
-- Game Sessions section (lines 330-345)
-- Advanced Context section (lines 350-385)
-- Game State Inspector tabs (lines 390-450)
-
 New responsibilities:
 - Create all control panel widgets
 - Return widget references as dictionary
@@ -39,11 +31,6 @@ class ControlPanelBuilder:
         """
         Build the control panel and return widget references.
         
-        MIGRATION NOTES:
-        - Extracted from: MainView._create_right_panel_widgets() lines 281-450
-        - Callbacks may be None initially (wired in set_orchestrator)
-        - All button commands are conditional to allow late binding
-        
         Args:
             parent: The main window to attach widgets to
             prompt_callbacks: Dict with 'new', 'edit', 'delete' callbacks (or None)
@@ -69,7 +56,6 @@ class ControlPanelBuilder:
             }
         """
         # === Control Panel (Scrollable) ===
-        # MIGRATED FROM: lines 285-290
         control_panel = ctk.CTkScrollableFrame(parent, fg_color=Theme.colors.bg_primary)
         control_panel.grid(row=0, column=1, sticky="nsew", 
                           padx=(0, Theme.spacing.padding_md), 
@@ -84,7 +70,6 @@ class ControlPanelBuilder:
         }
         
         # === Prompt Management Section ===
-        # MIGRATED FROM: lines 295-325
         prompt_collapsible = CollapsibleFrame(control_panel, "Prompt Management")
         prompt_collapsible.pack(**pack_config)
         
@@ -97,7 +82,6 @@ class ControlPanelBuilder:
         prompt_scrollable_frame.pack(**pack_config)
         
         # Prompt button frame
-        # MIGRATED FROM: lines 310-325
         prompt_button_frame = ctk.CTkFrame(prompt_content)
         prompt_button_frame.pack(**pack_config)
         
@@ -127,7 +111,6 @@ class ControlPanelBuilder:
         prompt_delete_button.pack(side="left", padx=Theme.spacing.padding_xs)
         
         # === Game Sessions Section ===
-        # MIGRATED FROM: lines 330-345
         session_collapsible = CollapsibleFrame(control_panel, "Game Sessions")
         session_collapsible.pack(**pack_config)
         
@@ -148,7 +131,6 @@ class ControlPanelBuilder:
         session_new_button.pack(**pack_config)
         
         # === Advanced Context Section ===
-        # MIGRATED FROM: lines 350-385
         context_collapsible = CollapsibleFrame(control_panel, "Advanced Context")
         context_collapsible.pack(**pack_config)
         
@@ -156,7 +138,6 @@ class ControlPanelBuilder:
         
                 
         # Author's Note textbox
-        # MIGRATED FROM: lines 362-367
         ctk.CTkLabel(context_content, text="Author's Note:").pack(
             pady=(Theme.spacing.padding_sm, 0), 
             padx=Theme.spacing.padding_sm, 
@@ -166,7 +147,6 @@ class ControlPanelBuilder:
         authors_note_textbox.pack(**pack_config)
         
         # World Info button
-        # MIGRATED FROM: lines 369-372
         ctk.CTkButton(
             context_content, 
             text="Manage World Info", 
@@ -174,7 +154,6 @@ class ControlPanelBuilder:
         ).pack(**pack_config)
         
         # Save Context button
-        # MIGRATED FROM: lines 374-377
         ctk.CTkButton(
             context_content, 
             text="Save Context", 
@@ -182,7 +161,6 @@ class ControlPanelBuilder:
         ).pack(**pack_config)
         
         # === Game State Inspector Section ===
-        # MIGRATED FROM: lines 390-450
         inspector_collapsible = CollapsibleFrame(control_panel, "Game State Inspector")
         inspector_collapsible.pack(
             pady=Theme.spacing.padding_sm, 
@@ -194,7 +172,6 @@ class ControlPanelBuilder:
         inspector_content = inspector_collapsible.get_content_frame()
         
         # Create tab view
-        # MIGRATED FROM: lines 400-450
         game_state_inspector_tabs = ctk.CTkTabview(inspector_content)
         game_state_inspector_tabs.pack(fill="both", expand=True)
         
@@ -207,7 +184,6 @@ class ControlPanelBuilder:
         game_state_inspector_tabs.add("State Viewer")
         
         # === Return Widget References ===
-        # NEW: Return all widgets as dictionary for parent to store
         return {
             'control_panel': control_panel,
             'prompt_collapsible': prompt_collapsible,
