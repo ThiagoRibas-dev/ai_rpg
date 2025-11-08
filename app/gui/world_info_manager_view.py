@@ -1,6 +1,7 @@
 import customtkinter as ctk
 from app.models.world_info import WorldInfo
 
+
 class WorldInfoManagerView(ctk.CTkToplevel):
     def __init__(self, master, db_manager, prompt_id: int, vector_store=None):
         super().__init__(master)
@@ -20,7 +21,9 @@ class WorldInfoManagerView(ctk.CTkToplevel):
         left_panel = ctk.CTkFrame(self)
         left_panel.grid(row=0, column=0, sticky="nsew", padx=(10, 5), pady=10)
 
-        list_label = ctk.CTkLabel(left_panel, text="World Info Entries", font=("Arial", 16, "bold"))
+        list_label = ctk.CTkLabel(
+            left_panel, text="World Info Entries", font=("Arial", 16, "bold")
+        )
         list_label.pack(pady=10)
 
         self.world_info_listbox = ctk.CTkScrollableFrame(left_panel)
@@ -29,17 +32,23 @@ class WorldInfoManagerView(ctk.CTkToplevel):
         button_frame = ctk.CTkFrame(left_panel)
         button_frame.pack(fill="x", padx=5, pady=5)
 
-        new_button = ctk.CTkButton(button_frame, text="New", command=self.new_world_info)
+        new_button = ctk.CTkButton(
+            button_frame, text="New", command=self.new_world_info
+        )
         new_button.pack(side="left", padx=2, expand=True, fill="x")
 
-        delete_button = ctk.CTkButton(button_frame, text="Delete", command=self.delete_world_info)
+        delete_button = ctk.CTkButton(
+            button_frame, text="Delete", command=self.delete_world_info
+        )
         delete_button.pack(side="left", padx=2, expand=True, fill="x")
 
         # Right panel - Edit world info
         right_panel = ctk.CTkFrame(self)
         right_panel.grid(row=0, column=1, sticky="nsew", padx=(5, 10), pady=10)
 
-        edit_label = ctk.CTkLabel(right_panel, text="Edit Entry", font=("Arial", 16, "bold"))
+        edit_label = ctk.CTkLabel(
+            right_panel, text="Edit Entry", font=("Arial", 16, "bold")
+        )
         edit_label.pack(pady=10)
 
         keywords_label = ctk.CTkLabel(right_panel, text="Keywords (comma-separated):")
@@ -54,7 +63,9 @@ class WorldInfoManagerView(ctk.CTkToplevel):
         self.content_textbox = ctk.CTkTextbox(right_panel)
         self.content_textbox.pack(fill="both", expand=True, padx=10, pady=5)
 
-        save_button = ctk.CTkButton(right_panel, text="Save Changes", command=self.save_world_info)
+        save_button = ctk.CTkButton(
+            right_panel, text="Save Changes", command=self.save_world_info
+        )
         save_button.pack(pady=10, padx=10, fill="x")
 
         self.refresh_list()
@@ -65,7 +76,7 @@ class WorldInfoManagerView(ctk.CTkToplevel):
             widget.destroy()
 
         world_infos = self.db_manager.get_world_info_by_prompt(self.prompt_id)
-        
+
         for wi in world_infos:
             # Create a frame for each entry
             frame = ctk.CTkFrame(self.world_info_listbox)
@@ -75,17 +86,17 @@ class WorldInfoManagerView(ctk.CTkToplevel):
             btn = ctk.CTkButton(
                 frame,
                 text=wi.keywords[:40] + ("..." if len(wi.keywords) > 40 else ""),
-                command=lambda w=wi: self.select_world_info(w)
+                command=lambda w=wi: self.select_world_info(w),
             )
             btn.pack(fill="x")
 
     def select_world_info(self, world_info: WorldInfo):
         """Load a world info entry for editing."""
         self.selected_world_info = world_info
-        
+
         self.keywords_entry.delete(0, "end")
         self.keywords_entry.insert(0, world_info.keywords)
-        
+
         self.content_textbox.delete("1.0", "end")
         self.content_textbox.insert("1.0", world_info.content)
 
@@ -123,7 +134,9 @@ class WorldInfoManagerView(ctk.CTkToplevel):
         self.db_manager.update_world_info(self.selected_world_info)
         if self.vector_store:
             try:
-                self.vector_store.upsert_world_info(self.prompt_id, self.selected_world_info.id, content)
+                self.vector_store.upsert_world_info(
+                    self.prompt_id, self.selected_world_info.id, content
+                )
             except Exception:
                 pass
         self.refresh_list()
@@ -136,12 +149,14 @@ class WorldInfoManagerView(ctk.CTkToplevel):
         self.db_manager.delete_world_info(self.selected_world_info.id)
         if self.vector_store:
             try:
-                self.vector_store.delete_world_info(self.prompt_id, self.selected_world_info.id)
+                self.vector_store.delete_world_info(
+                    self.prompt_id, self.selected_world_info.id
+                )
             except Exception:
                 pass
         self.selected_world_info = None
-        
+
         self.keywords_entry.delete(0, "end")
         self.content_textbox.delete("1.0", "end")
-        
+
         self.refresh_list()

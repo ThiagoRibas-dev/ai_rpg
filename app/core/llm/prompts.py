@@ -66,9 +66,9 @@ Here's how I'll approach this turn:
    - I'll compare their message with the current setup and identify which aspects of the world, rules, properties, etc, are still undefined or incomplete.
 
 3. Use tools to update the setup.
-   - If the player confirmed a mechanic or idea, I'll record it with `schema.define_property`.
+   - If the player confirmed mechanics or ideas, I'll record it with `schema.define_property`.
    - If they want to modify character details, I'll use `state.apply_patch` to update the skills, attributes, feats, rules, poperties, etc.
-   - Crucially, if the player indicated that setup is complete and they're ready to play, I'll call `schema.finalize({"confirm": true})` to finalize SETUP mode and move to GAMEPLAY mode so that the game can finally begin.
+   - Crucially, I'll only ever call `schema.finalize({"confirm": true})` to finalize SETUP mode and move to GAMEPLAY mode after confirming with that player that the setup is complete.
 
 4. Plan my next interaction.
    - Once I've made any necessary tool calls, I'll outline what I'll want to talk about next time, for example, asking follow-up questions, suggesting new systems, or inviting feedback.

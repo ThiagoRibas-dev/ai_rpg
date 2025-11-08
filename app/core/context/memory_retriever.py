@@ -4,22 +4,45 @@ from typing import List, Any
 from datetime import datetime
 from app.models.message import Message
 
+
 class MemoryRetriever:
     """Retrieves and formats relevant memories by mixing keyword, priority, recency, and semantic signals."""
+
     def __init__(self, db_manager, vector_store, logger: logging.Logger | None = None):
         self.db = db_manager
         self.vs = vector_store
         self.logger = logger or logging.getLogger(__name__)
 
     def extract_keywords(self, text: str, min_length: int = 3) -> List[str]:
-        words = re.findall(r'\b\w+\b', text.lower())
-        stop_words = {'the', 'and', 'but', 'for', 'not', 'with', 'this', 'that', 'from', 'have', 'been', 'are', 'was', 'were'}
+        words = re.findall(r"\b\w+\b", text.lower())
+        stop_words = {
+            "the",
+            "and",
+            "but",
+            "for",
+            "not",
+            "with",
+            "this",
+            "that",
+            "from",
+            "have",
+            "been",
+            "are",
+            "was",
+            "were",
+        }
         return list({w for w in words if len(w) >= min_length and w not in stop_words})
 
-    def get_relevant(self, session, recent_messages: List[Message], limit: int = 10) -> List[Any]:
+    def get_relevant(
+        self, session, recent_messages: List[Message], limit: int = 10
+    ) -> List[Any]:
         if not session or not session.id:
             return []
-        recent_text = " ".join([m.content for m in recent_messages[-5:]]) if recent_messages else ""
+        recent_text = (
+            " ".join([m.content for m in recent_messages[-5:]])
+            if recent_messages
+            else ""
+        )
         keywords = self.extract_keywords(recent_text)
 
         all_memories = self.db.get_memories_by_session(session.id) or []
@@ -29,7 +52,9 @@ class MemoryRetriever:
         # Semantic hits
         hit_ids = set()
         try:
-            sem_hits = self.vs.search_memories(session.id, recent_text, k=min(12, limit * 2), min_priority=1)
+            sem_hits = self.vs.search_memories(
+                session.id, recent_text, k=min(12, limit * 2), min_priority=1
+            )
             hit_ids = {int(h["memory_id"]) for h in sem_hits}
         except Exception:
             pass
@@ -72,7 +97,12 @@ class MemoryRetriever:
         if not memories:
             return ""
         lines = ["# RELEVANT MEMORIES #"]
-        kind_emoji = {"episodic": "📖", "semantic": "💡", "lore": "📜", "user_pref": "⚙️"}
+        kind_emoji = {
+            "episodic": "📖",
+            "semantic": "💡",
+            "lore": "📜",
+            "user_pref": "⚙️",
+        }
         for mem in memories:
             emoji = kind_emoji.get(mem.kind, "🗒️")
             stars = "★" * int(mem.priority or 0)

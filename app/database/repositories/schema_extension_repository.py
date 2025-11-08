@@ -1,46 +1,56 @@
-'''Repository for schema extension operations.'''
+"""Repository for schema extension operations."""
+
 import json
 from typing import Any, Dict
 from .base_repository import BaseRepository
 
-class SchemaExtensionRepository(BaseRepository):
-    '''Handles all schema extension related database operations.'''
 
-    def create(self, session_id: int, entity_type: str, property_name: str, definition_dict: Dict[str, Any]):
-        '''Create a new schema extension definition.'''
+class SchemaExtensionRepository(BaseRepository):
+    """Handles all schema extension related database operations."""
+
+    def create(
+        self,
+        session_id: int,
+        entity_type: str,
+        property_name: str,
+        definition_dict: Dict[str, Any],
+    ):
+        """Create a new schema extension definition."""
         definition_json = json.dumps(definition_dict)
         self._execute(
-            '''INSERT INTO schema_extensions (session_id, entity_type, property_name, definition)
-               VALUES (?, ?, ?, ?)''',
-            (session_id, entity_type, property_name, definition_json)
+            """INSERT INTO schema_extensions (session_id, entity_type, property_name, definition)
+               VALUES (?, ?, ?, ?)""",
+            (session_id, entity_type, property_name, definition_json),
         )
         self._commit()
 
-    def get_by_entity_type(self, session_id: int, entity_type: str) -> Dict[str, Dict[str, Any]]:
-        '''Get all schema extensions for a given session and entity type.'''
+    def get_by_entity_type(
+        self, session_id: int, entity_type: str
+    ) -> Dict[str, Dict[str, Any]]:
+        """Get all schema extensions for a given session and entity type."""
         rows = self._fetchall(
-            '''SELECT property_name, definition FROM schema_extensions
-               WHERE session_id = ? AND entity_type = ?''',
-            (session_id, entity_type)
+            """SELECT property_name, definition FROM schema_extensions
+               WHERE session_id = ? AND entity_type = ?""",
+            (session_id, entity_type),
         )
         return {row["property_name"]: json.loads(row["definition"]) for row in rows}
 
     def delete(self, session_id: int, entity_type: str, property_name: str):
-        '''Delete a specific schema extension.'''
+        """Delete a specific schema extension."""
         self._execute(
-            '''DELETE FROM schema_extensions
-               WHERE session_id = ? AND entity_type = ? AND property_name = ?''',
-            (session_id, entity_type, property_name)
+            """DELETE FROM schema_extensions
+               WHERE session_id = ? AND entity_type = ? AND property_name = ?""",
+            (session_id, entity_type, property_name),
         )
         self._commit()
 
     def get_all(self, session_id: int) -> Dict[str, Dict[str, Dict[str, Any]]]:
-        '''Get all schema extensions for a session, organized by entity type.'''
+        """Get all schema extensions for a session, organized by entity type."""
         rows = self._fetchall(
-            '''SELECT entity_type, property_name, definition FROM schema_extensions
+            """SELECT entity_type, property_name, definition FROM schema_extensions
                WHERE session_id = ?
-               ORDER BY entity_type, property_name''',
-            (session_id,)
+               ORDER BY entity_type, property_name""",
+            (session_id,),
         )
         results = {}
         for row in rows:

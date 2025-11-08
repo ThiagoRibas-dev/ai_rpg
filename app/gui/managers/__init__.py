@@ -22,11 +22,11 @@ from app.gui.managers.inspector_manager import InspectorManager
 from app.gui.managers.history_manager import HistoryManager
 
 __all__ = [
-    'ChatBubbleManager',
-    'ToolVisualizationManager',
-    'UIQueueHandler',
-    'SessionManager',
-    'PromptManager',
-    'InspectorManager',
-    'HistoryManager',
+    "ChatBubbleManager",
+    "ToolVisualizationManager",
+    "UIQueueHandler",
+    "SessionManager",
+    "PromptManager",
+    "InspectorManager",
+    "HistoryManager",
 ]

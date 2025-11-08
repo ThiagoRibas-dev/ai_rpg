@@ -1,9 +1,11 @@
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any
 
+
 class CharacterAttributes(BaseModel):
     hp_current: int
     hp_max: int
+
 
 class Character(BaseModel):
     # --- CORE SCHEMA ---
@@ -17,27 +19,31 @@ class Character(BaseModel):
     # --- DYNAMIC EXTENSION ---
     properties: Dict[str, Any] = Field(
         default_factory=dict,
-        description="Sandbox for AI-defined attributes like 'Sanity', 'Mana', 'Corruption'."
+        description="Sandbox for AI-defined attributes like 'Sanity', 'Mana', 'Corruption'.",
     )
+
 
 class Item(BaseModel):
     key: str = Field(..., description="Unique identifier for the item.")
     name: str = Field(..., description="The item's display name.")
     description: str = Field(default="", description="A brief description of the item.")
-    
+
     # --- DYNAMIC EXTENSION ---
     properties: Dict[str, Any] = Field(
         default_factory=dict,
-        description="Sandbox for AI-defined item attributes like 'Durability', 'Enchantment', 'Weight'."
+        description="Sandbox for AI-defined item attributes like 'Durability', 'Enchantment', 'Weight'.",
     )
+
 
 class Location(BaseModel):
     key: str = Field(..., description="Unique identifier for the location.")
     name: str = Field(..., description="The location's display name.")
-    description: str = Field(default="", description="A brief description of the location.")
-    
+    description: str = Field(
+        default="", description="A brief description of the location."
+    )
+
     # --- DYNAMIC EXTENSION ---
     properties: Dict[str, Any] = Field(
         default_factory=dict,
-        description="Sandbox for AI-defined location attributes like 'Weather', 'DangerLevel', 'SpecialEffect'."
+        description="Sandbox for AI-defined location attributes like 'Weather', 'DangerLevel', 'SpecialEffect'.",
     )

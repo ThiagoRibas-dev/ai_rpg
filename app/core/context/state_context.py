@@ -3,9 +3,16 @@ from typing import List
 from app.tools.registry import ToolRegistry
 from app.tools.schemas import StateQuery
 
+
 class StateContextBuilder:
     """Builds the CURRENT STATE section by querying game state via tools."""
-    def __init__(self, tool_registry: ToolRegistry, db_manager, logger: logging.Logger | None = None):
+
+    def __init__(
+        self,
+        tool_registry: ToolRegistry,
+        db_manager,
+        logger: logging.Logger | None = None,
+    ):
         self.tools = tool_registry
         self.db = db_manager
         self.logger = logger or logging.getLogger(__name__)
@@ -22,19 +29,19 @@ class StateContextBuilder:
         try:
             # Character
             char_query = StateQuery(
-                entity_type="character",
-                key="player",
-                json_path="."
+                entity_type="character", key="player", json_path="."
             )
             char_result = self.tools.execute(char_query, context=ctx)
-            
+
             char = char_result.get("value", {}) or {}
             if char:
                 name = char.get("name", "Player")
                 race = char.get("race", "")
                 char_class = char.get("class", "")
                 level = char.get("level", 1)
-                lines.append(f"**Character**: {name} ({race} {char_class}, Level {level})")
+                lines.append(
+                    f"**Character**: {name} ({race} {char_class}, Level {level})"
+                )
                 attrs = char.get("attributes", {})
                 if attrs:
                     hp = f"{attrs.get('hp_current', '?')}/{attrs.get('hp_max', '?')}"
@@ -48,13 +55,9 @@ class StateContextBuilder:
                 lines.append("")
 
             # Inventory
-            inv_query = StateQuery(
-                entity_type="inventory",
-                key="player",
-                json_path="."
-            )
+            inv_query = StateQuery(entity_type="inventory", key="player", json_path=".")
             inv_result = self.tools.execute(inv_query, context=ctx)
-            
+
             inv = inv_result.get("value", {}) or {}
             if inv:
                 slots = f"{inv.get('slots_used', 0)}/{inv.get('slots_max', 10)}"
@@ -74,13 +77,9 @@ class StateContextBuilder:
                 lines.append("")
 
             # Quests
-            quest_query = StateQuery(
-                entity_type="quests",
-                key="*",
-                json_path="."
-            )
+            quest_query = StateQuery(entity_type="quests", key="*", json_path=".")
             quest_result = self.tools.execute(quest_query, context=ctx)
-            
+
             quests = quest_result.get("value", {}) or {}
             if quests and isinstance(quests, dict):
                 lines.append("**Active Quests**:")

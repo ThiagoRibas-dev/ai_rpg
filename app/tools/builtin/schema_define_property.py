@@ -5,10 +5,13 @@ from app.tools.builtin.property_templates import apply_template
 
 logger = logging.getLogger(__name__)
 
+
 def handler(
     name: str,
     description: str,
-    entity_type: Literal["character", "item", "location"] = "character", # Default to character
+    entity_type: Literal[
+        "character", "item", "location"
+    ] = "character",  # Default to character
     template: Optional[str] = None,
     type: Optional[Literal["integer", "string", "boolean", "enum", "resource"]] = None,
     default_value: Any = None,
@@ -21,12 +24,12 @@ def handler(
     display_format: Optional[Literal["number", "bar", "badge"]] = None,
     regenerates: Optional[bool] = None,
     regeneration_rate: Optional[int] = None,
-    **context: Any # Catch-all for context parameters
+    **context: Any,  # Catch-all for context parameters
 ) -> Dict[str, Any]:
     """
     Allows the AI to define a new custom attribute (property) for game entities.
     These properties extend the core schema and are used to create dynamic game mechanics.
-    
+
     Args:
         name (str): The programmatic name of the property (e.g., 'Sanity', 'Mana').
         description (str): A human-readable description of what the property represents.
@@ -53,7 +56,9 @@ def handler(
     db_manager = context.get("db_manager")
 
     if not session_id or not db_manager:
-        logger.error("Session ID or DB Manager not found in context for schema.define_property.")
+        logger.error(
+            "Session ID or DB Manager not found in context for schema.define_property."
+        )
         return {"success": False, "error": "Missing session context."}
 
     overrides: Dict[str, Any] = {
@@ -79,13 +84,17 @@ def handler(
             prop_def = apply_template(template, overrides)
         else:
             # If no template, 'type' and 'default_value' are mandatory
-            if 'type' not in overrides or 'default_value' not in overrides:
-                raise ValueError("When no template is provided, 'type' and 'default_value' are required.")
+            if "type" not in overrides or "default_value" not in overrides:
+                raise ValueError(
+                    "When no template is provided, 'type' and 'default_value' are required."
+                )
             prop_def = PropertyDefinition(**overrides)
-        
+
         # Save to DB
-        db_manager.create_schema_extension(session_id, entity_type, name, prop_def.model_dump())
-        
+        db_manager.create_schema_extension(
+            session_id, entity_type, name, prop_def.model_dump()
+        )
+
         logger.info(f"Defined new property '{name}' for entity type '{entity_type}'.")
         return {"success": True, "property": prop_def.model_dump()}
 

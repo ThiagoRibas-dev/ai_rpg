@@ -1,20 +1,8 @@
 import random
 import re
 
-schema = {
-    "name": "rng.roll",
-    "description": "Roll dice like '1d20+3' or '2d6-1'.",
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "dice": {"type": "string", "description": "Dice spec, e.g., '1d20+3'."},
-            "dice_spec": {"type": "string", "description": "Alias for dice."}
-        },
-        "required": []
-    }
-}
-
 _dice_re = re.compile(r"^\s*(\d+)\s*d\s*(\d+)\s*([+-]\s*\d+)?\s*$", re.I)
+
 
 def handler(dice: str | None = None, dice_spec: str | None = None, **context) -> dict:
     spec = dice or dice_spec

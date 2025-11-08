@@ -8,6 +8,6 @@ Purpose: Reusable UI helpers
 from app.gui.utils.ui_helpers import get_mode_display, create_choice_buttons
 
 __all__ = [
-    'get_mode_display',
-    'create_choice_buttons',
+    "get_mode_display",
+    "create_choice_buttons",
 ]

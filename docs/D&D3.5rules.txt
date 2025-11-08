@@ -1,0 +1,85 @@
+D&D 3.5e System Framework
+A Definitive Overview of Core System Components and Mechanics
+
+The d20 System: Core Mechanic
+The D&D 3.5e framework is based on the **d20 System**, where most actions are resolved by rolling a 20-sided die (d20). Success is achieved when the result of the die roll plus all applicable **modifiers** meets or exceeds a target number, known as the **Difficulty Class (DC)** or **Armor Class (AC)**.
+
+d20 Roll + Modifiers ≥ Target Number (DC/AC)
+1. Abilities, Skills, and Feats
+The Six Ability Scores
+A score of 10 or 11 is considered average. The relevant **modifier** added to checks is derived by the formula: (Score - 10) / 2 (rounded down).
+
+Strength (STR): Physical power, Melee Attack/Damage, Climb/Jump/Swim.
+Dexterity (DEX): Agility, Ranged Attack Rolls, Armor Class, Reflex Saves.
+Constitution (CON): Health, Hit Points, Fortitude Saves.
+Intelligence (INT): Reasoning, Knowledge skills, number of Skill Points.
+Wisdom (WIS): Willpower, Perception skills, Will Saves.
+Charisma (CHA): Personality, Social skills, Turning Undead.
+Skills
+Skills are specific areas of learned ability, linked to a single Ability Score. The Skill Check formula is:
+
+d20 + Skill Ranks + Ability Mod + Misc ≥ DC
+**Skill Ranks:** Purchased with **Skill Points** (determined by Class and INT modifier).
+**Class Skills:** Skills associated with the character's class cost 1 point per rank.
+**Cross-Class Skills:** Skills not associated with the character's class cost 2 points per rank and max out at half the normal rank limit.
+**Skill Tricks:** An optional system where two ranks in a skill can unlock a special, limited maneuver.
+Feats
+Feats are special abilities that grant new capabilities or improve existing ones (e.g., *Power Attack*, *Improved Initiative*). They are a key source of character customization.
+
+All characters gain a feat at 1st level, and an additional feat every three levels thereafter (3rd, 6th, 9th, 12th, 15th, 18th).
+Humans gain an extra bonus feat at 1st level.
+Some classes (like the Fighter) receive additional bonus feats from a restricted list.
+Feats often have prerequisites, requiring a minimum score in an ability, a certain number of ranks in a skill, or possession of a previous feat.
+2. Character and Creature Framework
+Races and Templates
+**Races:** Provide initial ability score modifiers, movement speed, size, and racial features (e.g., an Elf gains **+2 DEX, -2 CON**, low-light vision, and immunity to sleep spells).
+**Templates:** Modifications that can be applied to a creature (the base creature) to alter its stats, abilities, type, and subtypes. Templates typically include powerful additions like flight, damage reduction, and special senses (e.g., the Vampire or Half-Dragon template).
+Class Progression (The Chassis)
+A character's class level defines their core competency tracks, which advance at different rates:
+
+**Hit Die (HD):** Determines how much HP a character gains per level (d4, d6, d8, d10, or d12).
+**Base Attack Bonus (BAB):** The foundational bonus for attack rolls.
+**Saving Throws:** Each class designates one or more saves (**Fortitude, Reflex, Will**) as "Good" (faster progression) or "Poor" (slower progression).
+**Caster Level (CL):** Tracks the power and effects of spells.
+Progression Tracks (Levels 1-20 Summary)
+Type	Example Class	BAB Progression	Good Save Total	Poor Save Total
+Full BAB (Martial)	Fighter, Barbarian	Full (BAB=Level) to **+20**	**+12** at level 20	**+6** at level 20
+3/4 BAB (Mixed)	Cleric, Rogue, Bard	3/4 of Level to **+15**	**+12** at level 20	**+6** at level 20
+1/2 BAB (Caster)	Wizard, Sorcerer	1/2 of Level to **+10**	**+12** at level 20	**+6** at level 20
+3. Standard Character Creation Process
+Character creation follows a strict sequence to ensure statistical dependencies are correctly calculated. The order is:
+
+Generate Ability Scores: Roll dice or use a Point Buy system to determine the raw scores for STR, DEX, CON, INT, WIS, and CHA.
+Choose Race: Select a race (e.g., Human, Elf). This applies immediate modifiers to the ability scores (e.g., +2 DEX, -2 CON for Elf). This step must precede Class choice as it affects score requirements for feats/multiclassing.
+Choose Class and Determine Core Chassis: Select a starting class (e.g., Fighter, Wizard). This determines Hit Die, Base Attack Bonus, Saving Throw progressions, and the number of Skill Points gained per level.
+Determine Skill Points and Ranks: Calculate the number of skill points available (based on INT modifier and Class). Spend these points to buy ranks in Class Skills and Cross-Class Skills.
+Select Feats: Choose initial feats (at least one at 1st level, plus any bonus feats from Race or Class), ensuring all prerequisites are met by the character's current scores, ranks, and BAB.
+Calculate Secondary Stats: Determine final statistics, including Hit Points (roll HD + CON Mod, plus full max HD at 1st level), Armor Class (AC), and saving throw bonuses.
+Purchase Equipment: Spend starting gold (determined by Class) on weapons, armor, and gear.
+4. Combat and Defenses
+Attack Rolls
+To successfully hit a target, an attack roll must meet or exceed the target's Armor Class (AC). Critical hits occur on a natural 20 (and possibly a successful confirmation roll) and critical misses on a natural 1.
+
+**Attack Roll = d20 + Base Attack Bonus (BAB) + Ability Modifier (STR for Melee, DEX for Ranged) + Size Modifiers + Weapon Enhancement/Feat Modifiers**
+Defenses
+Armor Class (AC): The target number for physical attacks.
+**Standard AC = 10 + Armor Bonus + Shield Bonus + Dexterity Modifier + Size Modifier + Natural Armor**
+Touch AC: The target number for attacks that ignore physical armor (e.g., ray spells). Calculated as AC without the Armor, Shield, or Natural Armor bonuses.
+Flat-Footed AC: The target number when caught unawares (e.g., before acting in the first round of combat). Calculated as AC without the Dexterity or Dodge bonuses.
+Saving Throws: Used to resist spells, poison, and special effects. The three types are Fortitude (CON), Reflex (DEX), and Will (WIS).
+5. Magic Systems
+The core of D&D 3.5e magic is the Vancian system, but numerous supplements expanded the game to include powerful alternative magic-like systems.
+
+Standard Spellcasting (Vancian Magic)
+**Spell Slots:** Casters gain a limited number of spell slots per day (0-9th level) and must "prepare" specific spells into those slots (Wizards, Clerics) or cast from a known list spontaneously (Sorcerers, Bards).
+**Spell DC:** The Difficulty Class to save against a spell is calculated as: **10 + Spell Level + Caster's Ability Modifier** (INT for Wizard, WIS for Cleric, CHA for Sorcerer).
+**Arcane:** Wizards and Sorcerers. Wizards rely on a spellbook. Sorcerers cast spontaneously. Arcane casters typically incur an "Arcane Spell Failure Chance" when wearing armor.
+**Divine:** Clerics and Druids. Cast without the risk of spell failure and typically access their full spell list daily.
+Alternative and Complex Systems
+**Psionics:** (from *Expanded Psionics Handbook*). A distinct power source utilizing a pool of **Power Points** rather than spell slots, offering greater flexibility in powering "powers" (equivalent to spells).
+**Invocations:** (from *Complete Arcane*). Used by the Warlock class. These are potent, often utility-focused abilities that can be used **at-will** (unlimited uses per day).
+**Martial Maneuvers/Stances:** (from *Tome of Battle*). A system for martial classes (Warblade, Crusader, Swordsage) using tactical maneuvers that are readied and refreshed **per-encounter** or **per-combat**, rather than per-day.
+**Binding:** (from *Tome of Magic*). Used by Binders who make pacts with powerful **Vestiges** to gain their abilities for a limited time.
+**Incarnum:** (from *Magic of Incarnum*). A system of **soul-stuff** where users shape raw Incarnum into **Soulmelds** (magic items) and power them by investing **Essentia**.
+**Shadowcasting:** (from *Tome of Magic*). Shadowcasters use **Mysteries** (spells) with a unique preparation and recovery mechanic based on the ambient light level.
+Content sourced from the D&D 3.5e System Reference Document (SRD) and core rulebooks.

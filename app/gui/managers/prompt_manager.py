@@ -21,16 +21,16 @@ class PromptManager:
     """
     Manages prompt operations and selection.
     """
-    
+
     def __init__(
-        self, 
+        self,
         db_manager,
         prompt_scrollable_frame: ctk.CTkScrollableFrame,
-        prompt_collapsible
+        prompt_collapsible,
     ):
         """
         Initialize the prompt manager.
-        
+
         Args:
             db_manager: Database manager instance
             prompt_scrollable_frame: Frame for displaying prompt list
@@ -41,116 +41,118 @@ class PromptManager:
         self.prompt_collapsible = prompt_collapsible
         self._selected_prompt: Optional[Prompt] = None
         self.session_manager = None  # Will be set by MainView.set_orchestrator
-    
+
     @property
     def selected_prompt(self) -> Optional[Prompt]:
         """
         Get the currently selected prompt.
         """
         return self._selected_prompt
-    
+
     def set_session_manager(self, session_manager):
         """
         Wire the session manager for cross-manager coordination.
-        
+
         NEW METHOD:
         - Called from: MainView.set_orchestrator()
         - Enables on_prompt_select to trigger session list refresh
         """
         self.session_manager = session_manager
-    
+
     def new_prompt(self):
         """
         Create a new prompt via 3-field dialog.
         """
         from app.gui.panels.prompt_dialog import PromptDialog
-        
-        dialog = PromptDialog(self.prompt_scrollable_frame.winfo_toplevel(), title="New Prompt")
+
+        dialog = PromptDialog(
+            self.prompt_scrollable_frame.winfo_toplevel(), title="New Prompt"
+        )
         self.prompt_scrollable_frame.wait_window(dialog)  # Wait for dialog to close
-        
+
         result = dialog.get_result()
         if result:
             name, content, initial_message = result
-            
+
             # Create in database
             self.db_manager.create_prompt(name, content, initial_message)
-            
+
             # Refresh list
             self.refresh_list()
-    
+
     def edit_prompt(self):
         """
         Edit the selected prompt via 3-field dialog.
         """
         if not self._selected_prompt:
             return
-        
+
         from app.gui.panels.prompt_dialog import PromptDialog
-        
+
         dialog = PromptDialog(
-            self.prompt_scrollable_frame.winfo_toplevel(), 
+            self.prompt_scrollable_frame.winfo_toplevel(),
             title="Edit Prompt",
-            existing_prompt=self._selected_prompt
+            existing_prompt=self._selected_prompt,
         )
         self.prompt_scrollable_frame.wait_window(dialog)  # Wait for dialog to close
-        
+
         result = dialog.get_result()
         if result:
             name, content, initial_message = result
-            
+
             # Update prompt object
             self._selected_prompt.name = name
             self._selected_prompt.content = content
             self._selected_prompt.initial_message = initial_message
-            
+
             # Save to database
             self.db_manager.update_prompt(self._selected_prompt)
-            
+
             # Refresh list
             self.refresh_list()
-    
+
     def delete_prompt(self):
         """
         Delete the selected prompt.
         """
         if not self._selected_prompt:
             return
-        
+
         # Delete from database
         self.db_manager.delete_prompt(self._selected_prompt.id)
         # Clear selection
         self._selected_prompt = None
         # Refresh list
         self.refresh_list()
-    
+
     def on_prompt_select(self, prompt: Prompt, session_manager):
         """
         Handle prompt selection.
-        
+
         Args:
             prompt: Selected prompt
             session_manager: SessionManager instance for refreshing session list
         """
         # Store selection
         self._selected_prompt = prompt
-        
+
         # Refresh session list for this prompt
         session_manager.refresh_session_list(prompt.id)
-        
+
         # Update button styles
         button_styles = get_button_style()
         selected_style = get_button_style("selected")
-        
+
         for widget in self.prompt_scrollable_frame.winfo_children():
             if widget.cget("text") == prompt.name:
                 widget.configure(fg_color=selected_style["fg_color"])
             else:
                 widget.configure(fg_color=button_styles["fg_color"])
-        
+
         # Collapse the prompt panel
         if self.prompt_collapsible and not self.prompt_collapsible.is_collapsed:
             self.prompt_collapsible.toggle()
-    
+
     def refresh_list(self):
         """
         Refresh the prompt list UI.
@@ -158,23 +160,23 @@ class PromptManager:
         # Clear existing widgets
         for widget in self.prompt_scrollable_frame.winfo_children():
             widget.destroy()
-        
+
         # Get all prompts from database
         prompts = self.db_manager.get_all_prompts()
-        
+
         # Create button for each prompt
         for prompt in prompts:
             btn = ctk.CTkButton(
-                self.prompt_scrollable_frame, 
+                self.prompt_scrollable_frame,
                 text=prompt.name,
-                command=lambda p=prompt: self._on_button_click(p)
+                command=lambda p=prompt: self._on_button_click(p),
             )
             btn.pack(pady=2, padx=5, fill="x")
-    
+
     def _on_button_click(self, prompt: Prompt):
         """
         Internal handler for prompt button clicks.
-        
+
         NEW METHOD:
         - Calls on_prompt_select with session_manager if available
         - Otherwise logs warning

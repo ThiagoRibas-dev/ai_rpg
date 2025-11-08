@@ -11,23 +11,24 @@ from app.database.repositories import (
     GameStateRepository,
     WorldInfoRepository,
     TurnMetadataRepository,
-    SchemaExtensionRepository
+    SchemaExtensionRepository,
 )
+
 
 class DBManager:
     """
     Database connection manager with repository-based access.
-    
+
     Usage:
         with DBManager("ai_rpg.db") as db:
             prompt = db.prompts.create("My Prompt", "Content")
             all_prompts = db.prompts.get_all()
     """
-    
+
     def __init__(self, db_path: str):
         self.db_path = db_path
         self.conn = None
-        
+
         # Repositories (initialized in __enter__)
         self.prompts: Optional[PromptRepository] = None
         self.sessions: Optional[SessionRepository] = None
@@ -40,7 +41,7 @@ class DBManager:
     def __enter__(self):
         self.conn = sqlite3.connect(self.db_path)
         self.conn.row_factory = sqlite3.Row
-        
+
         # Initialize all repositories
         self.prompts = PromptRepository(self.conn)
         self.sessions = SessionRepository(self.conn)
@@ -49,7 +50,7 @@ class DBManager:
         self.world_info = WorldInfoRepository(self.conn)
         self.turn_metadata = TurnMetadataRepository(self.conn)
         self.schema_extensions = SchemaExtensionRepository(self.conn)
-        
+
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -67,62 +68,66 @@ class DBManager:
             self._create_schema_extensions_table()
             self._create_game_state_table()
             self._create_indexes()
-    
+
     # ✅ BACKWARD COMPATIBILITY: Delegate to repositories
     # These methods maintain the old API for existing code
-    
+
     # Prompts
-    def create_prompt(self, name: str, content: str, initial_message: str = "") -> Prompt:
+    def create_prompt(
+        self, name: str, content: str, initial_message: str = ""
+    ) -> Prompt:
         with self.conn:
             return self.prompts.create(name, content, initial_message)
-    
+
     def get_all_prompts(self) -> List[Prompt]:
         with self.conn:
             return self.prompts.get_all()
-    
+
     def update_prompt(self, prompt: Prompt):
         with self.conn:
             self.prompts.update(prompt)
-    
+
     def delete_prompt(self, prompt_id: int):
         with self.conn:
             self.prompts.delete(prompt_id)
-    
+
     # Sessions
     def save_session(self, name: str, session_data: str, prompt_id: int) -> GameSession:
         with self.conn:
             return self.sessions.create(name, session_data, prompt_id)
-    
+
     def load_session(self, session_id: int) -> GameSession | None:
         with self.conn:
             return self.sessions.get_by_id(session_id)
-    
+
     def get_all_sessions(self) -> List[GameSession]:
         with self.conn:
             return self.sessions.get_all()
-    
+
     def get_sessions_by_prompt(self, prompt_id: int) -> List[GameSession]:
         with self.conn:
             return self.sessions.get_by_prompt(prompt_id)
-    
+
     def update_session(self, session: GameSession):
         with self.conn:
             self.sessions.update(session)
-    
+
     def update_session_context(self, session_id: int, memory: str, authors_note: str):
         with self.conn:
             self.sessions.update_context(session_id, memory, authors_note)
-    
+
     def update_session_game_time(self, session_id: int, game_time: str):
         with self.conn:
             self.sessions.update_game_time(session_id, game_time)
-    
+
     def get_session_context(self, session_id: int) -> Optional[dict]:
         with self.conn:
             return self.sessions.get_context(session_id)
 
     # World Info
-    def create_world_info(self, prompt_id: int, keywords: str, content: str) -> WorldInfo:
+    def create_world_info(
+        self, prompt_id: int, keywords: str, content: str
+    ) -> WorldInfo:
         with self.conn:
             return self.world_info.create(prompt_id, keywords, content)
 
@@ -139,19 +144,32 @@ class DBManager:
             self.world_info.delete(world_info_id)
 
     # Memories
-    def create_memory(self, session_id: int, kind: str, content: str, 
-                    priority: int = 3, tags: List[str] | None = None,
-                    fictional_time: str | None = None) -> Memory:
+    def create_memory(
+        self,
+        session_id: int,
+        kind: str,
+        content: str,
+        priority: int = 3,
+        tags: List[str] | None = None,
+        fictional_time: str | None = None,
+    ) -> Memory:
         with self.conn:
-            return self.memories.create(session_id, kind, content, priority, tags, fictional_time)
+            return self.memories.create(
+                session_id, kind, content, priority, tags, fictional_time
+            )
 
     def get_memories_by_session(self, session_id: int) -> List[Memory]:
         with self.conn:
             return self.memories.get_by_session(session_id)
 
-    def query_memories(self, session_id: int, kind: str | None = None, 
-                    tags: List[str] | None = None, query_text: str | None = None,
-                    limit: int = 10) -> List[Memory]:
+    def query_memories(
+        self,
+        session_id: int,
+        kind: str | None = None,
+        tags: List[str] | None = None,
+        query_text: str | None = None,
+        limit: int = 10,
+    ) -> List[Memory]:
         with self.conn:
             return self.memories.query(session_id, kind, tags, query_text, limit)
 
@@ -159,8 +177,14 @@ class DBManager:
         with self.conn:
             self.memories.update_access(memory_id)
 
-    def update_memory(self, memory_id: int, kind: str | None = None, content: str | None = None, 
-                  priority: int | None = None, tags: List[str] | None = None) -> Optional[Memory]:
+    def update_memory(
+        self,
+        memory_id: int,
+        kind: str | None = None,
+        content: str | None = None,
+        priority: int | None = None,
+        tags: List[str] | None = None,
+    ) -> Optional[Memory]:
         with self.conn:
             return self.memories.update(memory_id, kind, content, priority, tags)
 
@@ -177,59 +201,91 @@ class DBManager:
             return self.memories.get_statistics(session_id)
 
     # Game State
-    def get_game_state_entity(self, session_id: int, entity_type: str, entity_key: str) -> dict:
+    def get_game_state_entity(
+        self, session_id: int, entity_type: str, entity_key: str
+    ) -> dict:
         with self.conn:
             return self.game_state.get_entity(session_id, entity_type, entity_key)
-    
-    def set_game_state_entity(self, session_id: int, entity_type: str, entity_key: str, 
-                             state_data: dict) -> int:
+
+    def set_game_state_entity(
+        self, session_id: int, entity_type: str, entity_key: str, state_data: dict
+    ) -> int:
         with self.conn:
-            return self.game_state.set_entity(session_id, entity_type, entity_key, state_data)
-    
+            return self.game_state.set_entity(
+                session_id, entity_type, entity_key, state_data
+            )
+
     def get_all_entities_by_type(self, session_id: int, entity_type: str) -> dict:
         with self.conn:
             return self.game_state.get_all_entities_by_type(session_id, entity_type)
-    
-    def delete_game_state_entity(self, session_id: int, entity_type: str, entity_key: str):
+
+    def delete_game_state_entity(
+        self, session_id: int, entity_type: str, entity_key: str
+    ):
         with self.conn:
             self.game_state.delete_entity(session_id, entity_type, entity_key)
-    
+
     def get_all_game_state(self, session_id: int) -> dict:
         with self.conn:
             return self.game_state.get_all(session_id)
-    
+
     def get_game_state_statistics(self, session_id: int) -> dict:
         with self.conn:
             return self.game_state.get_statistics(session_id)
-    
+
     def clear_game_state(self, session_id: int):
         with self.conn:
             self.game_state.clear(session_id)
 
     # Schema Extensions
-    def create_schema_extension(self, session_id: int, entity_type: str, property_name: str, definition_dict: Dict[str, Any]):
+    def create_schema_extension(
+        self,
+        session_id: int,
+        entity_type: str,
+        property_name: str,
+        definition_dict: Dict[str, Any],
+    ):
         with self.conn:
-            self.schema_extensions.create(session_id, entity_type, property_name, definition_dict)
+            self.schema_extensions.create(
+                session_id, entity_type, property_name, definition_dict
+            )
 
-    def get_schema_extensions(self, session_id: int, entity_type: str) -> Dict[str, Dict[str, Any]]:
+    def get_schema_extensions(
+        self, session_id: int, entity_type: str
+    ) -> Dict[str, Dict[str, Any]]:
         with self.conn:
             return self.schema_extensions.get_by_entity_type(session_id, entity_type)
 
-    def delete_schema_extension(self, session_id: int, entity_type: str, property_name: str):
+    def delete_schema_extension(
+        self, session_id: int, entity_type: str, property_name: str
+    ):
         with self.conn:
             self.schema_extensions.delete(session_id, entity_type, property_name)
 
-    def get_all_schema_extensions(self, session_id: int) -> Dict[str, Dict[str, Dict[str, Any]]]:
+    def get_all_schema_extensions(
+        self, session_id: int
+    ) -> Dict[str, Dict[str, Dict[str, Any]]]:
         with self.conn:
             return self.schema_extensions.get_all(session_id)
 
     # Turn Metadata
-    def create_turn_metadata(self, session_id: int, prompt_id: int, round_number: int, 
-                            summary: str, tags: List[str], importance: int) -> int:
+    def create_turn_metadata(
+        self,
+        session_id: int,
+        prompt_id: int,
+        round_number: int,
+        summary: str,
+        tags: List[str],
+        importance: int,
+    ) -> int:
         with self.conn:
-            return self.turn_metadata.create(session_id, prompt_id, round_number, summary, tags, importance)
+            return self.turn_metadata.create(
+                session_id, prompt_id, round_number, summary, tags, importance
+            )
 
-    def get_turn_metadata_range(self, session_id: int, start_round: int, end_round: int) -> List[Dict[str, Any]]:
+    def get_turn_metadata_range(
+        self, session_id: int, start_round: int, end_round: int
+    ) -> List[Dict[str, Any]]:
         with self.conn:
             return self.turn_metadata.get_range(session_id, start_round, end_round)
 
@@ -246,7 +302,7 @@ class DBManager:
                         content TEXT NOT NULL,
                         initial_message TEXT DEFAULT ''
                     )        """)
-    
+
     def _create_sessions_table(self):
         self.conn.execute("""
             CREATE TABLE IF NOT EXISTS sessions (

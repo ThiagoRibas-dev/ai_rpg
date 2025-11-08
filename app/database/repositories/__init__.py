@@ -7,4 +7,13 @@ from .game_state_repository import GameStateRepository
 from .turn_metadata_repository import TurnMetadataRepository
 from .schema_extension_repository import SchemaExtensionRepository
 
-__all__ = ['BaseRepository', 'PromptRepository', 'SessionRepository', 'WorldInfoRepository', 'MemoryRepository', 'GameStateRepository', 'TurnMetadataRepository', 'SchemaExtensionRepository']
+__all__ = [
+    "BaseRepository",
+    "PromptRepository",
+    "SessionRepository",
+    "WorldInfoRepository",
+    "MemoryRepository",
+    "GameStateRepository",
+    "TurnMetadataRepository",
+    "SchemaExtensionRepository",
+]
