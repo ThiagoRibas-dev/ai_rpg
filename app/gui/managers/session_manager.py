@@ -33,7 +33,8 @@ class SessionManager:
         game_time_label: ctk.CTkLabel,
         game_mode_label: ctk.CTkLabel,
         send_button: ctk.CTkButton,
-        session_collapsible
+        session_collapsible,
+        authors_note_textbox: ctk.CTkTextbox
     ):
         """
         Initialize the session manager.
@@ -47,15 +48,17 @@ class SessionManager:
             game_mode_label: Label for current game mode
             send_button: Send button to enable/disable
             session_collapsible: Collapsible frame container
+            authors_note_textbox: Author's Notes textbox
         """
         self.orchestrator = orchestrator
-        self.db_manager = db_manager  # ✅ ADD THIS
+        self.db_manager = db_manager
         self.session_scrollable_frame = session_scrollable_frame
         self.session_name_label = session_name_label
         self.game_time_label = game_time_label
         self.game_mode_label = game_mode_label
         self.send_button = send_button
         self.session_collapsible = session_collapsible
+        self.authors_note_textbox = authors_note_textbox
         self._selected_session: Optional[GameSession] = None
     
     @property
@@ -170,9 +173,11 @@ class SessionManager:
         self.game_time_label.configure(text=f"🕐 {session.game_time}")
         
         # Update game mode indicator
-        # CHANGED: self._get_mode_display → get_mode_display
         mode_text, mode_color = get_mode_display(session.game_mode)
         self.game_mode_label.configure(text=mode_text, text_color=mode_color)
+    
+        # Load context (Author's Note)
+        self.load_context(self.authors_note_textbox)
         
         # Update memory inspector if available
         if 'memory' in inspectors and inspectors['memory']:
@@ -223,48 +228,68 @@ class SessionManager:
     
     def load_context(self, authors_note_textbox: ctk.CTkTextbox):
         """
-        Load memory and author's note for the current session.
-        
-        Args:
-            memory_textbox: Textbox for memory content
-            authors_note_textbox: Textbox for author's note
+        Load author's note for the current session.
         """
+        import logging
+        logger = logging.getLogger(__name__)
+        
         if not self._selected_session:
+            logger.debug("⏭️  No session selected, skipping load_context")
             return
         
         # Load context from database
         context = self.db_manager.get_session_context(self._selected_session.id)
         
         if context:
-            
-            
             # Populate author's note textbox
+            authors_note = context.get("authors_note", "")
             authors_note_textbox.delete("1.0", "end")
-            authors_note_textbox.insert("1.0", context.get("authors_note", ""))
+            authors_note_textbox.insert("1.0", authors_note)
+            
+            logger.debug(f"📖 Loaded author's note ({len(authors_note)} chars) for session {self._selected_session.id}")
+        else:
+            logger.warning(f"⚠️  No context found for session {self._selected_session.id}")
+            authors_note_textbox.delete("1.0", "end")
     
     def save_context(
         self, 
-        authors_note_textbox: ctk.CTkTextbox,
         bubble_manager
     ):
         """
         Save the author's note.
+        
+        MIGRATION NOTES:
+        - Removed memory field (deprecated)
         """
+        import logging
+        logger = logging.getLogger(__name__)
+        
         if not self._selected_session:
+            logger.warning("❌ No session selected, cannot save context")
+            bubble_manager.add_message("system", "⚠️ Please load a game session first")
             return
         
-        # Get content from textbox
-        authors_note = authors_note_textbox.get("1.0", "end-1c")
-        
-        # Save to database (memory field = empty string)
-        self.db_manager.update_session_context(
-            self._selected_session.id, 
-            "",
-            authors_note
-        )
-        
-        # Show confirmation
-        bubble_manager.add_message("system", "Context saved")
+        try:
+            # Get content from textbox
+            authors_note = self.authors_note_textbox.get("1.0", "end-1c")
+            
+            logger.debug(f"💾 Saving author's note for session {self._selected_session.id}")
+            logger.debug(f"   Author's Note length: {len(authors_note)} chars")
+            
+            # Save to database (memory field = empty string)
+            self.db_manager.update_session_context(
+                self._selected_session.id, 
+                "",  # memory field always empty now
+                authors_note
+            )
+            
+            logger.info(f"✅ Context saved successfully for session {self._selected_session.id}")
+            
+            # Show confirmation
+            bubble_manager.add_message("system", "✅ Author's Note saved")
+        except Exception as e:
+            logger.error(f"❌ Error saving context: {e}", exc_info=True)
+            bubble_manager.add_message("system", f"❌ Error saving: {e}")
     
     def _on_button_click(self, session: GameSession):
         """

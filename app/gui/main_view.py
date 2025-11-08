@@ -199,21 +199,22 @@ class MainView(ctk.CTk):
         # Initialize session manager (needs orchestrator)
         self.session_manager = SessionManager(
             orchestrator,
-            self.db_manager,  # ✅ ADD THIS
+            self.db_manager,
             self.session_scrollable_frame,
             self.session_name_label,
             self.game_time_label,
             self.game_mode_label,
             self.send_button,
-            self.session_collapsible
+            self.session_collapsible,
+            self.authors_note_textbox
         )
         
         # Wire prompt manager to session manager
-        # NEW: Enable cross-manager coordination
+        # Enable cross-manager coordination
         self.prompt_manager.set_session_manager(self.session_manager)
         
         # Wire session manager button callbacks (late binding)
-        # NEW: Connect session buttons to manager methods
+        # Connect session buttons to manager methods
         self.session_manager._on_button_click = lambda s: self.session_manager.on_session_select(
             s, 
             self.bubble_manager,
@@ -259,7 +260,7 @@ class MainView(ctk.CTk):
         # Start UI queue polling
         self.ui_queue_handler.start_polling()
 
-        # ✅ NEW: Wire state viewer button
+        # ✅ Wire state viewer button
         self._wire_state_viewer_button()
     
 
@@ -369,13 +370,24 @@ class MainView(ctk.CTk):
     
     def save_context(self):
         """
-        Save memory and author's note.
+        Save author's note.
         """
-        if self.session_manager:
-            self.session_manager.save_context(
-                self.authors_note_textbox,
-                self.bubble_manager
-            )
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        logger.debug("💾 MainView.save_context() called")
+        
+        if not self.session_manager:
+            logger.error("❌ session_manager not initialized")
+            return
+        
+        if not self.bubble_manager:
+            logger.error("❌ bubble_manager not initialized")
+            return
+        
+        self.session_manager.save_context(
+            self.bubble_manager
+        )
     
     def open_world_info_manager(self):
         """

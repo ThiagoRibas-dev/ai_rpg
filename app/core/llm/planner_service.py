@@ -24,9 +24,12 @@ class PlannerService:
         DynamicTurnPlan = create_dynamic_turn_plan_model(available_tool_models)
 
         # Build assistant prefill with dynamic content
-        prefill = f"""<think>{phase_template}
+        prefill = f"""
+{phase_template}
 {dynamic_context}
-Based on the above, I'll write a plan for my interaction with the player in the form of a JSON structure.</think>"""
+Based on the above, here's my plan for my next turn :
+
+"""
         
         # Inject prefill as final assistant message
         prefilled_history = chat_history + [Message(role="assistant", content=prefill)]

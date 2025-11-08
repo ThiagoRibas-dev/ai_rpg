@@ -30,11 +30,15 @@ class NarratorService:
         """
         
         # ✅ Build prefill with prior phase context
-        prefill = f"""<think>{plan_thought}
-{tool_results}
+        prefill = f"""
 {phase_template}
+{plan_thought}
+{tool_results}
 {dynamic_context}
-Based on the above context, I'll write my response in the form of a JSON structure.</think>"""
+Based on the above, I'll continue my interaction with the player in the form of a JSON structure.
+Now I'm ready to continue to interact with the player :
+
+"""
         
         # Inject prefill as final assistant message
         prefilled_history = chat_history + [Message(role="assistant", content=prefill)]

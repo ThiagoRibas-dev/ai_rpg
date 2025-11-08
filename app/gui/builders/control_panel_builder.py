@@ -146,18 +146,18 @@ class ControlPanelBuilder:
         authors_note_textbox = ctk.CTkTextbox(context_content, height=Theme.spacing.textbox_small)
         authors_note_textbox.pack(**pack_config)
         
+        # Save Context button
+        ctk.CTkButton(
+            context_content, 
+            text="💾 Save Author's Note",
+            command=save_context_callback
+        ).pack(**pack_config)
+        
         # World Info button
         ctk.CTkButton(
             context_content, 
             text="Manage World Info", 
             command=world_info_callback
-        ).pack(**pack_config)
-        
-        # Save Context button
-        ctk.CTkButton(
-            context_content, 
-            text="Save Context", 
-            command=save_context_callback
         ).pack(**pack_config)
         
         # === Game State Inspector Section ===

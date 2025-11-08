@@ -55,7 +55,7 @@ SESSION_ZERO_TEMPLATE = """
 Okay. Let me check the current game mode:
  - CURRENT GAME MODE: SETUP (Session Zero)
 
-Alright, so we are in the systems and world-building phase, similar to the pre-game session or Session Zero in tabletop RPGs where rules, tone, and  mechanics are collaboratively defined before gameplay begins.
+Alright, so we are still in the systems and world-building phase, similar to the pre-game session or Session Zero in tabletop RPGs where rules, tone, and  mechanics are collaboratively defined before gameplay begins.
 
 Here's how I'll approach this turn:
 1. **Understand the player's message.**
