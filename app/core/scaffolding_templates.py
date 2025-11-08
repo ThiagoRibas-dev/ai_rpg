@@ -21,29 +21,29 @@ def get_setup_scaffolding() -> Dict[str, Any]:
     # ✅ Use Pydantic models for type safety
     player_character = Character(
         key="player",
-        name="[To be defined]",
+        name="PLACEHOLDER",
         attributes=CharacterAttributes(hp_current=0, hp_max=0),
         conditions=[],
         location_key="starting_location",
         inventory_key="inventory:player",
         properties={
-            "race": "[To be defined]",
-            "classes": ["[To be defined]"],  # Note: 'class' is a Python keyword
+            "race": "PLACEHOLDER",
+            "classes": ["PLACEHOLDER"],
             "level": 1,
         },
     )
 
     starting_item = Item(
         key="starter_item_01",
-        name="[Starting Equipment]",
-        description="Basic gear to get started",
+        name="PLACEHOLDER EQUIPMENT",
+        description="PLACEHOLDER DESCRIPTION",
         properties={"quantity": 1, "equipped": False},
     )
 
     starting_location = Location(
         key="starting_location",
-        name="[Starting Location]",
-        description="Where the adventure begins.",
+        name="PLACEHOLDER LOCATION",
+        description="PLACEHOLDER DESCRIPTION",
         properties={},
     )
 

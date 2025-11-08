@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 def handler(
-    name: str,
+    property_name: str,
     description: str,
     entity_type: Literal[
         "character", "item", "location"
@@ -31,7 +31,7 @@ def handler(
     These properties extend the core schema and are used to create dynamic game mechanics.
 
     Args:
-        name (str): The programmatic name of the property (e.g., 'Sanity', 'Mana').
+        property_name (str): The programmatic name of the property (e.g., 'Sanity', 'Mana').
         description (str): A human-readable description of what the property represents.
         entity_type (Literal["character", "item", "location"]): The type of entity this property applies to.
         template (Optional[str]): A predefined template to use (e.g., 'resource', 'stat', 'reputation', 'flag', 'enum', 'string').
@@ -62,7 +62,7 @@ def handler(
         return {"success": False, "error": "Missing session context."}
 
     overrides: Dict[str, Any] = {
-        "name": name,
+        "property_name": property_name,
         "description": description,
         "default_value": default_value,
         "type": type,
@@ -92,10 +92,10 @@ def handler(
 
         # Save to DB
         db_manager.create_schema_extension(
-            session_id, entity_type, name, prop_def.model_dump()
+            session_id, entity_type, property_name, prop_def.model_dump()
         )
 
-        logger.info(f"Defined new property '{name}' for entity type '{entity_type}'.")
+        logger.info(f"Defined new property '{property_name}' for entity type '{entity_type}'.")
         return {"success": True, "property": prop_def.model_dump()}
 
     except ValueError as e:

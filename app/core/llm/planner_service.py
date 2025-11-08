@@ -36,7 +36,6 @@ My Plan:
 
         # Inject prefill as final assistant message
         prefilled_history = chat_history + [Message(role="assistant", content=prefill)]
-
         try:
             # ✅ Connector now returns a validated instance
             plan = self.llm.get_structured_response(
@@ -48,9 +47,7 @@ My Plan:
             # ✅ If no tool calls after validation, that's OK
             if plan and not plan.tool_calls:
                 logger.debug("Plan has no tool calls (empty or filtered out)")
-
             return plan
-
         except Exception as e:
             logger.error(f"Error in PlannerService.plan: {e}", exc_info=True)
             return None

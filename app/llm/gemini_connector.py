@@ -3,7 +3,7 @@ from google import genai
 from google.genai import types
 from pydantic import BaseModel
 
-from typing import Type, List, Generator, Any  # Added Any for recursive function
+from typing import Type, List, Generator  # Added Any for recursive function
 from app.llm.llm_connector import LLMConnector
 from app.models.message import Message
 
@@ -54,17 +54,6 @@ class GeminiConnector(LLMConnector):
                 types.Content(role=role, parts=[types.Part.from_text(text=msg.content)])
             )
         return contents
-
-    def _remove_discriminator_field(self, schema: Any):
-        """Recursively removes the 'discriminator' field from a schema dictionary."""
-        if isinstance(schema, dict):
-            if "discriminator" in schema:
-                del schema["discriminator"]
-            for key, value in schema.items():
-                self._remove_discriminator_field(value)
-        elif isinstance(schema, list):
-            for item in schema:
-                self._remove_discriminator_field(item)
 
     def get_streaming_response(
         self, system_prompt: str, chat_history: List[Message]

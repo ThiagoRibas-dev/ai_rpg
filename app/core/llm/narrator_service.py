@@ -1,7 +1,7 @@
 import logging
 from typing import List
 from app.models.message import Message
-from app.io.schemas import NarrativeStep
+from app.io.schemas import ResponseStep
 from app.llm.llm_connector import LLMConnector
 
 logger = logging.getLogger(__name__)
@@ -19,7 +19,7 @@ class NarratorService:
         plan_thought: str,  # ✅ Prior phase context
         tool_results: str,  # ✅ Prior phase context
         chat_history: List[Message],
-    ) -> NarrativeStep | None:
+    ) -> ResponseStep | None:
         """
         Generates narrative with full context from planning phase.
 
@@ -44,12 +44,11 @@ My Response:
 
         # Inject prefill as final assistant message
         prefilled_history = chat_history + [Message(role="assistant", content=prefill)]
-
         try:
             return self.llm.get_structured_response(
                 system_prompt=system_instruction,
                 chat_history=prefilled_history,
-                output_schema=NarrativeStep,
+                output_schema=ResponseStep,
             )
         except Exception as e:
             logger.error(f"Error in NarratorService.plan: {e}", exc_info=True)

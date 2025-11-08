@@ -395,8 +395,12 @@ class EndSetupAndStartGameplay(BaseModel):
     **When to use:** Only when all custom properties have been defined and the player has explicitly agreed to start the game.
     **Effect:** Transitions game mode from SETUP to GAMEPLAY.
     """
+
     name: Literal["end_setup_and_start_gameplay"] = "end_setup_and_start_gameplay"
-    reason: str = Field(..., description="A brief justification for why the setup is considered complete and gameplay should begin.")
+    reason: str = Field(
+        ...,
+        description="A brief justification for why the setup is considered complete and gameplay should begin.",
+    )
 
 
 class Deliberate(BaseModel):
@@ -408,6 +412,7 @@ class Deliberate(BaseModel):
     - If no other tool is appropriate for the current turn.
     - To signal that you are waiting for more information from the player.
     """
+
     name: Literal["deliberate"] = "deliberate"
 
 

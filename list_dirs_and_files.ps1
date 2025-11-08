@@ -58,6 +58,7 @@ function Get-DirectoryTreeString {
     "*.roo*",
 	"*\examples*",
 	"*__pycache__*",
+	"*\tests\*",
     "*package-lock.json",
     "*.DS_Store", # macOS folder metadata file
     "**.db",

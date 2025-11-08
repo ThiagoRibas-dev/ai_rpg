@@ -59,13 +59,13 @@ class ToolExecutor:
         }
 
         for i, call in enumerate(tool_calls[:tool_budget]):
-            # âœ… Debug logging to see what we actually got
+            # Debug logging to see what we actually got
             call_type = type(call)
             self.logger.debug(
                 f"Tool call {i}: type={call_type.__name__}, is BaseModel={call_type is BaseModel}"
             )
 
-            # âœ… Defensive check: ensure it's not a raw BaseModel
+            # Defensive check: ensure it's not a raw BaseModel
             if call_type is BaseModel or not hasattr(call, "name"):
                 self.logger.error(
                     f"Invalid tool call at index {i}: {call_type} - {call}"
@@ -79,7 +79,7 @@ class ToolExecutor:
                 )
                 continue
 
-            # âœ… Safe access to name with fallback
+            # Safe access to name with fallback
             try:
                 tool_name = call.name
             except AttributeError as e:
@@ -119,7 +119,7 @@ class ToolExecutor:
                     self.logger.error(f"Failed to put tool_call on UI queue: {e}")
 
             try:
-                # âœ… Execute using type-based dispatch
+                # Execute using type-based dispatch
                 result = self.tools.execute(call, context=ctx)
 
                 results.append(
@@ -138,7 +138,7 @@ class ToolExecutor:
                 # Execute post-execution hooks
                 self._post_hook(tool_name, result, session)
 
-                # âœ… Type-based check for memory tools (more Pythonic than string check)
+                # Type-based check for memory tools (more Pythonic than string check)
                 if isinstance(
                     call,
                     (
