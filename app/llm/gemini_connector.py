@@ -113,4 +113,5 @@ class GeminiConnector(LLMConnector):
                     contents=contents,
                     config=generation_config
                 )
-        return response.parsed
+        return output_schema.model_validate(response.parsed)
+

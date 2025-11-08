@@ -29,21 +29,7 @@ class MainPanelBuilder:
             send_callback: Callback for the send button
         
         Returns:
-            Dictionary containing all main panel widget references:
-            {
-                'main_panel': CTkFrame,
-                'game_time_frame': CTkFrame,
-                'game_time_label': CTkLabel,
-                'game_mode_label': CTkLabel,
-                'session_name_label': CTkLabel,
-                'chat_history_frame': CTkScrollableFrame,
-                'choice_button_frame': CTkFrame,
-                'loading_frame': CTkFrame,
-                'loading_label': CTkLabel,
-                'user_input': CTkTextbox,
-                'send_button': CTkButton,
-                'stop_button': CTkButton,
-            }
+            Dictionary containing all main panel widget references.
         """
         # === Main Panel Frame ===
         main_panel = ctk.CTkFrame(parent, fg_color=Theme.colors.bg_primary)
@@ -121,15 +107,58 @@ class MainPanelBuilder:
         loading_label.pack(pady=10)
         # Note: Don't grid yet - will be shown/hidden by UIQueueHandler
         
+        # === History Control Toolbar ===
+        history_toolbar = ctk.CTkFrame(main_panel)
+        history_toolbar.grid(row=3, column=0, columnspan=2, sticky="ew", 
+                             padx=Theme.spacing.padding_sm, 
+                             pady=(Theme.spacing.padding_sm, 0))
+        history_toolbar.grid_remove()  # Hidden by default, shown when session loaded
+        
+        reroll_button = ctk.CTkButton(
+            history_toolbar,
+            text="🔄 Reroll",
+            width=80,
+            height=28,
+            command=None  # Will be wired later
+        )
+        reroll_button.pack(side="left", padx=2)
+        
+        delete_last_button = ctk.CTkButton(
+            history_toolbar,
+            text="🗑️ Delete Last",
+            width=100,
+            height=28,
+            command=None  # Will be wired later
+        )
+        delete_last_button.pack(side="left", padx=2)
+        
+        trim_button = ctk.CTkButton(
+            history_toolbar,
+            text="✂️ Trim...",
+            width=80,
+            height=28,
+            command=None  # Will be wired later
+        )
+        trim_button.pack(side="left", padx=2)
+        
+        # History info label (shows message count)
+        history_info_label = ctk.CTkLabel(
+            history_toolbar,
+            text="0 messages",
+            font=Theme.fonts.body_small,
+            text_color=Theme.colors.text_muted
+        )
+        history_info_label.pack(side="right", padx=10)
+        
         # === User Input ===
         user_input = ctk.CTkTextbox(main_panel, height=Theme.spacing.input_height)
-        user_input.grid(row=3, column=0, sticky="ew", 
+        user_input.grid(row=4, column=0, sticky="ew", 
                        padx=Theme.spacing.padding_sm, 
                        pady=Theme.spacing.padding_sm)
         
         # === Button Frame ===
         button_frame = ctk.CTkFrame(main_panel)
-        button_frame.grid(row=3, column=1, sticky="ns", 
+        button_frame.grid(row=4, column=1, sticky="ns", 
                          padx=Theme.spacing.padding_sm, 
                          pady=Theme.spacing.padding_sm)
         
@@ -137,7 +166,7 @@ class MainPanelBuilder:
             button_frame, 
             text="Send", 
             state="disabled", 
-            command=send_callback  # CHANGED: callback passed from parent
+            command=send_callback
         )
         send_button.pack(expand=True, fill="both", 
                         padx=Theme.spacing.padding_xs, 
@@ -149,7 +178,6 @@ class MainPanelBuilder:
                         pady=Theme.spacing.padding_xs)
         
         # === Return Widget References ===
-        # NEW: Return all widgets as dictionary for parent to store
         return {
             'main_panel': main_panel,
             'game_time_frame': game_time_frame,
@@ -160,6 +188,11 @@ class MainPanelBuilder:
             'choice_button_frame': choice_button_frame,
             'loading_frame': loading_frame,
             'loading_label': loading_label,
+            'history_toolbar': history_toolbar,
+            'reroll_button': reroll_button,
+            'delete_last_button': delete_last_button,
+            'trim_button': trim_button,
+            'history_info_label': history_info_label,
             'user_input': user_input,
             'send_button': send_button,
             'stop_button': stop_button,

@@ -11,7 +11,7 @@ New responsibilities:
 import customtkinter as ctk
 import logging
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Callable
 from app.models.game_session import GameSession
 from app.gui.styles import get_button_style
 from app.gui.utils.ui_helpers import get_mode_display
@@ -34,7 +34,8 @@ class SessionManager:
         game_mode_label: ctk.CTkLabel,
         send_button: ctk.CTkButton,
         session_collapsible,
-        authors_note_textbox: ctk.CTkTextbox
+        authors_note_textbox: ctk.CTkTextbox,
+        on_session_loaded_callback: Optional[Callable] = None
     ):
         """
         Initialize the session manager.
@@ -49,6 +50,7 @@ class SessionManager:
             send_button: Send button to enable/disable
             session_collapsible: Collapsible frame container
             authors_note_textbox: Author's Notes textbox
+            on_session_loaded_callback: Optional callback to run after session loads
         """
         self.orchestrator = orchestrator
         self.db_manager = db_manager
@@ -60,6 +62,7 @@ class SessionManager:
         self.session_collapsible = session_collapsible
         self.authors_note_textbox = authors_note_textbox
         self._selected_session: Optional[GameSession] = None
+        self.on_session_loaded_callback = on_session_loaded_callback
     
     @property
     def selected_session(self) -> Optional[GameSession]:
@@ -201,6 +204,10 @@ class SessionManager:
         # Collapse the session panel
         if self.session_collapsible and not self.session_collapsible.is_collapsed:
             self.session_collapsible.toggle()
+
+        # Notify MainView that session was loaded
+        if self.on_session_loaded_callback:
+            self.on_session_loaded_callback()
     
     def refresh_session_list(self, prompt_id: int | None = None):
         """

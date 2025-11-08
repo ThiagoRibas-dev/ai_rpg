@@ -45,6 +45,7 @@ class MainView(ctk.CTk):
         self.session_manager = None
         self.prompt_manager = None
         self.inspector_manager = None
+        self.history_manager = None
         
         # Widget references (filled by builders in _build_panels)
         # Main panel widgets
@@ -56,6 +57,11 @@ class MainView(ctk.CTk):
         self.choice_button_frame = None
         self.loading_frame = None
         self.loading_label = None
+        self.history_toolbar = None
+        self.reroll_button = None
+        self.delete_last_button = None
+        self.trim_button = None
+        self.history_info_label = None
         self.user_input = None
         self.send_button = None
         self.stop_button = None
@@ -134,6 +140,11 @@ class MainView(ctk.CTk):
         self.choice_button_frame = main_widgets['choice_button_frame']
         self.loading_frame = main_widgets['loading_frame']
         self.loading_label = main_widgets['loading_label']
+        self.history_toolbar = main_widgets['history_toolbar']
+        self.reroll_button = main_widgets['reroll_button']
+        self.delete_last_button = main_widgets['delete_last_button']
+        self.trim_button = main_widgets['trim_button']
+        self.history_info_label = main_widgets['history_info_label']
         self.user_input = main_widgets['user_input']
         self.send_button = main_widgets['send_button']
         self.stop_button = main_widgets['stop_button']
@@ -159,6 +170,10 @@ class MainView(ctk.CTk):
         # Chat bubble manager
         # REPLACES: Chat-related methods (lines 121-180)
         self.bubble_manager = ChatBubbleManager(self.chat_history_frame, self)
+        
+        # History manager (needs bubble_manager)
+        # Note: Will set orchestrator in set_orchestrator()
+        # (Can't initialize fully here because orchestrator doesn't exist yet)
         
         # Inspector manager (must be created before others reference it)
         # REPLACES: Inspector initialization (lines 390-450)
@@ -196,6 +211,14 @@ class MainView(ctk.CTk):
         """
         self.orchestrator = orchestrator
         
+        # Initialize history manager (needs orchestrator)
+        from app.gui.managers.history_manager import HistoryManager
+        self.history_manager = HistoryManager(
+            orchestrator,
+            self.db_manager,
+            self.bubble_manager
+        )
+        
         # Initialize session manager (needs orchestrator)
         self.session_manager = SessionManager(
             orchestrator,
@@ -206,7 +229,8 @@ class MainView(ctk.CTk):
             self.game_mode_label,
             self.send_button,
             self.session_collapsible,
-            self.authors_note_textbox
+            self.authors_note_textbox,
+            on_session_loaded_callback=self._on_session_loaded
         )
         
         # Wire prompt manager to session manager
@@ -256,6 +280,11 @@ class MainView(ctk.CTk):
         self.session_new_button.configure(
             command=lambda: self.session_manager.new_game(self.prompt_manager.selected_prompt)
         )
+        
+        # Wire history control buttons
+        self.reroll_button.configure(command=self.handle_reroll)
+        self.delete_last_button.configure(command=self.handle_delete_last)
+        self.trim_button.configure(command=self.handle_trim_history)
         
         # Start UI queue polling
         self.ui_queue_handler.start_polling()
@@ -413,3 +442,113 @@ class MainView(ctk.CTk):
             self.orchestrator.ui_queue.put({"type": "tool_event", "message": message})
         else:
             logger.warning(f"Orchestrator not set, cannot log tool event: {message}")
+
+    def handle_reroll(self):
+        """
+        Reroll the last assistant response.
+        """
+        if not self.session_manager or not self.session_manager.selected_session:
+            self.bubble_manager.add_message("system", "⚠️ Please load a game session first")
+            return
+        
+        if not self.history_manager.can_reroll():
+            self.bubble_manager.add_message("system", "⚠️ Cannot reroll: last message is not from assistant")
+            return
+        
+        # Get the user message to resend
+        user_message = self.history_manager.reroll_last_response(
+            self.session_manager.selected_session
+        )
+        
+        if user_message:
+            # Add user message back to UI (it was already in history before the assistant response)
+            # We don't need to add it again, just trigger regeneration
+            
+            # Disable send button during regeneration
+            self.send_button.configure(state="disabled")
+            
+            # Clear any existing choices
+            for widget in self.choice_button_frame.winfo_children():
+                widget.destroy()
+            self.choice_button_frame.grid_remove()
+            
+            # Trigger regeneration
+            self.orchestrator.plan_and_execute(self.session_manager.selected_session)
+        
+        # Update history info
+        self._update_history_info()
+
+    def handle_delete_last(self):
+        """
+        Delete the last message pair (user + assistant).
+        """
+        if not self.session_manager or not self.session_manager.selected_session:
+            self.bubble_manager.add_message("system", "⚠️ Please load a game session first")
+            return
+        
+        # Delete last 2 messages (user + assistant pair)
+        success = self.history_manager.delete_last_n_messages(
+            self.session_manager.selected_session,
+            n=2
+        )
+        
+        if success:
+            self._update_history_info()
+
+    def handle_trim_history(self):
+        """
+        Open dialog to delete last N messages.
+        """
+        if not self.session_manager or not self.session_manager.selected_session:
+            self.bubble_manager.add_message("system", "⚠️ Please load a game session first")
+            return
+        
+        current_length = self.history_manager.get_history_length()
+        
+        if current_length == 0:
+            self.bubble_manager.add_message("system", "⚠️ No messages to delete")
+            return
+        
+        # Simple input dialog for now
+        dialog = ctk.CTkInputDialog(
+            text=f"How many messages to delete? (1-{current_length})",
+            title="Trim History"
+        )
+        result = dialog.get_input()
+        
+        if result:
+            try:
+                n = int(result)
+                if n < 1 or n > current_length:
+                    self.bubble_manager.add_message("system", f"⚠️ Please enter a number between 1 and {current_length}")
+                    return
+                
+                success = self.history_manager.delete_last_n_messages(
+                    self.session_manager.selected_session,
+                    n=n
+                )
+                
+                if success:
+                    self._update_history_info()
+            
+            except ValueError:
+                self.bubble_manager.add_message("system", "⚠️ Please enter a valid number")
+
+    def _update_history_info(self):
+        """
+        Update the history info label with current message count.
+        """
+        if self.history_manager:
+            count = self.history_manager.get_history_length()
+            self.history_info_label.configure(text=f"{count} messages")
+
+    def _on_session_loaded(self):
+        """
+        Called when a session is successfully loaded.
+        Shows history toolbar and updates info.
+        """
+        # Show history toolbar
+        self.history_toolbar.grid()
+        
+        # Update history info
+        self._update_history_info()
