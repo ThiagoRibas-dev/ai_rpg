@@ -31,9 +31,9 @@ After writing the narrative, I'll provide:
 - turn_summary: One-sentence summary of what happened this turn
 - turn_tags: 3-5 categorization tags (e.g., 'combat', 'dialogue', 'discovery', 'travel')
 - turn_importance: Rating from 1-5
-  * 1 = Minor detail, small talk
-  * 3 = Normal gameplay, advancing the scene
-  * 5 = Critical plot point, major revelation, dramatic turning point
+   1 = Minor detail, small talk
+   3 = Normal gameplay, advancing the scene
+   5 = Critical plot point, major revelation, dramatic turning point
 
 """
 
@@ -58,19 +58,19 @@ Okay. Let me check the current game mode:
 Alright, so we are still in the systems and world-building phase, similar to the pre-game session or Session Zero in tabletop RPGs where rules, tone, and  mechanics are collaboratively defined before gameplay begins.
 
 Here's how I'll approach this turn:
-1. **Understand the player's message.**
+1. Understand the player's message.
    - I'll read what the player wrote in the last turn to understand what genre, tone, setting, properties, mechanical ideas, etc, they described or confirmed.
 
-2. **Evaluate what's missing.**
+2. Evaluate what's missing.
    - I'll use state.query to check the what I have already created (skills, attributes, feats, rules, poperties, etc).
    - I'll compare their message with the current setup and identify which aspects of the world, rules, properties, etc, are still undefined or incomplete.
 
-3. **Use tools to update the setup.**
+3. Use tools to update the setup.
    - If the player confirmed a mechanic or idea, I'll record it with `schema.define_property`.
    - If they want to modify character details, I'll use `state.apply_patch` to update the skills, attributes, feats, rules, poperties, etc.
    - Crucially, if the player indicated that setup is complete and they're ready to play, I'll call `schema.finalize({"confirm": true})` to finalize SETUP mode and move to GAMEPLAY mode so that the game can finally begin.
 
-4. **Plan my next interaction.**
+4. Plan my next interaction.
    - Once I've made any necessary tool calls, I'll outline what I'll want to talk about next time, for example, asking follow-up questions, suggesting new systems, or inviting feedback.
    
 During this planning phase, I'm not speaking to the player yet. I'm quietly reasoning, using tools, and preparing for the next narrative response where I'll summarize progress and ask for input.
@@ -81,19 +81,21 @@ SETUP_RESPONSE_TEMPLATE = """
 Alright. Let me check the current game mode:
  - CURRENT GAME MODE: SETUP (Session Zero)
 
-Since we are still in the SETUP game mode (Session Zero phase), I'll acknowledge any new or updated properties and explain what each represents, how it might work in play, and how it fits the genre or tone we've been developing.
-I'll suggest optional refinements, like adding modifiers, linking properties to dice mechanics, or expanding narrative consequences, but I'll keep the focus collaborative.
+Since we are still in the SETUP game mode (Session Zero phase), I'll do the following:
+ - Summarize what's been defined so far
+ - Acknowledge any new or updated properties and explain what each represents, how it might work in play, and how it fits the genre or tone we've been developing.
+ - Ask what the player would like to do next: refine, add, or finalize the setup.
+ - If appropriate, I'll suggest optional refinements, like adding modifiers, linking properties to dice mechanics, etc.
+
+The idea is to get as much information as possible about the desired world, rules, tone, mechanics, etc, of the game's system or framework, efficiently. I should encourage the player to provide detailed information in their responses.
 
 There are a variety of examples I can take inspiration from for my suggestions:
- - **Fantasy Adventure:** *Dungeons & Dragons*, *Pathfinder*, *The Elder Scrolls*, *Zork*, *King's Quest* → Stats like Strength, Intelligence, Mana, Hit Points, Alignment, Encumbrance.
- - **Horror & Investigation:** *Call of Cthulhu*, *World of Darkness*, *Sunless Sea*, *Anchorhead* → Sanity, Stress, Willpower, Clue Points, Fear, Insight.
- - **Sci-Fi & Space Opera:** *Traveller*, *Starfinder*, *Mass Effect*, *Fallen London*, *Eventide* → Oxygen, Energy, Engineering, Reputation, Ship Integrity, Morale.
- - **Cyberpunk & Dystopia:** *Shadowrun*, *Cyberpunk 2020/RED*, *Deus Ex*, *AI Dungeon* → Augmentation Level, Cred, Street Rep, Heat, Cyberpsychosis.
- - **Mystery / Noir:** *GUMSHOE*, *Blades in the Dark*, *The Case of the Golden Idol*, *80 Days* → Clues, Reputation, Vice, Stress, Insight.
- - **Lighthearted / Slice of Life:** *Honey Heist*, *Pokémon Tabletop*, *Animal Crossing*, *80 Days*, *A Dark Room* → Friendship, Charm, Luck, Creativity, Chaos Meter.
+ - Fantasy Adventure: Dungeons & Dragons, Pathfinder, The Elder Scrolls, Zork, King's Quest → Stats like Strength, Intelligence, Mana, Hit Points, Alignment, Encumbrance.
+ - Horror & Investigation: Call of Cthulhu, World of Darkness, Sunless Sea, Anchorhead → Sanity, Stress, Willpower, Clue Points, Fear, Insight.
+ - Sci-Fi & Space Opera: Traveller, Starfinder, Mass Effect, Fallen London, Eventide → Oxygen, Energy, Engineering, Reputation, Ship Integrity, Morale.
+ - Cyberpunk & Dystopia: Shadowrun, Cyberpunk 2020/RED, Deus Ex, AI Dungeon → Augmentation Level, Cred, Street Rep, Heat, Cyberpsychosis.
+ - Mystery / Noir: GUMSHOE, Blades in the Dark, The Case of the Golden Idol, 80 Days → Clues, Reputation, Vice, Stress, Insight.
+ - Lighthearted / Slice of Life: Honey Heist, Pokémon Tabletop, Animal Crossing, 80 Days, A Dark Room → Friendship, Charm, Luck, Creativity, Chaos Meter.
 Etc.
-
-I'll summarize what's been defined so far in a clear, friendly tone that matches the chosen style (fantasy, sci-fi, horror, comedy, etc.), then ask what the player would like to do next: refine, add, or finalize the setup.
-The idea is to get as much information as possible about the desired world, rules, tone, mechanics, etc, of the game's system or framework, efficiently. I should encourage the player to provide detailed information in their responses.
 
 """

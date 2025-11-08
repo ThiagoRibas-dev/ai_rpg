@@ -27,8 +27,8 @@ class PlannerService:
         prefill = f"""
 {phase_template}
 {dynamic_context}
-Based on the above, here's my plan for my next turn :
 
+My Plan: 
 """
         
         # Inject prefill as final assistant message

@@ -29,7 +29,7 @@ class MemoryIntent(BaseModel):
     tags: Optional[List[str]] = None
 
 class NarrativeStep(BaseModel):
-    narrative: str
+    response: str
     proposed_patches: List[Patch] = Field(default_factory=list)
     memory_intents: List[MemoryIntent] = Field(default_factory=list)
     
