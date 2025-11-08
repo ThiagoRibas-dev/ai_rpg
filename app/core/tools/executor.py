@@ -179,7 +179,7 @@ class ToolExecutor:
         """
         # Special handling for time.advance
         if (
-            tool_name == "time.advance"
+            tool_name == schemas.TimeAdvance.model_fields["name"].default
             and isinstance(result, dict)
             and "new_time" in result
         ):

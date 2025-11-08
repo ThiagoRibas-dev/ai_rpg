@@ -328,17 +328,9 @@ class TimeAdvance(BaseModel):
 
 class SchemaDefineProperty(BaseModel):
     """
-    Define a new custom attribute (property) for game entities during Session Zero.
+    Define a new attribute (property) for game entities during SETUP mode (Session Zero).
 
     **Entity types:** 'character', 'item', 'location'
-
-    **Templates (recommended):**
-    - "resource": HP-like attributes (current/max, can regenerate) - e.g., Sanity, Mana
-    - "stat": Ability scores (1-20 range) - e.g., Strength, Intelligence
-    - "reputation": Faction standing (-100 to +100)
-    - "flag": Boolean states - e.g., Is Infected, Has Clearance
-    - "enum": Predefined string values - e.g., Alignment
-    - "string": Free-form text
 
     **Example:** Define a Sanity resource
     schema.define_property({
@@ -396,15 +388,27 @@ class SchemaDefineProperty(BaseModel):
     )
 
 
-class SchemaFinalize(BaseModel):
+class EndSetupAndStartGameplay(BaseModel):
     """
-    Signal the end of Session Zero setup phase.
+    Signal the end of Session Zero setup phase and start the game.
 
-    **When to use:** When all custom properties have been defined and the player gave permission explicit to initiate the game (GAMEPLAY mode).
+    **When to use:** Only when all custom properties have been defined and the player has explicitly agreed to start the game.
     **Effect:** Transitions game mode from SETUP to GAMEPLAY.
     """
+    name: Literal["end_setup_and_start_gameplay"] = "end_setup_and_start_gameplay"
+    reason: str = Field(..., description="A brief justification for why the setup is considered complete and gameplay should begin.")
 
-    name: Literal["schema.finalize"] = "schema.finalize"
+
+class Deliberate(BaseModel):
+    """
+    A no-op tool that allows the AI to think or reflect without taking a concrete action.
+
+    **When to use:**
+    - When you need to consider the next step without making any changes.
+    - If no other tool is appropriate for the current turn.
+    - To signal that you are waiting for more information from the player.
+    """
+    name: Literal["deliberate"] = "deliberate"
 
 
 class CharacterUpdate(BaseModel):

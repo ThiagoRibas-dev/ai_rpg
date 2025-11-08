@@ -1,3 +1,12 @@
+from app.tools.schemas import (
+    MemoryUpsert,
+    StateQuery,
+    SchemaDefineProperty,
+    Deliberate,
+    EndSetupAndStartGameplay,
+)
+
+
 PLAN_TEMPLATE = """
 Alright. I am now in the planning phase. My role is to:
 - Analyze the player's action for feasibility
@@ -13,7 +22,7 @@ IMPORTANT:
 
 """
 
-NARRATIVE_TEMPLATE = """
+NARRATIVE_TEMPLATE = f"""
 Okay. I am now in the narrative phase. My role is to:
 - Write the scene based on my planning intent and the tool results
 - Use second person ("You...") perspective
@@ -23,7 +32,7 @@ Okay. I am now in the narrative phase. My role is to:
 
 MEMORY NOTES:
 - The memories shown in context were automatically retrieved and marked as accessed
-- I don't need to create memory.upsert calls - those were handled in the planning phase
+- I don't need to create {MemoryUpsert.model_fields['name'].default} calls - those were handled in the planning phase
 - I should use these retrieved memories to inform my narrative
 
 TURN METADATA:
@@ -51,37 +60,31 @@ Each choice should be:
 
 """
 
-SESSION_ZERO_TEMPLATE = """
+SESSION_ZERO_TEMPLATE = f"""
 Okay. Let me check the current game mode:
  - CURRENT GAME MODE: SETUP (Session Zero)
 
-Alright, so we are still in the systems and world-building phase, similar to the pre-game session or Session Zero in tabletop RPGs where rules, tone, and  mechanics are collaboratively defined before gameplay begins.
+Alright, so we are still in the systems and world-building phase. My goal is to help the player define the rules, tone, and mechanics of the game.
 
-Here's how I'll approach this turn:
-1. Understand the player's message.
-   - I'll read what the player wrote in the last turn to understand what genre, tone, setting, properties, mechanical ideas, etc, they described or confirmed.
+Here's what I'll do exactly:
+1.  **Understand the player's message:** I'll analyze their input to see what genre, tone, setting, properties, or mechanical ideas they proposed or accepted.
+2.  **Evaluate the current setup:** I'll use `{StateQuery.model_fields['name'].default}` to see what we've already defined (skills, attributes, rules, etc.). I'll compare their message with the current state to see what's missing or needs clarification.
+3.  **Use the right tool for the job:**
+    *   **`{SchemaDefineProperty.model_fields['name'].default}`**: I'll use this tool to save or persist any new or updated attributes, rules, mechanics, skills, etc.
+    *   **`{Deliberate.model_fields['name'].default}`**: If I'm not sure what to do next, or if the player's message doesn't require a change, I'll use this tool to reflect and prepare my next question for them. This is my default "thinking" step.
+    *   **`{EndSetupAndStartGameplay.model_fields['name'].default}`**: If and only if the player has explicitly confirmed that the setup is complete and we are ready to begin the game, I'll use this tool to transition to the gameplay phase. I must provide a `reason` for using this tool.
+4.  **Plan my response:** After any tool calls, I'll plan my response to the player. This usually involves summarizing the current setup, explaining any new properties, and asking what they want to work on next.
 
-2. Evaluate what's missing.
-   - I'll use state.query to check the what I have already created (skills, attributes, feats, rules, poperties, etc).
-   - I'll compare their message with the current setup and identify which aspects of the world, rules, properties, etc, are still undefined or incomplete.
-
-3. Use tools to update the setup.
-   - If the player confirmed mechanics or ideas, I'll record it with `schema.define_property`.
-   - If they want to modify character details, I'll use `state.apply_patch` to update the skills, attributes, feats, rules, poperties, etc.
-   - Crucially, I'll only ever call `schema.finalize({"confirm": true})` to finalize SETUP mode and move to GAMEPLAY mode after confirming with that player that the setup is complete.
-
-4. Plan my next interaction.
-   - Once I've made any necessary tool calls, I'll outline what I'll want to talk about next time, for example, asking follow-up questions, suggesting new systems, or inviting feedback.
-   
-During this planning phase, I'm not speaking to the player yet. I'm quietly reasoning, using tools, and preparing for the next narrative response where I'll summarize progress and ask for input.
-
+I am not speaking to the player yet. This is my private planning phase.
 """
 
 SETUP_RESPONSE_TEMPLATE = """
 Alright. Let me check the current game mode:
  - CURRENT GAME MODE: SETUP (Session Zero)
 
-Since we are still in the SETUP game mode (Session Zero phase), I'll do the following:
+We are still in the SETUP game mode (Session Zero phase), so the player has not yet confirmed that the setup is complete.
+
+I'll do the following:
  - Summarize what's been defined so far
  - Acknowledge any new or updated properties and explain what each represents, how it might work in play, and how it fits the genre or tone we've been developing.
  - Ask what the player would like to do next: refine, add, or finalize the setup.

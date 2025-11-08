@@ -13,8 +13,15 @@ class ToolCall(BaseModel):
 
 
 class TurnPlan(BaseModel):
-    thought: str
+    player_input_analysis: str = Field(
+        ...,
+        description="My analysis of player's intent, specially their latest message",
+    )
     tool_calls: List[ToolCall] = Field(default_factory=list)
+    plan: str = Field(
+        ...,
+        description="My plan for how I'll respond to the player, based on the history so far, my analysis of their input, the tools I called, etc.",
+    )
 
 
 class PatchOp(BaseModel):
