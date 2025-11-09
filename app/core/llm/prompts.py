@@ -1,8 +1,6 @@
 from app.tools.schemas import (
     MemoryUpsert,
-    StateQuery,
     SchemaDefineProperty,
-    Deliberate,
     EndSetupAndStartGameplay,
 )
 
@@ -67,10 +65,9 @@ Alright, so we are still in the systems and world-building phase. My goal is to 
 
 Here's what I'll do exactly:
 1.  **Understand the player's message:** I'll analyze their input to see what genre, tone, setting, properties, or mechanical ideas they proposed or accepted.
-2.  **Evaluate the current setup:** I'll use `{StateQuery.model_fields["name"].default}` to see what we've already defined (skills, attributes, rules, etc.). I'll compare their message with the current state to see what's missing or needs clarification.
+2.  **Evaluate the current setup:** I'll see what we've already defined (skills, attributes, rules, etc.) and compare the player's choices with the current state to see what's missing or needs clarification.
 3.  **Use the right tool for the job:**
     *   **`{SchemaDefineProperty.model_fields["name"].default}`**: I'll use this tool to save or persist any new or updated attributes, rules, mechanics, skills, etc, once per property.
-    *   **`{Deliberate.model_fields["name"].default}`**: If I'm not sure what to do next, or if the player's message doesn't require a change, I'll use this tool to reflect and prepare my next question for them. This is my default "thinking" step.
     *   **`{EndSetupAndStartGameplay.model_fields["name"].default}`**: If and only if the player has explicitly confirmed that the setup is complete and we are ready to begin the game, I'll use this tool to transition to the gameplay phase. I must provide a `reason` for using this tool.
 4.  **Plan my response:** After any tool calls, I'll plan my response to the player. This usually involves summarizing the current setup, explaining any new properties, and asking what they want to work on next.
 

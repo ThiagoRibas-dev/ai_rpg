@@ -108,5 +108,3 @@ This project is documented across several files to keep the information organize
 **Ruff Linter:** During Execution, after performing a batch of changes, always run `ruff check . --fix` to ensure things are in order.
 
 **Logging:** All code will contain tracking logs that output to the console so that errors are easier to debug.
-
-**Prompt Caching:** When implementing new features, consider whether new prompt content should be static (cached) or dynamic (per-turn). Static content should go in `build_static_system_instruction()`, dynamic content in `build_dynamic_context()` or phase-specific prefills.

@@ -1,8 +1,8 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional, Literal, Any
+from typing import List, Optional, Literal, Any, Union
 
 # A reusable JSON type to avoid recursion errors with Pydantic's schema generator.
-JSONValue = Any
+JSONValue = Union[str, int, float, bool, dict, List]
 
 
 class UpdatePair(BaseModel):
@@ -11,7 +11,7 @@ class UpdatePair(BaseModel):
     key: str = Field(
         ..., description="The name of the attribute or property to update."
     )
-    value: Any = Field(..., description="The new value for the attribute or property.")
+    value: JSONValue = Field(..., description="The new value for the attribute or property.")
 
 
 class MathEval(BaseModel):

@@ -35,7 +35,6 @@ from app.models.session import Session
 from app.tools.registry import ToolRegistry
 from app.tools.schemas import (
     EndSetupAndStartGameplay,
-    Deliberate,
     Patch,
     SchemaDefineProperty,
     StateApplyPatch,
@@ -159,7 +158,6 @@ class Orchestrator:
                 if current_game_mode == "SETUP":
                     setup_tool_names = [
                         SchemaDefineProperty.model_fields["name"].default,
-                        Deliberate.model_fields["name"].default,
                         EndSetupAndStartGameplay.model_fields["name"].default,
                     ]
                     available_tool_models = self.tool_registry.get_tool_models(

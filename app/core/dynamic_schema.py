@@ -17,7 +17,6 @@ def create_dynamic_turn_plan_model(
     """
     if not tool_models:
         # If no tools are available, the tool_calls list should be empty.
-        # If no tools are available, the tool_calls list should be empty.
         # We create a TurnPlan that explicitly forbids any tool calls.
         DynamicTurnPlan = create_model(
             "DynamicTurnPlan",

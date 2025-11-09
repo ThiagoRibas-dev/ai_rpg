@@ -23,7 +23,6 @@ AI-driven, tool-using text RPG with:
 ## Features
 - **Two LLM backends**: Gemini and OpenAI-compatible
 - **Session Zero flow**: Define custom game mechanics via schema tools, then auto-switch to gameplay
-- **Prompt caching**: Static game prompt cached across all turn phases for 16x speedup
 - **Deterministic tools** with Pydantic-validated inputs (e.g., `rng.roll`, `state.apply_patch`, `character.update`)
 - **Memory system**: Upsert/query/update/delete + semantic retrieval
 - **World Info** (per-prompt lore) + vector search
