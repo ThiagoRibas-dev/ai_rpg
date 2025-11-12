@@ -1,5 +1,4 @@
 D&D 3.5e System Framework
-A Definitive Overview of Core System Components and Mechanics
 
 The d20 System: Core Mechanic
 The D&D 3.5e framework is based on the **d20 System**, where most actions are resolved by rolling a 20-sided die (d20). Success is achieved when the result of the die roll plus all applicable **modifiers** meets or exceeds a target number, known as the **Difficulty Class (DC)** or **Armor Class (AC)**.
@@ -82,4 +81,3 @@ Alternative and Complex Systems
 **Binding:** (from *Tome of Magic*). Used by Binders who make pacts with powerful **Vestiges** to gain their abilities for a limited time.
 **Incarnum:** (from *Magic of Incarnum*). A system of **soul-stuff** where users shape raw Incarnum into **Soulmelds** (magic items) and power them by investing **Essentia**.
 **Shadowcasting:** (from *Tome of Magic*). Shadowcasters use **Mysteries** (spells) with a unique preparation and recovery mechanic based on the ambient light level.
-Content sourced from the D&D 3.5e System Reference Document (SRD) and core rulebooks.

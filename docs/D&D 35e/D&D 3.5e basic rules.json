@@ -1,0 +1,395 @@
+{
+  "_comment": "A structured JSON representation of D&D 3.5e rules, organized for clarity and machine readability.",
+  "coreMechanics": {
+    "coreMechanic": {
+      "description": "The fundamental process for resolving actions with a chance of failure.",
+      "formula": "d20 Roll + Modifiers >= Target Number",
+      "successCondition": "Result equals or exceeds the target number."
+    },
+    "diceNotation": {
+      "standard": {
+        "example": "3d4+3",
+        "description": "Roll three 4-sided dice, sum the results, and add 3."
+      },
+      "percentile": {
+        "notation": "d%",
+        "description": "Roll two 10-sided dice. Designate one as the tens digit and the other as the ones digit. A roll of '00' represents 100."
+      }
+    },
+    "mathRules": {
+      "rounding": "In general, round down, even if the fraction is 0.5 or larger. Exception: Some rolls (e.g., damage, hit points) have a minimum of 1.",
+      "multiplying": {
+        "abstractValues": {
+          "description": "For modifiers or die rolls. Combine multipliers into a single multiple, with each extra multiple adding 1 less than its value to the first.",
+          "example": "A x2 and a x2 multiplier result in a x3 multiplier (2 + (2-1) = 3)."
+        },
+        "realWorldValues": {
+          "description": "For weight or distance. Normal multiplication rules apply.",
+          "example": "A creature whose size doubles (weight x8) and is then turned to stone (weight x3) weighs 24 times normal."
+        }
+      }
+    }
+  },
+  "abilityScores": {
+    "modifierFormula": "floor((Score - 10) / 2)",
+    "abilityScoreLoss": {
+      "types": [
+        {
+          "name": "Ability Damage",
+          "description": "Temporary loss of ability score points.",
+          "recovery": "Returns at a rate of 1 point per day per ability (or 2 points with complete bed rest). Can be healed by spells like 'lesser restoration'."
+        },
+        {
+          "name": "Ability Drain",
+          "description": "Permanent loss of ability score points.",
+          "recovery": "Only recoverable through magical means, such as the 'restoration' spell."
+        }
+      ],
+      "effectsAtZero": [
+        { "ability": "Strength", "effect": "Cannot move. Lies helpless on the ground." },
+        { "ability": "Dexterity", "effect": "Cannot move. Stands motionless, rigid, and helpless." },
+        { "ability": "Constitution", "effect": "Dead." },
+        { "ability": "Intelligence", "effect": "Unconscious in a coma-like stupor, helpless." },
+        { "ability": "Wisdom", "effect": "Withdrawn into a deep sleep filled with nightmares, helpless." },
+        { "ability": "Charisma", "effect": "Withdrawn into a catatonic, coma-like stupor, helpless." }
+      ]
+    },
+    "abilities": [
+      {
+        "name": "Strength",
+        "abbreviation": "Str",
+        "appliesTo": [
+          "Melee attack rolls",
+          "Damage rolls for melee and thrown weapons",
+          "Climb, Jump, and Swim checks",
+          "Strength checks"
+        ]
+      },
+      {
+        "name": "Dexterity",
+        "abbreviation": "Dex",
+        "appliesTo": [
+          "Ranged attack rolls",
+          "Armor Class (AC)",
+          "Reflex saving throws",
+          "Balance, Escape Artist, Hide, Move Silently, Open Lock, Ride, Sleight of Hand, Tumble, and Use Rope checks"
+        ]
+      },
+      {
+        "name": "Constitution",
+        "abbreviation": "Con",
+        "appliesTo": [
+          "Hit points per Hit Die (minimum 1)",
+          "Fortitude saving throws",
+          "Concentration checks"
+        ]
+      },
+      {
+        "name": "Intelligence",
+        "abbreviation": "Int",
+        "appliesTo": [
+          "Skill points per level (minimum 1)",
+          "Number of bonus languages at start",
+          "Appraise, Craft, Decipher Script, Disable Device, Forgery, Knowledge, Search, and Spellcraft checks",
+          "Wizard bonus spells and spell DCs"
+        ]
+      },
+      {
+        "name": "Wisdom",
+        "abbreviation": "Wis",
+        "appliesTo": [
+          "Will saving throws",
+          "Heal, Listen, Profession, Sense Motive, Spot, and Survival checks",
+          "Cleric, Druid, Paladin, and Ranger bonus spells and spell DCs"
+        ]
+      },
+      {
+        "name": "Charisma",
+        "abbreviation": "Cha",
+        "appliesTo": [
+          "Bluff, Diplomacy, Disguise, Gather Information, Handle Animal, Intimidate, Perform, and Use Magic Device checks",
+          "Checks to influence others",
+          "Turning checks for Clerics and Paladins",
+          "Sorcerer and Bard bonus spells and spell DCs"
+        ]
+      }
+    ]
+  },
+  "specialAbilitiesAndConditions": {
+    "abilityTypes": [
+      {
+        "name": "Extraordinary",
+        "abbreviation": "Ex",
+        "isMagical": false,
+        "isDispellable": false,
+        "isSubjectToSR": false,
+        "isSuppressedByAntimagic": false,
+        "provokesAoO": false,
+        "description": "Nonmagical, but not something anyone can do without extensive training."
+      },
+      {
+        "name": "Spell-Like",
+        "abbreviation": "Sp",
+        "isMagical": true,
+        "isDispellable": true,
+        "isSubjectToSR": true,
+        "isSuppressedByAntimagic": true,
+        "provokesAoO": true,
+        "description": "Magical abilities that are very much like spells."
+      },
+      {
+        "name": "Supernatural",
+        "abbreviation": "Su",
+        "isMagical": true,
+        "isDispellable": false,
+        "isSubjectToSR": false,
+        "isSuppressedByAntimagic": true,
+        "provokesAoO": false,
+        "description": "Magical abilities that are not like spells and cannot be dispelled or counterspelled."
+      }
+    ],
+    "commonAbilities": [
+      {
+        "name": "Antimagic",
+        "type": "Effect",
+        "description": "An effect that suppresses but does not dispel magic. Spells, spell-like, and supernatural abilities do not function within it. Extraordinary abilities are unaffected. Summoned creatures wink out and reappear when the field ends."
+      },
+      {
+        "name": "Breath Weapon",
+        "type": "Su",
+        "description": "A creature expels a substance or energy in a cone or line. It is typically a standard action, requires no attack roll, and allows a saving throw for half damage. Creatures are immune to their own breath weapons."
+      },
+      {
+        "name": "Damage Reduction",
+        "type": "Su",
+        "notation": "DR [Amount]/[Type]",
+        "description": "The creature ignores a certain amount of damage from weapons or natural attacks. The damage is negated unless the attack has the quality to bypass it (e.g., magic, adamantine, good). Spells and energy damage ignore DR."
+      },
+      {
+        "name": "Energy Drain",
+        "type": "Su",
+        "description": "An attack that bestows one or more negative levels on a target. Each negative level imposes a -1 penalty on most rolls, reduces HP by 5, and reduces effective level by 1. After 24 hours, the victim must make a Fortitude save for each negative level or lose a character level permanently."
+      },
+      {
+        "name": "Fast Healing",
+        "type": "Ex",
+        "description": "The creature regains a specific number of hit points at the start of its turn. It does not allow regrowth of lost body parts and does not restore hit points from starvation, thirst, or suffocation."
+      },
+      {
+        "name": "Gaze Attack",
+        "type": "Su",
+        "description": "An attack that takes effect when an opponent looks at the creature's eyes. Opponents can avert their eyes (50% chance to avoid save, creature gains concealment) or close their eyes (100% chance to avoid save, creature gains total concealment)."
+      },
+      {
+        "name": "Incorporeality",
+        "type": "Ex",
+        "description": "The creature has no physical body. It is immune to all nonmagical attacks and has a 50% chance to ignore damage from any corporeal source, except for force effects or attacks from a 'ghost touch' weapon. Its own attacks ignore natural armor, armor, and shields."
+      },
+      {
+        "name": "Poison",
+        "type": "Ex",
+        "description": "An attack that delivers a toxin. The victim must make a Fortitude save to resist both initial and secondary damage (usually ability damage). Types include contact, ingested, inhaled, and injury."
+      },
+      {
+        "name": "Regeneration",
+        "type": "Ex",
+        "description": "Damage dealt to the creature is treated as nonlethal damage, which it heals at a fixed rate. Certain attack forms (typically fire and acid) deal lethal damage that is not regenerated. The creature can regrow or reattach severed body parts."
+      },
+      {
+        "name": "Spell Resistance",
+        "type": "Ex",
+        "notation": "SR [Value]",
+        "description": "The ability to avoid being affected by spells. To affect the creature, the spellcaster must make a caster level check (1d20 + caster level) equal to or greater than the creature's SR."
+      }
+    ],
+    "conditions": [
+      {
+        "name": "Blinded",
+        "effects": "-2 AC, lose Dex bonus to AC, half speed, -4 on Search and most Str/Dex checks. Opponents have total concealment (50% miss chance)."
+      },
+      {
+        "name": "Confused",
+        "effects": "Acts randomly, determined by a d% roll at the start of the turn."
+      },
+      {
+        "name": "Dazed",
+        "effects": "Unable to take actions, but no penalty to AC. Typically lasts 1 round."
+      },
+      {
+        "name": "Dying",
+        "effects": "At -1 to -9 HP. Unconscious and loses 1 HP per round until stabilized."
+      },
+      {
+        "name": "Entangled",
+        "effects": "Half speed, cannot run or charge, -2 attack rolls, -4 Dexterity. Casting requires a Concentration check."
+      },
+      {
+        "name": "Exhausted",
+        "effects": "Half speed, -6 to Strength and Dexterity. After 1 hour of rest, becomes fatigued."
+      },
+      {
+        "name": "Fatigued",
+        "effects": "Cannot run or charge, -2 to Strength and Dexterity."
+      },
+      {
+        "name": "Flat-Footed",
+        "effects": "Has not yet acted in combat. Loses Dex bonus to AC and cannot make attacks of opportunity."
+      },
+      {
+        "name": "Grappling",
+        "effects": "Engaged in a wrestle. Can take only limited actions. Loses Dex bonus to AC against opponents not in the grapple."
+      },
+      {
+        "name": "Helpless",
+        "effects": "Paralyzed, held, bound, sleeping, or unconscious. Treated as having Dex 0 (-5 modifier). Melee attacks gain a +4 bonus. Can be subject to a coup de grace."
+      },
+      {
+        "name": "Nauseated",
+        "effects": "Unable to attack, cast spells, or concentrate. Can only take a single move action per turn."
+      },
+      {
+        "name": "Paralyzed",
+        "effects": "Frozen in place. Effective Strength and Dexterity are 0. Helpless, but can take purely mental actions."
+      },
+      {
+        "name": "Prone",
+        "effects": "On the ground. -4 on melee attack rolls, +4 AC against ranged attacks, -4 AC against melee attacks."
+      },
+      {
+        "name": "Shaken",
+        "effects": "-2 penalty on attack rolls, saving throws, skill checks, and ability checks."
+      },
+      {
+        "name": "Stunned",
+        "effects": "Drops everything held, can't take actions, -2 penalty to AC, and loses Dex bonus to AC."
+      },
+      {
+        "name": "Unconscious",
+        "effects": "Knocked out and helpless. Occurs from having HP between -1 and -9, or from nonlethal damage exceeding current HP."
+      }
+    ]
+  },
+  "characterClasses": {
+    "barbarian": {
+      "hitDie": "d12",
+      "alignment": "Any nonlawful",
+      "classSkills": ["Climb", "Craft", "Handle Animal", "Intimidate", "Jump", "Listen", "Ride", "Survival", "Swim"],
+      "skillPoints": {
+        "atFirstLevel": "(4 + Int modifier) * 4",
+        "perLevel": "4 + Int modifier"
+      },
+      "proficiencies": {
+        "weapons": ["Simple", "Martial"],
+        "armor": ["Light", "Medium"],
+        "shields": ["All except Tower"]
+      },
+      "progressionTable": [
+        { "level": 1, "bab": "+1", "fort": "+2", "ref": "+0", "will": "+0", "special": "Fast movement, illiteracy, rage 1/day" },
+        { "level": 2, "bab": "+2", "fort": "+3", "ref": "+0", "will": "+0", "special": "Uncanny dodge" },
+        { "level": 3, "bab": "+3", "fort": "+3", "ref": "+1", "will": "+1", "special": "Trap sense +1" },
+        { "level": 4, "bab": "+4", "fort": "+4", "ref": "+1", "will": "+1", "special": "Rage 2/day" },
+        { "level": 5, "bab": "+5", "fort": "+4", "ref": "+1", "will": "+1", "special": "Improved uncanny dodge" }
+      ]
+    },
+    "bard": {
+      "hitDie": "d6",
+      "alignment": "Any nonlawful",
+      "classSkills": ["Appraise", "Balance", "Bluff", "Climb", "Concentration", "Craft", "Decipher Script", "Diplomacy", "Disguise", "Escape Artist", "Gather Information", "Hide", "Jump", "Knowledge (all)", "Listen", "Move Silently", "Perform", "Profession", "Sense Motive", "Sleight of Hand", "Speak Language", "Spellcraft", "Swim", "Tumble", "Use Magic Device"],
+      "skillPoints": {
+        "atFirstLevel": "(6 + Int modifier) * 4",
+        "perLevel": "6 + Int modifier"
+      },
+      "proficiencies": {
+        "weapons": ["Simple", "Longsword", "Rapier", "Sap", "Short Sword", "Shortbow", "Whip"],
+        "armor": ["Light"],
+        "shields": ["All except Tower"]
+      },
+      "progressionTable": [
+        { "level": 1, "bab": "+0", "fort": "+0", "ref": "+2", "will": "+2", "special": "Bardic music, bardic knowledge, countersong, fascinate, inspire courage +1", "spellsPerDay": { "0": 2 } },
+        { "level": 2, "bab": "+1", "fort": "+0", "ref": "+3", "will": "+3", "special": "", "spellsPerDay": { "0": 3, "1": 0 } },
+        { "level": 3, "bab": "+2", "fort": "+1", "ref": "+3", "will": "+3", "special": "Inspire competence", "spellsPerDay": { "0": 3, "1": 1 } }
+      ]
+    }
+  },
+  "psionics": {
+    "overview": "Psionic powers spring from sentient minds and are fueled by a reserve of power points.",
+    "powerPoints": {
+      "source": "Gained from class, bonus from high key ability score, race, and feats.",
+      "bonusPointsFormula": "(Key Ability Modifier * Manifester Level) / 2"
+    },
+    "manifesting": {
+      "concentration": "Required to manifest a power. Can be broken by damage or distractions, requiring a Concentration check.",
+      "concentrationDCs": [
+        { "distraction": "Taking Damage", "dc": "10 + Damage Taken + Power Level" },
+        { "distraction": "Grappling or Pinned", "dc": "20 + Power Level" },
+        { "distraction": "Manifesting Defensively", "dc": "15 + Power Level" }
+      ]
+    },
+    "disciplines": [
+      "Clairsentience (Seer)",
+      "Metacreativity (Shaper)",
+      "Psychokinesis (Kineticist)",
+      "Psychometabolism (Egoist)",
+      "Psychoportation (Nomad)",
+      "Telepathy (Telepath)"
+    ],
+    "psionicsMagicTransparency": {
+      "description": "Powers and spells interact with each other as if they were the same type of effect.",
+      "rules": [
+        "Spell Resistance works against powers, and Power Resistance works against spells.",
+        "Detect Magic detects psionics, and vice versa.",
+        "Dispel Magic can dispel powers, and Dispel Psionics can dispel spells.",
+        "Dead Magic areas are also Dead Psionics areas."
+      ]
+    }
+  },
+  "races": [
+    {
+      "name": "Human",
+      "abilityModifiers": [],
+      "size": "Medium",
+      "speed": 30,
+      "specialQualities": [
+        "1 extra feat at 1st level.",
+        "4 extra skill points at 1st level and 1 extra skill point at each additional level."
+      ],
+      "favoredClass": "Any"
+    },
+    {
+      "name": "Dwarf",
+      "abilityModifiers": [
+        { "ability": "Constitution", "value": 2 },
+        { "ability": "Charisma", "value": -2 }
+      ],
+      "size": "Medium",
+      "speed": 20,
+      "specialQualities": [
+        "Darkvision 60 ft.",
+        "Stonecunning: +2 on Search for unusual stonework, can find stone traps.",
+        "Stability: +4 bonus to resist bull rush or trip.",
+        "+2 save vs. poison.",
+        "+2 save vs. spells.",
+        "+1 attack vs. orcs and goblinoids.",
+        "+4 dodge AC vs. giants."
+      ],
+      "favoredClass": "Fighter"
+    },
+    {
+      "name": "Elf",
+      "abilityModifiers": [
+        { "ability": "Dexterity", "value": 2 },
+        { "ability": "Constitution", "value": -2 }
+      ],
+      "size": "Medium",
+      "speed": 30,
+      "specialQualities": [
+        "Immunity to magic sleep effects.",
+        "+2 save vs. enchantment.",
+        "Low-light vision.",
+        "Proficient with longsword, rapier, longbow, and shortbow.",
+        "+2 on Listen, Search, and Spot checks."
+      ],
+      "favoredClass": "Wizard"
+    }
+  ]
+}

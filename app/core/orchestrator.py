@@ -189,6 +189,7 @@ class Orchestrator:
                 dynamic_context = context_builder.build_dynamic_context(
                     game_session, chat_history
                 )
+
                 # ===== STEP 1: PLAN =====
                 if current_game_mode == "SETUP":
                     phase_template = SETUP_PLAN_TEMPLATE
@@ -218,6 +219,7 @@ class Orchestrator:
                     logger.debug(f"Plan contains {len(plan.tool_calls)} tool calls:")
                     for i, call in enumerate(plan.tool_calls):
                         logger.debug(f"  {i}: {type(call).__name__}")
+
                 # ===== STEP 2: EXECUTE TOOLS =====
                 tool_results, memory_tool_used = executor.execute(
                     plan.tool_calls,
@@ -250,7 +252,7 @@ class Orchestrator:
                         self._update_game_in_thread(
                             game_session, thread_db_manager, session_in_thread
                         )
-                        return
+
                 # ===== STEP 2.5: AUDIT (only in GAMEPLAY mode) =====
                 if current_game_mode == "GAMEPLAY":
                     audit_history = context_builder.get_truncated_history(
@@ -259,127 +261,126 @@ class Orchestrator:
                     audit = auditor.audit(audit_history, tool_results)
                     if audit and not audit.ok:
                         auditor.apply_remediations(audit, game_session)
+
                 # ===== STEP 3: NARRATIVE/RESPONSE (only in GAMEPLAY mode, or if setup tools didn't finalize) =====
-                if current_game_mode == "GAMEPLAY" or not any(
-                    r.get("tool_name")
-                    == EndSetupAndStartGameplay.model_fields["name"].default
-                    for r in tool_results
-                ):
-                    # Rebuild dynamic context (state may have changed after tools)
-                    dynamic_context = context_builder.build_dynamic_context(
-                        game_session, chat_history
+                # Rebuild dynamic context (state may have changed after tools)
+                dynamic_context = context_builder.build_dynamic_context(
+                    game_session, chat_history
+                )
+                # ✅ Choose appropriate template based on game mode
+                if current_game_mode == "SETUP":
+                    phase_template = SETUP_RESPONSE_TEMPLATE
+                else:  # GAMEPLAY
+                    phase_template = NARRATIVE_TEMPLATE
+                narrative = self.narrator.write_step(
+                    system_instruction=static_instruction,
+                    phase_template=phase_template,
+                    dynamic_context=dynamic_context,
+                    plan_thought=plan.response_plan,
+                    tool_results=str(tool_results),
+                    chat_history=chat_history,
+                )
+                if not narrative:
+                    logger.error(
+                        "LLM returned no structured response for NarrativeStep."
                     )
-                    # ✅ Choose appropriate template based on game mode
-                    if current_game_mode == "SETUP":
-                        phase_template = SETUP_RESPONSE_TEMPLATE
-                    else:  # GAMEPLAY
-                        phase_template = NARRATIVE_TEMPLATE
-                    narrative = self.narrator.write_step(
-                        system_instruction=static_instruction,
-                        phase_template=phase_template,
-                        dynamic_context=dynamic_context,
-                        plan_thought=plan.response_plan,
-                        tool_results=str(tool_results),
-                        chat_history=chat_history,
+                    self.ui_queue.put(
+                        {
+                            "type": "error",
+                            "message": "AI failed to generate a valid narrative.",
+                        }
                     )
-                    if not narrative:
+                    return
+                self.ui_queue.put(
+                    {
+                        "type": "message_bubble",
+                        "role": "assistant",
+                        "content": narrative.response,
+                    }
+                )
+
+                # ===== STEP 3.5: Turn metadata =====
+                # ✅ Only store turn metadata in GAMEPLAY mode
+                if current_game_mode == "GAMEPLAY" and game_session.id:
+                    round_number = len(session_in_thread.get_history()) // 2 + 1
+                    turnmeta.persist(
+                        session_id=game_session.id,
+                        prompt_id=game_session.prompt_id,
+                        round_number=round_number,
+                        summary=narrative.turn_summary,
+                        tags=narrative.turn_tags,
+                        importance=narrative.turn_importance,
+                    )
+                    logger.debug(f"Stored metadata for turn {round_number}")
+
+                # ===== STEP 4: Apply patches and memory intents =====
+                if narrative.proposed_patches:
+                    for patch in narrative.proposed_patches:
+                        try:
+                            patch_call = StateApplyPatch(
+                                entity_type=patch.entity_type,
+                                key=patch.key,
+                                patch=[
+                                    Patch(**op.model_dump()) for op in patch.ops
+                                ],
+                            )
+                            result = self.tool_registry.execute(
+                                patch_call,
+                                context={
+                                    "session_id": game_session.id,
+                                    "db_manager": thread_db_manager,
+                                },
+                            )
+                            if self.tool_event_callback:
+                                self.ui_queue.put(
+                                    {
+                                        "type": "tool_event",
+                                        "message": f"{StateApplyPatch.model_fields['name'].default} ✓ → {result}",
+                                    }
+                                )
+                        except Exception as e:
+                            logger.error(f"Patch error: {e}")
+                            self.ui_queue.put(
+                                {"type": "error", "message": f"Patch error: {e}"}
+                            )
+                mem_intents.apply(
+                    narrative.memory_intents,
+                    session_in_thread,
+                    tool_event_callback=self.tool_event_callback,
+                )
+                
+                # ===== STEP 5: Action choices =====
+                # ✅ Only generate choices in GAMEPLAY mode
+                if current_game_mode == "GAMEPLAY":
+                    try:
+                        phase_template = CHOICE_GENERATION_TEMPLATE
+                        choices = self.choices.generate(
+                            system_instruction=static_instruction,
+                            phase_template=phase_template,
+                            narrative_text=narrative.response,
+                            chat_history=chat_history,
+                        )
+                        if choices and choices.choices:
+                            self.ui_queue.put(
+                                {"type": "choices", "choices": choices.choices}
+                            )
+                        else:
+                            logger.warning("Failed to generate action choices")
+                    except Exception as e:
                         logger.error(
-                            "LLM returned no structured response for NarrativeStep."
+                            f"Error generating action choices: {e}", exc_info=True
                         )
                         self.ui_queue.put(
                             {
                                 "type": "error",
-                                "message": "AI failed to generate a valid narrative.",
+                                "message": f"Error generating action choices: {e}",
                             }
                         )
-                        return
-                    self.ui_queue.put(
-                        {
-                            "type": "message_bubble",
-                            "role": "assistant",
-                            "content": narrative.response,
-                        }
-                    )
-                    # ===== STEP 3.5: Turn metadata =====
-                    # ✅ Only store turn metadata in GAMEPLAY mode
-                    if current_game_mode == "GAMEPLAY" and game_session.id:
-                        round_number = len(session_in_thread.get_history()) // 2 + 1
-                        turnmeta.persist(
-                            session_id=game_session.id,
-                            prompt_id=game_session.prompt_id,
-                            round_number=round_number,
-                            summary=narrative.turn_summary,
-                            tags=narrative.turn_tags,
-                            importance=narrative.turn_importance,
-                        )
-                        logger.debug(f"Stored metadata for turn {round_number}")
-                    # ===== STEP 4: Apply patches and memory intents =====
-                    if narrative.proposed_patches:
-                        for patch in narrative.proposed_patches:
-                            try:
-                                patch_call = StateApplyPatch(
-                                    entity_type=patch.entity_type,
-                                    key=patch.key,
-                                    patch=[
-                                        Patch(**op.model_dump()) for op in patch.ops
-                                    ],
-                                )
-                                result = self.tool_registry.execute(
-                                    patch_call,
-                                    context={
-                                        "session_id": game_session.id,
-                                        "db_manager": thread_db_manager,
-                                    },
-                                )
-                                if self.tool_event_callback:
-                                    self.ui_queue.put(
-                                        {
-                                            "type": "tool_event",
-                                            "message": f"{StateApplyPatch.model_fields['name'].default} ✓ → {result}",
-                                        }
-                                    )
-                            except Exception as e:
-                                logger.error(f"Patch error: {e}")
-                                self.ui_queue.put(
-                                    {"type": "error", "message": f"Patch error: {e}"}
-                                )
-                    mem_intents.apply(
-                        narrative.memory_intents,
-                        session_in_thread,
-                        tool_event_callback=self.tool_event_callback,
-                    )
-                    # ===== STEP 5: Action choices =====
-                    # ✅ Only generate choices in GAMEPLAY mode
-                    if current_game_mode == "GAMEPLAY":
-                        try:
-                            phase_template = CHOICE_GENERATION_TEMPLATE
-                            choices = self.choices.generate(
-                                system_instruction=static_instruction,
-                                phase_template=phase_template,
-                                narrative_text=narrative.response,
-                                chat_history=chat_history,
-                            )
-                            if choices and choices.choices:
-                                self.ui_queue.put(
-                                    {"type": "choices", "choices": choices.choices}
-                                )
-                            else:
-                                logger.warning("Failed to generate action choices")
-                        except Exception as e:
-                            logger.error(
-                                f"Error generating action choices: {e}", exc_info=True
-                            )
-                            self.ui_queue.put(
-                                {
-                                    "type": "error",
-                                    "message": f"Error generating action choices: {e}",
-                                }
-                            )
-                    # ===== NOW add narrative to chat history (all phases complete) =====
-                    session_in_thread.add_message("assistant", narrative.response)
-                    logger.debug(
-                        f"DEBUG: Added AI response to chat history: {narrative.response}"
-                    )
+                # ===== NOW add narrative to chat history (all phases complete) =====
+                session_in_thread.add_message("assistant", narrative.response)
+                logger.debug(
+                    f"DEBUG: Added AI response to chat history: {narrative.response}"
+                )
                 # Persist session, passing the final state from the thread
                 self._update_game_in_thread(
                     game_session, thread_db_manager, session_in_thread

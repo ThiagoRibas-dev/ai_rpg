@@ -1,0 +1,243 @@
+﻿### Core Game Mechanics
+
+#### The Core Mechanic
+
+When attempting an action with a chance of failure, the process is:
+1.  Roll a d20.
+2.  Add all relevant modifiers (from ability scores, skills, feats, etc.).
+3.  Compare the result to a Target Number (Difficulty Class or an opponent's roll).
+
+Formula: `d20 Roll + Modifiers ≥ Target Number` (Success)
+
+#### Dice Notation
+
+	Standard Dice: An expression like `3d4+3` means: Roll three 4-sided dice, sum the results, and add 3.
+	Percentile Dice (d%): Roll two 10-sided dice (d10). Designate one as the "tens" digit and the other as the "ones" digit. A roll of `0` on the tens die and `5` on the ones die is 5. A roll of two `0`s is 100.
+
+#### Mathematical Rules
+
+	Rounding: Always round down, unless a rule specifies a minimum of 1 (such as for Hit Points or damage).
+	Multiplying:
+		Abstract Values (Modifiers, Rolls): When multiple multipliers apply, combine them. The first multiplier works normally. Each additional multiplier adds 1 less than its value.
+			*Example:* A `x2` and another `x2` multiplier results in a `x3` multiplier (`2 + (2-1) = 3`).
+		Real-World Values (Distance, Weight): Use normal multiplication.
+			*Example:* Doubling weight (`x8`) then turning to stone (`x3`) results in `x24` total weight.
+
+
+### Ability Scores
+
+An ability score's modifier is calculated as: `(Score - 10) / 2`, rounded down.
+
+| Score   | Modifier | Score   | Modifier | Score   | Modifier |
+| :------ | :------- | :------ | :------- | :------ | :------- |
+| 1       | -5       | 12-13   | +1       | 24-25   | +7       |
+| 2-3     | -4       | 14-15   | +2       | 26-27   | +8       |
+| 4-5     | -3       | 16-17   | +3       | 28-29   | +9       |
+| 6-7     | -2       | 18-19   | +4       | 30-31   | +10      |
+| 8-9     | -1       | 20-21   | +5       | etc.    | ...      |
+| 10-11   | +0       | 22-23   | +6       |         |          |
+
+The Six Abilities
+
+| Ability             | Applies Modifier To                                                                                                                        | Key Skills                                                                                             |
+| :------------------ | :------------------------------------------------------------------------------------------------------------------------------------------'| :-----------------------------------------------------------------------------------------------------|
+| Strength (Str)  | • Melee attack rolls• Melee/Thrown weapon damage rolls• Strength-based skill checks• Strength checks (e.g., breaking doors)                    '| Climb, Jump, Swim                                                                                     |
+| Dexterity (Dex) | • Ranged attack rolls• Armor Class (AC)• Reflex saving throws• Dexterity-based skill checks                                                    | Balance, Escape Artist, Hide, Move Silently, Open Lock, Ride, Sleight of Hand, Tumble, Use Rope        |
+| Constitution (Con) | • Hit Points per Hit Die (minimum 1 per level)• Fortitude saving throws• Constitution-based skill checks                                    | Concentration                                                                                          |
+| Intelligence (Int) | • Skill points gained per level (minimum 1)• Number of starting languages• Intelligence-based skill checks• Wizard bonus spells & spell DCs | Appraise, Craft, Decipher Script, Disable Device, Forgery, Knowledge, Search, Spellcraft               |
+| Wisdom (Wis)    | • Will saving throws• Wisdom-based skill checks• Cleric, Druid, Paladin, Ranger bonus spells & spell DCs                                       | Heal, Listen, Profession, Sense Motive, Spot, Survival                                                 |
+| Charisma (Cha)  | • Charisma-based skill checks• Attempts to influence others• Turning/Rebuking undead checks• Sorcerer, Bard bonus spells & spell DCs           | Bluff, Diplomacy, Disguise, Gather Information, Handle Animal, Intimidate, Perform, Use Magic Device   |
+
+
+### Special Abilities & Conditions
+
+#### Types of Special Abilities
+
+| Type              | Magic | Dispel | Spell Resistance | Antimagic Field | Provokes AoO? |
+| :---------------- | :---- | :----- | :--------------- | :-------------- | :------------ |
+| Extraordinary (Ex) | No    | No     | No               | No              | No            |
+| Spell-Like (Sp)    | Yes   | Yes    | Yes              | Yes             | Yes           |
+| Supernatural (Su)  | Yes   | No     | No               | Yes             | No            |
+
+#### Common Special Abilities
+
+	Damage Reduction (DR): Reduces damage from physical attacks.
+		Notation: `DR Value / Quality`. The DR is bypassed if the attack has the specified quality.
+		Qualities:
+			Material: `adamantine`, `cold iron`, `silver`
+			Alignment: `good`, `evil`, `lawful`, `chaotic`
+			Weapon Type: `slashing`, `piercing`, `bludgeoning`
+			Magic: Any weapon with a `+1` or greater enhancement bonus.
+			Epic: Any weapon with a `+6` or greater enhancement bonus.
+			`—`: Cannot be bypassed by damage type, only by specific effects.
+		Ignores DR: Energy damage, spells, spell-like abilities, and supernatural abilities.
+		Negates on Hit: If DR negates all damage from an attack, it also negates most riders (poison, stun, etc.).
+	Energy Drain & Negative Levels: Bestows negative levels on a target.
+		Penalties per Negative Level:
+			`-1` on all checks (skill, ability), attack rolls, and saving throws.
+			`-5` Hit Points.
+			`-1` effective level for calculations.
+			Lose one highest-level spell slot.
+		Removal: After 24 hours, make a Fortitude save (DC 10 + 1/2 attacker's HD + attacker's Cha mod) for each negative level. Success removes it. Failure means the character's level is permanently reduced by one.
+	Fast Healing (Ex): Regains a set number of HP at the start of its turn. Does not regrow limbs. Heals nonlethal damage first. Does not heal HP lost to starvation, thirst, or suffocation.
+	Fear: Effects are cumulative (Shaken -> Frightened -> Panicked).
+		Shaken: `-2` penalty on attack rolls, saves, skill checks, and ability checks.
+		Frightened: Shaken, and must flee from the source of fear.
+		Panicked: Shaken, must drop held items and flee randomly. If cornered, cowers.
+	Regeneration (Ex): Damage taken is converted to nonlethal damage. Heals nonlethal damage at a set rate.
+		Bypassed by: Specific damage types (commonly acid and fire) deal lethal damage that is not regenerated.
+		Can regrow or reattach lost body parts.
+	Spell Resistance (SR) (Ex): A creature's ability to ignore spells.
+		Mechanic: To affect the creature, caster must make a caster level check: `1d20 + Caster Level ≥ Creature's SR`.
+		Applies to: Spells and Spell-Like abilities.
+		Does not apply to: Extraordinary and Supernatural abilities.
+	Turn Resistance (Ex): Creature is harder for Clerics/Paladins to turn or rebuke.
+		Mechanic: Add the Turn Resistance value to the creature's Hit Dice when resolving the turning attempt.
+
+#### Sensory Abilities
+
+| Ability     | Type | Range        | Details                                                                                                                                   | Negates                               |
+| :---------- | :--- | :----------- | :---------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------ |
+| Darkvision  | Ex   | Varies (60 ft. typical) | See in total darkness. Vision is black and white. Does not negate concealment or invisibility. Light does not hamper it.         | Darkness                              |
+| Low-Light Vision | Ex   | N/A          | See twice as far as a human in dim light (starlight, moonlight). Retains color vision.                                              | Poor illumination                     |
+| Blindsense  | Ex   | Varies       | Pinpoint creatures without sight. Targeted creatures still have total concealment (50% miss chance). Does not work in a vacuum.           | Invisibility, Darkness                |
+| Blindsight  | Ex   | Varies       | Operate perfectly without sight. Targeted creatures do not have concealment. Cannot distinguish color or read. Does not work in a vacuum. | Invisibility, Darkness, Concealment, Blur, Displacement |
+| Scent       | Ex   | 30 ft. (60 upwind, 15 downwind) | Detect creatures by smell. Pinpoints location within 5 ft. Can be used with the Track feat. Strong smells can double/triple range. | Invisibility, Darkness, Concealment     |
+| Tremorsense | Ex   | Varies       | Automatically sense the location of anything moving and in contact with the same ground/surface.                                    | Invisibility, Darkness, Concealment     |
+
+#### Conditions
+
+| Condition        | Effects                                                                                                                                                                  |
+| :--------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ability Damaged | Temporarily lose ability score points. Recovers 1 point/day. 0 Str = Helpless. 0 Dex = Paralyzed. 0 Con = Dead. 0 Int/Wis/Cha = Unconscious.                              |
+| Ability Drained | Permanently lose ability score points. Only restored by magic. Effects of 0 score are the same as damaged.                                                                |
+| Blinded      | Cannot see. -2 AC, lose Dex bonus to AC, move at half speed, -4 on most Str/Dex based checks. Opponents have total concealment (50% miss chance).                            |
+| Confused     | Acts randomly (d%): 01-10 Attack caster, 11-20 Act normally, 21-50 Babble, 51-70 Flee caster, 71-100 Attack nearest.                                                         |
+| Cowering     | Frozen in fear. Cannot take actions. -2 AC, lose Dex bonus to AC.                                                                                                            |
+| Dazed        | Cannot take actions. No penalty to AC.                                                                                                                                       |
+| Dazzled      | -1 on attack rolls, Search, and Spot checks.                                                                                                                                 |
+| Deafened     | Cannot hear. -4 on initiative checks, auto-fail Listen checks, 20% arcane spell failure for spells with verbal components.                                                   |
+| Disabled     | At 0 HP. Can take a single move or standard action. Strenuous actions cause 1 damage, making you Dying.                                                                      |
+| Dying        | At -1 to -9 HP. Unconscious. Lose 1 HP/round unless stabilized (10% chance per round or DC 15 Heal check).                                                                   |
+| Entangled    | Move at half speed, cannot run/charge, -2 on attack rolls, -4 to Dexterity. Casting spells requires a Concentration check (DC 15 + spell level).                             |
+| Exhausted    | Move at half speed, -6 penalty to Str and Dex. After 1 hour of rest, becomes Fatigued.                                                                                       |
+| Fatigued     | Cannot run or charge, -2 penalty to Str and Dex. Further fatigue causes exhaustion. Cured by 8 hours of rest.                                                                |
+| Flat-Footed  | Has not acted yet in combat. Lose Dex bonus to AC, cannot make attacks of opportunity.                                                                                       |
+| Frightened   | -2 penalty on attacks, saves, and checks. Must flee from source of fear if able.                                                                                             |
+| Grappling    | Engaged in melee struggle. Limited actions. Lose Dex bonus to AC against non-grappled opponents.                                                                             |
+| Helpless     | Paralyzed, unconscious, sleeping, bound, etc. Treated as having Dex 0 (-5 modifier). Melee attacks gain +4 bonus. Subject to coup de grace.                                  |
+| Incorporeal  | No physical body. Immune to non-magical attacks. 50% chance to ignore damage from corporeal sources (except force effects). Attacks ignore armor, shield, and natural armor. |
+| Invisible    | Visually undetectable. +2 on attacks. Opponents lose Dex bonus to AC. Opponents have 50% miss chance.                                                                        |
+| Nauseated    | Unable to attack, cast spells, or do anything requiring attention. Can take a single move action per turn.                                                                   |
+| Panicked     | Drops everything and flees randomly. If cornered, cowers. -2 on all saves and checks.                                                                                        |
+| Paralyzed    | Str and Dex are 0. Helpless. Can take purely mental actions.                                                                                                                 |
+| Petrified    | Turned to stone. Unconscious.                                                                                                                                                |
+| Pinned       | Held immobile in a grapple. Not helpless.                                                                                                                                    |
+| Prone        | On the ground. -4 on melee attacks. +4 AC vs. ranged attacks. -4 AC vs. melee attacks.                                                                                       |
+| Shaken       | -2 penalty on attack rolls, saves, skill checks, and ability checks.                                                                                                         |
+| Sickened     | -2 penalty on all attack rolls, weapon damage rolls, saves, skill checks, and ability checks.                                                                                |
+| Staggered    | Nonlethal damage equals current HP. Can take a single move or standard action per turn.                                                                                      |
+| Stunned      | Drops everything held, can't take actions, -2 penalty to AC, and loses Dex bonus to AC.                                                                                      |
+| Unconscious  | At -1 to -9 HP, or when nonlethal damage exceeds current HP. Helpless.                                                                                                       |
+
+
+### Combat Rules
+
+#### Combat Sequence
+
+1.  Surprise Round (if applicable): Combatants who are aware of the enemy can take one standard or move action.
+2.  Initiative: All combatants roll `1d20 + Dex Modifier`.
+3.  Combat Rounds:
+		Combatants act in initiative order, from highest to lowest.
+		On your turn, you can take a full round's worth of actions (e.g., a standard action and a move action).
+		The round ends after the combatant with the lowest initiative has acted. The cycle repeats.
+
+#### Core Combat Statistics
+
+| Statistic       | Formula / Description                                                                                                                             | Notes                                                                                                                                                              |
+| :-------------- | :------------------------------------------------------------------------------------------------------------------------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Attack Bonus    | Melee: `BAB + Str Mod + Size Mod`  Ranged: `BAB + Dex Mod + Size Mod + Range Penalty`                                                    | Natural 1 is always a miss. Natural 20 is always a hit and a critical threat.                                                                                      |
+| Armor Class (AC) | `10 + Armor Bonus + Shield Bonus + Dex Mod + Size Mod + Deflection Bonus + Dodge Bonus + Natural Armor`                                            | Touch AC: Ignores Armor, Shield, and Natural Armor.  Flat-Footed AC: Ignores Dex bonus and Dodge bonuses.                                              |
+| Damage      | 1H Melee/Thrown: `Weapon Damage + Str Mod`  2H Melee: `Weapon Damage + (1.5 x Str Mod)`  Off-Hand: `Weapon Damage + (0.5 x Str Mod)` | A hit always deals at least 1 damage. Extra damage dice (from sneak attack, etc.) are not multiplied on a critical hit.                                            |
+| Saving Throw  | `d20 + Base Save Bonus + Ability Modifier`                                                                                                         | Fortitude: Con Modifier  Reflex: Dex Modifier  Will: Wis Modifier. Natural 1 is always a failure. Natural 20 is always a success.              |
+| Initiative  | `d20 + Dex Modifier`                                                                                                                                 | Determines order of action in combat.                                                                                                                              |
+| Hit Points (HP) | A measure of health. 0 = Disabled. -1 to -9 = Dying. -10 = Dead.                                                                                   |                                                                                                                                                                    |
+
+#### Actions in Combat
+
+| Action Type       | Description                                                                  | Examples                                                          |
+| :---------------- | :--------------------------------------------------------------------------- | :---------------------------------------------------------------- |
+| Standard Action | A single main action, usually an attack or spell.                            | Melee/Ranged Attack, Cast a Spell, Use Special Ability, Aid Another |
+| Move Action     | Move up to your speed or perform an equivalent action.                       | Move, Draw Weapon, Stand Up, Open a Door                          |
+| Full-Round Action | Consumes your entire turn. You can still take a 5-foot step.               | Full Attack, Charge, Run, Withdraw, Cast a 1-round spell          |
+| Free Action     | Takes negligible time. Can be performed during other actions.              | Speak, Drop an Item, Cast a Quickened Spell                       |
+| Not an Action   | So minor it doesn't count as an action.                                      | 5-foot Step, Delay                                                |
+
+*You can take 1 Standard + 1 Move Action, or 1 Full-Round Action per turn, plus any number of Free Actions.*
+
+#### Attacks of Opportunity (AoO)
+
+A free melee attack you can make against an opponent who lets their guard down in a square you threaten.
+	Threatened Area: All squares you can attack with a melee weapon (usually adjacent squares).
+	Provoking an AoO:
+		Moving out of a threatened square.
+		Casting a spell.
+		Making a ranged attack.
+		Standing up from prone.
+		Loading a crossbow.
+		Drinking a potion.
+	Limit: One AoO per round, unless you have the Combat Reflexes feat.
+
+
+### Character Classes
+
+*(This is a highly condensed overview. Full class tables and detailed features would follow this format.)*
+
+| Class       | HD   | BAB      | Good Saves | Skills/Lvl | Key Ability | Proficiencies                                                                          | Core Features                                                                                                                                 |
+| :---------- | :--- | :------- | :--------- | :--------- | :---------- | :------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------- |
+| Barbarian | d12  | Full     | Fort       | 4 + Int    | Str, Con    | Simple & Martial Weapons, Light/Medium Armor, Shields                                  | Rage, Fast Movement, Uncanny Dodge, Trap Sense, Damage Reduction                                                                              |
+| Bard    | d6   | 3/4      | Ref, Will  | 6 + Int    | Cha, Dex    | Simple Weapons, specific martial weapons, Light Armor, Shields                         | Bardic Music, Bardic Knowledge, Arcane Spells (spontaneous, Cha-based)                                                                        |
+| Cleric  | d8   | 3/4      | Fort, Will | 2 + Int    | Wis, Cha    | Simple Weapons, All Armor, Shields                                                     | Divine Spells (prepared, Wis-based), Turn/Rebuke Undead, Domains, Spontaneous Casting                                                         |
+| Druid   | d8   | 3/4      | Fort, Will | 4 + Int    | Wis         | Simple Weapons (specific), Light/Medium Armor (non-metal), Shields (non-metal)         | Animal Companion, Wild Shape, Wild Empathy, Divine Spells (prepared, Wis-based), Spontaneous Casting                                          |
+| Fighter | d10  | Full     | Fort       | 2 + Int    | Str, Dex    | All Simple & Martial Weapons, All Armor, All Shields                                   | Bonus Combat Feats                                                                                                                            |
+| Monk    | d8   | 3/4      | All        | 4 + Int    | Str, Dex, Wis | Simple Weapons (specific), Special Monk Weapons. No Armor/Shield proficiency.            | Flurry of Blows, Unarmed Strike, AC Bonus, Fast Movement, Ki Strike, Evasion                                                                  |
+| Paladin | d10  | Full     | Fort       | 2 + Int    | Str, Cha, Wis | All Simple & Martial Weapons, All Armor, All Shields                                   | Smite Evil, Divine Grace, Lay on Hands, Aura of Courage, Special Mount, Divine Spells (prepared, Wis-based), Turn Undead                     |
+| Ranger  | d8   | Full     | Fort, Ref  | 6 + Int    | Str, Dex, Wis | All Simple & Martial Weapons, Light Armor, Shields                                     | Favored Enemy, Track, Combat Style, Animal Companion, Divine Spells (prepared, Wis-based)                                                     |
+| Rogue   | d6   | 3/4      | Ref        | 8 + Int    | Dex, Int    | Simple Weapons, specific martial weapons, Light Armor.                                 | Sneak Attack, Trapfinding, Evasion, Uncanny Dodge, Trap Sense                                                                                 |
+| Sorcerer  | d4   | 1/2      | Will       | 2 + Int    | Cha         | Simple Weapons. No Armor/Shield proficiency.                                           | Arcane Spells (spontaneous, Cha-based), Summon Familiar                                                                                       |
+| Wizard  | d4   | 1/2      | Will       | 2 + Int    | Int         | Simple Weapons (specific). No Armor/Shield proficiency.                                | Arcane Spells (prepared, Int-based), Scribe Scroll, Bonus Feats, Summon Familiar, School Specialization                                       |
+
+
+### Magic & Spells
+
+#### Spellcasting Basics
+
+	Types: Arcane (Bard, Sorcerer, Wizard) & Divine (Cleric, Druid, Paladin, Ranger).
+	Schools: Abjuration, Conjuration, Divination, Enchantment, Evocation, Illusion, Necromancy, Transmutation.
+	Casting a Spell: Requires Concentration. If concentration is broken (e.g., by taking damage), you must make a Concentration check or lose the spell.
+		Concentration DC (Injury): `10 + Damage Taken + Spell Level`
+		Concentration DC (Defensive Casting): `15 + Spell Level`
+	Saving Throws: If a spell allows a save, the DC is `10 + Spell Level + Caster's Relevant Ability Modifier`.
+	Caster Level: Usually your class level. Determines range, duration, damage, and overcoming Spell Resistance.
+
+#### Arcane vs. Divine Spellcasting
+
+| Feature              | Arcane (Wizard)                                    | Arcane (Sorcerer/Bard)                                 | Divine (Cleric/Druid/etc.)                                  |
+| :------------------- | :------------------------------------------------- | :----------------------------------------------------- | :---------------------------------------------------------- |
+| Source           | Study, Intellect                                   | Innate Talent, Personality                             | Faith, Divine Source, Nature                                |
+| Key Ability      | Intelligence                                       | Charisma                                               | Wisdom                                                      |
+| Preparation      | Must prepare specific spells from spellbook daily. | Casts any known spell spontaneously.                   | Must prepare specific spells from class list daily.         |
+| Spells Known     | Limited only by spellbook contents.                | Knows a limited number of spells, gained at new levels.| Knows all spells on their class list.                       |
+| Arcane Spell Failure | Applies if wearing armor/shield.               | Applies for medium/heavy armor and shields.            | Does not apply (unless armor is prohibited, like for Druids).|
+
+
+### Skills
+
+	Skill Check: `d20 + Skill Ranks + Ability Modifier + Misc Modifiers`
+	Skill Ranks:
+		Class Skill: 1 rank per skill point. Max rank = `Character Level + 3`.
+		Cross-Class Skill: 1/2 rank per skill point. Max rank = `(Character Level + 3) / 2`.
+	Special Checks:
+		Take 10: When not threatened or distracted, you can choose to get a result of 10 on the d20 roll.
+		Take 20: If you have ample time and there is no penalty for failure, you can choose to get a result of 20 on the d20 roll. This takes 20 times as long as a normal check.
+	Aid Another: Make a DC 10 check with the same skill. If you succeed, your ally gets a +2 bonus on their check.

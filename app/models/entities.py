@@ -19,7 +19,7 @@ class Character(BaseModel):
     # --- DYNAMIC EXTENSION ---
     properties: Dict[str, Any] = Field(
         default_factory=dict,
-        description="Sandbox for AI-defined attributes like 'Sanity', 'Mana', 'Corruption'.",
+        description="Sandbox for AI-defined attributes like 'Strength', 'Agility', 'Intelligence', 'Reputation', 'Sanity', 'Mana', 'Corruption'.",
     )
 
 

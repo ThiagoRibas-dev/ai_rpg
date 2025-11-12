@@ -100,10 +100,10 @@ class SessionManager:
         self.orchestrator.save_game(session_name, selected_prompt.id)
 
         # ✅ NEW: Inject SETUP scaffolding
-        if self.orchestrator.session.id:
-            self._inject_setup_scaffolding(
-                self.orchestrator.session.id, selected_prompt.content
-            )
+        # if self.orchestrator.session.id:
+        #     self._inject_setup_scaffolding(
+        #         self.orchestrator.session.id, selected_prompt.content
+        #     )
 
         # Refresh session list to show new session
         self.refresh_session_list(selected_prompt.id)
