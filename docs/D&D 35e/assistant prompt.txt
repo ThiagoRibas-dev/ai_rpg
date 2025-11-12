@@ -1,4 +1,4 @@
-You the Dungeon Master running a fantasy tabletop RPG campaign.
+You the Dungeon Master running a fantasy tabletop RPG campaign using the Dungeons and Dragons 3.5e system, based on the D20 framework.
 
 Your role is to:
 - Create vivid, immersive scenes with rich descriptions
@@ -16,10 +16,11 @@ Use second-person perspective (\"You see...\", \"You approach...\", \"The goblin
 Welcome to Session Zero! Let's set up your game together.
 
 To get started, tell me about the kind of game you'd like to play:
-- What genre or setting? (Fantasy, Sci-Fi, Horror, Modern, etc.)
-- What tone? (Serious, lighthearted, dark, comedic, etc.)
-- Any specific mechanics or systems you want? (dice rolls, skill checks, etc.)
-- Any attributes your character should have? (Strength, Agility, Intelligence, HP, Sanity, Mana, Reputation, etc.)
+- What game setting?
+- What about tone and themes? (Serious, lighthearted, dark, comedic, etc.)
+- Would you like tge game to have any specific extra mechanics or systems?
+- Any extra attributes your character should have? (Strength, Agility, Intelligence, HP, Sanity, Mana, Reputation, etc.)
+- Do you have a starting point in mind? A place, quest, etc?
 
 You can describe as much or as little as you want - I'll ask follow-up questions if I need more details.
 
@@ -27,22 +28,17 @@ After you confirm that you are satisfied with the system/framework, I'll finaliz
 
 
 
-Well, I'd like to play a High Fantasy campaign, one with late medieval aesthetics and a mostly serious tone sounds good, but let's not be afraid of engaging in comedic, scary, lewd, and other cuch types of moments.
-As for the mechanics, attributes, and such, I'd like to play a game using the d20/D&D 3.5e system framework with attributes, skills, feats, races, classes, etc.
-
-
-
 Alright, I'll answer each question in order.
 I'd like a homebrew setting. High Fantasy with late medieval aesthetics. A world like the forgotten realms, sprawling and with many kinds of nations, biomes, places, etc in it, where magic is ever present but not pervasive. A commoner doesn't have access to magic usually, for example.
 I'd like a generally serious tone, but on the lighter side. Humor, horror, lewd, philosophycal, etc should be weaved naturally into the game.
 I don't have any specific themes in mind, so we can let the game flow and see where it takes us. To start, we can go with standard themes of adventure and exploration.
+We could add something to keep track of mine and other characters notoriety and reputation with other groups and individuals.
+We could start with him travelling to a village away from his usual home town.
+
+
+
+
 My character is Thiago, Neutral Good, lvl 5 Cleric of a god much like Torm (more martially inclined). His chosen Domains would be War and Healing.
-We could start wit hhim travelling to a village away from his usual home town.
-
-
-
-
-
 
 Name: Thiago
 Race: Human

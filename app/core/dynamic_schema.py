@@ -3,7 +3,7 @@ from typing import List, Type, Union  # Added Annotated
 
 from pydantic import BaseModel, Field, create_model, field_validator
 
-from app.io.schemas import TurnPlan
+from app.llm.schemas import TurnPlan
 
 logger = logging.getLogger(__name__)
 

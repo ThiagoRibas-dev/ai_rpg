@@ -210,7 +210,7 @@ class PromptDialog(ctk.CTkToplevel):
     def _generate_template_background(self, rules_text: str):
         """Background thread for AI processing."""
         try:
-            from app.core.template_generator import TemplateGenerator
+            from app.setup.template_generator import TemplateGenerator
             
             # ✅ NEW: Use the passed-in connector
             if not self.llm_connector:
@@ -230,7 +230,7 @@ class PromptDialog(ctk.CTkToplevel):
     def _on_template_generated(self, template: dict | None, error: str | None):
         """Handle template generation result."""
         import json
-        from app.core.template_generator import validate_descriptions
+        from app.setup.template_generator import validate_descriptions
         
         self.generate_btn.configure(state="normal")
         

@@ -4,7 +4,7 @@ Schema query tool - look up game mechanics on-demand.
 
 def handler(query_type: str, specific_name: str | None = None, **context) -> dict:
     """Query game schema for detailed mechanics."""
-    from app.core.setup_manifest import SetupManifest
+    from app.setup.setup_manifest import SetupManifest
     
     session_id = context.get("session_id")
     db = context.get("db_manager")

@@ -12,7 +12,8 @@ import customtkinter as ctk
 from app.gui.styles import get_button_style
 from app.gui.utils.ui_helpers import get_mode_display
 from app.models.game_session import GameSession
-from app.core.setup_manifest import SetupManifest
+from app.setup.scaffolding import inject_setup_scaffolding # <-- NEW IMPORT
+from app.setup.setup_manifest import SetupManifest
 
 logger = logging.getLogger(__name__)
 
@@ -108,11 +109,6 @@ class SessionManager:
     def new_game(self, selected_prompt):
         """
         Create a new game session with initial GM message and scaffolding.
-
-        UPDATED:
-        - Adds initial_message from prompt as first assistant message
-        - Injects SETUP scaffolding into game state
-        - Displays initial message in chat immediately
         """
         if not selected_prompt:
             return
@@ -134,44 +130,21 @@ class SessionManager:
         self.orchestrator.save_game(session_name, selected_prompt.id)
 
         # ✅ NEW: Inherit template manifest into session
-        if self.orchestrator.session.id and selected_prompt.template_manifest:
+        session_id = self.orchestrator.session.id
+        if session_id and selected_prompt.template_manifest:
             self._apply_template_to_session(
-                self.orchestrator.session.id, selected_prompt.template_manifest
+                session_id, selected_prompt.template_manifest
             )
+        
+        # ✅ NEW: Inject scaffolding now using the centralized helper
+        if session_id:
+            inject_setup_scaffolding(
+                session_id, selected_prompt.content, self.db_manager
+            )
+            logger.info(f"Injected scaffolding for session {session_id}")
 
         # Refresh session list to show new session
         self.refresh_session_list(selected_prompt.id)
-
-    def _inject_setup_scaffolding(self, session_id: int, prompt_content: str):
-        """
-        Inject initial scaffolding structure for SETUP mode.
-
-        Args:
-            session_id: Current session ID
-            prompt_content: The prompt content (used for genre detection)
-        """
-        from app.core.scaffolding_templates import (
-            detect_genre_from_prompt,
-            get_genre_specific_scaffolding,
-            get_setup_scaffolding,
-        )
-
-        # Detect genre and get appropriate scaffolding
-        genre = detect_genre_from_prompt(prompt_content)
-
-        if genre != "generic":
-            scaffolding = get_genre_specific_scaffolding(genre)
-        else:
-            scaffolding = get_setup_scaffolding()
-
-        # Inject scaffolding into database
-        for entity_type, entities in scaffolding.items():
-            for entity_key, entity_data in entities.items():
-                self.db_manager.set_game_state_entity(
-                    session_id, entity_type, entity_key, entity_data
-                )
-
-        logger.info(f"Injected {genre} scaffolding for session {session_id}")
 
     def load_game(self, session_id: int, bubble_manager):
         """
