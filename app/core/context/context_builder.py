@@ -40,7 +40,7 @@ class ContextBuilder:
         self.logger = logger or logging.getLogger(__name__)
 
     def build_static_system_instruction(
-        self, game_session: GameSession, tool_schemas: List[dict]
+        self, game_session: GameSession, tool_schemas: List[dict], schema_ref: str = ""
     ) -> str:
         """
 
@@ -67,17 +67,23 @@ class ContextBuilder:
 
         sections.append(user_game_prompt)
 
-        # 2. Tool schemas (only if tools are available)
+        # 2. ✅ NEW: Lean schema reference (if exists)
+        if schema_ref:
+            sections.append("# GAME MECHANICS QUICK REFERENCE")
+            sections.append(schema_ref)
+            sections.append("Use schema.query or state.query for detailed values.")
+
+        # 3. Tool schemas (only if tools are available)
 
         if tool_schemas:
-            sections.append("# AVAILABLE TOOLS #")
+            sections.append("# AVAILABLE TOOLS")
 
             sections.append(json.dumps(tool_schemas, indent=2))
 
-        # 3. Author's note (if exists)
+        # 4. Author's note (if exists)
 
         if game_session.authors_note:
-            sections.append("# NOTE #")
+            sections.append("# NOTE")
 
             sections.append(game_session.authors_note)
 

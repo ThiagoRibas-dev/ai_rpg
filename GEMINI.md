@@ -36,7 +36,7 @@ Changes every turn and is appended via **assistant message prefill**:
 
 #### Implementation Details
 1. **Session.system_prompt**: Stored separately from chat history (not in messages array)
-2. **ContextBuilder.build_static_system_instruction()**: Builds cacheable prompt once per session/mode
+2. **ContextBuilder.build_static_system_instruction()**: Builds static system prompts that the API can cache and reuse
 3. **ContextBuilder.build_dynamic_context()**: Builds fresh context every turn
 4. **Services use assistant prefill**: Each phase injects instructions + context as assistant message
 5. **Chat history updated once**: After all phases complete, narrative is added to history

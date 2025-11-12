@@ -12,26 +12,30 @@ class SessionRepository(BaseRepository):
         """Create a new game session."""
         cursor = self._execute(
             """INSERT INTO sessions 
-               (name, session_data, prompt_id, memory, authors_note, game_mode) 
-               VALUES (?, ?, ?, '', '', 'SETUP')""",
+               (name, session_data, prompt_id, memory, authors_note, game_mode, setup_phase_data) 
+               VALUES (?, ?, ?, '', '', 'SETUP', '{}')""",
             (name, session_data, prompt_id),
         )
         self._commit()
+        session_id = cursor.lastrowid
+        if session_id is None:
+            raise ValueError("Failed to retrieve session ID after insertion.")
         return GameSession(
-            id=cursor.lastrowid,
+            id=session_id,
             name=name,
             session_data=session_data,
             prompt_id=prompt_id,
             memory="",
             authors_note="",
             game_mode="SETUP",
+            setup_phase_data="{}",
         )
 
     def get_by_id(self, session_id: int) -> Optional[GameSession]:
         """Load a session by ID."""
         row = self._fetchone(
             """SELECT id, name, session_data, prompt_id, memory, authors_note, 
-                      game_time, game_mode 
+                      game_time, game_mode, setup_phase_data
                FROM sessions WHERE id = ?""",
             (session_id,),
         )
@@ -43,7 +47,7 @@ class SessionRepository(BaseRepository):
         """Get all sessions."""
         rows = self._fetchall(
             """SELECT id, name, session_data, prompt_id, memory, authors_note, 
-                      game_time, game_mode 
+                      game_time, game_mode, setup_phase_data
                FROM sessions"""
         )
         return [GameSession(**dict(row)) for row in rows]
@@ -52,7 +56,7 @@ class SessionRepository(BaseRepository):
         """Get all sessions for a specific prompt."""
         rows = self._fetchall(
             """SELECT id, name, session_data, prompt_id, memory, authors_note, 
-                      game_time, game_mode 
+                      game_time, game_mode, setup_phase_data
                FROM sessions WHERE prompt_id = ?""",
             (prompt_id,),
         )

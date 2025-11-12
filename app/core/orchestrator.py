@@ -39,6 +39,8 @@ from app.tools.schemas import (
     SchemaDefineProperty,
     StateApplyPatch,
 )
+from app.core.setup_manifest import SetupManifest
+from app.core.llm.prompts import build_lean_schema_reference
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -158,6 +160,7 @@ class Orchestrator:
                 if current_game_mode == "SETUP":
                     setup_tool_names = [
                         SchemaDefineProperty.model_fields["name"].default,
+                        "schema.query",
                         EndSetupAndStartGameplay.model_fields["name"].default,
                     ]
                     available_tool_models = self.tool_registry.get_tool_models(
@@ -176,8 +179,14 @@ class Orchestrator:
                         f"GAMEPLAY mode: {len(available_tool_models)} tools available."
                     )
                 # ===== BUILD STATIC SYSTEM INSTRUCTION =====
+                manifest_mgr = SetupManifest(thread_db_manager)
+                manifest = manifest_mgr.get_manifest(game_session.id)
+
+                # Build lean schema reference
+                schema_ref = build_lean_schema_reference(manifest)
+
                 static_instruction = context_builder.build_static_system_instruction(
-                    game_session, available_tool_schemas_json
+                    game_session, available_tool_schemas_json, schema_ref
                 )
                 # ===== BUILD CHAT HISTORY (ONCE, before all phases) =====
                 session_in_thread = Session.from_json(game_session.session_data)

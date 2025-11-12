@@ -1,20 +1,18 @@
 """
 Manages game session CRUD operations and UI.
-
-New responsibilities:
-- Create/load/save game sessions
-- Handle session selection
-- Update session context (memory, author's note)
-- Coordinate with orchestrator
 """
 
-import customtkinter as ctk
+import json
 import logging
 from datetime import datetime
-from typing import Optional, Callable
-from app.models.game_session import GameSession
+from typing import Callable, Optional
+
+import customtkinter as ctk
+
 from app.gui.styles import get_button_style
 from app.gui.utils.ui_helpers import get_mode_display
+from app.models.game_session import GameSession
+from app.core.setup_manifest import SetupManifest
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +69,42 @@ class SessionManager:
         """
         return self._selected_session
 
+    def _apply_template_to_session(self, session_id: int, template_json: str):
+        """Copy template manifest into session's setup_phase_data."""
+
+        try:
+            template = json.loads(template_json)
+
+            # If template is empty, keep default empty manifest
+            if not template or template == {}:
+                return
+
+            # Merge template with session-specific fields
+            manifest_mgr = SetupManifest(self.db_manager)
+
+            session_manifest = {
+                "genre": template.get("genre"),
+                "tone": template.get("tone"),
+                "entity_schemas": template.get("entity_schemas", {"character": {}}),
+                "rule_schemas": template.get("rule_schemas", []),
+                "conditions": template.get("conditions", []),
+                "skills": template.get("skills", []),
+                "action_economy": template.get("action_economy"),
+                "classes": template.get("classes", []),
+                "races": template.get("races", []),
+                # Session-specific (not from template)
+                "player_character": None,
+                "starting_location": None,
+                "ready_to_play": False,
+            }
+
+            manifest_mgr.update_manifest(session_id, session_manifest, merge=False)
+
+            logger.info(f"Applied template to session {session_id}")
+
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse template manifest: {e}")
+
     def new_game(self, selected_prompt):
         """
         Create a new game session with initial GM message and scaffolding.
@@ -99,11 +133,11 @@ class SessionManager:
         # Save to get session ID
         self.orchestrator.save_game(session_name, selected_prompt.id)
 
-        # ✅ NEW: Inject SETUP scaffolding
-        # if self.orchestrator.session.id:
-        #     self._inject_setup_scaffolding(
-        #         self.orchestrator.session.id, selected_prompt.content
-        #     )
+        # ✅ NEW: Inherit template manifest into session
+        if self.orchestrator.session.id and selected_prompt.template_manifest:
+            self._apply_template_to_session(
+                self.orchestrator.session.id, selected_prompt.template_manifest
+            )
 
         # Refresh session list to show new session
         self.refresh_session_list(selected_prompt.id)
@@ -117,9 +151,9 @@ class SessionManager:
             prompt_content: The prompt content (used for genre detection)
         """
         from app.core.scaffolding_templates import (
-            get_setup_scaffolding,
             detect_genre_from_prompt,
             get_genre_specific_scaffolding,
+            get_setup_scaffolding,
         )
 
         # Detect genre and get appropriate scaffolding

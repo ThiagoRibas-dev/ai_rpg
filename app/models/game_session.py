@@ -11,3 +11,4 @@ class GameSession:
     authors_note: str = ""
     game_time: str = "Day 1, Dawn"
     game_mode: str = "SETUP"  # Added for Session Zero
+    setup_phase_data: str = "{}"

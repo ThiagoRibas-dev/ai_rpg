@@ -64,3 +64,12 @@ This document outlines the planned features and development milestones for the A
 *   **Initial Message Injection on Session Creation:** Automatically add the prompt's `initial_message` as the first assistant message when creating a new game session, ensuring players immediately see the Game Master's opening setup question in the chat history.
 
 *   **SETUP Mode Scaffolding System:** Implement automatic injection of initial JSON structure (character/inventory/location templates) when a new game enters SETUP mode, providing the AI with a foundation to build upon rather than creating entities from scratch, with optional genre-specific suggestions (fantasy/sci-fi/horror/cyberpunk).
+
+## V9: Rules Pre-processing and Template Management
+
+*   **AI-Generated Game Templates:** Introduce a new feature that allows users to input raw rules documents (SRD, homebrew, etc.) from which the AI can automatically generate structured game templates. These templates capture core mechanics like attributes, resources, skills, and action economy.
+*   **Rich Template Schema:** Implement a comprehensive Pydantic model (`GameTemplate`) to represent the structured game mechanics, ensuring semantic clarity and consistency for AI processing.
+*   **Lean System Prompt Integration:** Utilize the generated game templates to create a highly compressed, "lean" schema reference that is injected into the AI's system prompt. This significantly reduces token usage while still providing the AI with essential game mechanic information.
+*   **On-Demand Schema Query Tool:** Develop a `schema.query` tool that allows the AI to dynamically look up detailed information about game mechanics (attributes, skills, classes, etc.) from the active game template. This enables the AI to "ask" for rules details as needed, rather than memorizing the entire ruleset.
+*   **Streamlined Session Setup:** New game sessions can now automatically inherit the AI-generated game template from the selected prompt, drastically reducing the manual setup time for new games.
+*   **Enhanced Prompt Management UI:** Update the prompt creation/editing dialog to include fields for rules document input and a preview of the AI-generated template, providing a more intuitive user experience for defining game systems.

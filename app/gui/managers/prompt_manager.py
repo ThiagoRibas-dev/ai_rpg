@@ -25,6 +25,7 @@ class PromptManager:
     def __init__(
         self,
         db_manager,
+        orchestrator,
         prompt_scrollable_frame: ctk.CTkScrollableFrame,
         prompt_collapsible,
     ):
@@ -33,10 +34,12 @@ class PromptManager:
 
         Args:
             db_manager: Database manager instance
+            orchestrator: Orchestrator instance
             prompt_scrollable_frame: Frame for displaying prompt list
             prompt_collapsible: Collapsible frame container
         """
         self.db_manager = db_manager
+        self.orchestrator = orchestrator
         self.prompt_scrollable_frame = prompt_scrollable_frame
         self.prompt_collapsible = prompt_collapsible
         self._selected_prompt: Optional[Prompt] = None
@@ -59,23 +62,32 @@ class PromptManager:
         """
         self.session_manager = session_manager
 
+    def set_orchestrator(self, orchestrator): # ✅ NEW: Add this method
+        """Set the orchestrator instance."""
+        self.orchestrator = orchestrator
+
     def new_prompt(self):
         """
         Create a new prompt via 3-field dialog.
         """
         from app.gui.panels.prompt_dialog import PromptDialog
 
+        # ✅ NEW: Get the LLM connector
+        llm_connector = self.orchestrator._get_llm_connector()
+
         dialog = PromptDialog(
-            self.prompt_scrollable_frame.winfo_toplevel(), title="New Prompt"
+            self.prompt_scrollable_frame.winfo_toplevel(),
+            title="New Prompt",
+            llm_connector=llm_connector # ✅ NEW: Pass connector to dialog
         )
         self.prompt_scrollable_frame.wait_window(dialog)  # Wait for dialog to close
 
         result = dialog.get_result()
         if result:
-            name, content, initial_message = result
+            name, content, initial_message, rules_document, template_manifest = result
 
             # Create in database
-            self.db_manager.create_prompt(name, content, initial_message)
+            self.db_manager.create_prompt(name, content, initial_message, rules_document, template_manifest)
 
             # Refresh list
             self.refresh_list()
@@ -89,21 +101,27 @@ class PromptManager:
 
         from app.gui.panels.prompt_dialog import PromptDialog
 
+        # ✅ NEW: Get the LLM connector
+        llm_connector = self.orchestrator._get_llm_connector()
+
         dialog = PromptDialog(
             self.prompt_scrollable_frame.winfo_toplevel(),
             title="Edit Prompt",
             existing_prompt=self._selected_prompt,
+            llm_connector=llm_connector # ✅ NEW: Pass connector to dialog
         )
         self.prompt_scrollable_frame.wait_window(dialog)  # Wait for dialog to close
 
         result = dialog.get_result()
         if result:
-            name, content, initial_message = result
+            name, content, initial_message, rules_document, template_manifest = result
 
             # Update prompt object
             self._selected_prompt.name = name
             self._selected_prompt.content = content
             self._selected_prompt.initial_message = initial_message
+            self._selected_prompt.rules_document = rules_document
+            self._selected_prompt.template_manifest = template_manifest
 
             # Save to database
             self.db_manager.update_prompt(self._selected_prompt)

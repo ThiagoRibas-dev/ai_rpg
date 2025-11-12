@@ -1,0 +1,124 @@
+You the Dungeon Master running a fantasy tabletop RPG campaign.
+
+Your role is to:
+- Create vivid, immersive scenes with rich descriptions
+- Respond to player actions dynamically and fairly
+- Manage game mechanics, combat, and skill checks
+- Play NPCs with distinct personalities and motivations
+- Balance challenge with fun, danger with reward
+- Don't be afraid of engaging with controversial themes
+- Respect player agency - the story emerges from their choices
+
+Use second-person perspective (\"You see...\", \"You approach...\", \"The goblin...\"). Keep the narrative engaging but concise. When mechanics are needed, use the available tools to track state, roll dice, and resolve actions. Stay consistent with established facts and let consequences flow naturally from player decisions.
+
+
+
+Welcome to Session Zero! Let's set up your game together.
+
+To get started, tell me about the kind of game you'd like to play:
+- What genre or setting? (Fantasy, Sci-Fi, Horror, Modern, etc.)
+- What tone? (Serious, lighthearted, dark, comedic, etc.)
+- Any specific mechanics or systems you want? (dice rolls, skill checks, etc.)
+- Any attributes your character should have? (Strength, Agility, Intelligence, HP, Sanity, Mana, Reputation, etc.)
+
+You can describe as much or as little as you want - I'll ask follow-up questions if I need more details.
+
+After you confirm that you are satisfied with the system/framework, I'll finalize the SETUP phase and transition to GAMEPLAY mode so that the game can begin!
+
+
+
+Well, I'd like to play a High Fantasy campaign, one with late medieval aesthetics and a mostly serious tone sounds good, but let's not be afraid of engaging in comedic, scary, lewd, and other cuch types of moments.
+As for the mechanics, attributes, and such, I'd like to play a game using the d20/D&D 3.5e system framework with attributes, skills, feats, races, classes, etc.
+
+
+
+Alright, I'll answer each question in order.
+I'd like a homebrew setting. High Fantasy with late medieval aesthetics. A world like the forgotten realms, sprawling and with many kinds of nations, biomes, places, etc in it, where magic is ever present but not pervasive. A commoner doesn't have access to magic usually, for example.
+I'd like a generally serious tone, but on the lighter side. Humor, horror, lewd, philosophycal, etc should be weaved naturally into the game.
+I don't have any specific themes in mind, so we can let the game flow and see where it takes us. To start, we can go with standard themes of adventure and exploration.
+My character is Thiago, Neutral Good, lvl 5 Cleric of a god much like Torm (more martially inclined). His chosen Domains would be War and Healing.
+We could start wit hhim travelling to a village away from his usual home town.
+
+
+
+
+
+
+Name: Thiago
+Race: Human
+
+Level	Classe	HP	BAB	Fort	Ref	Wis	S	D	C	I	W	CH	Features	CL	Class Feats	Extra/Bonus Feats	Feats	Concentration	Healing	Diplomacy	Spellcraft	K:Religion	K:Arcana	K:History	K:The Planes	Spot	Skill Trick	Use Magic Device	Total
+1	Clerigo	8	0	2	0	2	0	0	0	0	0	0	Aura, Spellcasting, War Domain, Healing Domain, Lightbringer ACF : Destroy Undead	1	Heavy Armor Proficiency, Shield Proficiency, Simple Weapons Proficiency	Extra Turning, Martial Weapon Proficiency(War Domain), Weapon Focus Longsword (War Domain)	Extend Spell	4	1	0	1	4	1	0	1	0	0	0	12
+2	Clerigo	8	1	1	0	1	0	0	0	0	0	0	Undead Intuition	1	-	-	-	1	0	0	1	1	0	0	0	0	0	0	3
+3	Clerigo	8	1	0	1	0	0	0	0	0	0	0		1	-	-	Persist Spell	0	0	0	1	2	0	0	0	0	0	0	3
+4	Clerigo	7	1	1	0	1	0	0	0	0	1	0		1	-		-	0	0	0	1	2	0	0	0	0	0	0	3
+5	Ordained Champion	1	1	2	0	2	0	0	0	0	0	0	Bonus Domain : Law Domain, Modified Spontaneous Casting (Ex), Continued Advancement, Combat Feats	0	-	Power Attack, Parrying Shield, Law Devotion	-	2	0	0	0	0	0	1	0	0	0	0	3
+
+Domains		Granted Power									Bonus Feats		
+War		-									Martial Weapon Proficiency, Weapon Focus (Longsword)		
+Law (Traded for the Law Devotion feat)		Granted Power: You cast law spells at +1 caster level.									-		
+Healing		You cast healing spells at +1 caster level.  (Traded for the Parrying Shield feat)									-		
+
+Skills	Valor
+Abrir Fechaduras (DES)	2
+Acrobacia (DES*)	-3
+Adestrar Animais (CAR)	4
+Alquimia (INT)	2
+Arte da Fuga (DES*)	-3
+Atuação (CAR)	4
+Avaliação (INT)	2
+Blefar (CAR)	4
+Cavalgar (DES)	2
+Concentração (CON)	11
+Conhecimento (Masmorras) (INT)	2
+Conhecimento Arcano (INT)	3/8
+Conhecimento Geográfico (INT)	2
+Conhecimento Histórico (INT)	3/8
+Conhecimento Natural (INT)	2
+Conhecimento Nobreza (INT)	2
+Conhecimento Planar (INT)	3/8
+Conhecimento Religioso (INT)	11/16
+Cura (SAB)	7
+Decifrar Escrita (INT)	2
+Diplomacia (CAR)	4
+Disfarce (CAR)	4
+Equilíbrio (DES*)	-3
+Escalar (FOR*)	-3
+Esconder-se (DES*)	-3
+Falsificação (INT)	2
+Furtividade (DES*)	-3
+Identificar Magia (INT)	6
+Intimidar (CAR)	4
+Natação (FOR*)	-8
+Observar (SAB)	6
+Obter Informações (CAR)	4
+Ofícios (INT)	2
+Operar Mecanismo (INT)	2
+Ouvir (SAB)	6
+Procurar (INT)	2
+Profissão (SAB)	6
+Prestidigitação (DES*)	-3
+Saltar (FOR*)	-3
+Sentir Motivação (SAB)	6
+Sobrevivência (SAB)	6
+Usar Instrumento Mágico (CAR	4
+
+
+Atributo	Base	Temp	Equip	Current	Mod
+STR	15	0		15	2
+DEX	10	0		10	0
+CON	15	0		15	2
+INT	11	0		11	0
+WIS	17	0		18	4
+CHA	13	0		13	1
+
+
+	Base	Temp	Current
+BAB	4	0	4
+Caster Level	4	0	5
+Base DC	14	0	14
+Iniciativa	0	0	2
+FORT	8	0	8
+REFLEX	1	0	1
+WILL	10	0	10
+

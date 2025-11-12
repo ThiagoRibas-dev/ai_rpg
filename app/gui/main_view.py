@@ -188,15 +188,6 @@ class MainView(ctk.CTk):
             self.inspector_manager.tool_calls_frame
         )
 
-        # Prompt manager
-        # REPLACES: Prompt methods (lines 621-700)
-        self.prompt_manager = PromptManager(
-            self.db_manager, self.prompt_scrollable_frame, self.prompt_collapsible
-        )
-
-        # Refresh prompt list
-        self.prompt_manager.refresh_list()
-
         # Session manager and UI queue handler will be initialized in set_orchestrator()
         # because they need the orchestrator instance
 
@@ -208,6 +199,15 @@ class MainView(ctk.CTk):
             orchestrator: Orchestrator instance
         """
         self.orchestrator = orchestrator
+
+        # Prompt manager
+        # REPLACES: Prompt methods (lines 621-700)
+        self.prompt_manager = PromptManager(
+            self.db_manager, orchestrator, self.prompt_scrollable_frame, self.prompt_collapsible
+        )
+
+        # Refresh prompt list
+        self.prompt_manager.refresh_list()
 
         # Initialize history manager (needs orchestrator)
         from app.gui.managers.history_manager import HistoryManager
@@ -233,6 +233,7 @@ class MainView(ctk.CTk):
         # Wire prompt manager to session manager
         # Enable cross-manager coordination
         self.prompt_manager.set_session_manager(self.session_manager)
+        self.prompt_manager.set_orchestrator(orchestrator)
 
         # Wire session manager button callbacks (late binding)
         # Connect session buttons to manager methods

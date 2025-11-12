@@ -74,10 +74,17 @@ class DBManager:
 
     # Prompts
     def create_prompt(
-        self, name: str, content: str, initial_message: str = ""
+        self,
+        name: str,
+        content: str,
+        initial_message: str = "",
+        rules_document: str = "",
+        template_manifest: str = "{}",
     ) -> Prompt:
         with self.conn:
-            return self.prompts.create(name, content, initial_message)
+            return self.prompts.create(
+                name, content, initial_message, rules_document, template_manifest
+            )
 
     def get_all_prompts(self) -> List[Prompt]:
         with self.conn:
@@ -300,7 +307,9 @@ class DBManager:
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         name TEXT NOT NULL,
                         content TEXT NOT NULL,
-                        initial_message TEXT DEFAULT ''
+                        initial_message TEXT DEFAULT '',
+                        rules_document TEXT DEFAULT '',
+                        template_manifest TEXT DEFAULT '{}'
                     )        """)
 
     def _create_sessions_table(self):
@@ -314,6 +323,7 @@ class DBManager:
                 authors_note TEXT DEFAULT '',
                 game_time TEXT DEFAULT 'Day 1, Dawn',
                 game_mode TEXT DEFAULT 'SETUP',
+                setup_phase_data TEXT DEFAULT '{}',
                 FOREIGN KEY (prompt_id) REFERENCES prompts (id)
             )
         """)

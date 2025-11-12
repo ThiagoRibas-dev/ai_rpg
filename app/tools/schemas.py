@@ -449,3 +449,30 @@ class CharacterUpdate(BaseModel):
         ...,
         description="List of key-value pairs for updates. Supports core attributes (hp_current, hp_max, conditions, etc) and custom properties (str, dex, skill_spot, etc).",
     )
+
+
+class SchemaQuery(BaseModel):
+    """
+    Query detailed information about game mechanics.
+    
+    Use this when you need to know:
+    - What a specific attribute/skill/class does
+    - What actions are available in combat
+    - Details about game mechanics
+    """
+    name: Literal["schema.query"] = "schema.query"
+    
+    query_type: Literal[
+        "attribute",
+        "resource",
+        "skill",
+        "action_economy",
+        "class",
+        "race",
+        "all"
+    ]
+    
+    specific_name: Optional[str] = Field(
+        None,
+        description="Name of specific item to query. Leave blank for all of that type."
+    )
