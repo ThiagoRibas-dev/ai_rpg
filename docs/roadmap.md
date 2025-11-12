@@ -73,3 +73,6 @@ This document outlines the planned features and development milestones for the A
 *   **On-Demand Schema Query Tool:** Develop a `schema.query` tool that allows the AI to dynamically look up detailed information about game mechanics (attributes, skills, classes, etc.) from the active game template. This enables the AI to "ask" for rules details as needed, rather than memorizing the entire ruleset.
 *   **Streamlined Session Setup:** New game sessions can now automatically inherit the AI-generated game template from the selected prompt, drastically reducing the manual setup time for new games.
 *   **Enhanced Prompt Management UI:** Update the prompt creation/editing dialog to include fields for rules document input and a preview of the AI-generated template, providing a more intuitive user experience for defining game systems.
+
+## V10: Sequential Game Template Generation
+*   **Refactoring of single-shot Game Template Generation:** Refactor the single-shot `GameTemplate` generation into a more robust, multi-step pipeline. This approach improves reliability, quality, and enable context-passing between generation steps.
