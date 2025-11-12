@@ -1,4 +1,4 @@
-﻿### Core Game Mechanics
+﻿### Dungeons and Dragons 3.5e (D&D 3.5e) Core Game Mechanics
 
 #### The Core Mechanic
 
@@ -231,13 +231,59 @@ A free melee attack you can make against an opponent who lets their guard down i
 | Arcane Spell Failure | Applies if wearing armor/shield.               | Applies for medium/heavy armor and shields.            | Does not apply (unless armor is prohibited, like for Druids).|
 
 
-### Skills
+### General Skill Rules
 
-	Skill Check: `d20 + Skill Ranks + Ability Modifier + Misc Modifiers`
+	Skill Check Formula: `d20 + Skill Ranks + Ability Modifier + Misc. Modifiers`
 	Skill Ranks:
 		Class Skill: 1 rank per skill point. Max rank = `Character Level + 3`.
 		Cross-Class Skill: 1/2 rank per skill point. Max rank = `(Character Level + 3) / 2`.
 	Special Checks:
-		Take 10: When not threatened or distracted, you can choose to get a result of 10 on the d20 roll.
-		Take 20: If you have ample time and there is no penalty for failure, you can choose to get a result of 20 on the d20 roll. This takes 20 times as long as a normal check.
-	Aid Another: Make a DC 10 check with the same skill. If you succeed, your ally gets a +2 bonus on their check.
+		Take 10: When not threatened or distracted, you can opt for a result of 10 on the d20 roll.
+		Take 20: With ample time and no penalty for failure, you can opt for a result of 20 on the d20 roll. This takes 20 times longer than a normal check.
+	Aid Another: Make a DC 10 check with the same skill. If successful, your ally gets a +2 bonus on their check.
+
+### Skills Summary Matrix
+
+| Skill | Key Ability | Trained? | ACP? | Description | Action | Try Again? |
+| Appraise | INT | No | No | Estimate the monetary value of an item. | 1 Minute | No |
+| Autohypnosis | WIS | Yes | No | Use mental focus to control your own body and mind to resist various effects. | Reaction/None | Varies |
+| Balance | DEX | No | Yes | Keep your footing on narrow, uneven, or unstable surfaces. | Part of Movement | Yes |
+| Bluff | CHA | No | No | Deceive others, feint in combat, or send secret messages. | Varies | Varies |
+| Climb | STR | No | Yes | Scale walls, cliffs, and other steep inclines. | Part of Movement | Yes |
+| Concentration | CON | No | No | Maintain focus on a task (like spellcasting) when distracted by damage or other events. | Reaction/None | Yes |
+| Control Shape | WIS | No | No | (Lycanthropes only) Control or resist transformation into animal/hybrid form. | Standard Action | Varies |
+| Craft | INT | No | No | Make or repair items of a specific type (e.g., weapons, armor, alchemy). | Long-Term | Yes |
+| Decipher Script| INT | Yes | No | Read unknown languages, archaic texts, or coded messages. | Varies | No |
+| Diplomacy | CHA | No | No | Persuade NPCs, improve their attitudes, and negotiate peacefully. | 1 Minute+ | No |
+| Disable Device| INT | Yes | No | Disarm traps and disable or sabotage mechanical devices. | Full-Round+ | Varies |
+| Disguise | CHA | No | No | Alter your appearance to look like someone or something else. | Minutes | Yes |
+| Escape Artist| DEX | No | Yes | Wriggle out of bonds, grapples, or tight spaces. | Varies | Yes |
+| Forgery | INT | No | No | Create or detect fake documents. | Minutes | No |
+| Gather Info | CHA | No | No | Collect rumors, local news, and specific information in a community. | Hours | Yes |
+| Handle Animal| CHA | Yes | No | Train, command, and work with animals. | Varies | Yes |
+| Heal | WIS | No | No | Provide medical care to stabilize the dying, treat wounds, poison, and disease. | Varies | Varies |
+| Hide | DEX | No | Yes | Conceal yourself from sight using cover or concealment. | Part of Movement | Yes |
+| Intimidate | CHA | No | No | Frighten or coerce others through threats, presence, or demoralizing them in combat. | Varies | No |
+| Jump | STR | No | Yes | Leap across horizontal gaps or over vertical obstacles. | Part of Movement | Yes |
+| Knowledge | INT | Yes | No | Recall lore and facts about a specific field of study (e.g., Arcana, History, Nature). | None | No |
+| Listen | WIS | No | No | Hear noises, detect stealthy creatures, and eavesdrop on conversations. | Reaction/None | Yes |
+| Martial Lore | INT | Yes | No | Identify martial maneuvers and disciplines as they are used. | Varies | Varies |
+| Move Silently | DEX | No | Yes | Move without making a sound to avoid being heard. | Part of Movement | Yes |
+| Open Lock | DEX | Yes | No | Pick locks on chests, doors, and other secured containers. | Full-Round Action | Yes |
+| Perform | CHA | No | No | Entertain an audience with music, acting, dance, or another artistic expression. | Varies | Yes |
+| Profession | WIS | Yes | No | Use a trained vocation (e.g., sailor, miner) to earn a living or perform related tasks. | Long-Term | Varies |
+| Psicraft | INT | Yes | No | Identify psionic powers and their effects. | Reaction/None | No |
+| Ride | DEX | No | No | Mount, guide, and control a mount, especially in difficult situations or combat. | Varies | Yes |
+| Search | INT | No | No | Actively look for hidden objects, secret doors, simple traps, or clues. | Full-Round Action | Yes |
+| Sense Motive | WIS | No | No | Detect lies, sense hidden motives, and read social situations. | Varies | No |
+| Sleight of Hand| DEX | Yes | Yes | Pick pockets, palm small objects, and perform feats of manual dexterity. | Standard Action | Yes |
+| Speak Language| N/A | Yes | No | Learn to speak, read, and write a new language. | N/A | N/A |
+| Spellcraft | INT | Yes | No | Identify spells and magic effects, and work with magical writings like scrolls. | Reaction/None | No |
+| Spot | WIS | No | No | Notice things with your eyes, such as hidden creatures, details, or someone in disguise. | Reaction/None | Yes |
+| Survival | WIS | No | No | Survive in the wild by finding food, navigating, avoiding hazards, and following tracks. | Varies | Varies |
+| Swim | STR | No | Yes | Move through water without drowning. | Part of Movement | Yes |
+| Truespeak | INT | Yes | No | Correctly pronounce powerful truenames to create magical or other effects. | Standard Action | Yes |
+| Tumble | DEX | Yes | Yes | Use acrobatics to avoid attacks of opportunity when moving or to reduce falling damage. | Part of Movement | No |
+| Use Magic Device| CHA | Yes | No | Activate a magic item (wand, scroll, etc.) that you normally could not use. | Part of Activation | Yes |
+| Use Psionic Device| CHA | Yes | No | Activate a psionic item (dorje, power stone, etc.) that you normally could not use. | Part of Activation | Yes |
+| Use Rope | DEX | No | No | Tie effective knots, secure ropes, and bind prisoners. | Varies | Yes |

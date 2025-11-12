@@ -139,5 +139,3 @@ class GameTemplate(BaseModel):
     
     classes: List[ClassDefinition] = Field(default_factory=list)
     races: List[RaceDefinition] = Field(default_factory=list)
-    
-    analysis_notes: str = ""
