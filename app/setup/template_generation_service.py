@@ -1,6 +1,6 @@
 import logging
 import json
-from typing import Dict, Any, List, Callable, Optional
+from typing import Dict, Any, List, Callable, Optional, cast
 from pydantic import BaseModel, create_model
 
 from app.llm.llm_connector import LLMConnector
@@ -10,16 +10,17 @@ from app.models.game_schemas import (
     SkillDefinition, ConditionDefinition, ClassDefinition, RaceDefinition,
     SkillList, ConditionList, ClassList, RaceList
 )
-# We will create these new prompts in the next step
+# Use the new instruction-based prompts
 from app.prompts.templates import (
-    GENERATE_ENTITY_SCHEMA_PROMPT,
-    GENERATE_CORE_RULE_PROMPT,
-    GENERATE_DERIVED_RULES_PROMPT,
-    GENERATE_ACTION_ECONOMY_PROMPT,
-    GENERATE_SKILLS_PROMPT,
-    GENERATE_CONDITIONS_PROMPT,
-    GENERATE_CLASSES_PROMPT,
-    GENERATE_RACES_PROMPT
+    TEMPLATE_GENERATION_SYSTEM_PROMPT,
+    GENERATE_ENTITY_SCHEMA_INSTRUCTION,
+    GENERATE_CORE_RULE_INSTRUCTION,
+    GENERATE_DERIVED_RULES_INSTRUCTION,
+    GENERATE_ACTION_ECONOMY_INSTRUCTION,
+    GENERATE_SKILLS_INSTRUCTION,
+    GENERATE_CONDITIONS_INSTRUCTION,
+    GENERATE_CLASSES_INSTRUCTION,
+    GENERATE_RACES_INSTRUCTION
 )
 
 logger = logging.getLogger(__name__)
@@ -38,6 +39,15 @@ class TemplateGenerationService:
         self.llm = llm
         self.rules_text = rules_text
         self.status_callback = status_callback
+        
+        # --- V11 REFACTOR: Create a single, static system prompt ---
+        self.static_system_prompt = f"""{TEMPLATE_GENERATION_SYSTEM_PROMPT}
+
+# GAME RULES DOCUMENT
+---
+{self.rules_text}
+---
+"""
 
     def _update_status(self, message: str):
         """Safely invokes the status callback if it exists."""
@@ -52,7 +62,7 @@ class TemplateGenerationService:
         self._update_status("Analyzing Attributes & Resources...")
         entity_schemas = self._generate_entity_schemas()
         attributes_list = entity_schemas.attributes if entity_schemas else []
-        attributes_context = json.dumps(attributes_list)
+        attributes_context = json.dumps([attr.model_dump() for attr in attributes_list], indent=2)
         
         # --- Step 2a: Generate Core Resolution Mechanic ---
         self._update_status("Defining Core Resolution Mechanic...")
@@ -60,7 +70,6 @@ class TemplateGenerationService:
         
         # --- Step 2b: Generate Derived Rules & Mechanics ---
         self._update_status("Defining Specific Game Mechanics...")
-        # Feed the core rule into the prompt for the next step!
         core_rule_context = core_rule.model_dump_json(indent=2) if core_rule else "No core rule defined."
         derived_rules: List[RuleSchema] = self._generate_derived_rules(attributes_context, core_rule_context)
         
@@ -73,7 +82,7 @@ class TemplateGenerationService:
         # Step 4: Generate Skills
         self._update_status("Extracting Skills...")
         skills = self._generate_skills(attributes_context)
-        skills_context = json.dumps([skill.model_dump() for skill in skills])
+        skills_context = json.dumps([skill.model_dump() for skill in skills], indent=2)
 
         # Step 5: Generate Conditions
         self._update_status("Defining Conditions...")
@@ -107,143 +116,134 @@ class TemplateGenerationService:
         """Generates entity schemas (attributes and resources)."""
         from typing import cast
         result = self.llm.get_structured_response(
-            system_prompt=GENERATE_ENTITY_SCHEMA_PROMPT,
-            chat_history=[Message(role="user", content=self.rules_text)],
+            system_prompt=self.static_system_prompt,
+            chat_history=[Message(role="user", content=GENERATE_ENTITY_SCHEMA_INSTRUCTION)],
             output_schema=EntitySchema
         )
-        return cast(EntitySchema, result) or EntitySchema() # Return empty object on failure
+        return cast(EntitySchema, result) or EntitySchema()
 
     def _generate_core_rule(self, attributes_context: str) -> Optional[RuleSchema]:
         """Generates the core rule, using attributes as context."""
-        prompt = f"""
-        Here are the rules:
-        {self.rules_text}
-        
-        Here are the attributes that have already been defined for a character:
-        {attributes_context}
-        
-        Now, define the single core rule for action resolution.
-        """
+        user_instruction = f"""{GENERATE_CORE_RULE_INSTRUCTION}
+
+# CONTEXT: DEFINED ATTRIBUTES
+---
+{attributes_context}
+---
+"""
         from typing import cast
         result = self.llm.get_structured_response(
-            system_prompt=GENERATE_CORE_RULE_PROMPT,
-            chat_history=[Message(role="user", content=prompt)],
+            system_prompt=self.static_system_prompt,
+            chat_history=[Message(role="user", content=user_instruction)],
             output_schema=RuleSchema
         )
         return cast(Optional[RuleSchema], result)
 
     def _generate_derived_rules(self, attributes_context: str, core_rule_context: str) -> List[RuleSchema]:
-        """
-        Generates specific rules like AC, saves, movement, etc.,
-        using the core rule as a foundation.
-        """
-        # This prompt is much more comprehensive, as you wanted.
-        prompt = f"""
-        Here are the game rules to analyze:
-        {self.rules_text}
-        
-        We have already defined the following core character attributes:
-        {attributes_context}
-        
-        And we have defined the FOUNDATIONAL action resolution mechanic as:
-        {core_rule_context}
-        
-        Now, using the foundational mechanic as a pattern, extract and define the specific rules for the following concepts if they are present in the rules text:
-        - Armor Class / Defense calculation
-        - Saving Throws or Resistance checks
-        - Initiative or turn order determination
-        - Movement rules (speed, difficult terrain, etc.)
-        - Rules for Cover and/or Concealment
-        - Any other key combat or exploration mechanics.
-        
-        For each rule, provide a name, a description, and a formula if applicable.
-        """
-        RulesWrapper = create_model(
-            "RulesWrapper",
-            rules=(
-                List[RuleSchema]
-            ),
-            __base__=BaseModel,
-        )
+        """Generates specific rules, using the core rule as a foundation."""
+        user_instruction = f"""{GENERATE_DERIVED_RULES_INSTRUCTION}
+
+# CONTEXT: DEFINED ATTRIBUTES
+---
+{attributes_context}
+---
+
+# CONTEXT: CORE RESOLUTION MECHANIC
+---
+{core_rule_context}
+---
+"""
+        RulesWrapper = create_model("RulesWrapper", rules=(List[RuleSchema], ...), __base__=BaseModel)
         
         result = self.llm.get_structured_response(
-            system_prompt=GENERATE_DERIVED_RULES_PROMPT,
-            chat_history=[Message(role="user", content=prompt)],
-            output_schema= RulesWrapper
+            system_prompt=self.static_system_prompt,
+            chat_history=[Message(role="user", content=user_instruction)],
+            output_schema=RulesWrapper
         )
-        return result.rules if result else []
+        casted_result = cast(RulesWrapper, result)
+        return casted_result.rules if casted_result else []
 
     def _generate_action_economy(self) -> Optional[ActionEconomyDefinition]:
         """Generates the action economy definition."""
         from typing import cast
         result = self.llm.get_structured_response(
-            system_prompt=GENERATE_ACTION_ECONOMY_PROMPT,
-            chat_history=[Message(role="user", content=self.rules_text)],
+            system_prompt=self.static_system_prompt,
+            chat_history=[Message(role="user", content=GENERATE_ACTION_ECONOMY_INSTRUCTION)],
             output_schema=ActionEconomyDefinition
         )
         return cast(Optional[ActionEconomyDefinition], result)
 
     def _generate_skills(self, attributes_context: str) -> List[SkillDefinition]:
         """Generates skills, ensuring they link to existing attributes."""
-        prompt = f"""
-        Rules: {self.rules_text}
-        Defined Attributes: {attributes_context}
-        
-        Extract all skills from the rules. For each skill, ensure you set 'linked_attribute'
-        to one of the provided attribute names.
-        """
+        user_instruction = f"""{GENERATE_SKILLS_INSTRUCTION}
+
+# CONTEXT: DEFINED ATTRIBUTES
+---
+{attributes_context}
+---
+"""
         from typing import cast
         result = self.llm.get_structured_response(
-            system_prompt=GENERATE_SKILLS_PROMPT,
-            chat_history=[Message(role="user", content=prompt)],
-            output_schema=SkillList  # Use the wrapper model
+            system_prompt=self.static_system_prompt,
+            chat_history=[Message(role="user", content=user_instruction)],
+            output_schema=SkillList
         )
         casted_result = cast(SkillList, result)
-        return casted_result.skills if casted_result else [] # Unwrap the list from the result object
+        return casted_result.skills if casted_result else []
 
     def _generate_conditions(self) -> List[ConditionDefinition]:
         """Generates conditions."""
         from typing import cast
         result = self.llm.get_structured_response(
-            system_prompt=GENERATE_CONDITIONS_PROMPT,
-            chat_history=[Message(role="user", content=self.rules_text)],
-            output_schema=ConditionList # Use the wrapper model
+            system_prompt=self.static_system_prompt,
+            chat_history=[Message(role="user", content=GENERATE_CONDITIONS_INSTRUCTION)],
+            output_schema=ConditionList
         )
         casted_result = cast(ConditionList, result)
-        return casted_result.conditions if casted_result else [] # Unwrap the list from the result object
+        return casted_result.conditions if casted_result else []
 
     def _generate_classes(self, attributes_context: str, skills_context: str) -> List[ClassDefinition]:
         """Generates classes, using attributes and skills as context."""
-        prompt = f"""
-        Rules: {self.rules_text}
-        Defined Attributes: {attributes_context}
-        Defined Skills: {skills_context}
-        
-        Extract all character classes from the rules.
-        """
+        user_instruction = f"""{GENERATE_CLASSES_INSTRUCTION}
+
+# CONTEXT: DEFINED ATTRIBUTES
+---
+{attributes_context}
+---
+
+# CONTEXT: DEFINED SKILLS
+---
+{skills_context}
+---
+"""
         from typing import cast
         result = self.llm.get_structured_response(
-            system_prompt=GENERATE_CLASSES_PROMPT,
-            chat_history=[Message(role="user", content=prompt)],
-            output_schema=ClassList # Use the wrapper model
+            system_prompt=self.static_system_prompt,
+            chat_history=[Message(role="user", content=user_instruction)],
+            output_schema=ClassList
         )
         casted_result = cast(ClassList, result)
-        return casted_result.classes if casted_result else [] # Unwrap the list from the result object
+        return casted_result.classes if casted_result else []
 
     def _generate_races(self, attributes_context: str, skills_context: str) -> List[RaceDefinition]:
         """Generates races, using attributes and skills as context."""
-        prompt = f"""
-        Rules: {self.rules_text}
-        Defined Attributes: {attributes_context}
-        Defined Skills: {skills_context}
-        
-        Extract all character races/species from the rules.
-        """
+        user_instruction = f"""{GENERATE_RACES_INSTRUCTION}
+
+# CONTEXT: DEFINED ATTRIBUTES
+---
+{attributes_context}
+---
+
+# CONTEXT: DEFINED SKILLS
+---
+{skills_context}
+---
+"""
         from typing import cast
         result = self.llm.get_structured_response(
-            system_prompt=GENERATE_RACES_PROMPT,
-            chat_history=[Message(role="user", content=prompt)],
-            output_schema=RaceList # Use the wrapper model
+            system_prompt=self.static_system_prompt,
+            chat_history=[Message(role="user", content=user_instruction)],
+            output_schema=RaceList
         )
         casted_result = cast(RaceList, result)
-        return casted_result.races if casted_result else [] # Unwrap the list from the result object
+        return casted_result.races if casted_result else []

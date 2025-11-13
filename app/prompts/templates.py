@@ -4,8 +4,15 @@ from app.tools.schemas import (
     EndSetupAndStartGameplay,
 )
 
-GENERATE_ENTITY_SCHEMA_PROMPT = """
-You are a game system analyst. Your task is to extract ONLY the core Attributes (like Strength, Dexterity, Intelligence) and Resources (like Health, Mana, Sanity) from the provided rules text.
+# ==============================================================================
+# RULES EXTRACTION PROMPTS
+# ==============================================================================
+
+TEMPLATE_GENERATION_SYSTEM_PROMPT = """You are a meticulous game system analyst. You will be provided with the full text of a game's rules. Following that, you will be given a series of specific tasks to extract and structure different parts of the game's mechanics into a JSON format. Follow each task's instructions precisely and output ONLY the requested JSON object.
+"""
+
+GENERATE_ENTITY_SCHEMA_INSTRUCTION = """
+Your task is to extract ONLY the core Attributes (like Strength, Dexterity, Intelligence) and Resources (like Health, Mana, Sanity) from the provided rules text.
 
 - **Attributes:** Fixed scores that characters possess.
 - **Resources:** Pools that can be spent or depleted.
@@ -13,14 +20,14 @@ You are a game system analyst. Your task is to extract ONLY the core Attributes 
 For every attribute and resource, you MUST provide a concise, one-sentence description of its purpose in the game.
 """
 
-GENERATE_CORE_RULE_PROMPT = """
-You are a game system analyst. Based on the provided rules and the defined character attributes, your task is to identify and define the single, primary action resolution mechanic. This is the core dice roll of the game (e.g., '1d20 + Attribute Modifier vs. Difficulty Class').
+GENERATE_CORE_RULE_INSTRUCTION = """
+Based on the provided rules and the defined character attributes (provided as context), your task is to identify and define the single, primary action resolution mechanic. This is the core dice roll of the game (e.g., '1d20 + Attribute Modifier vs. Difficulty Class').
 """
 
-GENERATE_DERIVED_RULES_PROMPT = """
-You are a game system analyst. Your task is to define specific, derived game mechanics based on a foundational rule that has already been established.
+GENERATE_DERIVED_RULES_INSTRUCTION = """
+Your task is to define specific, derived game mechanics based on a foundational rule that has already been established.
 
-You will be given the original rules text, the defined character attributes, and the core action resolution mechanic.
+You will be given the original rules text, the defined character attributes, and the core action resolution mechanic as context.
 
 Now, using the foundational mechanic as a pattern, extract and define the other rules and systems. A couple of examples of rules would be:
 - **Defensive Systems:** How do characters avoid or reduce harm? Is it a static target number (like Armor Class), an active defense roll (like Dodge/Parry), a way to soak/reduce damage after being hit, or something else entirely?
@@ -34,27 +41,75 @@ Now, using the foundational mechanic as a pattern, extract and define the other 
 For each rule you create, ensure it is consistent with the provided foundational mechanic.
 """
 
-GENERATE_ACTION_ECONOMY_PROMPT = """
-You are a game system analyst. Your task is to analyze the provided rules and determine the game's Action Economy - the structure of a character's turn. Identify the system type (e.g., Action Points, Fixed Action Types like 'Standard/Move/Bonus', etc.) and describe its components.
+GENERATE_ACTION_ECONOMY_INSTRUCTION = """
+Your task is to analyze the provided rules and determine the game's Action Economy - the structure of a character's turn. Identify the system type (e.g., Action Points, Fixed Action Types like 'Standard/Move/Bonus', etc.) and describe its components.
 """
 
-GENERATE_SKILLS_PROMPT = """
-You are a game system analyst. Your task is to extract all Skills from the provided rules text.
+GENERATE_SKILLS_INSTRUCTION = """
+Your task is to extract all Skills from the provided rules text.
 You will be given the list of Attributes that have already been defined.
 For each skill you identify, you MUST link it to one of the provided attributes in the `linked_attribute` field.
 """
 
-GENERATE_CONDITIONS_PROMPT = """
-You are a game system analyst. Your task is to extract all status effects, also known as Conditions (e.g., 'Blinded', 'Poisoned', 'Stunned'), from the provided rules text. For each condition, provide a concise description of its mechanical effect.
+GENERATE_CONDITIONS_INSTRUCTION = """
+Your task is to extract all status effects, also known as Conditions (e.g., 'Blinded', 'Poisoned', 'Stunned'), from the provided rules text. For each condition, provide a concise description of its mechanical effect.
 """
 
-GENERATE_CLASSES_PROMPT = """
-You are a game system analyst. Your task is to identify and define the character Classes (e.g., 'Warrior', 'Mage', 'Rogue') from the rules. You will be provided with the game's attributes and skills for context. For each class, describe its primary role and key features.
+GENERATE_CLASSES_INSTRUCTION = """
+Your task is to identify and define the character Classes (e.g., 'Warrior', 'Mage', 'Rogue') from the rules. You will be provided with the game's attributes and skills for context. For each class, describe its primary role and key features.
 """
 
-GENERATE_RACES_PROMPT = """
-You are a game system analyst. Your task is to identify and define the character Races or Species (e.g., 'Elf', 'Dwarf', 'Orc') from the rules. You will be provided with the game's attributes and skills for context. For each race, describe its unique traits.
+GENERATE_RACES_INSTRUCTION = """
+Your task is to identify and define the character Races or Species (e.g., 'Elf', 'Dwarf', 'Orc') from the rules. You will be provided with the game's attributes and skills for context. For each race, describe its unique traits.
 """
+
+# ==============================================================================
+# SETUP MODE PROMPTS
+# ==============================================================================
+
+SETUP_PLAN_TEMPLATE = f"""
+Okay. Let me check the current game mode:
+ - CURRENT GAME MODE: SETUP (Session Zero)
+
+Alright, so we are still in the systems and world-building phase. My goal is to help the player define the rules, tone, and mechanics of the game.
+
+Here's what I'll do exactly:
+1.  **Understand the player's message:** I'll analyze their input to see what genre, tone, setting, properties, or mechanical ideas they proposed or accepted and create a checklist.
+2.  **Evaluate the current setup:** I'll see what we've already defined (skills, attributes, rules, etc.) and compare the player's choices with the current state to see what's missing or needs clarification.
+3.  **Use the right tool for the job:**
+    *   **`{SchemaDefineProperty.model_fields["name"].default}`**: I'll use this tool to save or persist any new or updated attributes, rules, mechanics, skills, etc, once per property.
+    *   **`{EndSetupAndStartGameplay.model_fields["name"].default}`**: If and only if the player has explicitly confirmed that the setup is complete and we are ready to begin the game, I'll use this tool to transition to the gameplay phase. I must provide a `reason` for using this tool.
+4.  **Plan my response:** After any tool calls, I'll plan my response to the player. This usually involves summarizing the current setup, explaining any new properties, and asking what they want to work on next.
+
+"""
+
+SETUP_RESPONSE_TEMPLATE = """
+Alright. Let me check the current game mode:
+ - CURRENT GAME MODE: SETUP (Session Zero)
+
+We are still in the SETUP game mode (Session Zero phase), so the player has not yet confirmed that the setup is complete.
+Right now I need to get as much information as possible about the desired world, rules, tone, mechanics, etc, of the game's system or framework, efficiently. I should encourage the player to provide detailed information in their responses.
+
+There are a variety of examples I can take inspiration from for my suggestions:
+ - Fantasy Adventure: Dungeons & Dragons, Pathfinder, The Elder Scrolls, Zork, King's Quest â†’ Stats like Strength, Intelligence, Mana, Hit Points, Alignment, Encumbrance.
+ - Sci-Fi & Space Opera: Traveller, Starfinder, Mass Effect, Fallen London, Eventide â†’ Oxygen, Energy, Engineering, Reputation, Ship Integrity, Morale.
+ - Cyberpunk & Dystopia: Shadowrun, Cyberpunk 2020/RED, Deus Ex, AI Dungeon â†’ Augmentation Level, Cred, Street Rep, Heat, Cyberpsychosis.
+ - Mystery / Noir: GUMSHOE, Blades in the Dark, The Case of the Golden Idol, 80 Days â†’ Clues, Reputation, Vice, Stress, Insight.
+ - Lighthearted / Slice of Life: Honey Heist, PokÃ©mon Tabletop, Animal Crossing, 80 Days, A Dark Room â†’ Friendship, Charm, Luck, Creativity, Chaos Meter.
+ - Horror & Investigation: Call of Cthulhu, World of Darkness, Sunless Sea, Anchorhead â†’ Sanity, Stress, Willpower, Clue Points, Fear, Insight.
+Etc.
+
+I'll do the following:
+ - Summarize what's been defined so far
+ - Acknowledge any new or updated properties and explain what each represents, how it might work in play, and how it fits the genre or tone we've been developing.
+ - Ask what the player would like to do next: refine, add, or finalize the setup.
+ - If appropriate, I'll suggest optional refinements, like adding modifiers, linking properties to dice mechanics, etc.
+
+"""
+
+# ==============================================================================
+# GAMEPLAY MODE PROMPTS
+# ==============================================================================
 
 PLAN_TEMPLATE = """
 Alright. I am now in the planning phase. My role is to:
@@ -106,45 +161,5 @@ Each choice should be:
 - Relevant to the current situation
 - Distinct from other choices
 - Offering diverse options (e.g., combat, diplomacy, investigation, stealth)
-
-"""
-
-SETUP_PLAN_TEMPLATE = f"""
-Okay. Let me check the current game mode:
- - CURRENT GAME MODE: SETUP (Session Zero)
-
-Alright, so we are still in the systems and world-building phase. My goal is to help the player define the rules, tone, and mechanics of the game.
-
-Here's what I'll do exactly:
-1.  **Understand the player's message:** I'll analyze their input to see what genre, tone, setting, properties, or mechanical ideas they proposed or accepted and create a checklist.
-2.  **Evaluate the current setup:** I'll see what we've already defined (skills, attributes, rules, etc.) and compare the player's choices with the current state to see what's missing or needs clarification.
-3.  **Use the right tool for the job:**
-    *   **`{SchemaDefineProperty.model_fields["name"].default}`**: I'll use this tool to save or persist any new or updated attributes, rules, mechanics, skills, etc, once per property.
-    *   **`{EndSetupAndStartGameplay.model_fields["name"].default}`**: If and only if the player has explicitly confirmed that the setup is complete and we are ready to begin the game, I'll use this tool to transition to the gameplay phase. I must provide a `reason` for using this tool.
-4.  **Plan my response:** After any tool calls, I'll plan my response to the player. This usually involves summarizing the current setup, explaining any new properties, and asking what they want to work on next.
-
-"""
-
-SETUP_RESPONSE_TEMPLATE = """
-Alright. Let me check the current game mode:
- - CURRENT GAME MODE: SETUP (Session Zero)
-
-We are still in the SETUP game mode (Session Zero phase), so the player has not yet confirmed that the setup is complete.
-Right now I need to get as much information as possible about the desired world, rules, tone, mechanics, etc, of the game's system or framework, efficiently. I should encourage the player to provide detailed information in their responses.
-
-There are a variety of examples I can take inspiration from for my suggestions:
- - Fantasy Adventure: Dungeons & Dragons, Pathfinder, The Elder Scrolls, Zork, King's Quest → Stats like Strength, Intelligence, Mana, Hit Points, Alignment, Encumbrance.
- - Sci-Fi & Space Opera: Traveller, Starfinder, Mass Effect, Fallen London, Eventide → Oxygen, Energy, Engineering, Reputation, Ship Integrity, Morale.
- - Cyberpunk & Dystopia: Shadowrun, Cyberpunk 2020/RED, Deus Ex, AI Dungeon → Augmentation Level, Cred, Street Rep, Heat, Cyberpsychosis.
- - Mystery / Noir: GUMSHOE, Blades in the Dark, The Case of the Golden Idol, 80 Days → Clues, Reputation, Vice, Stress, Insight.
- - Lighthearted / Slice of Life: Honey Heist, Pokémon Tabletop, Animal Crossing, 80 Days, A Dark Room → Friendship, Charm, Luck, Creativity, Chaos Meter.
- - Horror & Investigation: Call of Cthulhu, World of Darkness, Sunless Sea, Anchorhead → Sanity, Stress, Willpower, Clue Points, Fear, Insight.
-Etc.
-
-I'll do the following:
- - Summarize what's been defined so far
- - Acknowledge any new or updated properties and explain what each represents, how it might work in play, and how it fits the genre or tone we've been developing.
- - Ask what the player would like to do next: refine, add, or finalize the setup.
- - If appropriate, I'll suggest optional refinements, like adding modifiers, linking properties to dice mechanics, etc.
 
 """
