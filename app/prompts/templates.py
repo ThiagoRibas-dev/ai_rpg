@@ -51,6 +51,12 @@ You will be given the list of Attributes that have already been defined.
 For each skill you identify, you MUST link it to one of the provided attributes in the `linked_attribute` field.
 """
 
+GENERATE_SKILLS_INSTRUCTION_ITERATIVE = """
+Your task is to extract additional Skills from the provided rules text that are NOT present in the list of skills already found.
+
+If you cannot find any more skills, return an empty list.
+"""
+
 GENERATE_CONDITIONS_INSTRUCTION = """
 Your task is to extract all status effects, also known as Conditions (e.g., 'Blinded', 'Poisoned', 'Stunned'), from the provided rules text. For each condition, provide a concise description of its mechanical effect.
 """

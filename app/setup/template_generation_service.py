@@ -1,16 +1,15 @@
 import logging
 import json
-from typing import Dict, Any, List, Callable, Optional, cast
+from typing import Dict, Any, List, Callable, Optional, Type, TypeVar, cast
 from pydantic import BaseModel, create_model
 
 from app.llm.llm_connector import LLMConnector
 from app.models.message import Message
 from app.models.game_schemas import (
     GameTemplate, EntitySchema, RuleSchema, ActionEconomyDefinition,
-    SkillDefinition, ConditionDefinition, ClassDefinition, RaceDefinition,
+    ConditionDefinition, ClassDefinition, RaceDefinition,
     SkillList, ConditionList, ClassList, RaceList
 )
-# Use the new instruction-based prompts
 from app.prompts.templates import (
     TEMPLATE_GENERATION_SYSTEM_PROMPT,
     GENERATE_ENTITY_SCHEMA_INSTRUCTION,
@@ -18,12 +17,16 @@ from app.prompts.templates import (
     GENERATE_DERIVED_RULES_INSTRUCTION,
     GENERATE_ACTION_ECONOMY_INSTRUCTION,
     GENERATE_SKILLS_INSTRUCTION,
+    GENERATE_SKILLS_INSTRUCTION_ITERATIVE,
     GENERATE_CONDITIONS_INSTRUCTION,
     GENERATE_CLASSES_INSTRUCTION,
     GENERATE_RACES_INSTRUCTION
 )
 
 logger = logging.getLogger(__name__)
+
+# Generic Type for our Pydantic models
+T = TypeVar('T', bound=BaseModel)
 
 class TemplateGenerationService:
     """Orchestrates the multi-step generation of a GameTemplate from rules."""
@@ -54,6 +57,88 @@ class TemplateGenerationService:
         if self.status_callback:
             self.status_callback(message)
 
+    # ==============================================================================
+    # Iterative Generation Helper
+    # ==============================================================================
+    def _iterative_generation_loop(
+        self,
+        initial_instruction: str,
+        iterative_instruction: str,
+        output_schema: Type[T],
+        list_accessor: str,
+        context_key: str,
+        context_data: str = "",
+        max_iterations: int = 5
+    ) -> List[Any]:
+        """
+        A generic loop to iteratively extract a list of items from the rules.
+
+        Args:
+            initial_instruction: The prompt for the first call.
+            iterative_instruction: The prompt for subsequent calls.
+            output_schema: The Pydantic model that wraps the list (e.g., SkillList).
+            list_accessor: The attribute name of the list within the schema (e.g., "skills").
+            context_key: The placeholder name for the list of found items in the prompt.
+            context_data: Additional static context (like attributes).
+            max_iterations: Safety break to prevent infinite loops.
+        """
+        all_items = []
+        found_item_names = set()
+
+        for i in range(max_iterations):
+            self._update_status(f"Running {context_key} extraction pass {i + 1}...")
+
+            # Use initial prompt on first loop, iterative on subsequent ones
+            current_instruction = initial_instruction if i == 0 else iterative_instruction
+
+            # Build the user prompt with context
+            found_items_context = json.dumps([item.model_dump() for item in all_items], indent=2)
+            
+            user_prompt = f"""{current_instruction}
+{context_data}
+
+# CONTEXT: {context_key.upper()} ALREADY FOUND
+---
+{found_items_context}
+---
+"""
+            
+            # Make the LLM call
+            response = self.llm.get_structured_response(
+                system_prompt=self.static_system_prompt,
+                chat_history=[Message(role="user", content=user_prompt)],
+                output_schema=output_schema
+            )
+
+            if not response:
+                break # Stop if we get no response
+
+            new_items = getattr(response, list_accessor, [])
+
+            # Termination condition: model returned an empty list
+            if not new_items:
+                self._update_status(f"No new {context_key} found. Concluding extraction.")
+                break
+
+            # Filter out duplicates before adding
+            unique_new_items = []
+            for item in new_items:
+                item_name = getattr(item, 'name', '').lower()
+                if item_name and item_name not in found_item_names:
+                    unique_new_items.append(item)
+                    found_item_names.add(item_name)
+            
+            if unique_new_items:
+                all_items.extend(unique_new_items)
+                self._update_status(f"Found {len(unique_new_items)} new {context_key}. Total: {len(all_items)}.")
+            else:
+                 # Stop if all returned items were duplicates
+                self._update_status(f"No unique new {context_key} found. Concluding extraction.")
+                break
+        
+        return all_items
+
+
     def generate_template(self) -> Dict[str, Any]:
         """
         Run the full generation pipeline and assemble the final GameTemplate.
@@ -79,9 +164,18 @@ class TemplateGenerationService:
         self._update_status("Designing Action Economy...")
         action_economy = self._generate_action_economy()
 
-        # Step 4: Generate Skills
-        self._update_status("Extracting Skills...")
-        skills = self._generate_skills(attributes_context)
+        # ==============================================================================
+        # MODIFIED: Use the iterative loop for skills
+        # ==============================================================================
+        self._update_status("Extracting Skills (iteratively)...")
+        skills = self._iterative_generation_loop(
+            initial_instruction=GENERATE_SKILLS_INSTRUCTION,
+            iterative_instruction=GENERATE_SKILLS_INSTRUCTION_ITERATIVE,
+            output_schema=SkillList,
+            list_accessor="skills",
+            context_key="Skills",
+            context_data=f"# CONTEXT: DEFINED ATTRIBUTES\n---\n{attributes_context}\n---"
+        )
         skills_context = json.dumps([skill.model_dump() for skill in skills], indent=2)
 
         # Step 5: Generate Conditions
@@ -172,24 +266,6 @@ class TemplateGenerationService:
             output_schema=ActionEconomyDefinition
         )
         return cast(Optional[ActionEconomyDefinition], result)
-
-    def _generate_skills(self, attributes_context: str) -> List[SkillDefinition]:
-        """Generates skills, ensuring they link to existing attributes."""
-        user_instruction = f"""{GENERATE_SKILLS_INSTRUCTION}
-
-# CONTEXT: DEFINED ATTRIBUTES
----
-{attributes_context}
----
-"""
-        from typing import cast
-        result = self.llm.get_structured_response(
-            system_prompt=self.static_system_prompt,
-            chat_history=[Message(role="user", content=user_instruction)],
-            output_schema=SkillList
-        )
-        casted_result = cast(SkillList, result)
-        return casted_result.skills if casted_result else []
 
     def _generate_conditions(self) -> List[ConditionDefinition]:
         """Generates conditions."""
