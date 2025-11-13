@@ -1,7 +1,8 @@
 from app.tools.schemas import (
     MemoryUpsert,
-    SchemaDefineProperty,
+    SchemaDefine,
     EndSetupAndStartGameplay,
+    SchemaQuery,
 )
 
 # ==============================================================================
@@ -70,15 +71,19 @@ SETUP_PLAN_TEMPLATE = f"""
 Okay. Let me check the current game mode:
  - CURRENT GAME MODE: SETUP (Session Zero)
 
-Alright, so we are still in the systems and world-building phase. My goal is to help the player define the rules, tone, and mechanics of the game.
-
-Here's what I'll do exactly:
-1.  Understand the player's message: I'll analyze their input to see what genre, tone, setting, properties, or mechanical ideas they proposed or accepted and create a checklist.
-2.  Evaluate the current setup: I'll see what we've already defined (skills, attributes, rules, etc.) and compare the player's choices with the current state to see what's missing or needs clarification.
-3.  Use the right tool for the job:
-    *   `{SchemaDefineProperty.model_fields["name"].default}`: I'll use this tool to save or persist any new or updated attributes, rules, mechanics, skills, etc, once per property.
-    *   `{EndSetupAndStartGameplay.model_fields["name"].default}`: If and only if the player has explicitly confirmed that the setup is complete and we are ready to begin the game, I'll use this tool to transition to the gameplay phase. I must provide a `reason` for using this tool.
-4.  Plan my response: After any tool calls, I'll plan my response to the player. This usually involves summarizing the current setup, explaining any new properties, and asking what they want to work on next.
+My goal is to help the player define the rules, tone, and mechanics of the game and manage state (new properties, player attributes, etc).
+I will do the following:
+1. Analyze Input: Analyze our conversation, specially the player's latest message.
+2. Formulate Plan (Self-Correction): A step-by-step plan for which tools I'll call now and how I'll respond to the player after.
+3. Tool Calls: Write the calls for the `{SchemaDefine.model_fields["name"].default}`, `{SchemaQuery.model_fields["name"].default}`, and `{EndSetupAndStartGameplay.model_fields["name"].default}` based on my formulated plan.
+    - The `{SchemaQuery.model_fields["name"].default}` tool will be used to query the details of information that might be usefull for my response to the player.
+    - The `{SchemaDefine.model_fields["name"].default}` tool will be used for any addition, removel, or update I need to make to the properties and attributes of the player, campaign, etc.
+    - I will *only* ever call the `{EndSetupAndStartGameplay.model_fields["name"].default}` once the player has given the go ahead.
+    - Tool Call Examples : 
+    ```
+    "tool_calls": [ {{ "property_name": "Prop 1", "description": "Prop 1 description. Ranges from -10 to +10.", "entity_type": "character", "template": "resource", "has_max": true, "min_value": -10, "max_value": 10, "display_category": "Stats", "icon": "P", "display_format": "bar", "regenerates": true, "regeneration_rate": 1 }} ] 
+    ```
+4. Plan Narrative: After all that, I will outline the response I will give the player. This will summarize what we've defined, confirm the changes, and ask what they want to work on next.
 
 """
 
@@ -111,17 +116,18 @@ I'll do the following:
 # ==============================================================================
 
 PLAN_TEMPLATE = """
-Alright. I am now in the planning phase. My role is to:
-- Analyze the player's action for feasibility
-- Select appropriate tools to handle the request (max {tool_budget} tools)
-- Query state if I need more information before acting
-- Write a plan for my next interaction with the player
+Alright. I am now in the planning phase for a GAMEPLAY turn. My role is to create a detailed, structured plan.
+
+1. Analyze Player Input: I will first analyze the player's latest message to understand their intent. This will be a brief, one-sentence summary.
+2. Formulate Plan Steps: I will create a step-by-step list of actions I need to take. This includes checking game state, evaluating conditions, and determining consequences.
+3. Select Tools: Based on my plan steps, I will select the necessary tools to execute to create or update records, fetch memories, etc. Each tool call in the `tool_calls` list must directly correspond to a step in my plan. I have a budget of {tool_budget} tools.
+4. Plan Narrative Response: Finally, I will outline the narrative response I will give to the player *after* the tools have been executed.
 
 IMPORTANT: 
-- If no tools are needed, return an empty array: "tool_calls": []
-- Each tool call MUST include a valid "name" field matching an available tool
-- Never include empty objects {{}} in the tool_calls array
-- Read tool descriptions carefully to choose the right tool for the job
+- If no tools are needed, `tool_calls` must be an empty list: `[]`.
+- Each tool call must have a valid `name` matching an available tool.
+- I will not include empty objects {{}} in the `tool_calls` list.
+- I will read tool descriptions carefully to use them correctly.
 
 """
 

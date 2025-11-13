@@ -24,7 +24,7 @@ from app.tools.executor import ToolExecutor
 from app.database.db_manager import DBManager
 from app.models.game_session import GameSession
 from app.models.session import Session
-from app.tools.schemas import EndSetupAndStartGameplay, Patch, SchemaDefineProperty, StateApplyPatch
+from app.tools.schemas import EndSetupAndStartGameplay, Patch, SchemaDefine, StateApplyPatch, SchemaQuery, Deliberate
 from app.setup.setup_manifest import SetupManifest
 
 MAX_HISTORY_MESSAGES = 20
@@ -70,7 +70,10 @@ class TurnManager:
         current_game_mode = game_session.game_mode
         if current_game_mode == "SETUP":
             setup_tool_names = [
-                SchemaDefineProperty.model_fields["name"].default, "schema.query", EndSetupAndStartGameplay.model_fields["name"].default
+                SchemaDefine.model_fields["name"].default, 
+                Deliberate.model_fields["name"].default, 
+                SchemaQuery.model_fields["name"].default, 
+                EndSetupAndStartGameplay.model_fields["name"].default
             ]
             available_tool_models = self.tool_registry.get_tool_models(setup_tool_names)
             available_tool_schemas_json = [s for s in self.tool_registry.get_all_schemas() if s["name"] in setup_tool_names]
@@ -101,7 +104,11 @@ class TurnManager:
             self.logger.error("LLM returned no structured response for TurnPlan.")
             self.ui_queue.put({"type": "error", "message": "AI failed to generate a valid plan."})
             return
-        self.ui_queue.put({"type": "thought_bubble", "content": plan.response_plan})
+        
+        plan_steps_text = "\n - ".join(plan.plan_steps)
+        plan_summary = f"""{plan.player_input_analysis}\n\n{plan_steps_text}\n\n{plan.narrative_plan}"""
+
+        self.ui_queue.put({"type": "thought_bubble", "content": plan_summary})
 
         # ===== STEP 2: EXECUTE TOOLS =====
         tool_results, memory_tool_used = executor.execute(
@@ -128,7 +135,7 @@ class TurnManager:
         dynamic_context = context_builder.build_dynamic_context(game_session, chat_history)
         phase_template = SETUP_RESPONSE_TEMPLATE if current_game_mode == "SETUP" else NARRATIVE_TEMPLATE
         narrative = self.narrator.write_step(
-            system_instruction=static_instruction, phase_template=phase_template, dynamic_context=dynamic_context, plan_thought=plan.response_plan, tool_results=str(tool_results), chat_history=chat_history
+            system_instruction=static_instruction, phase_template=phase_template, dynamic_context=dynamic_context, plan_thought=plan_summary, tool_results=str(tool_results), chat_history=chat_history
         )
         if not narrative:
             self.logger.error("LLM returned no structured response for NarrativeStep.")

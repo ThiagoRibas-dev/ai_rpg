@@ -36,9 +36,7 @@ We could add something to keep track of mine and other characters notoriety and 
 We could start with him travelling to a village away from his usual home town.
 
 
-
-
-My character is Thiago, Neutral Good, lvl 5 Cleric of a god much like Torm (more martially inclined). His chosen Domains would be War and Healing.
+My character is Thiago, Neutral Good, lvl 5 Cleric/Ordained Champion of a god much like Torm from the forgotten realms. His chosen Domains would be War and Healing, later getting access to the Law Domain.
 
 Name: Thiago
 Race: Human

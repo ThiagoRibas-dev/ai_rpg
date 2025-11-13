@@ -60,7 +60,7 @@ def create_dynamic_turn_plan_model(
         tool_calls=(
             List[Union[tuple(tool_models)]],
             Field(
-                default_factory=lambda: [],
+                ...,
                 description="The tools that will be executed based on the input analysis and the response plan.",
             ),
         ),

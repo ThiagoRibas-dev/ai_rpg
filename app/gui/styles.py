@@ -134,8 +134,8 @@ class Dimensions:
     """Window and component dimensions."""
 
     # Main window
-    window_width: int = 1200
-    window_height: int = 800
+    window_width: int = 1600
+    window_height: int = 900
 
     # Component widths
     button_small: int = 60

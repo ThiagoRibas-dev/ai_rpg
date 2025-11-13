@@ -27,12 +27,7 @@ class PlannerService:
         DynamicTurnPlan = create_dynamic_turn_plan_model(available_tool_models)
 
         # Build assistant prefill with dynamic content
-        prefill = f"""
-{phase_template}
-{dynamic_context}
-
-My Plan: 
-"""
+        prefill = f"""\n{phase_template}\n{dynamic_context}\n\nMy Plan:\n"""
 
         # Inject prefill as final assistant message
         prefilled_history = chat_history + [Message(role="assistant", content=prefill)]

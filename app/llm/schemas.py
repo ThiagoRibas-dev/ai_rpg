@@ -25,17 +25,26 @@ class TurnPlan(BaseModel):
 
     player_input_analysis: str = Field(
         ...,
-        description="The LLM's analysis of the player's intent and latest message.",
-        example="The player wants to buy a sword. I need to check if they have enough gold and if there's a blacksmith in town.",
+        description="A brief, one or two-sentence analysis of the player's last message, identifying their core intent.",
+        example="The player wants to buy a sword from the blacksmith.",
     )
-    response_plan: str = Field(
+    plan_steps: List[str] = Field(
         ...,
-        description="The LLM's for the turn's response, after analyzing input and executing tools.",
-        example="First, I'll describe the bustling market. Then, I'll have the blacksmith greet the player and show them the available swords. I'll mention the price and wait for the player's response.",
+        description="A step-by-step logical plan of what the AI will do this turn before responding. This includes which tools will be called and why.",
+        example=[
+            "1. Check the player's current gold by querying their inventory.",
+            "2. Check the blacksmith's stock by querying the location's state.",
+            "3. Based on the results, formulate a narrative response.",
+        ],
     )
     tool_calls: List[ToolCall] = Field(
         default_factory=list,
-        description="The tools that will be executed based on the input analysis and the response plan.",
+        description="The tools that will be executed this turn based on the plan_steps.",
+    )
+    narrative_plan: str = Field(
+        ...,
+        description="A summary of the narrative response I will provide to the player *after* the plan steps and tools have been executed. This is the plan for the story part of the turn.",
+        example="I will describe the blacksmith's workshop, have him greet the player, show the available swords and their prices based on the tool results, and then ask the player what they want to do.",
     )
 
 

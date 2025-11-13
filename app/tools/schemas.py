@@ -1,5 +1,6 @@
+from typing import Any, List, Literal, Optional, Union
+
 from pydantic import BaseModel, Field
-from typing import List, Optional, Literal, Any, Union
 
 # A reusable JSON type to avoid recursion errors with Pydantic's schema generator.
 JSONValue = Union[str, int, float, bool, dict, List]
@@ -11,7 +12,9 @@ class UpdatePair(BaseModel):
     key: str = Field(
         ..., description="The name of the attribute or property to update."
     )
-    value: JSONValue = Field(..., description="The new value for the attribute or property.")
+    value: JSONValue = Field(
+        ..., description="The new value for the attribute or property."
+    )
 
 
 class MathEval(BaseModel):
@@ -326,21 +329,22 @@ class TimeAdvance(BaseModel):
     )
 
 
-class SchemaDefineProperty(BaseModel):
+class SchemaDefine(BaseModel):
     """
-    Define a new attribute (property) for game entities during SETUP mode (Session Zero).
+        Define a new attribute (property) for game entities during SETUP mode (Session Zero).
 
-    **Entity types:** 'character', 'item', 'location'
+        **Entity types:** 'character', 'item', 'location'
 
-    **Example:** Define a Sanity resource
-    schema.define_property({
-        "property_name": "Sanity",
-        "template": "resource",
-        "description": "Mental fortitude against cosmic horrors",
-        "max_value": 100,
-        "icon": "🧠",
-        "regenerates": true
-    })
+        **Example:** Define a Points resource
+        schema.define_property({
+            "property_name": "Points",
+            "template": "resource",
+            "description": "Points than can be spent",
+            "max_value": 100,
+            "icon": "P"
+    ,
+            "regenerates": true
+        })
     """
 
     name: Literal["schema.define_property"] = "schema.define_property"
@@ -454,25 +458,18 @@ class CharacterUpdate(BaseModel):
 class SchemaQuery(BaseModel):
     """
     Query detailed information about game mechanics.
-    
+
     Use this when you need to know:
     - What a specific attribute/skill/class does
     - What actions are available in combat
     - Details about game mechanics
     """
+
     name: Literal["schema.query"] = "schema.query"
-    
     query_type: Literal[
-        "attribute",
-        "resource",
-        "skill",
-        "action_economy",
-        "class",
-        "race",
-        "all"
+        "attribute", "resource", "skill", "action_economy", "class", "race", "all"
     ]
-    
     specific_name: Optional[str] = Field(
         None,
-        description="Name of specific item to query. Leave blank for all of that type."
+        description="Name of specific item to query. Leave blank for all of that type.",
     )
