@@ -21,6 +21,7 @@ To get started, tell me about the kind of game you'd like to play:
 - Would you like tge game to have any specific extra mechanics or systems?
 - Any extra attributes your character should have? (Strength, Agility, Intelligence, HP, Sanity, Mana, Reputation, etc.)
 - Do you have a starting point in mind? A place, quest, etc?
+- What is your character like? His name, personality, background, build (race, classes, feats...), etc?
 
 You can describe as much or as little as you want - I'll ask follow-up questions if I need more details.
 
@@ -28,7 +29,6 @@ After you confirm that you are satisfied with the system/framework, I'll finaliz
 
 
 
-Alright, I'll answer each question in order.
 I'd like a homebrew setting. High Fantasy with late medieval aesthetics. A world like the forgotten realms, sprawling and with many kinds of nations, biomes, places, etc in it, where magic is ever present but not pervasive. A commoner doesn't have access to magic usually, for example.
 I'd like a generally serious tone, but on the lighter side. Humor, horror, lewd, philosophycal, etc should be weaved naturally into the game.
 I don't have any specific themes in mind, so we can let the game flow and see where it takes us. To start, we can go with standard themes of adventure and exploration.
@@ -117,4 +117,3 @@ Iniciativa	0	0	2
 FORT	8	0	8
 REFLEX	1	0	1
 WILL	10	0	10
-

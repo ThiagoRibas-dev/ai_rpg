@@ -12,16 +12,16 @@ TEMPLATE_GENERATION_SYSTEM_PROMPT = """You are a meticulous game system analyst.
 """
 
 GENERATE_ENTITY_SCHEMA_INSTRUCTION = """
-Your task is to extract ONLY the core Attributes (like Strength, Dexterity, Intelligence) and Resources (like Health, Mana, Sanity) from the provided rules text.
+Your task is to extract ONLY the core Attributes (like Strength, Dexterity, Intelligence) and Resources (like Health, MP, etc) that exist in the provided rules text.
 
-- **Attributes:** Fixed scores that characters possess.
-- **Resources:** Pools that can be spent or depleted.
+- Attributes: Fixed scores that characters possess.
+- Resources: Pools that can be spent or depleted.
 
 For every attribute and resource, you MUST provide a concise, one-sentence description of its purpose in the game.
 """
 
 GENERATE_CORE_RULE_INSTRUCTION = """
-Based on the provided rules and the defined character attributes (provided as context), your task is to identify and define the single, primary action resolution mechanic. This is the core dice roll of the game (e.g., '1d20 + Attribute Modifier vs. Difficulty Class').
+Based on the provided rules and the defined character attributes (provided as context), your task is to identify and define the single, primary action resolution mechanic. This is the core dice roll of the game (e.g., '1d20 + Attribute Modifier vs. DC/Difficulty Class', Dice Pool, Narrative, etc).
 """
 
 GENERATE_DERIVED_RULES_INSTRUCTION = """
@@ -29,27 +29,15 @@ Your task is to define specific, derived game mechanics based on a foundational 
 
 You will be given the original rules text, the defined character attributes, and the core action resolution mechanic as context.
 
-Now, using the foundational mechanic as a pattern, extract and define the other rules and systems. A couple of examples of rules would be:
-- **Defensive Systems:** How do characters avoid or reduce harm? Is it a static target number (like Armor Class), an active defense roll (like Dodge/Parry), a way to soak/reduce damage after being hit, or something else entirely?
-- **Resistance Mechanics:** How do characters endure non-physical effects (like magic, poison, fear, or social influence)? Is it a categorical roll (like "Save vs. Poison"), an attribute-based check, or do they spend a resource (like Willpower or Stress) to resist?
-- **Resource Pools:** What key resources do characters track? Look for systems governing Health (Hit Points, Wound Levels, Harm), Magic/Powers (Mana, Spell Slots, Drain), and Mental State (Sanity, Stress, Humanity).
-- **Action Sequencing:** How is the order of actions in a round determined? Is there a rolled initiative, a static score, a narrative turn order, or an action point system?
-- **Character Advancement:** How do characters improve over time? Is it a level-based system, or do players spend experience points on individual traits?
-- **Specialized Subsystems:** Are there detailed rules for specific, complex activities? Look for things like Magic/Spellcasting, Hacking/Netrunning, Social Combat, or Crafting.
-- **Movement and Positioning:** How is movement handled? Are there rules for speed, difficult terrain, taking cover, or being concealed?
+Now, using the foundational mechanic as a pattern, extract and define other rules and systems. Some examples of the things you are looking for:
+- Armor Class (AC), Dodge, Parry, Soak, Damage Reduction, etc: How characters avoid or reduce harm (Defensive Systems).
+- Saving Throws, Resistance Checks, Willpower, etc: How characters endure non-physical effects like magic, poison, or fear (Resistance Mechanics).
+- Initiative, Turn Order, Action Points, etc: How the sequence of actions in a round is determined (Action Sequencing).
+- Speed, Difficult Terrain, Cover, Concealment: How movement and positioning are handled in the game world (Movement and Positioning).
+- Leveling, Experience Points (XP), Milestones: How characters improve over time (Character Advancement).
+- Magic, Spellcasting, Hacking, Netrunning, Social Combat, Crafting: Detailed rules for specific, complex activities (Specialized Subsystems).
 
 For each rule you create, ensure it is consistent with the provided foundational mechanic.
-"""
-
-## ==============================================================================
-## Iterative prompt for derived rules
-## ==============================================================================
-GENERATE_DERIVED_RULES_INSTRUCTION_ITERATIVE = """
-Your task is to extract additional game mechanics and rules from the provided text that are NOT present in the list of rules already found.
-
-Review the existing rules and find any missing systems (e.g., defense, resistance, movement, special subsystems).
-
-If you cannot find any more distinct rules, return an empty list.
 """
 
 GENERATE_ACTION_ECONOMY_INSTRUCTION = """
@@ -60,12 +48,6 @@ GENERATE_SKILLS_INSTRUCTION = """
 Your task is to extract all Skills from the provided rules text.
 You will be given the list of Attributes that have already been defined.
 For each skill you identify, you MUST link it to one of the provided attributes in the `linked_attribute` field.
-"""
-
-GENERATE_SKILLS_INSTRUCTION_ITERATIVE = """
-Your task is to extract additional Skills from the provided rules text that are NOT present in the list of skills already found.
-
-If you cannot find any more skills, return an empty list.
 """
 
 GENERATE_CONDITIONS_INSTRUCTION = """
@@ -91,12 +73,12 @@ Okay. Let me check the current game mode:
 Alright, so we are still in the systems and world-building phase. My goal is to help the player define the rules, tone, and mechanics of the game.
 
 Here's what I'll do exactly:
-1.  **Understand the player's message:** I'll analyze their input to see what genre, tone, setting, properties, or mechanical ideas they proposed or accepted and create a checklist.
-2.  **Evaluate the current setup:** I'll see what we've already defined (skills, attributes, rules, etc.) and compare the player's choices with the current state to see what's missing or needs clarification.
-3.  **Use the right tool for the job:**
-    *   **`{SchemaDefineProperty.model_fields["name"].default}`**: I'll use this tool to save or persist any new or updated attributes, rules, mechanics, skills, etc, once per property.
-    *   **`{EndSetupAndStartGameplay.model_fields["name"].default}`**: If and only if the player has explicitly confirmed that the setup is complete and we are ready to begin the game, I'll use this tool to transition to the gameplay phase. I must provide a `reason` for using this tool.
-4.  **Plan my response:** After any tool calls, I'll plan my response to the player. This usually involves summarizing the current setup, explaining any new properties, and asking what they want to work on next.
+1.  Understand the player's message: I'll analyze their input to see what genre, tone, setting, properties, or mechanical ideas they proposed or accepted and create a checklist.
+2.  Evaluate the current setup: I'll see what we've already defined (skills, attributes, rules, etc.) and compare the player's choices with the current state to see what's missing or needs clarification.
+3.  Use the right tool for the job:
+    *   `{SchemaDefineProperty.model_fields["name"].default}`: I'll use this tool to save or persist any new or updated attributes, rules, mechanics, skills, etc, once per property.
+    *   `{EndSetupAndStartGameplay.model_fields["name"].default}`: If and only if the player has explicitly confirmed that the setup is complete and we are ready to begin the game, I'll use this tool to transition to the gameplay phase. I must provide a `reason` for using this tool.
+4.  Plan my response: After any tool calls, I'll plan my response to the player. This usually involves summarizing the current setup, explaining any new properties, and asking what they want to work on next.
 
 """
 

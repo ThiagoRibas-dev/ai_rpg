@@ -15,10 +15,8 @@ from app.prompts.templates import (
     GENERATE_ENTITY_SCHEMA_INSTRUCTION,
     GENERATE_CORE_RULE_INSTRUCTION,
     GENERATE_DERIVED_RULES_INSTRUCTION,
-    GENERATE_DERIVED_RULES_INSTRUCTION_ITERATIVE,
     GENERATE_ACTION_ECONOMY_INSTRUCTION,
     GENERATE_SKILLS_INSTRUCTION,
-    GENERATE_SKILLS_INSTRUCTION_ITERATIVE,
     GENERATE_CONDITIONS_INSTRUCTION,
     GENERATE_CLASSES_INSTRUCTION,
     GENERATE_RACES_INSTRUCTION
@@ -63,8 +61,7 @@ class TemplateGenerationService:
     # ==============================================================================
     def _iterative_generation_loop(
         self,
-        initial_instruction: str,
-        iterative_instruction: str,
+        current_instruction: str,
         output_schema: Type[T],
         list_accessor: str,
         context_key: str,
@@ -75,8 +72,7 @@ class TemplateGenerationService:
         A generic loop to iteratively extract a list of items from the rules.
 
         Args:
-            initial_instruction: The prompt for the first call.
-            iterative_instruction: The prompt for subsequent calls.
+            current_instruction: The prompt.
             output_schema: The Pydantic model that wraps the list (e.g., SkillList).
             list_accessor: The attribute name of the list within the schema (e.g., "skills").
             context_key: The placeholder name for the list of found items in the prompt.
@@ -89,21 +85,13 @@ class TemplateGenerationService:
         for i in range(max_iterations):
             self._update_status(f"Running {context_key} extraction pass {i + 1}...")
 
-            # Use initial prompt on first loop, iterative on subsequent ones
-            current_instruction = initial_instruction if i == 0 else iterative_instruction
-
-            # Build the user prompt with context
-            found_items_context = json.dumps([item.model_dump() for item in all_items], indent=2)
-            
-            user_prompt = f"""{current_instruction}
-{context_data}
-
-# CONTEXT: {context_key.upper()} ALREADY FOUND
----
-{found_items_context}
----
+            if i == 0:
+                # Build the user prompt with context
+                found_items_context = json.dumps([item.model_dump() for item in all_items], indent=2)
+                user_prompt = f"""{current_instruction}\n{context_data}"""
+            else:
+                user_prompt = f"""{current_instruction}\n{context_data}\n\n### ALREADY FOUND {context_key.upper()}:\n{found_items_context}
 """
-            
             # Make the LLM call
             response = self.llm.get_structured_response(
                 system_prompt=self.static_system_prompt,
@@ -155,7 +143,7 @@ class TemplateGenerationService:
         core_rule: Optional[RuleSchema] = self._generate_core_rule(attributes_context)
         
         # ==============================================================================
-        # MODIFIED: Use the iterative loop for derived rules
+        # Use the iterative loop for derived rules
         # ==============================================================================
         self._update_status("Defining Specific Game Mechanics (iteratively)...")
         core_rule_context = core_rule.model_dump_json(indent=2) if core_rule else "No core rule defined."
@@ -164,8 +152,7 @@ class TemplateGenerationService:
         RulesWrapper = create_model("RulesWrapper", rules=(List[RuleSchema], ...), __base__=BaseModel)
 
         derived_rules: List[RuleSchema] = self._iterative_generation_loop(
-            initial_instruction=GENERATE_DERIVED_RULES_INSTRUCTION,
-            iterative_instruction=GENERATE_DERIVED_RULES_INSTRUCTION_ITERATIVE,
+            current_instruction=GENERATE_DERIVED_RULES_INSTRUCTION,
             output_schema=RulesWrapper,
             list_accessor="rules",
             context_key="Rules",
@@ -184,8 +171,7 @@ class TemplateGenerationService:
         # --- Step 4: Generate Skills (Iteratively) ---
         self._update_status("Extracting Skills (iteratively)...")
         skills = self._iterative_generation_loop(
-            initial_instruction=GENERATE_SKILLS_INSTRUCTION,
-            iterative_instruction=GENERATE_SKILLS_INSTRUCTION_ITERATIVE,
+            current_instruction=GENERATE_SKILLS_INSTRUCTION,
             output_schema=SkillList,
             list_accessor="skills",
             context_key="Skills",
