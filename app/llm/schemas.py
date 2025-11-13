@@ -1,8 +1,8 @@
-from typing import List, Optional, Literal, Any
+from typing import List, Optional, Literal, Union
 from pydantic import BaseModel, Field
 
 # A reusable JSON type to avoid recursion errors with Pydantic's schema generator.
-JSONValue = Any
+JSONValue = Union[str, int, float, bool, dict, List]
 
 
 class ToolCall(BaseModel):

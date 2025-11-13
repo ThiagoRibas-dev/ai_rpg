@@ -11,7 +11,7 @@ def handler(
     description: str,
     entity_type: Literal[
         "character", "item", "location"
-    ] = "character",  # Default to character
+    ] = "character",
     template: Optional[str] = None,
     type: Optional[Literal["integer", "string", "boolean", "enum", "resource"]] = None,
     default_value: Any = None,
@@ -24,7 +24,7 @@ def handler(
     display_format: Optional[Literal["number", "bar", "badge"]] = None,
     regenerates: Optional[bool] = None,
     regeneration_rate: Optional[int] = None,
-    **context: Any,  # Catch-all for context parameters
+    **context: Any,
 ) -> Dict[str, Any]:
     """
     Allows the AI to define a new custom attribute (property) for game entities.

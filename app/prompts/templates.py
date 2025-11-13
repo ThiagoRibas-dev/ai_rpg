@@ -1,6 +1,6 @@
 from app.tools.schemas import (
     MemoryUpsert,
-    SchemaDefine,
+    SchemaDefineProperty,
     EndSetupAndStartGameplay,
     SchemaQuery,
 )
@@ -75,14 +75,26 @@ My goal is to help the player define the rules, tone, and mechanics of the game 
 I will do the following:
 1. Analyze Input: Analyze our conversation, specially the player's latest message.
 2. Formulate Plan (Self-Correction): A step-by-step plan for which tools I'll call now and how I'll respond to the player after.
-3. Tool Calls: Write the calls for the `{SchemaDefine.model_fields["name"].default}`, `{SchemaQuery.model_fields["name"].default}`, and `{EndSetupAndStartGameplay.model_fields["name"].default}` based on my formulated plan.
+3. Operations: Write the calls for the `{SchemaDefineProperty.model_fields["name"].default}`, `{SchemaQuery.model_fields["name"].default}`, and `{EndSetupAndStartGameplay.model_fields["name"].default}` tools based on my formulated plan.
+    - The `{SchemaDefineProperty.model_fields["name"].default}` tool will be used for any addition, removel, or update I need to make to the properties and attributes of the player, campaign, etc.
     - The `{SchemaQuery.model_fields["name"].default}` tool will be used to query the details of information that might be usefull for my response to the player.
-    - The `{SchemaDefine.model_fields["name"].default}` tool will be used for any addition, removel, or update I need to make to the properties and attributes of the player, campaign, etc.
     - I will *only* ever call the `{EndSetupAndStartGameplay.model_fields["name"].default}` once the player has given the go ahead.
-    - Tool Call Examples : 
-    ```
-    "tool_calls": [ {{ "property_name": "Prop 1", "description": "Prop 1 description. Ranges from -10 to +10.", "entity_type": "character", "template": "resource", "has_max": true, "min_value": -10, "max_value": 10, "display_category": "Stats", "icon": "P", "display_format": "bar", "regenerates": true, "regeneration_rate": 1 }} ] 
-    ```
+    - Operation Tool Call Example: 
+    `"tool_calls": [ 
+        {{
+            "name": "schema.define_property",
+            "property_name": "Prop 1",
+            "description": "Prop 1 description. Ranges from -10 to +10.",
+            "entity_type": "character",
+            "template": "resource", "has_max": true,
+            "min_value": -10, "max_value": 10,
+            "display_category": "Stats",
+            "icon": "P",
+            "display_format": "bar",
+            "regenerates": true,
+            "regeneration_rate": 1
+        }}
+    ]`
 4. Plan Narrative: After all that, I will outline the response I will give the player. This will summarize what we've defined, confirm the changes, and ask what they want to work on next.
 
 """

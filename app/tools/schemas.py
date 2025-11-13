@@ -1,5 +1,4 @@
 from typing import Any, List, Literal, Optional, Union
-
 from pydantic import BaseModel, Field
 
 # A reusable JSON type to avoid recursion errors with Pydantic's schema generator.
@@ -329,7 +328,7 @@ class TimeAdvance(BaseModel):
     )
 
 
-class SchemaDefine(BaseModel):
+class SchemaDefineProperty(BaseModel):
     """
         Define a new attribute (property) for game entities during SETUP mode (Session Zero).
 

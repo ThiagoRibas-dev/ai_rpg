@@ -24,7 +24,7 @@ from app.tools.executor import ToolExecutor
 from app.database.db_manager import DBManager
 from app.models.game_session import GameSession
 from app.models.session import Session
-from app.tools.schemas import EndSetupAndStartGameplay, Patch, SchemaDefine, StateApplyPatch, SchemaQuery, Deliberate
+from app.tools.schemas import EndSetupAndStartGameplay, Patch, SchemaDefineProperty, StateApplyPatch, SchemaQuery, Deliberate
 from app.setup.setup_manifest import SetupManifest
 
 MAX_HISTORY_MESSAGES = 20
@@ -70,7 +70,7 @@ class TurnManager:
         current_game_mode = game_session.game_mode
         if current_game_mode == "SETUP":
             setup_tool_names = [
-                SchemaDefine.model_fields["name"].default, 
+                SchemaDefineProperty.model_fields["name"].default, 
                 Deliberate.model_fields["name"].default, 
                 SchemaQuery.model_fields["name"].default, 
                 EndSetupAndStartGameplay.model_fields["name"].default
