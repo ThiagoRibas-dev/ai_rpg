@@ -183,6 +183,10 @@ class PromptDialog(ctk.CTkToplevel):
             fg_color=Theme.colors.button_default[0],
         ).pack(side="right", padx=5)
 
+    def _update_generation_status(self, message: str):
+        """GUI thread-safe method to update the status label."""
+        self.generate_status.configure(text=message, text_color="gray")
+
     def _generate_template(self):
         """Generate template from rules document using AI."""
         import threading
@@ -208,29 +212,31 @@ class PromptDialog(ctk.CTkToplevel):
         thread.start()
 
     def _generate_template_background(self, rules_text: str):
-        """Background thread for AI processing."""
+        """Background thread for AI processing using the new service."""
         try:
-            from app.setup.template_generator import TemplateGenerator
+            from app.setup.template_generation_service import TemplateGenerationService
             
-            # ✅ NEW: Use the passed-in connector
             if not self.llm_connector:
                 raise ValueError("LLMConnector not provided to PromptDialog")
 
-            generator = TemplateGenerator(self.llm_connector)
-            template = generator.generate_from_rules(rules_text)
+            # The service takes a callback function to post updates to the GUI
+            generator = TemplateGenerationService(
+                self.llm_connector, 
+                rules_text, 
+                status_callback=lambda msg: self.after(0, self._update_generation_status, msg)
+            )
+            template = generator.generate_template()
             
-            # Update UI on main thread
+            # Update final UI on main thread
             self.after(0, self._on_template_generated, template, None)
             
         except Exception as e:
-            # ✅ NEW: Add proper logging
             logging.exception("Template generation failed in background thread")
             self.after(0, self._on_template_generated, None, str(e))
 
     def _on_template_generated(self, template: dict | None, error: str | None):
         """Handle template generation result."""
         import json
-        from app.setup.template_generator import validate_descriptions
         
         self.generate_btn.configure(state="normal")
         
@@ -247,23 +253,18 @@ class PromptDialog(ctk.CTkToplevel):
             self.template_textbox.delete("1.0", "end")
             self.template_textbox.insert("1.0", template_json)
             
-            # Validate and show status
-            warnings = validate_descriptions(template)
-            
+            # Calculate property count for status
             prop_count = len(template.get("entity_schemas", {}).get("character", {}).get("attributes", []))
             prop_count += len(template.get("entity_schemas", {}).get("character", {}).get("resources", []))
             prop_count += len(template.get("skills", []))
+            prop_count += len(template.get("conditions", []))
+            prop_count += len(template.get("classes", []))
+            prop_count += len(template.get("races", []))
             
-            if warnings:
-                self.generate_status.configure(
-                    text=f"⚠️ Generated {prop_count} properties ({len(warnings)} warnings)",
-                    text_color="orange"
-                )
-            else:
-                self.generate_status.configure(
-                    text=f"✅ Generated {prop_count} properties",
-                    text_color="green"
-                )
+            self.generate_status.configure(
+                text=f"✅ Generated {prop_count} properties",
+                text_color="green"
+            )
 
     def _load_existing_data(self):
         """Load data from existing prompt if editing."""

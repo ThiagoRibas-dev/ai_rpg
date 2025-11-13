@@ -4,75 +4,57 @@ from app.tools.schemas import (
     EndSetupAndStartGameplay,
 )
 
-RULES_ANALYSIS_PROMPT = """
-You are a game system analyst.
-Extract detailed structured game mechanics from rules documents.
+GENERATE_ENTITY_SCHEMA_PROMPT = """
+You are a game system analyst. Your task is to extract ONLY the core Attributes (like Strength, Dexterity, Intelligence) and Resources (like Health, Mana, Sanity) from the provided rules text.
 
-CRITICAL: For EVERY property you define, provide a **concise, actionable description**.
+- **Attributes:** Fixed scores that characters possess.
+- **Resources:** Pools that can be spent or depleted.
 
-**DESCRIPTION GUIDELINES:**
-✅ Good: "Physical power; affects melee attacks and carrying capacity"
-✅ Good: "Mental fortitude against cosmic horrors; loss causes madness"
-✅ Good: "Social influence and persuasion; determines NPC reactions"
-
-❌ Bad: "Strength" (not descriptive)
-❌ Bad: "This attribute represents the character's physical capabilities..." (too verbose)
-
-**FORMAT:** One sentence (max 15 words), explain WHAT it is and WHAT it affects.
-
----
-
-OUTPUT STRUCTURE:
-
-**ENTITY SCHEMAS** - How game entities are structured
-
-1. **Attributes** - Core abilities (STR, DEX, INT, etc.)
-   - name: Attribute name
-   - abbreviation: Short code (e.g., "STR")
-   - description: ONE SENTENCE (required!)
-   - default: Starting value
-   - range: [min, max] if applicable
-   - modifier_formula: e.g., "floor((score - 10) / 2)"
-   - applies_to: 3-5 examples of what it affects
-
-2. **Resources** - Expendable pools (HP, Mana, Sanity, etc.)
-   - name: Resource name
-   - description: ONE SENTENCE (required!)
-   - default: Starting value
-   - has_max: true/false
-   - regenerates: true/false
-   - death_at: Value at death (if applicable)
-
-3. **Derived Stats** - Calculated values (AC, Initiative, etc.)
-   - name: Stat name
-   - description: ONE SENTENCE (required!)
-   - formula: How it's calculated
-
-**SKILLS** - Learned abilities
-- name, description (ONE SENTENCE), system_type (ranked/percentile/dice_pool/binary)
-- linked_attribute: Which attribute it uses
-
-**ACTION ECONOMY** - How turns work
-Identify system type:
-- fixed_types: Specific categories (D&D: standard/move/swift)
-- action_points: Pool system (PF2e: 3 actions)
-- multi_action: Penalty-based (Savage Worlds: -2 per extra)
-- narrative: Fiction-first (PbtA/BitD)
-
-**RULE SCHEMAS** - Core mechanics
-- Core resolution mechanic (d20 + mods >= DC, etc.)
-
-**CONDITIONS** - Status effects (Blinded, Stunned, etc.)
-
-**CLASSES** - Character archetypes (if applicable)
-
-**RACES** - Character species (if applicable)
-
-```
-
-Now analyze the provided rules document and generate the JSON rules schema.
+For every attribute and resource, you MUST provide a concise, one-sentence description of its purpose in the game.
 """
 
+GENERATE_CORE_RULE_PROMPT = """
+You are a game system analyst. Based on the provided rules and the defined character attributes, your task is to identify and define the single, primary action resolution mechanic. This is the core dice roll of the game (e.g., '1d20 + Attribute Modifier vs. Difficulty Class').
+"""
+
+GENERATE_DERIVED_RULES_PROMPT = """
+You are a game system analyst. Your task is to define specific, derived game mechanics based on a foundational rule that has already been established.
+
+You will be given the original rules text, the defined character attributes, and the core action resolution mechanic.
+
+Now, using the foundational mechanic as a pattern, extract and define the other rules and systems. A couple of examples of rules would be:
+- **Defensive Systems:** How do characters avoid or reduce harm? Is it a static target number (like Armor Class), an active defense roll (like Dodge/Parry), a way to soak/reduce damage after being hit, or something else entirely?
+- **Resistance Mechanics:** How do characters endure non-physical effects (like magic, poison, fear, or social influence)? Is it a categorical roll (like "Save vs. Poison"), an attribute-based check, or do they spend a resource (like Willpower or Stress) to resist?
+- **Resource Pools:** What key resources do characters track? Look for systems governing Health (Hit Points, Wound Levels, Harm), Magic/Powers (Mana, Spell Slots, Drain), and Mental State (Sanity, Stress, Humanity).
+- **Action Sequencing:** How is the order of actions in a round determined? Is there a rolled initiative, a static score, a narrative turn order, or an action point system?
+- **Character Advancement:** How do characters improve over time? Is it a level-based system, or do players spend experience points on individual traits?
+- **Specialized Subsystems:** Are there detailed rules for specific, complex activities? Look for things like Magic/Spellcasting, Hacking/Netrunning, Social Combat, or Crafting.
+- **Movement and Positioning:** How is movement handled? Are there rules for speed, difficult terrain, taking cover, or being concealed?
+
+For each rule you create, ensure it is consistent with the provided foundational mechanic.
+"""
+
+GENERATE_ACTION_ECONOMY_PROMPT = """
+You are a game system analyst. Your task is to analyze the provided rules and determine the game's Action Economy - the structure of a character's turn. Identify the system type (e.g., Action Points, Fixed Action Types like 'Standard/Move/Bonus', etc.) and describe its components.
+"""
+
+GENERATE_SKILLS_PROMPT = """
+You are a game system analyst. Your task is to extract all Skills from the provided rules text.
+You will be given the list of Attributes that have already been defined.
+For each skill you identify, you MUST link it to one of the provided attributes in the `linked_attribute` field.
+"""
+
+GENERATE_CONDITIONS_PROMPT = """
+You are a game system analyst. Your task is to extract all status effects, also known as Conditions (e.g., 'Blinded', 'Poisoned', 'Stunned'), from the provided rules text. For each condition, provide a concise description of its mechanical effect.
+"""
+
+GENERATE_CLASSES_PROMPT = """
+You are a game system analyst. Your task is to identify and define the character Classes (e.g., 'Warrior', 'Mage', 'Rogue') from the rules. You will be provided with the game's attributes and skills for context. For each class, describe its primary role and key features.
+"""
+
+GENERATE_RACES_PROMPT = """
+You are a game system analyst. Your task is to identify and define the character Races or Species (e.g., 'Elf', 'Dwarf', 'Orc') from the rules. You will be provided with the game's attributes and skills for context. For each race, describe its unique traits.
+"""
 
 PLAN_TEMPLATE = """
 Alright. I am now in the planning phase. My role is to:

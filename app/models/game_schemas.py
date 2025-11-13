@@ -139,3 +139,22 @@ class GameTemplate(BaseModel):
     
     classes: List[ClassDefinition] = Field(default_factory=list)
     races: List[RaceDefinition] = Field(default_factory=list)
+
+
+# NEW: Pydantic models to wrap lists for structured LLM output
+
+class SkillList(BaseModel):
+    """A list of skills."""
+    skills: List[SkillDefinition] = Field(default_factory=list)
+
+class ConditionList(BaseModel):
+    """A list of conditions."""
+    conditions: List[ConditionDefinition] = Field(default_factory=list)
+
+class ClassList(BaseModel):
+    """A list of classes."""
+    classes: List[ClassDefinition] = Field(default_factory=list)
+
+class RaceList(BaseModel):
+    """A list of races."""
+    races: List[RaceDefinition] = Field(default_factory=list)
