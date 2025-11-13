@@ -15,6 +15,7 @@ from app.prompts.templates import (
     GENERATE_ENTITY_SCHEMA_INSTRUCTION,
     GENERATE_CORE_RULE_INSTRUCTION,
     GENERATE_DERIVED_RULES_INSTRUCTION,
+    GENERATE_DERIVED_RULES_INSTRUCTION_ITERATIVE,
     GENERATE_ACTION_ECONOMY_INSTRUCTION,
     GENERATE_SKILLS_INSTRUCTION,
     GENERATE_SKILLS_INSTRUCTION_ITERATIVE,
@@ -153,20 +154,34 @@ class TemplateGenerationService:
         self._update_status("Defining Core Resolution Mechanic...")
         core_rule: Optional[RuleSchema] = self._generate_core_rule(attributes_context)
         
-        # --- Step 2b: Generate Derived Rules & Mechanics ---
-        self._update_status("Defining Specific Game Mechanics...")
+        # ==============================================================================
+        # MODIFIED: Use the iterative loop for derived rules
+        # ==============================================================================
+        self._update_status("Defining Specific Game Mechanics (iteratively)...")
         core_rule_context = core_rule.model_dump_json(indent=2) if core_rule else "No core rule defined."
-        derived_rules: List[RuleSchema] = self._generate_derived_rules(attributes_context, core_rule_context)
+        
+        # Define the wrapper schema for the list of rules
+        RulesWrapper = create_model("RulesWrapper", rules=(List[RuleSchema], ...), __base__=BaseModel)
+
+        derived_rules: List[RuleSchema] = self._iterative_generation_loop(
+            initial_instruction=GENERATE_DERIVED_RULES_INSTRUCTION,
+            iterative_instruction=GENERATE_DERIVED_RULES_INSTRUCTION_ITERATIVE,
+            output_schema=RulesWrapper,
+            list_accessor="rules",
+            context_key="Rules",
+            context_data=(
+                f"# CONTEXT: DEFINED ATTRIBUTES\n---\n{attributes_context}\n---\n\n"
+                f"# CONTEXT: CORE RESOLUTION MECHANIC\n---\n{core_rule_context}\n---"
+            )
+        )
         
         all_rules: List[RuleSchema] = ([core_rule] if core_rule else []) + derived_rules
 
-        # Step 3: Generate Action Economy
+        # --- Step 3: Generate Action Economy ---
         self._update_status("Designing Action Economy...")
         action_economy = self._generate_action_economy()
 
-        # ==============================================================================
-        # MODIFIED: Use the iterative loop for skills
-        # ==============================================================================
+        # --- Step 4: Generate Skills (Iteratively) ---
         self._update_status("Extracting Skills (iteratively)...")
         skills = self._iterative_generation_loop(
             initial_instruction=GENERATE_SKILLS_INSTRUCTION,
@@ -178,19 +193,17 @@ class TemplateGenerationService:
         )
         skills_context = json.dumps([skill.model_dump() for skill in skills], indent=2)
 
-        # Step 5: Generate Conditions
+        # --- Step 5, 6, 7: Conditions, Classes, Races ---
         self._update_status("Defining Conditions...")
         conditions = self._generate_conditions()
 
-        # Step 6: Generate Classes
         self._update_status("Building Classes...")
         classes = self._generate_classes(attributes_context, skills_context)
 
-        # Step 7: Generate Races
         self._update_status("Constructing Races...")
         races = self._generate_races(attributes_context, skills_context)
 
-        # Final Assembly
+        # --- Final Assembly ---
         self._update_status("Assembling final template...")
         final_template = GameTemplate(
             genre={"name": "TBD"},
@@ -208,7 +221,6 @@ class TemplateGenerationService:
 
     def _generate_entity_schemas(self) -> EntitySchema:
         """Generates entity schemas (attributes and resources)."""
-        from typing import cast
         result = self.llm.get_structured_response(
             system_prompt=self.static_system_prompt,
             chat_history=[Message(role="user", content=GENERATE_ENTITY_SCHEMA_INSTRUCTION)],
@@ -225,7 +237,6 @@ class TemplateGenerationService:
 {attributes_context}
 ---
 """
-        from typing import cast
         result = self.llm.get_structured_response(
             system_prompt=self.static_system_prompt,
             chat_history=[Message(role="user", content=user_instruction)],
@@ -233,33 +244,8 @@ class TemplateGenerationService:
         )
         return cast(Optional[RuleSchema], result)
 
-    def _generate_derived_rules(self, attributes_context: str, core_rule_context: str) -> List[RuleSchema]:
-        """Generates specific rules, using the core rule as a foundation."""
-        user_instruction = f"""{GENERATE_DERIVED_RULES_INSTRUCTION}
-
-# CONTEXT: DEFINED ATTRIBUTES
----
-{attributes_context}
----
-
-# CONTEXT: CORE RESOLUTION MECHANIC
----
-{core_rule_context}
----
-"""
-        RulesWrapper = create_model("RulesWrapper", rules=(List[RuleSchema], ...), __base__=BaseModel)
-        
-        result = self.llm.get_structured_response(
-            system_prompt=self.static_system_prompt,
-            chat_history=[Message(role="user", content=user_instruction)],
-            output_schema=RulesWrapper
-        )
-        casted_result = cast(RulesWrapper, result)
-        return casted_result.rules if casted_result else []
-
     def _generate_action_economy(self) -> Optional[ActionEconomyDefinition]:
         """Generates the action economy definition."""
-        from typing import cast
         result = self.llm.get_structured_response(
             system_prompt=self.static_system_prompt,
             chat_history=[Message(role="user", content=GENERATE_ACTION_ECONOMY_INSTRUCTION)],
@@ -269,7 +255,6 @@ class TemplateGenerationService:
 
     def _generate_conditions(self) -> List[ConditionDefinition]:
         """Generates conditions."""
-        from typing import cast
         result = self.llm.get_structured_response(
             system_prompt=self.static_system_prompt,
             chat_history=[Message(role="user", content=GENERATE_CONDITIONS_INSTRUCTION)],
@@ -292,7 +277,6 @@ class TemplateGenerationService:
 {skills_context}
 ---
 """
-        from typing import cast
         result = self.llm.get_structured_response(
             system_prompt=self.static_system_prompt,
             chat_history=[Message(role="user", content=user_instruction)],
@@ -315,7 +299,6 @@ class TemplateGenerationService:
 {skills_context}
 ---
 """
-        from typing import cast
         result = self.llm.get_structured_response(
             system_prompt=self.static_system_prompt,
             chat_history=[Message(role="user", content=user_instruction)],

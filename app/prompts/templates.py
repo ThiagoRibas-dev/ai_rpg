@@ -41,6 +41,17 @@ Now, using the foundational mechanic as a pattern, extract and define the other 
 For each rule you create, ensure it is consistent with the provided foundational mechanic.
 """
 
+## ==============================================================================
+## Iterative prompt for derived rules
+## ==============================================================================
+GENERATE_DERIVED_RULES_INSTRUCTION_ITERATIVE = """
+Your task is to extract additional game mechanics and rules from the provided text that are NOT present in the list of rules already found.
+
+Review the existing rules and find any missing systems (e.g., defense, resistance, movement, special subsystems).
+
+If you cannot find any more distinct rules, return an empty list.
+"""
+
 GENERATE_ACTION_ECONOMY_INSTRUCTION = """
 Your task is to analyze the provided rules and determine the game's Action Economy - the structure of a character's turn. Identify the system type (e.g., Action Points, Fixed Action Types like 'Standard/Move/Bonus', etc.) and describe its components.
 """
