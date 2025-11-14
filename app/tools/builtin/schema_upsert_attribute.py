@@ -57,7 +57,7 @@ def handler(
 
     if not session_id or not db_manager:
         logger.error(
-            "Session ID or DB Manager not found in context for schema.define_property."
+            "Session ID or DB Manager not found in context for schema.upsert_attibute."
         )
         return {"success": False, "error": "Missing session context."}
 

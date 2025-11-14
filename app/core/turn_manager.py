@@ -6,26 +6,33 @@ from app.context.context_builder import ContextBuilder
 from app.context.memory_retriever import MemoryRetriever
 from app.context.state_context import StateContextBuilder
 from app.context.world_info_service import WorldInfoService
+from app.core.metadata.turn_metadata_service import TurnMetadataService
+from app.database.db_manager import DBManager
 from app.llm.auditor_service import AuditorService
 from app.llm.choices_service import ChoicesService
 from app.llm.narrator_service import NarratorService
 from app.llm.planner_service import PlannerService
-from app.prompts.templates import (
-    CHOICE_GENERATION_TEMPLATE,
-    NARRATIVE_TEMPLATE,
-    PLAN_TEMPLATE,
-    SETUP_PLAN_TEMPLATE,
-    SETUP_RESPONSE_TEMPLATE,
-)
-from app.prompts.builder import build_lean_schema_reference
 from app.memory.memory_intents_service import MemoryIntentsService
-from app.core.metadata.turn_metadata_service import TurnMetadataService
-from app.tools.executor import ToolExecutor
-from app.database.db_manager import DBManager
 from app.models.game_session import GameSession
 from app.models.session import Session
-from app.tools.schemas import EndSetupAndStartGameplay, Patch, SchemaDefineProperty, StateApplyPatch, SchemaQuery, Deliberate
+from app.prompts.builder import build_lean_schema_reference
+from app.prompts.templates import (
+    ANALYSIS_TEMPLATE,
+    CHOICE_GENERATION_TEMPLATE,
+    NARRATIVE_TEMPLATE,
+    SETUP_RESPONSE_TEMPLATE,
+    STRATEGY_TEMPLATE,
+    TOOL_SELECTION_TEMPLATE,
+)
 from app.setup.setup_manifest import SetupManifest
+from app.tools.executor import ToolExecutor
+from app.tools.schemas import (
+    Deliberate,
+    EndSetupAndStartGameplay,
+    Patch,
+    SchemaUpsertAttribute,
+    StateApplyPatch,
+)
 
 MAX_HISTORY_MESSAGES = 20
 TOOL_BUDGET = 10
@@ -70,19 +77,19 @@ class TurnManager:
         current_game_mode = game_session.game_mode
         if current_game_mode == "SETUP":
             setup_tool_names = [
-                SchemaDefineProperty.model_fields["name"].default, 
-                Deliberate.model_fields["name"].default, 
-                SchemaQuery.model_fields["name"].default, 
-                EndSetupAndStartGameplay.model_fields["name"].default
+                SchemaUpsertAttribute.model_fields["tool_name"].default, 
+                Deliberate.model_fields["tool_name"].default, 
+                # SchemaQuery.model_fields["tool_name"].default, 
+                EndSetupAndStartGameplay.model_fields["tool_name"].default
             ]
             available_tool_models = self.tool_registry.get_tool_models(setup_tool_names)
-            available_tool_schemas_json = [s for s in self.tool_registry.get_all_schemas() if s["name"] in setup_tool_names]
+            available_tool_schemas_json = [s for s in self.tool_registry.get_all_schemas() if s["tool_name"] in setup_tool_names]
         else:  # GAMEPLAY mode
             available_tool_models = self.tool_registry.get_all_tool_types()
             available_tool_schemas_json = self.tool_registry.get_all_schemas()
 
         # ===== BUILD STATIC SYSTEM INSTRUCTION =====
-        manifest_mgr = SetupManifest(thread_db_manager)
+        manifest_mgr: SetupManifest = SetupManifest(thread_db_manager)
         manifest = manifest_mgr.get_manifest(game_session.id)
         schema_ref = build_lean_schema_reference(manifest)
         static_instruction = context_builder.build_static_system_instruction(
@@ -95,30 +102,52 @@ class TurnManager:
         # ===== BUILD DYNAMIC CONTEXT =====
         dynamic_context = context_builder.build_dynamic_context(game_session, chat_history)
 
-        # ===== STEP 1: PLAN =====
-        phase_template = SETUP_PLAN_TEMPLATE if current_game_mode == "SETUP" else PLAN_TEMPLATE.format(tool_budget=TOOL_BUDGET)
-        plan = self.planner.plan(
-            system_instruction=static_instruction, phase_template=phase_template, dynamic_context=dynamic_context, chat_history=chat_history, available_tool_models=available_tool_models
-        )
-        if not plan:
-            self.logger.error("LLM returned no structured response for TurnPlan.")
-            self.ui_queue.put({"type": "error", "message": "AI failed to generate a valid plan."})
-            return
+        # ===== STEP 1: PLAN (3-PHASE PROCESS for ALL modes) =====
         
-        plan_steps_text = "\n - ".join(plan.plan_steps)
-        plan_summary = f"""{plan.player_input_analysis}\n\n{plan_steps_text}\n\n{plan.narrative_plan}"""
+        # Phase 1: Analyze Intent
+        intent = self.planner.analyze_intent(
+            system_instruction=static_instruction, phase_template=ANALYSIS_TEMPLATE, chat_history=chat_history
+        )
+        if not intent:
+            self.logger.error("LLM returned no structured response for PlayerIntentAnalysis.")
+            self.ui_queue.put({"type": "error", "message": "AI failed to analyze intent."})
+            return
+        analysis_text = intent.analysis
+
+        # Phase 2: Develop Strategy
+        strategy = self.planner.develop_strategy(
+            system_instruction=static_instruction, phase_template=STRATEGY_TEMPLATE, analysis=analysis_text, dynamic_context=dynamic_context, chat_history=chat_history
+        )
+        if not strategy:
+            self.logger.error("LLM returned no structured response for StrategicPlan.")
+            self.ui_queue.put({"type": "error", "message": "AI failed to generate a valid strategy."})
+            return
+        plan_steps = strategy.plan_steps
+        narrative_plan = strategy.response_plan
+
+        # Phase 3: Select Tools
+        tool_calls = self.planner.select_tools(
+            system_instruction=static_instruction, phase_template=TOOL_SELECTION_TEMPLATE.format(tool_budget=TOOL_BUDGET), strategic_plan=strategy, chat_history=chat_history, available_tool_models=available_tool_models
+        )
+
+        # ===== Construct plan summary for UI and Narration =====
+        plan_steps_text = "\n - ".join(plan_steps)
+        tools_called = ", ".join([tool.name for tool in tool_calls]) if tool_calls else ""
+        tools_called = f"""Tools Called: {tools_called}""" if tools_called else ""
+
+        plan_summary = f"""{analysis_text}\n\n{plan_steps_text}\n\n{narrative_plan}\n\n{tools_called}"""
 
         self.ui_queue.put({"type": "thought_bubble", "content": plan_summary})
 
         # ===== STEP 2: EXECUTE TOOLS =====
         tool_results, memory_tool_used = executor.execute(
-            plan.tool_calls, game_session, TOOL_BUDGET, current_game_time=getattr(game_session, "game_time", None)
+            tool_calls, game_session, TOOL_BUDGET, current_game_time=getattr(game_session, "game_time", None)
         )
         if memory_tool_used and hasattr(self.orchestrator.view, "memory_inspector"):
             self.ui_queue.put({"type": "refresh_memory_inspector"})
 
         for result in tool_results:
-            if result.get("tool_name") == EndSetupAndStartGameplay.model_fields["name"].default and result.get("result", {}).get("setup_complete"):
+            if result.get("tool_name") == EndSetupAndStartGameplay.model_fields["tool_name"].default and result.get("result", {}).get("setup_complete"):
                 game_session.game_mode = "GAMEPLAY"
                 self.ui_queue.put({"type": "update_game_mode", "new_mode": "GAMEPLAY"})
                 self.ui_queue.put({"type": "message_bubble", "role": "system", "content": "✅ Session Zero complete! Game starting..."})

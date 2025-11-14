@@ -9,7 +9,10 @@ class Session:
     """
 
     def __init__(
-        self, session_id: str, system_prompt: str = "You are a helpful assistant."
+        self,
+        session_id: str,
+        system_prompt: str = "You are a helpful assistant.",
+        setup_phase_data: str = "{}",
     ):
         self.session_id = session_id
         self.id: Optional[int] = None
@@ -17,6 +20,7 @@ class Session:
         self.history: List[
             Message
         ] = []  # ✅ Start empty - only user/assistant messages
+        self.setup_phase_data = setup_phase_data
 
     def add_message(self, role: str, content: str):
         """Adds a message to the session history."""
@@ -41,6 +45,7 @@ class Session:
                 "session_id": self.session_id,
                 "system_prompt": self.system_prompt,  # ✅ Store separately
                 "history": [message.model_dump() for message in self.history],
+                "setup_phase_data": self.setup_phase_data,
             }
         )
 
@@ -51,6 +56,7 @@ class Session:
         session = cls(
             data["session_id"],
             system_prompt=data.get("system_prompt", "You are a helpful assistant."),
+            setup_phase_data=data.get("setup_phase_data", "{}"),
         )
         session.history = [Message(**item) for item in data["history"]]
         return session

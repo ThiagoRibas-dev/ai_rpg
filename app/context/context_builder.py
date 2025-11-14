@@ -49,7 +49,7 @@ class ContextBuilder:
 
         # 2. ✅ NEW: Lean schema reference (if exists)
         if schema_ref:
-            sections.append("# GAME MECHANICS QUICK REFERENCE")
+            sections.append("# GAME MECHANICS REFERENCE")
             sections.append(schema_ref)
             sections.append("Use schema.query or state.query for detailed values.")
 

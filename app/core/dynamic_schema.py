@@ -1,34 +1,32 @@
 import logging
-from typing import List, Type, Union  # Added Annotated
+from typing import List, Type, Union
 from pydantic import BaseModel, Field, create_model, field_validator
-from app.llm.schemas import TurnPlan
+from app.llm.schemas import ToolCall
 
 logger = logging.getLogger(__name__)
 
 
 def create_dynamic_turn_plan_model(
     tool_models: List[Type[BaseModel]],
-) -> Type[TurnPlan]:
+) -> Type[BaseModel]:
     """
-    Dynamically creates a Pydantic TurnPlan model with tool_calls strictly typed
-    to a discriminated union of the provided tool_models.
+    Dynamically creates a Pydantic model for tool selection, including
+    tool_calls strictly typed to a discriminated union of the provided tool_models.
     """
+    # If no tools are available, the tool_calls list should be empty.
+    # We create a model that explicitly forbids any tool calls.
     if not tool_models:
-        # If no tools are available, the tool_calls list should be empty.
-        # We create a TurnPlan that explicitly forbids any tool calls.
-        DynamicTurnPlan = create_model(
-            "DynamicTurnPlan",
+        DynamicExecutionPlan = create_model(
+            "DynamicExecutionPlan",
             tool_calls=(
-                List[BaseModel],
+                List[ToolCall],
                 Field(
-                    default_factory=lambda: [],
+                    default_factory=list,
                     description="No tools are available in this context.",
-                    max_items=0,
                 ),
             ),
-            __base__=TurnPlan,
         )
-        return DynamicTurnPlan
+        return DynamicExecutionPlan
 
     # ✅ Create validator to filter out invalid tool calls
     def validate_tool_calls(cls, tool_calls):
@@ -54,23 +52,22 @@ def create_dynamic_turn_plan_model(
 
         return valid_calls
 
-    # Dynamically create a TurnPlan model using the discriminated union
-    DynamicTurnPlan = create_model(
-        "DynamicTurnPlan",
+    # Dynamically create an ExecutionPlan model using the discriminated union
+    DynamicExecutionPlan = create_model(
+        "DynamicExecutionPlan",
         tool_calls=(
-            List[Union[tuple(tool_models)]],
+            List[Union[*tool_models]], # Corrected Union unpacking
             Field(
                 ...,
                 description="The tools that will be executed based on the input analysis and the response plan.",
             ),
         ),
-        __base__=TurnPlan,
         __validators__={
             "validate_tool_calls": field_validator("tool_calls")(validate_tool_calls)
         },
     )
 
     # Log available tool names for debugging
-    logger.debug(f"Created DynamicTurnPlan : {DynamicTurnPlan.schema_json()}\n")
+    logger.debug(f"Created DynamicExecutionPlan : {DynamicExecutionPlan.schema_json()}\n")
 
-    return DynamicTurnPlan
+    return DynamicExecutionPlan

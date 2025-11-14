@@ -8,13 +8,15 @@ from .base_repository import BaseRepository
 class SessionRepository(BaseRepository):
     """Handles all session-related database operations."""
 
-    def create(self, name: str, session_data: str, prompt_id: int) -> GameSession:
+    def create(
+        self, name: str, session_data: str, prompt_id: int, setup_phase_data: str = "{}"
+    ) -> GameSession:
         """Create a new game session."""
         cursor = self._execute(
             """INSERT INTO sessions 
                (name, session_data, prompt_id, memory, authors_note, game_mode, setup_phase_data) 
-               VALUES (?, ?, ?, '', '', 'SETUP', '{}')""",
-            (name, session_data, prompt_id),
+               VALUES (?, ?, ?, '', '', 'SETUP', ?)""",
+            (name, session_data, prompt_id, setup_phase_data),
         )
         self._commit()
         session_id = cursor.lastrowid
@@ -28,7 +30,7 @@ class SessionRepository(BaseRepository):
             memory="",
             authors_note="",
             game_mode="SETUP",
-            setup_phase_data="{}",
+            setup_phase_data=setup_phase_data,
         )
 
     def get_by_id(self, session_id: int) -> Optional[GameSession]:
@@ -67,7 +69,7 @@ class SessionRepository(BaseRepository):
         self._execute(
             """UPDATE sessions 
                SET name = ?, session_data = ?, prompt_id = ?, memory = ?, 
-                   authors_note = ?, game_time = ?, game_mode = ? 
+                   authors_note = ?, game_time = ?, game_mode = ?, setup_phase_data = ?
                WHERE id = ?""",
             (
                 session.name,
@@ -77,6 +79,7 @@ class SessionRepository(BaseRepository):
                 session.authors_note,
                 session.game_time,
                 session.game_mode,
+                session.setup_phase_data,
                 session.id,
             ),
         )

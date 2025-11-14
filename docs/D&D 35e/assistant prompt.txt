@@ -53,49 +53,50 @@ War		-									Martial Weapon Proficiency, Weapon Focus (Longsword)
 Law (Traded for the Law Devotion feat)		Granted Power: You cast law spells at +1 caster level.									-		
 Healing		You cast healing spells at +1 caster level.  (Traded for the Parrying Shield feat)									-		
 
-Skills	Valor
-Abrir Fechaduras (DES)	2
-Acrobacia (DES*)	-3
-Adestrar Animais (CAR)	4
-Alquimia (INT)	2
-Arte da Fuga (DES*)	-3
-Atuação (CAR)	4
-Avaliação (INT)	2
-Blefar (CAR)	4
-Cavalgar (DES)	2
-Concentração (CON)	11
-Conhecimento (Masmorras) (INT)	2
-Conhecimento Arcano (INT)	3/8
-Conhecimento Geográfico (INT)	2
-Conhecimento Histórico (INT)	3/8
-Conhecimento Natural (INT)	2
-Conhecimento Nobreza (INT)	2
-Conhecimento Planar (INT)	3/8
-Conhecimento Religioso (INT)	11/16
-Cura (SAB)	7
-Decifrar Escrita (INT)	2
-Diplomacia (CAR)	4
-Disfarce (CAR)	4
-Equilíbrio (DES*)	-3
-Escalar (FOR*)	-3
-Esconder-se (DES*)	-3
-Falsificação (INT)	2
-Furtividade (DES*)	-3
-Identificar Magia (INT)	6
-Intimidar (CAR)	4
-Natação (FOR*)	-8
-Observar (SAB)	6
-Obter Informações (CAR)	4
-Ofícios (INT)	2
-Operar Mecanismo (INT)	2
-Ouvir (SAB)	6
-Procurar (INT)	2
-Profissão (SAB)	6
-Prestidigitação (DES*)	-3
-Saltar (FOR*)	-3
-Sentir Motivação (SAB)	6
-Sobrevivência (SAB)	6
-Usar Instrumento Mágico (CAR	4
+
+Skills	Value
+Open Lock (DES)	2
+Tumble (DES*)	-3
+Handle Animal (CAR)	4
+Craft (Alchemy)	(INT)	2
+Escape Artist (DES*)	-3
+Perform (CAR)	4
+Appraise (INT)	2
+Bluff (CAR)	4
+Ride (DES)	2
+Concentration (CON)	11
+Knowledge (Dungeoneering)	(INT)	2
+Knowledge (Arcana)	(INT)	3/8
+Knowledge (Geography)	(INT)	2
+Knowledge (History)	(INT)	3/8
+Knowledge (Nature)	(INT)	2
+Knowledge (Nobility and royalty)	(INT)	2
+Knowledge (The planes)	(INT)	3/8
+Knowledge (Religion)	(INT)	11/16
+Heal (SAB)	7
+Decipher Script (INT)	2
+Diplomacy (CAR)	4
+Disguise (CAR)	4
+Balance (DES*)	-3
+Climb (FOR*)	-3
+Hide (DES*)	-3
+Forgery (INT)	2
+Move Silently (DES*)	-3
+Spellcraft (INT)	6
+Intimidate (CAR)	4
+Swim (FOR*)	-8
+Spot (SAB)	6
+Gather Information (CAR)	4
+Craft (INT)	2
+Disable Device (INT)	2
+Listen (SAB)	6
+Search (INT)	2
+Profession (SAB)	6
+Sleight of Hand (DES*)	-3
+Jump (FOR*)	-3
+Sense Motive (SAB)	6
+Survival (SAB)	6
+Use Magic Device (CAR)	4
 
 
 Atributo	Base	Temp	Equip	Current	Mod

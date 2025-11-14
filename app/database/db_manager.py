@@ -51,6 +51,15 @@ class DBManager:
         self.turn_metadata = TurnMetadataRepository(self.conn)
         self.schema_extensions = SchemaExtensionRepository(self.conn)
 
+        # Assert that repositories are not None for Mypy
+        assert self.prompts is not None
+        assert self.sessions is not None
+        assert self.memories is not None
+        assert self.game_state is not None
+        assert self.world_info is not None
+        assert self.turn_metadata is not None
+        assert self.schema_extensions is not None
+
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -99,9 +108,11 @@ class DBManager:
             self.prompts.delete(prompt_id)
 
     # Sessions
-    def save_session(self, name: str, session_data: str, prompt_id: int) -> GameSession:
+    def save_session(
+        self, name: str, session_data: str, prompt_id: int, setup_phase_data: str = "{}"
+    ) -> GameSession:
         with self.conn:
-            return self.sessions.create(name, session_data, prompt_id)
+            return self.sessions.create(name, session_data, prompt_id, setup_phase_data)
 
     def load_session(self, session_id: int) -> GameSession | None:
         with self.conn:

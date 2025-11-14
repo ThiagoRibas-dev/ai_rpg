@@ -1,8 +1,5 @@
 from app.tools.schemas import (
     MemoryUpsert,
-    SchemaDefineProperty,
-    EndSetupAndStartGameplay,
-    SchemaQuery,
 )
 
 # ==============================================================================
@@ -64,40 +61,40 @@ Your task is to identify and define the character Races or Species (e.g., 'Elf',
 """
 
 # ==============================================================================
-# SETUP MODE PROMPTS
+# Three-Phase Planning Prompts
 # ==============================================================================
 
-SETUP_PLAN_TEMPLATE = f"""
-Okay. Let me check the current game mode:
- - CURRENT GAME MODE: SETUP (Session Zero)
-
-My goal is to help the player define the rules, tone, and mechanics of the game and manage state (new properties, player attributes, etc).
-I will do the following:
-1. Analyze Input: Analyze our conversation, specially the player's latest message.
-2. Formulate Plan (Self-Correction): A step-by-step plan for which tools I'll call now and how I'll respond to the player after.
-3. Operations: Write the calls for the `{SchemaDefineProperty.model_fields["name"].default}`, `{SchemaQuery.model_fields["name"].default}`, and `{EndSetupAndStartGameplay.model_fields["name"].default}` tools based on my formulated plan.
-    - The `{SchemaDefineProperty.model_fields["name"].default}` tool will be used for any addition, removel, or update I need to make to the properties and attributes of the player, campaign, etc.
-    - The `{SchemaQuery.model_fields["name"].default}` tool will be used to query the details of information that might be usefull for my response to the player.
-    - I will *only* ever call the `{EndSetupAndStartGameplay.model_fields["name"].default}` once the player has given the go ahead.
-    - Operation Tool Call Example: 
-    `"tool_calls": [ 
-        {{
-            "name": "schema.define_property",
-            "property_name": "Prop 1",
-            "description": "Prop 1 description. Ranges from -10 to +10.",
-            "entity_type": "character",
-            "template": "resource", "has_max": true,
-            "min_value": -10, "max_value": 10,
-            "display_category": "Stats",
-            "icon": "P",
-            "display_format": "bar",
-            "regenerates": true,
-            "regeneration_rate": 1
-        }}
-    ]`
-4. Plan Narrative: After all that, I will outline the response I will give the player. This will summarize what we've defined, confirm the changes, and ask what they want to work on next.
-
+ANALYSIS_TEMPLATE = """
+This is the analysis step of my planning.
+My task is to carefully read the player's latest message and the recent conversation history and determine the player's intent or needs in a short, concise way.
+I will not plan any actions yet, only state my understanding of what the player wants to achieve.
 """
+
+STRATEGY_TEMPLATE = """
+I'm in the strategizing phase of my planning.
+Given the player's intent and the current game state, my task is to create a step-by-step action and response plan.
+I must also outline the narrative goal for my response to the player.
+
+As such:
+- My plan steps should be logical and describe both the what and how I'll do it, including tool names/identifiers if appropriate.
+- My narrative plan should serve as a guide for my response to the player in the next stage of the planning phase.
+"""
+
+TOOL_SELECTION_TEMPLATE = """
+Okay. So now I'm in the step of my planning where I call the necessary tools to fetch information, create properties, edit state, etc.
+The tool calls are made by populating an array with JSON objects for each tool, with each tool being identified by the `name` field.
+My sole task right now is to translate the information I have (context, step-by-step plan, etc) into a series of concrete, executable tool calls.
+
+For that, I will:
+- Review each step of the plan.
+- Writhe the JSON for the appropriate tool(s) from the available list to accomplish each objective (change a value, add a property, fetch information, etc).
+- Respect the budget of {tool_budget} tool calls for this turn.
+- If no tools are necessary to execute the plan, I will return an empty list: `[]`.
+"""
+
+# ==============================================================================
+# SETUP MODE PROMPTS
+# ==============================================================================
 
 SETUP_RESPONSE_TEMPLATE = """
 Alright. Let me check the current game mode:
@@ -127,22 +124,6 @@ I'll do the following:
 # GAMEPLAY MODE PROMPTS
 # ==============================================================================
 
-PLAN_TEMPLATE = """
-Alright. I am now in the planning phase for a GAMEPLAY turn. My role is to create a detailed, structured plan.
-
-1. Analyze Player Input: I will first analyze the player's latest message to understand their intent. This will be a brief, one-sentence summary.
-2. Formulate Plan Steps: I will create a step-by-step list of actions I need to take. This includes checking game state, evaluating conditions, and determining consequences.
-3. Select Tools: Based on my plan steps, I will select the necessary tools to execute to create or update records, fetch memories, etc. Each tool call in the `tool_calls` list must directly correspond to a step in my plan. I have a budget of {tool_budget} tools.
-4. Plan Narrative Response: Finally, I will outline the narrative response I will give to the player *after* the tools have been executed.
-
-IMPORTANT: 
-- If no tools are needed, `tool_calls` must be an empty list: `[]`.
-- Each tool call must have a valid `name` matching an available tool.
-- I will not include empty objects {{}} in the `tool_calls` list.
-- I will read tool descriptions carefully to use them correctly.
-
-"""
-
 NARRATIVE_TEMPLATE = f"""
 Okay. I am now in the narrative phase. My role is to:
 - Write the scene based on my planning intent and the tool results
@@ -153,7 +134,7 @@ Okay. I am now in the narrative phase. My role is to:
 
 MEMORY NOTES:
 - The memories shown in context were automatically retrieved and marked as accessed
-- I don't need to create {MemoryUpsert.model_fields["name"].default} calls - those were handled in the planning phase
+- I don't need to create {MemoryUpsert.model_fields["tool_name"].default} calls - those were handled in the planning phase
 - I should use these retrieved memories to inform my narrative
 
 TURN METADATA:
