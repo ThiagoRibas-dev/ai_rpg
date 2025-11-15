@@ -1,5 +1,4 @@
-from typing import List, Literal, Optional, Union
-
+from typing import List, Literal, Optional, Union, Any
 from pydantic import BaseModel, Field
 
 # A reusable JSON type to avoid recursion errors with Pydantic's schema generator.
@@ -9,11 +8,13 @@ JSONValue = Union[str, int, float, bool, dict, List]
 class ToolCall(BaseModel):
     """Represents a single call to a tool from the LLM."""
 
-    tool_name: str = Field(
+    name: str = Field(
+        ...,
         description="The name of the tool to call.",
         example="state_query",
     )
-    arguments: str = Field(
+    arguments: Any = Field(
+        "",
         description="The JSON-formatted string arguments for the tool.",
         example='{"entity_type": "character", "key": "player", "query": "gold"}',
     )

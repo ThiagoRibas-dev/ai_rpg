@@ -25,14 +25,14 @@ class ToolVisualizationManager:
         """
         self.tool_calls_frame = tool_calls_frame
 
-    def add_tool_call(self, tool_name: str, args: dict):
+    def add_tool_call(self, name: str, args: dict):
         """
         Add a tool call to the dedicated tool calls panel.
         """
         import logging
 
         logger = logging.getLogger(__name__)
-        logger.debug(f"🔧 ToolVisualizationManager.add_tool_call: {tool_name}")
+        logger.debug(f"🔧 ToolVisualizationManager.add_tool_call: {name}")
 
         style = get_tool_call_style()
 
@@ -47,7 +47,7 @@ class ToolVisualizationManager:
         # Header with tool name
         header = ctk.CTkLabel(
             call_frame,
-            text=f"🛠️ {tool_name}",
+            text=f"🛠️ {name}",
             font=Theme.fonts.subheading,
             text_color=style["header_color"],
         )

@@ -24,7 +24,7 @@ class MathEval(BaseModel):
     **Example:** "2+3*4" → 14
     """
 
-    tool_name: Literal["math.eval"] = "math.eval"
+    name: Literal["math.eval"] = "math.eval"
     expression: str = Field(..., description="Math expression, e.g., '2+3*4'")
 
 
@@ -52,7 +52,7 @@ class MemoryUpsert(BaseModel):
     })
     """
 
-    tool_name: Literal["memory.upsert"] = "memory.upsert"
+    name: Literal["memory.upsert"] = "memory.upsert"
     kind: str = Field(
         ...,
         description="Memory type: 'episodic' (events), 'semantic' (facts), 'lore' (backstory), 'user_pref' (preferences)",
@@ -76,7 +76,7 @@ class RagSearch(BaseModel):
     **Timeboxed:** Keep k small (2-4) to avoid overwhelming context.
     """
 
-    tool_name: Literal["rag.search"] = "rag.search"
+    name: Literal["rag.search"] = "rag.search"
     query: str = Field(..., description="The search query")
     k: int = Field(2, description="Number of chunks to return (keep small: 2-4)")
     filters: Optional[dict] = Field(
@@ -95,7 +95,7 @@ class RngRoll(BaseModel):
     **Returns:** Total result and individual roll values
     """
 
-    tool_name: Literal["rng.roll"] = "rng.roll"
+    name: Literal["rng.roll"] = "rng.roll"
     dice: Optional[str] = Field(
         None, description="Dice specification (e.g., '1d20+3', '2d6-1')"
     )
@@ -134,7 +134,7 @@ class RulesResolveAction(BaseModel):
     **You decide:** DC, modifiers, and resolution type based on context.
     """
 
-    tool_name: Literal["rules.resolve_action"] = "rules.resolve_action"
+    name: Literal["rules.resolve_action"] = "rules.resolve_action"
     action_id: str = Field(
         ..., description="Descriptive label for the action (e.g., 'Open Humming Lock')"
     )
@@ -172,7 +172,7 @@ class StateApplyPatch(BaseModel):
     })
     """
 
-    tool_name: Literal["state.apply_patch"] = "state.apply_patch"
+    name: Literal["state.apply_patch"] = "state.apply_patch"
     entity_type: str = Field(..., description="Type of entity to modify")
     key: str = Field(..., description="Entity key")
     patch: List[Patch] = Field(..., description="List of JSON Patch operations")
@@ -191,7 +191,7 @@ class StateQuery(BaseModel):
     - Get all quests: state.query({"entity_type": "quest", "key": "*", "json_path": "."})
     """
 
-    tool_name: Literal["state.query"] = "state.query"
+    name: Literal["state.query"] = "state.query"
     entity_type: str = Field(
         ...,
         description="Type of entity (e.g., 'character', 'inventory', 'quest', 'location')",
@@ -211,7 +211,7 @@ class TimeNow(BaseModel):
     **When to use:** Logging events with real timestamps (rarely needed in gameplay).
     """
 
-    tool_name: Literal["time.now"] = "time.now"
+    name: Literal["time.now"] = "time.now"
 
 
 class MemoryQuery(BaseModel):
@@ -230,7 +230,7 @@ class MemoryQuery(BaseModel):
     memory.query({"tags": ["combat"], "limit": 5})
     """
 
-    tool_name: Literal["memory.query"] = "memory.query"
+    name: Literal["memory.query"] = "memory.query"
     kind: Optional[str] = Field(
         None,
         description="Filter by memory kind: 'episodic', 'semantic', 'lore', or 'user_pref'",
@@ -257,7 +257,7 @@ class MemoryUpdate(BaseModel):
     memory.update({"memory_id": 42, "priority": 5})
     """
 
-    tool_name: Literal["memory.update"] = "memory.update"
+    name: Literal["memory.update"] = "memory.update"
     memory_id: int = Field(..., description="The ID of the memory to update")
     content: Optional[str] = Field(None, description="New content for the memory")
     priority: Optional[int] = Field(None, description="New priority (1-5)", ge=1, le=5)
@@ -271,7 +271,7 @@ class MemoryDelete(BaseModel):
     **Caution:** Deleted memories cannot be recovered.
     """
 
-    tool_name: Literal["memory.delete"] = "memory.delete"
+    name: Literal["memory.delete"] = "memory.delete"
     memory_id: int = Field(..., description="The ID of the memory to delete")
 
 
@@ -293,7 +293,7 @@ class TimeAdvance(BaseModel):
     })
     """
 
-    tool_name: Literal["time.advance"] = "time.advance"
+    name: Literal["time.advance"] = "time.advance"
     description: str = Field(
         ...,
         description="Human-readable time passage (e.g., '3 hours', 'until dawn', 'to the next day')",
@@ -319,7 +319,7 @@ class SchemaUpsertAttribute(BaseModel):
         })
     """
 
-    tool_name: Literal["schema.upsert_attribute"] = "schema.upsert_attribute"
+    name: Literal["schema.upsert_attribute"] = "schema.upsert_attribute"
     property_name: str = Field(
         ...,
         description="The programmatic name of the property (e.g., 'Sanity', 'Mana')",
@@ -366,12 +366,12 @@ class SchemaUpsertAttribute(BaseModel):
 
 class EndSetupAndStartGameplay(BaseModel):
     """
-    Signal the end of Session Zero setup phase and start the game.
-    **When to use:** Only when all custom properties have been defined and the player has explicitly agreed to start the game.
-    **Effect:** Transitions game mode from SETUP to GAMEPLAY.
+    Signal the end of the SETUP game mode (Session Zero) and start the game (GAMEPLAY mode).
+    **When to use:** Only when the player has explicitly requested or agreed to start the game.
+    **Effect:** Transitions game mode from SETUP to GAMEPLAY and starts the game.
     """
 
-    tool_name: Literal["end_setup_and_start_gameplay"] = "end_setup_and_start_gameplay"
+    name: Literal["end_setup_and_start_gameplay"] = "end_setup_and_start_gameplay"
     reason: str = Field(
         ...,
         description="A brief justification for why the setup is considered complete and gameplay should begin.",
@@ -387,7 +387,7 @@ class Deliberate(BaseModel):
     - To signal that you are waiting for more information from the player.
     """
 
-    tool_name: Literal["deliberate"] = "deliberate"
+    name: Literal["deliberate"] = "deliberate"
 
 
 class CharacterUpdate(BaseModel):
@@ -397,11 +397,6 @@ class CharacterUpdate(BaseModel):
     - Modifying HP, stats, conditions, or custom properties
     - Any character data changes (damage, healing, stat adjustments)
     - **Preferred over state.apply_patch** for character updates
-    **Benefits:**
-    - Automatic type checking and range validation
-    - Built-in game logic (e.g., death detection when HP ≤ 0)
-    - Validates against custom property schemas from Session Zero
-    - Clearer intent than low-level patches
     **Example:** Update HP and custom Sanity property
     character.update({
         "character_key": "player",
@@ -412,7 +407,7 @@ class CharacterUpdate(BaseModel):
     })
     """
 
-    tool_name: Literal["character.update"] = "character.update"
+    name: Literal["character.update"] = "character.update"
     character_key: str = Field(
         ..., description="Character ID (e.g., 'player', 'npc_goblin_chief')"
     )
@@ -431,7 +426,7 @@ class SchemaQuery(BaseModel):
     - Details about game mechanics
     """
 
-    tool_name: Literal["schema.query"] = "schema.query"
+    name: Literal["schema.query"] = "schema.query"
     query_type: Literal[
         "attribute", "resource", "skill", "action_economy", "class", "race", "all"
     ]

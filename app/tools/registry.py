@@ -56,10 +56,10 @@ class ToolRegistry:
                 issubclass(attr, BaseModel) and 
                 attr is not BaseModel and
                 hasattr(attr, "model_fields") and
-                "tool_name" in attr.model_fields):
+                "name" in attr.model_fields):
                 
                 # Extract the tool name from the Literal field
-                tool_name = attr.model_fields["tool_name"].default
+                tool_name = attr.model_fields["name"].default
                 name_to_type[tool_name] = attr
         
         logger.debug(f"Found {len(name_to_type)} Pydantic tool schemas")
@@ -111,7 +111,7 @@ class ToolRegistry:
 
         # Extract properties, excluding the discriminator field 'name'
         properties = schema.get("properties", {}).copy()
-        properties.pop("tool_name", None)
+        properties.pop("name", None)
 
         # Clean up schema for LLM (remove titles, defaults)
         for prop_schema in properties.values():
@@ -119,7 +119,7 @@ class ToolRegistry:
         _remove_default_field(properties)
 
         # Extract required fields, excluding 'name'
-        required = [r for r in schema.get("required", []) if r != "tool_name"]
+        required = [r for r in schema.get("required", []) if r != "name"]
 
         # Build parameters schema
         parameters_schema = {"type": "object"}
@@ -131,7 +131,7 @@ class ToolRegistry:
         # Store complete tool schema
         self.tool_schemas.append(
             {
-                "tool_name": self._get_tool_name(schema_type),
+                "name": self._get_tool_name(schema_type),
                 "description": description,
                 "parameters": parameters_schema,
             }
@@ -140,7 +140,7 @@ class ToolRegistry:
     @staticmethod
     def _get_tool_name(schema_type: Type[BaseModel]) -> str:
         """Extract tool name from Pydantic type."""
-        return schema_type.model_fields["tool_name"].default
+        return schema_type.model_fields["name"].default
 
     def get_all_schemas(self) -> List[Dict[str, Any]]:
         """Returns the JSON schemas of all registered tools for LLM."""
@@ -169,12 +169,12 @@ class ToolRegistry:
         """
         llm_schemas = []
         for schema in self.tool_schemas:
-            if schema["tool_name"] in tool_names:
+            if schema["name"] in tool_names:
                 # Create the format expected by OpenAI/Gemini tool calling
                 formatted_schema = {
                     "type": "function",
                     "function": {
-                        "name": schema["tool_name"],
+                        "name": schema["name"],
                         "description": schema["description"],
                         "parameters": schema["parameters"],
                     },
@@ -203,7 +203,7 @@ class ToolRegistry:
         handler = self._handlers[tool_type]
 
         # Extract all fields except the discriminator 'tool_name'
-        handler_args = tool_model.model_dump(exclude={"tool_name"})
+        handler_args = tool_model.model_dump(exclude={"name"})
 
         # Merge in context
         if context:

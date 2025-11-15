@@ -23,7 +23,8 @@ from app.prompts.templates import (
     CHOICE_GENERATION_TEMPLATE,
     NARRATIVE_TEMPLATE,
     SETUP_RESPONSE_TEMPLATE,
-    TOOL_SELECTION_TEMPLATE,
+    TOOL_SELECTION_SETUP_TEMPLATE,
+    TOOL_SELECTION_GAMEPLAY_TEMPLATE
 )
 from app.setup.setup_manifest import SetupManifest
 from app.tools.executor import ToolExecutor
@@ -97,10 +98,10 @@ class TurnManager:
         current_game_mode = game_session.game_mode
         if current_game_mode == "SETUP":
             setup_tool_names = [
-                SchemaUpsertAttribute.model_fields["tool_name"].default,
-                Deliberate.model_fields["tool_name"].default,
-                # SchemaQuery.model_fields["tool_name"].default,
-                EndSetupAndStartGameplay.model_fields["tool_name"].default,
+                SchemaUpsertAttribute.model_fields["name"].default,
+                Deliberate.model_fields["name"].default,
+                # SchemaQuery.model_fields["name"].default,
+                EndSetupAndStartGameplay.model_fields["name"].default,
             ]
         else:  # GAMEPLAY mode
             setup_tool_names = self.tool_registry.get_all_tool_names()  # Use all tools
@@ -164,16 +165,28 @@ class TurnManager:
         plan_steps = strategy.plan_steps
         narrative_plan = strategy.response_plan
 
+        # Phase 2: Develop Strategy
+        
         # Prepare a simple list of tool names for the prompt template
         tool_names_for_prompt = ", ".join(setup_tool_names)
-        tool_selection_template = TOOL_SELECTION_TEMPLATE.format(
-            tool_budget=TOOL_BUDGET, tool_names_list=tool_names_for_prompt
-        )
+        
+        if current_game_mode == "SETUP":
+            TOOL_NAME_SCHEMA_UPSERT = SchemaUpsertAttribute.model_fields["name"].default
+            TOOL_NAME_END_SETUP = EndSetupAndStartGameplay.model_fields["name"].default
+            
+            tool_selection_template = TOOL_SELECTION_SETUP_TEMPLATE.format(
+                tool_budget=TOOL_BUDGET, tool_names_list=tool_names_for_prompt, TOOL_NAME_SCHEMA_UPSERT=TOOL_NAME_SCHEMA_UPSERT, TOOL_NAME_END_SETUP=TOOL_NAME_END_SETUP
+            )
+        else:
+            tool_selection_template = TOOL_SELECTION_GAMEPLAY_TEMPLATE.format(
+                tool_budget=TOOL_BUDGET, tool_names_list=tool_names_for_prompt
+            )
 
         # Phase 3: Select Tools
         tool_calls = self.planner.select_tools(
             system_instruction=static_instruction,
             phase_template=tool_selection_template,
+            analysis=analysis_text,
             strategic_plan=strategy,
             chat_history=chat_history,
             tool_registry=self.tool_registry,
@@ -183,9 +196,9 @@ class TurnManager:
         # ===== Construct plan summary for UI and Narration =====
         plan_steps_text = "\n - ".join(plan_steps)
         plan_steps_text = f" - {plan_steps_text}"
-        
+
         tools_called = (
-            ", ".join([tool.tool_name for tool in tool_calls]) if tool_calls else ""
+            ", ".join([tool.name for tool in tool_calls]) if tool_calls else ""
         )
         tools_called = f"""Tools Called: {tools_called}""" if tools_called else ""
 
@@ -204,8 +217,8 @@ class TurnManager:
             self.ui_queue.put({"type": "refresh_memory_inspector"})
 
         for result in tool_results:
-            if result.get("tool_name") == EndSetupAndStartGameplay.model_fields[
-                "tool_name"
+            if result.get("name") == EndSetupAndStartGameplay.model_fields[
+                "name"
             ].default and result.get("result", {}).get("setup_complete"):
                 game_session.game_mode = "GAMEPLAY"
                 self.ui_queue.put({"type": "update_game_mode", "new_mode": "GAMEPLAY"})

@@ -19,7 +19,7 @@ class PlannerService:
         chat_history: List[Message],
     ) -> PlayerIntentAnalysis | None:
         """Phase 1: Determine the player's core intent."""
-        prefill = f"\n{phase_template}\n\nMy analysis of the player's intent is:"
+        prefill = f"{phase_template}\n\nMy analysis of the player's intent is :\n"
         prefilled_history = chat_history + [Message(role="assistant", content=prefill)]
         try:
             return self.llm.get_structured_response(
@@ -40,13 +40,7 @@ class PlannerService:
         chat_history: List[Message],
     ) -> StrategicPlan | None:
         """Phase 2: Formulate a high-level plan and narrative goal."""
-        prefill = f"""[Player Intent Analysis]
-{analysis}
-
-{phase_template}
-{dynamic_context}
-
-My strategic plan is:"""
+        prefill = f"""{phase_template}\n\nMy analysis of the player's intent is :\n{analysis}\n\n{dynamic_context}Here's my step by step plan :\n"""
         prefilled_history = chat_history + [Message(role="assistant", content=prefill)]
         try:
             return self.llm.get_structured_response(
@@ -62,15 +56,16 @@ My strategic plan is:"""
         self,
         system_instruction: str,
         phase_template: str,
+        analysis: str,
         strategic_plan: StrategicPlan,
         chat_history: List[Message],
         tool_registry, # Pass the whole registry
         available_tool_names: List[str],
     ) -> List[BaseModel]:
         """Phase 3: Select concrete tools to execute the strategic plan."""
-        narrative_plan = strategic_plan.response_plan
+        # narrative_plan = strategic_plan.response_plan
         plan_steps_str = "\n - ".join(strategic_plan.plan_steps)
-        prefill = f"""{phase_template}\n\nMy analysis of the current exchange:\n{narrative_plan}\n\nStep by step plan:\n - {plan_steps_str}\n\n"""
+        prefill = f"""{phase_template}\n\n### My analysis of the player's intent is :\n{analysis}\n\n### Step-by-step plan :\n - {plan_steps_str}\n\n### List of individual tool calls :\n"""
         
         prefilled_history = chat_history + [Message(role="assistant", content=prefill)]
         
@@ -87,7 +82,7 @@ My strategic plan is:"""
             
             # Convert the API response back into our Pydantic models for type-safe execution
             pydantic_tool_calls = []
-            name_to_type_map = {tool_type.model_fields['tool_name'].default: tool_type for tool_type in tool_registry.get_all_tool_types()}
+            name_to_type_map = {tool_type.model_fields['name'].default: tool_type for tool_type in tool_registry.get_all_tool_types()}
             for call in api_tool_calls:
                 tool_name = call.get("name")
                 if tool_name in name_to_type_map:

@@ -68,41 +68,109 @@ Your task is to identify and define the character Races or Species (e.g., 'Elf',
 # ==============================================================================
 
 ANALYSIS_TEMPLATE = """
-This is the analysis step of my planning.
-My task is to carefully read the player's latest message and the recent conversation history and determine the player's intent or needs in a short, concise way.
-I will not plan any actions yet, only state my understanding of what the player wants to achieve.
+I am in the analysis phase of my turn. I will do the following:
+1.  Carefully review the player's most recent message and the last few turns of conversation.
+2.  Identify the core intent: what the player wants to do, know, or achieve.
+3.  Write a concise, one-sentence summary of this intent.
 """
 
 GAMEPLAY_STRATEGY_TEMPLATE = """
-Okay. We are currently in GAMEPLAY mode, when I narrate, play combat, dialog with NPCs, create surprises for the player, etc.
-Given the player's intent and the current game state, I will create a step-by-step plan of my actions and a response intent plan describing how I'll continue the game and respond to the player's last message.
-
-As such:
-- My plan steps should be logical and describe both the what and how I'll do it, including wich tool names/identifiers I'll call.
-- My response plan should serve as a guide for my response to the player in the next stage of the planning phase.
+I am in the strategy phase for a GAMEPLAY turn. I will do the following:
+1.  Review the Player Intent Analysis and the current game state (character stats, inventory, active quests, relevant memories, and world info).
+2.  Create a step-by-step plan detailing the actions I will take to move the game forward. This includes identifying the specific tools I need to call (e.g., `state.query` to check facts, `rng.roll` for chance, `character.update` for damage/healing).
+3.  Formulate a `response_plan` that outlines the narrative goal for my next message to the player. This will guide me on how to describe the scene, roleplay NPCs, and present the outcomes of the player's actions.
 """
 
 SETUP_STRATEGY_TEMPLATE = f"""
-Alright. We are still in the SETUP game mode (Session Zero phase), when we decide the basics of the game and its systems, and I'm in the strategizing phase of my planning.
-Given the player's intent and the current game state, I will create a step-by-step plan of my actions and a response intent plan.
+Alright. Let me check the current game mode:
+ - CURRENT GAME MODE: SETUP (Session Zero)
 
-The rules for the step-by-step plan are as follows:
-- The steps of the plan will be based on the current context and the player's last input.
-- To craft the steps, I'll ask myself questions like "how many properties should I add or change", "did the player make a questions?", "should I make a suggestion?", "did the player ask to finish the SETUP mode and start GAMEPLAY mode?", etc.
-- I will create new game properties and modify existing ones. My primary tool for this is `{SchemaUpsertAttribute.model_fields["tool_name"].default}`. I should plan to call it for each new or updated property.
-- I'll question if the player is done with the SETUP of the game and wish to transition the game into GAMEPLAY mode.
-- If and only if the player has clearly and explicitly confirmed they are finished with setup and are ready to start the game, I will call `{EndSetupAndStartGameplay.model_fields["tool_name"].default}` to transition the from SETUP mode to GAMEPLAY mode.
-- If no other tools apply, I'll use the `{Deliberate.model_fields["tool_name"].default}` tool to think without making changes.
+I am in the planning phase for a SETUP turn (Session Zero).
+My goal is to help the player build the game's mechanics.
 
-My plan steps will detail which properties I will define or modify using the `{SchemaUpsertAttribute.model_fields["tool_name"].default}` tool.
-My response plan will outline how I will explain the changes back to the player, what suggestions I'll make if applicabe, and ask what they want to do next.
+I will start by analyzing the player's request to determine which game properties/attributes (stats, resources, equipment, skills, etc.) I should create or modify if any.
+Then, I will write a step-by-step plan, following:
+    1.  For each new or updated property requested by the player, I will plan a call to the `{SchemaUpsertAttribute.model_fields["name"].default}` tool, ensuring I fill out all the necessary details like name, description, and type.
+    2.  If the player asked a question or I need more information before acting, I will plan to use the `{Deliberate.model_fields["name"].default}` tool.
+    3.  I'll plan to call the `{EndSetupAndStartGameplay.model_fields["name"].default}` tool in order to transition for the current SETUP mode into the GAMEPLAY mode as ssoon as the player has confirmed his desire to start the game.
+
+And finally, I'll formulate a `response_plan` to guide my reply.
+This `response_plan` will describe the current game mode (SETUP), the changes I made, affirm my understanding, and asks what the player wants to do next (add another stat or resource, modify an existing one, finish the SETUP mode and start the game, etc).
+
+An example of my output : 
+{{
+  "plan_steps": [
+    "1. Define the 'attribute1' attribute using `{SchemaUpsertAttribute.model_fields["name"].default}`. This will be a core stat for [description]], with a default value of 10.",
+    "2. Create the 'resource1' resource using `{SchemaUpsertAttribute.model_fields["name"].default}`. I'll set it up as a resource with a maximum value based on another stat, and a default of 100.",
+    "3. Add the 'resource2' property via `{SchemaUpsertAttribute.model_fields["name"].default}`. This will be a resource, starting at 100, that decreases in [condition] and regenerates 1 point per hour.",
+    "4. The player has said they are happy with the defined attributes and are ready to start. I will call `{EndSetupAndStartGameplay.model_fields["name"].default}` to transition from SETUP mode to GAMEPLAY mode and start the game."
+  ],
+  "response_plan": "I will tell player that the core attributes of attribute1, resource1, and resource2 have been successfully created.\nAnd since the player has given the green light to start the game, I will announce that the setup is complete."
+}}
 """
 
-TOOL_SELECTION_TEMPLATE = """
-I am in the tool selection phase.
-Based on the step-by-step plan, I will call the necessary tools to gather information or modify the game state.
+TOOL_SELECTION_SETUP_TEMPLATE = """
+Alright, we are still in SETUP mode.
+I have analyzed the player's intent, and concocted a "Step-by-step plan".
 
-There is a budget of {tool_budget} tool calls for this turn and I have access to the following tools : {tool_names_list}
+Now, I will do the following:
+1.  Follow the step-by-step plan I created in the strategy phase.
+2.  Translate each step into precise, structured tool calls from the list of available tools.
+3.  Ensure I do not exceed the tool budget of {{tool_budget}} calls for this turn.
+4.  Only use tools from this list: {{tool_names_list}}.
+
+An example of my output :
+[
+  {{
+    "tool_name": "{TOOL_NAME_SCHEMA_UPSERT}",
+    "arguments": {{
+      "property_name": "Attribute1",
+      "description": "A core stat for physical actions.",
+      "template": "stat",
+      "default_value": 10,
+      "min_value": 1,
+      "max_value": 20
+    }}
+  }},
+  {{
+    "tool_name": "{TOOL_NAME_SCHEMA_UPSERT}",
+    "arguments": {{
+      "property_name": "Resource1",
+      "description": "Maximum value based on [attribute].",
+      "template": "resource",
+      "default_value": 100,
+      "max_value": 100
+    }}
+  }},
+  {{
+    "tool_name": "{TOOL_NAME_SCHEMA_UPSERT}",
+    "arguments": {{
+      "property_name": "Resource2",
+      "description": "A resource that decreases and regenerates automatically.",
+      "template": "resource",
+      "default_value": 100,
+      "max_value": 100,
+      "regenerates": true
+    }}
+  }},
+  {{
+    "tool_name": "{TOOL_NAME_END_SETUP}",
+    "arguments": {{
+      "reason": "The player has confirmed that they are satisfied with the setup and that I should start the game by transitioning to GAMEPLAY mode."
+    }}
+  }}
+]
+"""
+
+TOOL_SELECTION_GAMEPLAY_TEMPLATE = """
+Okay. We are in GAMEPLAY mode, so let's continue.
+I have analyzed the player's intent, and concocted a "Step-by-step plan".
+
+Now, I will do the following:
+1.  Follow the step-by-step plan I created in the strategy phase.
+2.  Translate each step into precise, structured tool calls from the list of available tools.
+3.  Ensure I do not exceed the tool budget of {tool_budget} calls for this turn.
+4.  Only use tools from this list: {tool_names_list}.
 """
 
 # ==============================================================================
@@ -147,7 +215,7 @@ Okay. I am now in the narrative phase. My role is to:
 
 MEMORY NOTES:
 - The memories shown in context were automatically retrieved and marked as accessed
-- I don't need to create {MemoryUpsert.model_fields["tool_name"].default} calls - those were handled in the planning phase
+- I don't need to create {MemoryUpsert.model_fields["name"].default} calls - those were handled in the planning phase
 - I should use these retrieved memories to inform my narrative
 
 TURN METADATA:

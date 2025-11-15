@@ -66,13 +66,13 @@ class ToolExecutor:
             )
 
             # Defensive check: ensure it's not a raw BaseModel
-            if call_type is BaseModel or not hasattr(call, "tool_name"):
+            if call_type is BaseModel or not hasattr(call, "name"):
                 self.logger.error(
                     f"Invalid tool call at index {i}: {call_type} - {call}"
                 )
                 results.append(
                     {
-                        "tool_name": "unknown",
+                        "name": "unknown",
                         "arguments": {},
                         "error": f"Invalid tool call type: {call_type.__name__}",
                     }
@@ -81,14 +81,14 @@ class ToolExecutor:
 
             # Safe access to name with fallback
             try:
-                tool_name = call.tool_name
+                tool_name = call.name
             except AttributeError as e:
                 self.logger.error(
-                    f"Tool call has no 'tool_name' attribute: {call_type} - {e}"
+                    f"Tool call has no 'name' attribute: {call_type} - {e}"
                 )
                 results.append(
                     {
-                        "tool_name": "unknown",
+                        "name": "unknown",
                         "arguments": {},
                         "error": f"Tool call missing 'name' field: {call_type.__name__}",
                     }
@@ -96,12 +96,12 @@ class ToolExecutor:
                 continue
 
             try:
-                tool_args = call.model_dump(exclude={"tool_name", "description"})
+                tool_args = call.model_dump(exclude={"name", "description"})
             except Exception as e:
                 self.logger.error(f"Failed to dump model for {tool_name}: {e}")
                 results.append(
                     {
-                        "tool_name": tool_name,
+                        "name": tool_name,
                         "arguments": {},
                         "error": f"Failed to serialize tool arguments: {e}",
                     }
@@ -123,7 +123,7 @@ class ToolExecutor:
                 result = self.tools.execute(call, context=ctx)
 
                 results.append(
-                    {"tool_name": tool_name, "arguments": tool_args, "result": result}
+                    {"name": tool_name, "arguments": tool_args, "result": result}
                 )
 
                 # Notify UI of success
@@ -156,7 +156,7 @@ class ToolExecutor:
                 )
 
                 results.append(
-                    {"tool_name": tool_name, "arguments": tool_args, "error": str(e)}
+                    {"name": tool_name, "arguments": tool_args, "error": str(e)}
                 )
 
                 # Notify UI of error
@@ -179,7 +179,7 @@ class ToolExecutor:
         """
         # Special handling for time.advance
         if (
-            tool_name == schemas.TimeAdvance.model_fields["tool_name"].default
+            tool_name == schemas.TimeAdvance.model_fields["name"].default
             and isinstance(result, dict)
             and "new_time" in result
         ):
