@@ -1,7 +1,7 @@
 import os
 import json
 import openai
-from typing import Dict, Type, List, Generator
+from typing import Dict, Type, List, Generator, Any
 from pydantic import BaseModel, ValidationError
 from app.llm.llm_connector import LLMConnector
 from app.models.message import Message
@@ -11,6 +11,10 @@ logger = logging.getLogger(__name__)
 
 
 class OpenAIConnector(LLMConnector):
+    """
+    Reference : https://deepwiki.com/openai/openai-python/4.1-chat-completions-api
+    """
+
     def __init__(self):
         self.base_url = os.environ.get("OPENAI_API_BASE_URL")
         self.api_key = os.environ.get("OPENAI_API_KEY")
@@ -113,3 +117,34 @@ class OpenAIConnector(LLMConnector):
             logger.error(f"JSON decode error in OpenAI response: {e}")
             logger.error(f"Raw content: {content}")
             raise
+
+    def get_tool_calls(
+        self,
+        system_prompt: str,
+        chat_history: List[Message],
+        tools: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        """Makes an OpenAI-compatible API call and returns a list of tool calls."""
+        messages = [{"role": "system", "content": system_prompt}]
+        messages.extend(self._convert_chat_history_to_messages(chat_history))
+
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            tools=tools,
+            tool_choice="required",
+        )
+
+        response_message = response.choices[0].message
+        tool_calls_data = []
+
+        if response_message.tool_calls:
+            for tool_call in response_message.tool_calls:
+                tool_calls_data.append(
+                    {
+                        "name": tool_call.function.name,
+                        "arguments": json.loads(tool_call.function.arguments),
+                    }
+                )
+
+        return tool_calls_data

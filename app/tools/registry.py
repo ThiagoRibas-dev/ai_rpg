@@ -162,6 +162,26 @@ class ToolRegistry:
         name_to_type = {self._get_tool_name(t): t for t in self._handlers.keys()}
         return [name_to_type[name] for name in tool_names if name in name_to_type]
 
+    def get_llm_tool_schemas(self, tool_names: List[str]) -> List[Dict[str, Any]]:
+        """
+        Returns the JSON schemas for a given list of tools, formatted for LLM tool-calling APIs.
+        This renames 'tool_name' to 'name' for API compatibility.
+        """
+        llm_schemas = []
+        for schema in self.tool_schemas:
+            if schema["tool_name"] in tool_names:
+                # Create the format expected by OpenAI/Gemini tool calling
+                formatted_schema = {
+                    "type": "function",
+                    "function": {
+                        "name": schema["tool_name"],
+                        "description": schema["description"],
+                        "parameters": schema["parameters"],
+                    },
+                }
+                llm_schemas.append(formatted_schema)
+        return llm_schemas
+
     def execute(
         self, tool_model: BaseModel, context: Dict[str, Any] | None = None
     ) -> Any:

@@ -66,7 +66,7 @@ class ToolExecutor:
             )
 
             # Defensive check: ensure it's not a raw BaseModel
-            if call_type is BaseModel or not hasattr(call, "name"):
+            if call_type is BaseModel or not hasattr(call, "tool_name"):
                 self.logger.error(
                     f"Invalid tool call at index {i}: {call_type} - {call}"
                 )
@@ -81,10 +81,10 @@ class ToolExecutor:
 
             # Safe access to name with fallback
             try:
-                tool_name = call.name
+                tool_name = call.tool_name
             except AttributeError as e:
                 self.logger.error(
-                    f"Tool call has no 'name' attribute: {call_type} - {e}"
+                    f"Tool call has no 'tool_name' attribute: {call_type} - {e}"
                 )
                 results.append(
                     {
@@ -96,7 +96,7 @@ class ToolExecutor:
                 continue
 
             try:
-                tool_args = call.model_dump(exclude={"name"})
+                tool_args = call.model_dump(exclude={"tool_name", "description"})
             except Exception as e:
                 self.logger.error(f"Failed to dump model for {tool_name}: {e}")
                 results.append(

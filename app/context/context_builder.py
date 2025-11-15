@@ -1,5 +1,4 @@
 import logging
-import json
 from typing import List
 from app.models.session import Session
 from app.models.game_session import GameSession
@@ -28,17 +27,16 @@ class ContextBuilder:
 
     def build_static_system_instruction(
         self,
-        game_session: GameSession,
-        tool_schemas: List[dict],
+        game_session: GameSession, # tool_schemas removed
         schema_ref: str = "",
     ) -> str:
         """
         Build the cacheable system instruction.
         Call this when:
         - Session starts
-        - Game mode changes (SETUP → GAMEPLAY)
+        - Session is loaded
         - Author's note is edited
-        - Tool availability changes
+        - Tool availability changes (this is now handled by the tool calling API, so the full schemas are not needed here)
         """
         sections = []
 
@@ -53,10 +51,6 @@ class ContextBuilder:
             sections.append(schema_ref)
             sections.append("Use schema.query or state.query for detailed values.")
 
-        # 3. Tool schemas (only if tools are available)
-        if tool_schemas:
-            sections.append("# AVAILABLE TOOLS")
-            sections.append(json.dumps(tool_schemas, indent=2))
 
         # 4. Author's note (if exists)
         if game_session.authors_note:

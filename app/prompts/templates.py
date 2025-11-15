@@ -73,23 +73,18 @@ I will not plan any actions yet, only state my understanding of what the player 
 STRATEGY_TEMPLATE = """
 I'm in the strategizing phase of my planning.
 Given the player's intent and the current game state, my task is to create a step-by-step action and response plan.
-I must also outline the narrative goal for my response to the player.
+I must also outline the response goal for my response to the player.
 
 As such:
 - My plan steps should be logical and describe both the what and how I'll do it, including tool names/identifiers if appropriate.
-- My narrative plan should serve as a guide for my response to the player in the next stage of the planning phase.
+- My response plan should serve as a guide for my response to the player in the next stage of the planning phase.
 """
 
 TOOL_SELECTION_TEMPLATE = """
-Okay. So now I'm in the step of my planning where I call the necessary tools to fetch information, create properties, edit state, etc.
-The tool calls are made by populating an array with JSON objects for each tool, with each tool being identified by the `name` field.
-My sole task right now is to translate the information I have (context, step-by-step plan, etc) into a series of concrete, executable tool calls.
+I am in the tool selection phase.
+Based on the step-by-step plan, I will call the necessary tools to gather information or modify the game state.
 
-For that, I will:
-- Review each step of the plan.
-- Writhe the JSON for the appropriate tool(s) from the available list to accomplish each objective (change a value, add a property, fetch information, etc).
-- Respect the budget of {tool_budget} tool calls for this turn.
-- If no tools are necessary to execute the plan, I will return an empty list: `[]`.
+There is a budget of {tool_budget} tool calls for this turn and I have access to the following tools : {tool_names_list}
 """
 
 # ==============================================================================

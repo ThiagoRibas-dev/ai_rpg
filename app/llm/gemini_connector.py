@@ -3,7 +3,7 @@ from google import genai
 from google.genai import types
 from pydantic import BaseModel
 
-from typing import Type, List, Generator  # Added Any for recursive function
+from typing import Type, List, Generator, Dict, Any
 from app.llm.llm_connector import LLMConnector
 from app.models.message import Message
 
@@ -111,3 +111,37 @@ class GeminiConnector(LLMConnector):
             model=self.model_name, contents=contents, config=generation_config
         )
         return output_schema.model_validate(response.parsed)
+
+    def get_tool_calls(
+        self,
+        system_prompt: str,
+        chat_history: List[Message],
+        tools: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        """Makes a Gemini API call and returns a list of tool calls requested by the model."""
+        contents = self._convert_chat_history_to_contents(chat_history)
+
+        # Gemini expects a list of `Tool` objects.
+        gemini_tools = [types.Tool.from_dict(t) for t in tools]
+
+        generation_config = types.GenerateContentConfig(
+            temperature=1,
+            top_p=0.9,
+            max_output_tokens=self.default_max_tokens,
+            safety_settings=self.default_safety_settings,
+        )
+
+        response = self.client.models.generate_content(
+            model=self.model_name,
+            contents=contents,
+            system_instruction=[types.Part.from_text(text=system_prompt)],
+            generation_config=generation_config,
+            tools=gemini_tools,
+        )
+
+        tool_calls = []
+        if response.candidates and response.candidates[0].finish_reason == "TOOL_CALLS":
+            for part in response.candidates[0].content.parts:
+                if fc := part.function_call:
+                    tool_calls.append({"name": fc.name, "arguments": dict(fc.args)})
+        return tool_calls
