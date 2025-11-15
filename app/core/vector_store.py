@@ -142,6 +142,19 @@ class VectorStore:
                 f"Deleted {len(all_items['ids'])} turns from vector store for session {session_id}"
             )
 
+    def delete_session_data(self, session_id: int):
+        """Delete all turns and memories for a session from the vector store."""
+        # Delete turns
+        self.delete_session_turns(session_id)
+
+        # Delete memories
+        all_memories = self.memories_col.get(where={"session_id": {"$eq": session_id}})
+        if all_memories["ids"]:
+            self.memories_col.delete(ids=all_memories["ids"])
+            logger.info(
+                f"Deleted {len(all_memories['ids'])} memories from vector store for session {session_id}"
+            )
+
     # ===== Memories embeddings =====
     def upsert_memory(
         self,

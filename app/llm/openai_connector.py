@@ -74,6 +74,7 @@ class OpenAIConnector(LLMConnector):
                 "schema": output_schema.model_json_schema(),
             },
             extra_body={
+                "chat_template_kwargs": {"enable_thinking": False},
                 "top_k": 40,
                 "response_format": {
                     "type": "json_object",
@@ -132,7 +133,14 @@ class OpenAIConnector(LLMConnector):
             model=self.model,
             messages=messages,
             tools=tools,
+            max_completion_tokens=-1,
+            temperature=0.7,
+            top_p=0.9,
             tool_choice="required",
+            extra_body={
+                "chat_template_kwargs": {"enable_thinking": False},
+                "top_k": 40,
+            },
         )
 
         response_message = response.choices[0].message

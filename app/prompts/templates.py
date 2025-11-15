@@ -1,5 +1,8 @@
 from app.tools.schemas import (
     MemoryUpsert,
+    SchemaUpsertAttribute,
+    EndSetupAndStartGameplay,
+    Deliberate,
 )
 
 # ==============================================================================
@@ -70,14 +73,29 @@ My task is to carefully read the player's latest message and the recent conversa
 I will not plan any actions yet, only state my understanding of what the player wants to achieve.
 """
 
-STRATEGY_TEMPLATE = """
-I'm in the strategizing phase of my planning.
-Given the player's intent and the current game state, my task is to create a step-by-step action and response plan.
-I must also outline the response goal for my response to the player.
+GAMEPLAY_STRATEGY_TEMPLATE = """
+Okay. We are currently in GAMEPLAY mode, when I narrate, play combat, dialog with NPCs, create surprises for the player, etc.
+Given the player's intent and the current game state, I will create a step-by-step plan of my actions and a response intent plan describing how I'll continue the game and respond to the player's last message.
 
 As such:
-- My plan steps should be logical and describe both the what and how I'll do it, including tool names/identifiers if appropriate.
+- My plan steps should be logical and describe both the what and how I'll do it, including wich tool names/identifiers I'll call.
 - My response plan should serve as a guide for my response to the player in the next stage of the planning phase.
+"""
+
+SETUP_STRATEGY_TEMPLATE = f"""
+Alright. We are still in the SETUP game mode (Session Zero phase), when we decide the basics of the game and its systems, and I'm in the strategizing phase of my planning.
+Given the player's intent and the current game state, I will create a step-by-step plan of my actions and a response intent plan.
+
+The rules for the step-by-step plan are as follows:
+- The steps of the plan will be based on the current context and the player's last input.
+- To craft the steps, I'll ask myself questions like "how many properties should I add or change", "did the player make a questions?", "should I make a suggestion?", "did the player ask to finish the SETUP mode and start GAMEPLAY mode?", etc.
+- I will create new game properties and modify existing ones. My primary tool for this is `{SchemaUpsertAttribute.model_fields["tool_name"].default}`. I should plan to call it for each new or updated property.
+- I'll question if the player is done with the SETUP of the game and wish to transition the game into GAMEPLAY mode.
+- If and only if the player has clearly and explicitly confirmed they are finished with setup and are ready to start the game, I will call `{EndSetupAndStartGameplay.model_fields["tool_name"].default}` to transition the from SETUP mode to GAMEPLAY mode.
+- If no other tools apply, I'll use the `{Deliberate.model_fields["tool_name"].default}` tool to think without making changes.
+
+My plan steps will detail which properties I will define or modify using the `{SchemaUpsertAttribute.model_fields["tool_name"].default}` tool.
+My response plan will outline how I will explain the changes back to the player, what suggestions I'll make if applicabe, and ask what they want to do next.
 """
 
 TOOL_SELECTION_TEMPLATE = """

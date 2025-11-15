@@ -213,3 +213,7 @@ list_dirs_and_files.txt
 chroma_db/*
 .VSCodeCounter/*
 docs/assistant prompt.txt
+.bat
+start_server_gemma-3n-E4B_32k.bat
+start_server_Qwen3-30B-A3B-instruct.bat
+start_server_Qwen3-30B-A3B-thinking.bat

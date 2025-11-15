@@ -18,10 +18,11 @@ from app.models.session import Session
 from app.prompts.builder import build_lean_schema_reference
 from app.prompts.templates import (
     ANALYSIS_TEMPLATE,
+    SETUP_STRATEGY_TEMPLATE,
+    GAMEPLAY_STRATEGY_TEMPLATE,
     CHOICE_GENERATION_TEMPLATE,
     NARRATIVE_TEMPLATE,
     SETUP_RESPONSE_TEMPLATE,
-    STRATEGY_TEMPLATE,
     TOOL_SELECTION_TEMPLATE,
 )
 from app.setup.setup_manifest import SetupManifest
@@ -142,9 +143,14 @@ class TurnManager:
         analysis_text = intent.analysis
 
         # Phase 2: Develop Strategy
+        if current_game_mode == "SETUP":
+            strategy_template = SETUP_STRATEGY_TEMPLATE
+        else:
+            strategy_template = GAMEPLAY_STRATEGY_TEMPLATE
+
         strategy = self.planner.develop_strategy(
             system_instruction=static_instruction,
-            phase_template=STRATEGY_TEMPLATE,
+            phase_template=strategy_template,
             analysis=analysis_text,
             dynamic_context=dynamic_context,
             chat_history=chat_history,
@@ -176,6 +182,8 @@ class TurnManager:
 
         # ===== Construct plan summary for UI and Narration =====
         plan_steps_text = "\n - ".join(plan_steps)
+        plan_steps_text = f" - {plan_steps_text}"
+        
         tools_called = (
             ", ".join([tool.tool_name for tool in tool_calls]) if tool_calls else ""
         )

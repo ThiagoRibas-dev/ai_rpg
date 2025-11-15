@@ -122,21 +122,25 @@ class GeminiConnector(LLMConnector):
         contents = self._convert_chat_history_to_contents(chat_history)
 
         # Gemini expects a list of `Tool` objects.
-        gemini_tools = [types.Tool.from_dict(t) for t in tools]
+        function_declarations = [
+            types.FunctionDeclaration(**t["function"]) for t in tools
+        ]
+        gemini_tool = types.Tool(function_declarations=function_declarations)
 
         generation_config = types.GenerateContentConfig(
+            system_instruction=[types.Part.from_text(text=system_prompt)],
+            tools=[gemini_tool],
             temperature=1,
             top_p=0.9,
             max_output_tokens=self.default_max_tokens,
+            thinking_config=types.ThinkingConfig(
+                thinking_budget=self.default_thinking_budget
+            ),
             safety_settings=self.default_safety_settings,
         )
 
         response = self.client.models.generate_content(
-            model=self.model_name,
-            contents=contents,
-            system_instruction=[types.Part.from_text(text=system_prompt)],
-            generation_config=generation_config,
-            tools=gemini_tools,
+            model=self.model_name, contents=contents, config=generation_config
         )
 
         tool_calls = []

@@ -142,23 +142,32 @@ class DBManager:
         with self.conn:
             return self.sessions.get_context(session_id)
 
+    def delete_session(self, session_id: int):
+        with self.conn:
+            assert self.sessions is not None
+            self.sessions.delete(session_id)
+
     # World Info
     def create_world_info(
         self, prompt_id: int, keywords: str, content: str
     ) -> WorldInfo:
         with self.conn:
+            assert self.world_info is not None
             return self.world_info.create(prompt_id, keywords, content)
 
     def get_world_info_by_prompt(self, prompt_id: int) -> List[WorldInfo]:
         with self.conn:
+            assert self.world_info is not None
             return self.world_info.get_by_prompt(prompt_id)
 
     def update_world_info(self, world_info: WorldInfo):
         with self.conn:
+            assert self.world_info is not None
             self.world_info.update(world_info)
 
     def delete_world_info(self, world_info_id: int):
         with self.conn:
+            assert self.world_info is not None
             self.world_info.delete(world_info_id)
 
     # Memories
@@ -172,12 +181,14 @@ class DBManager:
         fictional_time: str | None = None,
     ) -> Memory:
         with self.conn:
+            assert self.memories is not None
             return self.memories.create(
                 session_id, kind, content, priority, tags, fictional_time
             )
 
     def get_memories_by_session(self, session_id: int) -> List[Memory]:
         with self.conn:
+            assert self.memories is not None
             return self.memories.get_by_session(session_id)
 
     def query_memories(
@@ -189,10 +200,12 @@ class DBManager:
         limit: int = 10,
     ) -> List[Memory]:
         with self.conn:
+            assert self.memories is not None
             return self.memories.query(session_id, kind, tags, query_text, limit)
 
     def update_memory_access(self, memory_id: int):
         with self.conn:
+            assert self.memories is not None
             self.memories.update_access(memory_id)
 
     def update_memory(
@@ -204,18 +217,22 @@ class DBManager:
         tags: List[str] | None = None,
     ) -> Optional[Memory]:
         with self.conn:
+            assert self.memories is not None
             return self.memories.update(memory_id, kind, content, priority, tags)
 
     def get_memory_by_id(self, memory_id: int) -> Optional[Memory]:
         with self.conn:
+            assert self.memories is not None
             return self.memories.get_by_id(memory_id)
 
     def delete_memory(self, memory_id: int):
         with self.conn:
+            assert self.memories is not None
             self.memories.delete(memory_id)
 
     def get_memory_statistics(self, session_id: int) -> Dict[str, Any]:
         with self.conn:
+            assert self.memories is not None
             return self.memories.get_statistics(session_id)
 
     # Game State
@@ -223,36 +240,43 @@ class DBManager:
         self, session_id: int, entity_type: str, entity_key: str
     ) -> dict:
         with self.conn:
+            assert self.game_state is not None
             return self.game_state.get_entity(session_id, entity_type, entity_key)
 
     def set_game_state_entity(
         self, session_id: int, entity_type: str, entity_key: str, state_data: dict
     ) -> int:
         with self.conn:
+            assert self.game_state is not None
             return self.game_state.set_entity(
                 session_id, entity_type, entity_key, state_data
             )
 
     def get_all_entities_by_type(self, session_id: int, entity_type: str) -> dict:
         with self.conn:
+            assert self.game_state is not None
             return self.game_state.get_all_entities_by_type(session_id, entity_type)
 
     def delete_game_state_entity(
         self, session_id: int, entity_type: str, entity_key: str
     ):
         with self.conn:
+            assert self.game_state is not None
             self.game_state.delete_entity(session_id, entity_type, entity_key)
 
     def get_all_game_state(self, session_id: int) -> dict:
         with self.conn:
+            assert self.game_state is not None
             return self.game_state.get_all(session_id)
 
     def get_game_state_statistics(self, session_id: int) -> dict:
         with self.conn:
+            assert self.game_state is not None
             return self.game_state.get_statistics(session_id)
 
     def clear_game_state(self, session_id: int):
         with self.conn:
+            assert self.game_state is not None
             self.game_state.clear(session_id)
 
     # Schema Extensions
@@ -264,6 +288,7 @@ class DBManager:
         definition_dict: Dict[str, Any],
     ):
         with self.conn:
+            assert self.schema_extensions is not None
             self.schema_extensions.create(
                 session_id, entity_type, property_name, definition_dict
             )
@@ -272,18 +297,21 @@ class DBManager:
         self, session_id: int, entity_type: str
     ) -> Dict[str, Dict[str, Any]]:
         with self.conn:
+            assert self.schema_extensions is not None
             return self.schema_extensions.get_by_entity_type(session_id, entity_type)
 
     def delete_schema_extension(
         self, session_id: int, entity_type: str, property_name: str
     ):
         with self.conn:
+            assert self.schema_extensions is not None
             self.schema_extensions.delete(session_id, entity_type, property_name)
 
     def get_all_schema_extensions(
         self, session_id: int
     ) -> Dict[str, Dict[str, Dict[str, Any]]]:
         with self.conn:
+            assert self.schema_extensions is not None
             return self.schema_extensions.get_all(session_id)
 
     # Turn Metadata
@@ -297,6 +325,7 @@ class DBManager:
         importance: int,
     ) -> int:
         with self.conn:
+            assert self.turn_metadata is not None
             return self.turn_metadata.create(
                 session_id, prompt_id, round_number, summary, tags, importance
             )
@@ -305,10 +334,12 @@ class DBManager:
         self, session_id: int, start_round: int, end_round: int
     ) -> List[Dict[str, Any]]:
         with self.conn:
+            assert self.turn_metadata is not None
             return self.turn_metadata.get_range(session_id, start_round, end_round)
 
     def get_all_turn_metadata(self, session_id: int) -> List[Dict[str, Any]]:
         with self.conn:
+            assert self.turn_metadata is not None
             return self.turn_metadata.get_all(session_id)
 
     # Private table creation methods

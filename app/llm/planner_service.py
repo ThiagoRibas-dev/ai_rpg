@@ -70,7 +70,7 @@ My strategic plan is:"""
         """Phase 3: Select concrete tools to execute the strategic plan."""
         narrative_plan = strategic_plan.response_plan
         plan_steps_str = "\n - ".join(strategic_plan.plan_steps)
-        prefill = f"""{phase_template}\n\nMy analysis of the current exchange:\n{narrative_plan}\n\nStep by step plan:\n - {plan_steps_str}\n\nStructured Tool Calls:\n"""
+        prefill = f"""{phase_template}\n\nMy analysis of the current exchange:\n{narrative_plan}\n\nStep by step plan:\n - {plan_steps_str}\n\n"""
         
         prefilled_history = chat_history + [Message(role="assistant", content=prefill)]
         

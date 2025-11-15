@@ -50,7 +50,8 @@ class SessionRepository(BaseRepository):
         rows = self._fetchall(
             """SELECT id, name, session_data, prompt_id, memory, authors_note, 
                       game_time, game_mode, setup_phase_data
-               FROM sessions"""
+               FROM sessions
+               ORDER BY id desc"""
         )
         return [GameSession(**dict(row)) for row in rows]
 
@@ -58,11 +59,16 @@ class SessionRepository(BaseRepository):
         """Get all sessions for a specific prompt."""
         rows = self._fetchall(
             """SELECT id, name, session_data, prompt_id, memory, authors_note, 
-                      game_time, game_mode, setup_phase_data
-               FROM sessions WHERE prompt_id = ?""",
+                       game_time, game_mode, setup_phase_data
+               FROM sessions WHERE prompt_id = ? ORDER BY id DESC""",
             (prompt_id,),
         )
         return [GameSession(**dict(row)) for row in rows]
+
+    def delete(self, session_id: int):
+        """Delete a session by ID."""
+        self._execute("DELETE FROM sessions WHERE id = ?", (session_id,))
+        self._commit()
 
     def update(self, session: GameSession):
         """Update a session."""

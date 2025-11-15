@@ -32,22 +32,24 @@ class SessionManager:
         game_mode_label: ctk.CTkLabel,
         send_button: ctk.CTkButton,
         session_collapsible,
+        bubble_manager,
         authors_note_textbox: ctk.CTkTextbox,
         on_session_loaded_callback: Optional[Callable] = None,
     ):
         """
-        Initialize the session manager.
+        Initializes the SessionManager.
 
         Args:
-            orchestrator: Orchestrator instance
-            db_manager: Database manager instance
-            session_scrollable_frame: Frame for displaying session list
-            session_name_label: Label for current session name
-            game_time_label: Label for current game time
-            game_mode_label: Label for current game mode
+            orchestrator: The main orchestrator instance.
+            db_manager: The database manager instance.
+            session_name_label: Label to display the current session name.
+            session_scrollable_frame: Frame to hold session buttons.
+            game_time_label: Label to display the current game time.
+            game_mode_label: Label to display the current game mode.
             send_button: Send button to enable/disable
             session_collapsible: Collapsible frame container
             authors_note_textbox: Author's Notes textbox
+            bubble_manager: The ChatBubbleManager instance.
             on_session_loaded_callback: Optional callback to run after session loads
         """
         self.orchestrator = orchestrator
@@ -58,6 +60,7 @@ class SessionManager:
         self.game_mode_label = game_mode_label
         self.send_button = send_button
         self.session_collapsible = session_collapsible
+        self.bubble_manager = bubble_manager
         self.authors_note_textbox = authors_note_textbox
         self._selected_session: Optional[GameSession] = None
         self.on_session_loaded_callback = on_session_loaded_callback
@@ -166,11 +169,16 @@ class SessionManager:
         button_styles = get_button_style()
         selected_style = get_button_style("selected")
 
-        for widget in self.session_scrollable_frame.winfo_children():
-            if widget.cget("text") == session.name:
-                widget.configure(fg_color=selected_style["fg_color"])
-            else:
-                widget.configure(fg_color=button_styles["fg_color"])
+        for row_frame in self.session_scrollable_frame.winfo_children():
+            # Ensure the child is a frame and has children before proceeding
+            if isinstance(row_frame, ctk.CTkFrame) and row_frame.winfo_children():
+                # The load button is the first child of the row_frame
+                load_button = row_frame.winfo_children()[0]
+                if isinstance(load_button, ctk.CTkButton):
+                    if load_button.cget("text") == session.name:
+                        load_button.configure(fg_color=selected_style["fg_color"])
+                    else:
+                        load_button.configure(fg_color=button_styles["fg_color"])
 
         # Collapse the session panel
         if self.session_collapsible and not self.session_collapsible.is_collapsed:
@@ -195,14 +203,48 @@ class SessionManager:
             # Get sessions for this prompt
             sessions = self.db_manager.get_sessions_by_prompt(prompt_id)
 
-            # Create button for each session
+            # Create a frame with load/delete buttons for each session
             for session in sessions:
-                btn = ctk.CTkButton(
-                    self.session_scrollable_frame,
+                row_frame = ctk.CTkFrame(self.session_scrollable_frame, fg_color="transparent")
+                row_frame.pack(fill="x", pady=2, padx=5)
+
+                load_btn = ctk.CTkButton(
+                    row_frame,
                     text=session.name,
-                    command=lambda s=session: self._on_button_click(s),
+                    command=lambda s=session: self._on_button_click(s)
                 )
-                btn.pack(pady=2, padx=5, fill="x")
+                load_btn.pack(side="left", expand=True, fill="x")
+
+                delete_btn = ctk.CTkButton(
+                    row_frame,
+                    text="🗑️",
+                    command=lambda s=session: self.delete_session(s),
+                    width=40,
+                    fg_color="darkred",
+                    hover_color="red"
+                )
+                delete_btn.pack(side="left", padx=(5, 0))
+
+    def delete_session(self, session_to_delete: GameSession):
+        """Delete a session after confirmation."""
+        dialog = ctk.CTkInputDialog(
+            text=f"This is irreversible.\nType DELETE to remove '{session_to_delete.name}':",
+            title="Confirm Deletion"
+        )
+        result = dialog.get_input()
+
+        if result == "DELETE":
+            prompt_id = session_to_delete.prompt_id
+            is_current_session = self._selected_session and self._selected_session.id == session_to_delete.id
+
+            self.db_manager.delete_session(session_to_delete.id)
+            self.orchestrator.vector_store.delete_session_data(session_to_delete.id)
+
+            if is_current_session:
+                self._clear_active_session_view()
+
+            self.refresh_session_list(prompt_id)
+            self.bubble_manager.add_message("system", f"🗑️ Deleted session '{session_to_delete.name}'")
 
     def load_context(self, authors_note_textbox: ctk.CTkTextbox):
         """
@@ -275,6 +317,17 @@ class SessionManager:
         except Exception as e:
             logger.error(f"❌ Error saving context: {e}", exc_info=True)
             bubble_manager.add_message("system", f"❌ Error saving: {e}")
+
+    def _clear_active_session_view(self):
+        """Resets the UI to a neutral state when a session is deleted or unloaded."""
+        self.bubble_manager.clear_history()
+        self._selected_session = None
+        self.orchestrator.session = None
+        self.session_name_label.configure(text="No session loaded")
+        self.game_time_label.configure(text="...")
+        self.game_mode_label.configure(text="")
+        self.send_button.configure(state="disabled")
+        self.authors_note_textbox.delete("1.0", "end")
 
     def _on_button_click(self, session: GameSession):
         """

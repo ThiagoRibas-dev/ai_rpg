@@ -226,6 +226,7 @@ class MainView(ctk.CTk):
             self.game_mode_label,
             self.send_button,
             self.session_collapsible,
+            self.bubble_manager,
             self.authors_note_textbox,
             on_session_loaded_callback=self._on_session_loaded,
         )
