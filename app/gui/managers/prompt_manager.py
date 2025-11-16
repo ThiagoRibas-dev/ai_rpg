@@ -13,6 +13,7 @@ import logging
 from typing import Optional
 from app.models.prompt import Prompt
 from app.gui.styles import get_button_style
+from app.gui.world_info_manager_view import WorldInfoManagerView
 
 logger = logging.getLogger(__name__)
 
@@ -27,10 +28,12 @@ class PromptManager:
         db_manager,
         orchestrator,
         prompt_scrollable_frame: ctk.CTkScrollableFrame,
+        # COMMENT: We need the main view (parent window) to create the modal dialog.
+        parent_view: ctk.CTk,
         prompt_collapsible,
     ):
         """
-        Initialize the prompt manager.
+        Initializes the PromptManager.
 
         Args:
             db_manager: Database manager instance
@@ -203,3 +206,24 @@ class PromptManager:
             self.on_prompt_select(prompt, self.session_manager)
         else:
             logger.warning("Prompt button clicked but session_manager not wired yet")
+
+    def open_world_info_manager(self):
+        """
+        Open world info manager dialog.
+        COMMENT: This logic is moved from MainView. It belongs here because
+        World Info is tied to the currently selected prompt.
+        """
+        if not self.selected_prompt:
+            # We need a bubble manager reference to show this message.
+            # This will be wired in MainView.
+            if hasattr(self, 'bubble_manager') and self.bubble_manager:
+                self.bubble_manager.add_message("system", "Please select a prompt first")
+            return
+
+        world_info_view = WorldInfoManagerView(
+            self.parent_view,
+            self.db_manager,
+            self.selected_prompt.id,
+            getattr(self.orchestrator, "vector_store", None),
+        )
+        world_info_view.grab_set()

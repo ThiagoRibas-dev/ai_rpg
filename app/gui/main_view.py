@@ -12,10 +12,10 @@ from app.gui.managers import (
     SessionManager,
     PromptManager,
     InspectorManager,
+    InputManager,
 )
 
 # Other GUI components
-from app.gui.world_info_manager_view import WorldInfoManagerView
 from app.gui.styles import Theme
 
 logger = logging.getLogger(__name__)
@@ -46,6 +46,7 @@ class MainView(ctk.CTk):
         self.prompt_manager = None
         self.inspector_manager = None
         self.history_manager = None
+        self.input_manager = None
 
         # Widget references (filled by builders in _build_panels)
         # Main panel widgets
@@ -76,6 +77,8 @@ class MainView(ctk.CTk):
         self.session_collapsible = None
         self.session_scrollable_frame = None
         self.session_new_button = None
+        # COMMENT: Add a new attribute to hold the button reference.
+        self.world_info_button = None
 
         self.authors_note_textbox = None
         self.game_state_inspector_tabs = None
@@ -115,9 +118,9 @@ class MainView(ctk.CTk):
                 "new": self._stub_new_prompt,
                 "edit": self._stub_edit_prompt,
                 "delete": self._stub_delete_prompt,
+                "world_info": self._stub_open_world_info,
             },
             session_callback=self._stub_new_game,
-            world_info_callback=self.open_world_info_manager,
             save_context_callback=self.save_context,
         )
 
@@ -160,6 +163,8 @@ class MainView(ctk.CTk):
         self.session_collapsible = control_widgets["session_collapsible"]
         self.session_scrollable_frame = control_widgets["session_scrollable_frame"]
         self.session_new_button = control_widgets["session_new_button"]
+        # COMMENT: Store the new button reference when the UI is built.
+        self.world_info_button = control_widgets["world_info_button"]
 
         self.authors_note_textbox = control_widgets["authors_note_textbox"]
         self.game_state_inspector_tabs = control_widgets["game_state_inspector_tabs"]
@@ -188,6 +193,18 @@ class MainView(ctk.CTk):
             self.inspector_manager.tool_calls_frame
         )
 
+        # Input manager (NEW)
+        # This manager will handle user input, send button, and choices.
+        # It needs the orchestrator, so it will be fully wired in set_orchestrator.
+        # We can partially initialize it here with the widgets it needs.
+        self.input_manager = InputManager(
+            orchestrator=None, # Will be set later
+            session_manager=None, # Will be set later
+            user_input_widget=self.user_input,
+            send_button_widget=self.send_button,
+            choice_button_frame=self.choice_button_frame
+        )
+
         # Session manager and UI queue handler will be initialized in set_orchestrator()
         # because they need the orchestrator instance
 
@@ -203,7 +220,12 @@ class MainView(ctk.CTk):
         # Prompt manager
         # REPLACES: Prompt methods (lines 621-700)
         self.prompt_manager = PromptManager(
-            self.db_manager, orchestrator, self.prompt_scrollable_frame, self.prompt_collapsible
+            self.db_manager, 
+            orchestrator, 
+            self.prompt_scrollable_frame, 
+            # Pass the main view as the parent for dialogs
+            parent_view=self, 
+            prompt_collapsible=self.prompt_collapsible
         )
 
         # Refresh prompt list
@@ -234,7 +256,13 @@ class MainView(ctk.CTk):
         # Wire prompt manager to session manager
         # Enable cross-manager coordination
         self.prompt_manager.set_session_manager(self.session_manager)
+        # COMMENT: Give the prompt manager a reference to the bubble manager for user feedback.
+        self.prompt_manager.bubble_manager = self.bubble_manager
         self.prompt_manager.set_orchestrator(orchestrator)
+
+        # Wire input manager dependencies
+        self.input_manager.orchestrator = orchestrator
+        self.input_manager.session_manager = self.session_manager
 
         # Wire session manager button callbacks (late binding)
         # Connect session buttons to manager methods
@@ -269,7 +297,7 @@ class MainView(ctk.CTk):
                 "memory": self.inspector_manager.memory_inspector,
             },
         )
-        self.ui_queue_handler.on_choice_selected = self.select_choice
+        self.ui_queue_handler.on_choice_selected = self.input_manager.handle_choice_selected
 
         # Wire inspectors
         self.inspector_manager.set_orchestrator(orchestrator)
@@ -278,6 +306,8 @@ class MainView(ctk.CTk):
         self.prompt_new_button.configure(command=self.prompt_manager.new_prompt)
         self.prompt_edit_button.configure(command=self.prompt_manager.edit_prompt)
         self.prompt_delete_button.configure(command=self.prompt_manager.delete_prompt)
+        # COMMENT: This is the new, robust line that REPLACES the fragile nametowidget call.
+        self.world_info_button.configure(command=self.prompt_manager.open_world_info_manager)
         self.session_new_button.configure(
             command=lambda: self.session_manager.new_game(
                 self.prompt_manager.selected_prompt
@@ -354,6 +384,10 @@ class MainView(ctk.CTk):
     def _stub_new_game(self):
         """Stub - replaced in set_orchestrator()."""
         logger.warning("New game button clicked before manager initialization")
+        
+    def _stub_open_world_info(self):
+        """Stub - replaced in set_orchestrator()."""
+        logger.warning("World Info button clicked before manager initialization")
 
     # ==================== Thin delegation methods ====================
     # These remain for external callers (orchestrator, etc.)
@@ -363,43 +397,19 @@ class MainView(ctk.CTk):
         """
         Get user input text.
         """
-        return self.user_input.get("1.0", "end-1c")
+        # COMMENT: Delegated to the InputManager.
+        return self.input_manager.get_input_text()
 
     def clear_input(self):
         """
         Clear user input field.
         """
-        self.user_input.delete("1.0", "end")
+        # COMMENT: Delegated to the InputManager.
+        self.input_manager.clear_input_text()
 
     def handle_send_button(self):
-        """
-        Handle send button click.
-        """
-        if not self.session_manager or not self.session_manager.selected_session:
-            return
-
-        # Disable to prevent concurrent turns
-        self.send_button.configure(state="disabled")
-
-        # Clear previous choices
-        for widget in self.choice_button_frame.winfo_children():
-            widget.destroy()
-        self.choice_button_frame.grid_remove()
-
-        # Start turn (non-blocking)
-        self.orchestrator.plan_and_execute(self.session_manager.selected_session)
-
-    def select_choice(self, choice: str):
-        """
-        Handle when a user clicks an action choice.
-
-        Args:
-            choice: Selected choice text
-        """
-        self.user_input.delete("1.0", "end")
-        self.user_input.insert("1.0", choice)
-        self.choice_button_frame.grid_remove()
-        self.handle_send_button()
+        # COMMENT: This is now a thin wrapper that delegates to the InputManager.
+        self.input_manager.handle_send_input()
 
     def save_context(self):
         """
@@ -425,13 +435,6 @@ class MainView(ctk.CTk):
             self.bubble_manager.add_message("system", "Please select a prompt first")
             return
 
-        world_info_view = WorldInfoManagerView(
-            self,
-            self.db_manager,
-            self.prompt_manager.selected_prompt.id,
-            getattr(self.orchestrator, "vector_store", None),
-        )
-        world_info_view.grab_set()
 
     def log_tool_event(self, message: str):
         """

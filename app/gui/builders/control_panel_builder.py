@@ -25,7 +25,6 @@ class ControlPanelBuilder:
         parent: ctk.CTk,
         prompt_callbacks: Optional[Dict[str, Callable]],
         session_callback: Optional[Callable],
-        world_info_callback: Callable,
         save_context_callback: Callable,
     ) -> Dict[str, Any]:
         """
@@ -33,9 +32,8 @@ class ControlPanelBuilder:
 
         Args:
             parent: The main window to attach widgets to
-            prompt_callbacks: Dict with 'new', 'edit', 'delete' callbacks (or None)
+            prompt_callbacks: Dict with 'new', 'edit', 'delete', 'world_info' callbacks
             session_callback: Callback for new game button (or None)
-            world_info_callback: Callback for world info button
             save_context_callback: Callback for save context button
 
         Returns:
@@ -153,9 +151,12 @@ class ControlPanelBuilder:
         ).pack(**pack_config)
 
         # World Info button
-        ctk.CTkButton(
-            context_content, text="Manage World Info", command=world_info_callback
-        ).pack(**pack_config)
+        # COMMENT: We will capture the button in a variable instead of creating it anonymously.
+        world_info_button = ctk.CTkButton(
+            context_content, text="Manage World Info", 
+            command=prompt_callbacks["world_info"] if prompt_callbacks else None,
+        )
+        world_info_button.pack(**pack_config)
 
         # === Game State Inspector Section ===
         inspector_collapsible = CollapsibleFrame(control_panel, "Game State Inspector")
@@ -193,4 +194,6 @@ class ControlPanelBuilder:
             "session_new_button": session_new_button,  # NEW: For rewiring
             "authors_note_textbox": authors_note_textbox,
             "game_state_inspector_tabs": game_state_inspector_tabs,
+            # COMMENT: We add the new button reference to the dictionary here.
+            "world_info_button": world_info_button,
         }

@@ -20,6 +20,7 @@ from app.gui.managers.session_manager import SessionManager
 from app.gui.managers.prompt_manager import PromptManager
 from app.gui.managers.inspector_manager import InspectorManager
 from app.gui.managers.history_manager import HistoryManager
+from app.gui.managers.input_manager import InputManager
 
 __all__ = [
     "ChatBubbleManager",
@@ -29,4 +30,5 @@ __all__ = [
     "PromptManager",
     "InspectorManager",
     "HistoryManager",
+    "InputManager",
 ]
