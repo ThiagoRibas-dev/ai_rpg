@@ -47,8 +47,8 @@ class StateViewerDialog(ctk.CTkToplevel):
     def refresh(self):
         """Load and display current state."""
         try:
-            state = self.db_manager.get_all_game_state(self.session_id)
-            stats = self.db_manager.get_game_state_statistics(self.session_id)
+            state = self.db_manager.game_state.get_all(self.session_id)
+            stats = self.db_manager.game_state.get_statistics(self.session_id)
 
             # Update stats
             total = stats.get("total_entities", 0)

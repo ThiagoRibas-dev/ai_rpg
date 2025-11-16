@@ -258,7 +258,6 @@ class MainView(ctk.CTk):
         self.prompt_manager.set_session_manager(self.session_manager)
         # COMMENT: Give the prompt manager a reference to the bubble manager for user feedback.
         self.prompt_manager.bubble_manager = self.bubble_manager
-        self.prompt_manager.set_orchestrator(orchestrator)
 
         # Wire input manager dependencies
         self.input_manager.orchestrator = orchestrator
@@ -408,31 +407,14 @@ class MainView(ctk.CTk):
         self.input_manager.clear_input_text()
 
     def handle_send_button(self):
-        """
-        Handle send button click.
-        """
-        if not self.session_manager or not self.session_manager.selected_session:
-            return
-
-        # Disable to prevent concurrent turns
-        self.send_button.configure(state="disabled")
-
-        # Clear previous choices
-        for widget in self.choice_button_frame.winfo_children():
-            widget.destroy()
-        self.choice_button_frame.grid_remove()
-
-        # Start turn (non-blocking)
-        self.orchestrator.plan_and_execute(self.session_manager.selected_session)
-
+        """Handle send button click."""
+        # This logic is now fully owned by the InputManager.
+        self.input_manager.handle_send_input()
+        
     def select_choice(self, choice: str):
-        """
-        Handle when a user clicks an action choice.
-        """
-        self.user_input.delete("1.0", "end")
-        self.user_input.insert("1.0", choice)
-        self.choice_button_frame.grid_remove()
-        self.handle_send_button()
+        """Handle when a user clicks an action choice."""
+        # This logic is also fully owned by the InputManager.
+        self.input_manager.handle_choice_selected(choice)
 
     def save_context(self):
         """
@@ -449,15 +431,6 @@ class MainView(ctk.CTk):
             return
 
         self.session_manager.save_context(self.bubble_manager)
-
-    def open_world_info_manager(self):
-        """
-        Open world info manager dialog.
-        """
-        if not self.prompt_manager.selected_prompt:
-            self.bubble_manager.add_message("system", "Please select a prompt first")
-            return
-
 
     def log_tool_event(self, message: str):
         """

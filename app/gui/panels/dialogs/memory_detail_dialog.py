@@ -115,7 +115,7 @@ class MemoryDetailDialog(ctk.CTkToplevel):
         new_tags = [t.strip() for t in tags_str.split(",") if t.strip()]
 
         # Update in database
-        self.db_manager.update_memory(
+        self.db_manager.memories.update(
             self.memory.id,
             kind=new_kind,
             content=new_content,

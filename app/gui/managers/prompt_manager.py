@@ -67,10 +67,6 @@ class PromptManager:
         """
         self.session_manager = session_manager
 
-    def set_orchestrator(self, orchestrator): # Add this method
-        """Set the orchestrator instance."""
-        self.orchestrator = orchestrator
-
     def new_prompt(self):
         """
         Create a new prompt via 3-field dialog.
