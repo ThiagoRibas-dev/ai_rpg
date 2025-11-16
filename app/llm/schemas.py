@@ -14,34 +14,25 @@ class ToolCall(BaseModel):
         example="state_query",
     )
     arguments: Any = Field(
-        "",
+        default_factory=dict,
         description="The JSON-formatted string arguments for the tool.",
         example='{"entity_type": "character", "key": "player", "query": "gold"}',
     )
 
 
-class PlayerIntentAnalysis(BaseModel):
-    """The LLM's analysis of the player's last message, identifying their core intent."""
+class TurnPlan(BaseModel):
+    """The LLM's analysis of the player's intent and the strategic plan for the turn."""
 
     analysis: str = Field(
-        description="A brief, one or two-sentence analysis of the player's last message.",
+        description="A brief, one or two-sentence analysis of the player's last message, identifying their core intent.",
         example="The player wants to buy a sword from the blacksmith.",
     )
-
-
-class StrategicPlan(BaseModel):
-    """The LLM's high-level strategy for the turn, before tool selection."""
-
     plan_steps: List[str] = Field(
-        description="A step-by-step logical plan of what the AI will do this turn before responding based on the context and the player's last message.",
+        description="A step-by-step logical plan of what the AI will do this turn before responding. This includes identifying necessary tool calls.",
         example=[
-            "1. Check the player's current gold.",
-            "2. See what swords the blacksmith has in stock.",
+            "1. Check the player's current gold using state.query.",
+            "2. See what swords the blacksmith has in stock using state.query.",
         ],
-    )
-    response_plan: str = Field(
-        description="A summary of the response I will provide to the player *after* the plan steps and tools have been executed.",
-        example="I will describe the blacksmith's workshop, have him greet the player, show the available swords and their prices, and then ask the player what they want to do.",
     )
 
 

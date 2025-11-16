@@ -1,4 +1,4 @@
-from typing import Any, List, Literal, Optional, Union
+from typing import List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -309,14 +309,14 @@ class SchemaUpsertAttribute(BaseModel):
         Creates or updates a new basic attribute for game entities during SETUP mode (Session Zero).
         **Entity types:** 'character', 'item', 'location'
         **Example:** Define a Points resource
-        schema.upsert_attribute({
+        {
             "property_name": "Points",
             "template": "resource",
             "description": "Points than can be spent",
             "max_value": 100,
             "icon": "P",
             "regenerates": true
-        })
+        }
     """
 
     name: Literal["schema.upsert_attribute"] = "schema.upsert_attribute"
@@ -336,7 +336,7 @@ class SchemaUpsertAttribute(BaseModel):
     type: Optional[Literal["integer", "string", "boolean", "enum", "resource"]] = Field(
         None, description="Data type (required if no template)"
     )
-    default_value: Optional[Any] = Field(
+    default_value: Optional[JSONValue] = Field(
         None, description="Initial value (required if no template)"
     )
     has_max: Optional[bool] = Field(

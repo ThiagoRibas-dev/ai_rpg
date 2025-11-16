@@ -1,7 +1,3 @@
-# File: app/core/turn_manager.py
-
-
-# Import from new locations
 from app.context.context_builder import ContextBuilder
 from app.context.memory_retriever import MemoryRetriever
 from app.context.state_context import StateContextBuilder
@@ -17,14 +13,12 @@ from app.models.game_session import GameSession
 from app.models.session import Session
 from app.prompts.builder import build_lean_schema_reference
 from app.prompts.templates import (
-    ANALYSIS_TEMPLATE,
-    SETUP_STRATEGY_TEMPLATE,
-    GAMEPLAY_STRATEGY_TEMPLATE,
+    GAMEPLAY_PLAN_TEMPLATE,
+    SETUP_PLAN_TEMPLATE,
     CHOICE_GENERATION_TEMPLATE,
     NARRATIVE_TEMPLATE,
     SETUP_RESPONSE_TEMPLATE,
-    TOOL_SELECTION_SETUP_TEMPLATE,
-    TOOL_SELECTION_GAMEPLAY_TEMPLATE
+    TOOL_SELECTION_PER_STEP_TEMPLATE,
 )
 from app.setup.setup_manifest import SetupManifest
 from app.tools.executor import ToolExecutor
@@ -34,9 +28,10 @@ from app.tools.schemas import (
     Patch,
     SchemaUpsertAttribute,
     StateApplyPatch,
+    SchemaQuery,
 )
 
-MAX_HISTORY_MESSAGES = 20
+MAX_HISTORY_MESSAGES = 50
 TOOL_BUDGET = 10
 
 
@@ -100,7 +95,7 @@ class TurnManager:
             setup_tool_names = [
                 SchemaUpsertAttribute.model_fields["name"].default,
                 Deliberate.model_fields["name"].default,
-                # SchemaQuery.model_fields["name"].default,
+                SchemaQuery.model_fields["name"].default,
                 EndSetupAndStartGameplay.model_fields["name"].default,
             ]
         else:  # GAMEPLAY mode
@@ -125,73 +120,56 @@ class TurnManager:
             game_session, chat_history
         )
 
-        # ===== STEP 1: PLAN (3-PHASE PROCESS for ALL modes) =====
-
-        # Phase 1: Analyze Intent
-        intent = self.planner.analyze_intent(
-            system_instruction=static_instruction,
-            phase_template=ANALYSIS_TEMPLATE,
-            chat_history=chat_history,
+        # ===== STEP 1: PLAN (2-PHASE PROCESS for ALL modes) =====
+        # --- Signal the start of the turn to the UI to show the loading indicator immediately ---
+        self.ui_queue.put(
+            {"type": "planning_started", "content": "😑 Planning..."}
         )
-        if not intent:
-            self.logger.error(
-                "LLM returned no structured response for PlayerIntentAnalysis."
-            )
-            self.ui_queue.put(
-                {"type": "error", "message": "AI failed to analyze intent."}
-            )
-            return
-        analysis_text = intent.analysis
 
-        # Phase 2: Develop Strategy
+        # Phase 1: Create Plan (Analysis + Strategy)
         if current_game_mode == "SETUP":
-            strategy_template = SETUP_STRATEGY_TEMPLATE
+            plan_template = SETUP_PLAN_TEMPLATE
         else:
-            strategy_template = GAMEPLAY_STRATEGY_TEMPLATE
+            plan_template = GAMEPLAY_PLAN_TEMPLATE
 
-        strategy = self.planner.develop_strategy(
+        turn_plan = self.planner.create_plan(
             system_instruction=static_instruction,
-            phase_template=strategy_template,
-            analysis=analysis_text,
+            phase_template=plan_template,
             dynamic_context=dynamic_context,
             chat_history=chat_history,
         )
-        if not strategy:
-            self.logger.error("LLM returned no structured response for StrategicPlan.")
+        if not turn_plan:
+            self.logger.error("LLM returned no structured response for TurnPlan.")
             self.ui_queue.put(
-                {"type": "error", "message": "AI failed to generate a valid strategy."}
+                {"type": "error", "message": "AI failed to create a plan."}
             )
             return
-        plan_steps = strategy.plan_steps
-        narrative_plan = strategy.response_plan
+        analysis_text = turn_plan.analysis
+        plan_steps = turn_plan.plan_steps
 
-        # Phase 2: Develop Strategy
+        # --- Iterative Tool Selection ---
+        # Instead of one big call, we loop through each plan step and select tools individually.
+        # This is more reliable for models that are reluctant to call multiple tools.
+        all_tool_calls = []
+        if plan_steps:
+            self.logger.debug(f"Starting iterative tool selection for {len(plan_steps)} steps.")
+            for i, step in enumerate(plan_steps):
+                self.logger.debug(f"  -> Selecting tool for step {i+1}: '{step}'")
+                # Use the new per-step planner method
+                step_tool_calls = self.planner.select_tools_for_step(
+                    system_instruction=static_instruction,
+                    phase_template=TOOL_SELECTION_PER_STEP_TEMPLATE,
+                    analysis=analysis_text,
+                    plan_step=step,
+                    chat_history=chat_history,
+                    tool_registry=self.tool_registry,
+                    available_tool_names=setup_tool_names,
+                )
+                if step_tool_calls:
+                    self.logger.debug(f"  <- Selected {len(step_tool_calls)} tool(s) for step {i+1}.")
+                    all_tool_calls.extend(step_tool_calls)
         
-        # Prepare a simple list of tool names for the prompt template
-        tool_names_for_prompt = ", ".join(setup_tool_names)
-        
-        if current_game_mode == "SETUP":
-            TOOL_NAME_SCHEMA_UPSERT = SchemaUpsertAttribute.model_fields["name"].default
-            TOOL_NAME_END_SETUP = EndSetupAndStartGameplay.model_fields["name"].default
-            
-            tool_selection_template = TOOL_SELECTION_SETUP_TEMPLATE.format(
-                tool_budget=TOOL_BUDGET, tool_names_list=tool_names_for_prompt, TOOL_NAME_SCHEMA_UPSERT=TOOL_NAME_SCHEMA_UPSERT, TOOL_NAME_END_SETUP=TOOL_NAME_END_SETUP
-            )
-        else:
-            tool_selection_template = TOOL_SELECTION_GAMEPLAY_TEMPLATE.format(
-                tool_budget=TOOL_BUDGET, tool_names_list=tool_names_for_prompt
-            )
-
-        # Phase 3: Select Tools
-        tool_calls = self.planner.select_tools(
-            system_instruction=static_instruction,
-            phase_template=tool_selection_template,
-            analysis=analysis_text,
-            strategic_plan=strategy,
-            chat_history=chat_history,
-            tool_registry=self.tool_registry,
-            available_tool_names=setup_tool_names,
-        )
+        tool_calls = all_tool_calls
 
         # ===== Construct plan summary for UI and Narration =====
         plan_steps_text = "\n - ".join(plan_steps)
@@ -202,7 +180,7 @@ class TurnManager:
         )
         tools_called = f"""Tools Called: {tools_called}""" if tools_called else ""
 
-        plan_summary = f"""{analysis_text}\n\n{plan_steps_text}\n\n{narrative_plan}\n\n{tools_called}"""
+        plan_summary = f"""{analysis_text}\n\n{plan_steps_text}\n\n{tools_called}"""
 
         self.ui_queue.put({"type": "thought_bubble", "content": plan_summary})
 
@@ -226,7 +204,7 @@ class TurnManager:
                     {
                         "type": "message_bubble",
                         "role": "system",
-                        "content": "✅ Session Zero complete! Game starting...",
+                        "content": "âœ… Session Zero complete! Game starting...",
                     }
                 )
                 self.orchestrator._update_game_in_thread(
@@ -305,7 +283,7 @@ class TurnManager:
                         self.ui_queue.put(
                             {
                                 "type": "tool_event",
-                                "message": f"{StateApplyPatch.model_fields['name'].default} ✓ → {result}",
+                                "message": f"{StateApplyPatch.model_fields['name'].default} âœ“ â†’ {result}",
                             }
                         )
                 except Exception as e:

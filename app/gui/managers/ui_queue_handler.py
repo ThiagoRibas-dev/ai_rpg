@@ -86,7 +86,7 @@ class UIQueueHandler:
             if processed > 0:
                 logger.debug(f"📬 Processed {processed} UI messages")
             # Re-schedule polling
-            # CHANGED: Use orchestrator's view for after() call
+            # Use orchestrator's view for after() call
             self.orchestrator.view.after(100, self._process_queue)
 
     def _handle_message(self, msg: Dict[str, Any]):
@@ -111,18 +111,24 @@ class UIQueueHandler:
         msg_type = msg.get("type")
         logger.debug(f"📨 UI message received: {msg_type}")
 
-        # === Thought Bubble ===
-        if msg_type == "thought_bubble":
-            # Show loading frame
+        # ---Handle the planning_started message ---
+        # This message is sent right before the first LLM call.
+        if msg_type == "planning_started":
+            self.loading_label.configure(
+                text=msg.get("content", "🤔 AI is thinking...")
+            )
             self.loading_frame.grid(
                 row=2, column=0, columnspan=2, sticky="ew", padx=5, pady=5
             )
-            # CHANGED: self.add_message_bubble → self.bubble_manager.add_message
+        # === Thought Bubble ===
+        elif msg_type == "thought_bubble":
+            # The loading frame is now shown by the 'planning_started' message,
+            # so we no longer need to show it here.
             self.bubble_manager.add_message("thought", msg["content"])
 
         # === Message Bubble ===
         elif msg_type == "message_bubble":
-            # CHANGED: self.add_message_bubble → self.bubble_manager.add_message
+            # self.add_message_bubble → self.bubble_manager.add_message
             self.bubble_manager.add_message(msg["role"], msg["content"])
 
         # === Tool Call ===
@@ -130,7 +136,7 @@ class UIQueueHandler:
             logger.debug(
                 f"🔧 Processing tool_call: {msg.get('name')} with args: {msg.get('args')}"
             )
-            # CHANGED: self.add_tool_call → self.tool_viz_manager.add_tool_call
+            # self.add_tool_call → self.tool_viz_manager.add_tool_call
             try:
                 self.tool_viz_manager.add_tool_call(msg["name"], msg["args"])
                 logger.debug("✅ Tool call added to visualization")
@@ -139,7 +145,7 @@ class UIQueueHandler:
 
         # === Tool Result ===
         elif msg_type == "tool_result":
-            # CHANGED: self.add_tool_result → self.tool_viz_manager.add_tool_result
+            # self.add_tool_result → self.tool_viz_manager.add_tool_result
             self.tool_viz_manager.add_tool_result(
                 msg["result"], msg.get("is_error", False)
             )
@@ -147,14 +153,14 @@ class UIQueueHandler:
         # === Choices ===
         elif msg_type == "choices":
             if self.on_choice_selected:
-                # CHANGED: self.display_action_choices → create_choice_buttons (ui_helpers)
+                # self.display_action_choices → create_choice_buttons (ui_helpers)
                 create_choice_buttons(
                     self.choice_button_frame, msg["choices"], self.on_choice_selected
                 )
 
         # === Error ===
         elif msg_type == "error":
-            # CHANGED: self.add_message_bubble → self.bubble_manager.add_message
+            # self.add_message_bubble → self.bubble_manager.add_message
             self.bubble_manager.add_message("system", f"❌ Error: {msg['message']}")
 
         # === Turn Complete ===
@@ -163,7 +169,7 @@ class UIQueueHandler:
             self.send_button.configure(state="normal")  # Re-enable
 
             # Refresh inspectors if needed
-            # CHANGED: Direct inspector access → via inspectors dict
+            # Direct inspector access → via inspectors dict
             if "character" in self.inspectors and self.inspectors["character"]:
                 self.inspectors["character"].refresh()
             if "inventory" in self.inspectors and self.inspectors["inventory"]:
@@ -182,7 +188,7 @@ class UIQueueHandler:
 
         # === Update Game Mode ===
         elif msg_type == "update_game_mode":
-            # CHANGED: self._get_mode_display → get_mode_display (ui_helpers)
+            # self._get_mode_display → get_mode_display (ui_helpers)
             mode_text, mode_color = get_mode_display(msg["new_mode"])
             self.game_mode_label.configure(text=mode_text, text_color=mode_color)
 

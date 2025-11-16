@@ -1,8 +1,6 @@
 from app.tools.schemas import (
     MemoryUpsert,
     SchemaUpsertAttribute,
-    EndSetupAndStartGameplay,
-    Deliberate,
 )
 
 # ==============================================================================
@@ -64,113 +62,46 @@ Your task is to identify and define the character Races or Species (e.g., 'Elf',
 """
 
 # ==============================================================================
-# Three-Phase Planning Prompts
+# Two-Phase Planning Prompts (NEW)
 # ==============================================================================
 
-ANALYSIS_TEMPLATE = """
-I am in the analysis phase of my turn. I will do the following:
-1.  Carefully review the player's most recent message and the last few turns of conversation.
-2.  Identify the core intent: what the player wants to do, know, or achieve.
-3.  Write a concise, one-sentence summary of this intent.
+GAMEPLAY_PLAN_TEMPLATE = """
+I am in the planning phase for a GAMEPLAY turn. I will perform two tasks and structure my output as a JSON object with 'analysis' and 'plan_steps'.
+1.  **Analysis**: Review the player's last message and the conversation history to determine their core intent.
+2.  **Plan Steps**: Based on my analysis and the current game state (character, inventory, quests, memories, world info), create a step-by-step plan of actions I will take. This includes identifying necessary tool calls.
 """
 
-GAMEPLAY_STRATEGY_TEMPLATE = """
-I am in the strategy phase for a GAMEPLAY turn. I will do the following:
-1.  Review the Player Intent Analysis and the current game state (character stats, inventory, active quests, relevant memories, and world info).
-2.  Create a step-by-step plan detailing the actions I will take to move the game forward. This includes identifying the specific tools I need to call (e.g., `state.query` to check facts, `rng.roll` for chance, `character.update` for damage/healing).
-3.  Formulate a `response_plan` that outlines the narrative goal for my next message to the player. This will guide me on how to describe the scene, roleplay NPCs, and present the outcomes of the player's actions.
+SETUP_PLAN_TEMPLATE = f"""
+What is the current game mode?
+- CURRENT GAME MODE: SETUP (Session Zero)
+
+Okay, so I am in the planning phase for a SETUP turn and my goal is to help the player build the game's mechanics before we begin the game.
+I will structure my output as a JSON object with 'analysis' and 'plan_steps'.
+
+I will perform two tasks:
+1.  **Analysis**: I will analyze the player's latest message to determine which game properties they want to create or modify.
+2.  **Plan Steps**: I will write a step-by-step plan.
+    - For each new or updated property the player explicitly requested or agreed to, I will plan a call to the `{SchemaUpsertAttribute.model_fields["name"].default}` tool, describing what it does.
+    - I will plan clarifying questions if necessary.
+    - If the player is asking a question, I will plan my reply.
 """
+ 
+# Per-Step Tool Selection Prompt ---
+TOOL_SELECTION_PER_STEP_TEMPLATE = """
+I will now select the single best tool to accomplish the following plan step.
 
-SETUP_STRATEGY_TEMPLATE = f"""
-Alright. Let me check the current game mode:
- - CURRENT GAME MODE: SETUP (Session Zero)
+For this response, I'll do exactly the following:
+1.  Analyze the provided "Plan Step" in the context of the overall "Analysis" and conversation history for what actions I need to take *now*.
+2.  If the step is an action that needs to be executed now, choose one or more tools that directly executes this step from the "Available Tools" list.
+3.  If the step is a future action,, is purely for dialogue, narration, doesn't require a tool, or if there isn't enough information to select a tool with the correct arguments, I will select the {deliberate_tool}.
 
-I am in the planning phase for a SETUP turn (Session Zero).
-My goal is to help the player build the game's mechanics.
+**Analysis**: {analysis}
+**Available Tools**: {tool_names_list}
+**Plan Step to exeute**: "{plan_step}"
 
-I will start by analyzing the player's request to determine which game properties/attributes (stats, resources, equipment, skills, etc.) I should create or modify if any.
-Then, I will write a step-by-step plan, following:
-    1.  For each new or updated property requested by the player, I will plan a call to the `{SchemaUpsertAttribute.model_fields["name"].default}` tool, ensuring I fill out all the necessary details like name, description, and type.
-    2.  If the player asked a question or I need more information before acting, I will plan to use the `{Deliberate.model_fields["name"].default}` tool.
-    3.  I'll plan to call the `{EndSetupAndStartGameplay.model_fields["name"].default}` tool in order to transition for the current SETUP mode into the GAMEPLAY mode as ssoon as the player has confirmed his desire to start the game.
+Now I'm ready to do this.
 
-And finally, I'll formulate a `response_plan` to guide my reply.
-This `response_plan` will describe the current game mode (SETUP), the changes I made, affirm my understanding, and asks what the player wants to do next (add another stat or resource, modify an existing one, finish the SETUP mode and start the game, etc).
-
-An example of my output : 
-{{
-  "plan_steps": [
-    "1. Define the 'attribute1' attribute using `{SchemaUpsertAttribute.model_fields["name"].default}`. This will be a core stat for [description]], with a default value of 10.",
-    "2. Create the 'resource1' resource using `{SchemaUpsertAttribute.model_fields["name"].default}`. I'll set it up as a resource with a maximum value based on another stat, and a default of 100.",
-    "3. Add the 'resource2' property via `{SchemaUpsertAttribute.model_fields["name"].default}`. This will be a resource, starting at 100, that decreases in [condition] and regenerates 1 point per hour.",
-    "4. The player has said they are happy with the defined attributes and are ready to start. I will call `{EndSetupAndStartGameplay.model_fields["name"].default}` to transition from SETUP mode to GAMEPLAY mode and start the game."
-  ],
-  "response_plan": "I will tell player that the core attributes of attribute1, resource1, and resource2 have been successfully created.\nAnd since the player has given the green light to start the game, I will announce that the setup is complete."
-}}
-"""
-
-TOOL_SELECTION_SETUP_TEMPLATE = """
-Alright, we are still in SETUP mode.
-I have analyzed the player's intent, and concocted a "Step-by-step plan".
-
-Now, I will do the following:
-1.  Follow the step-by-step plan I created in the strategy phase.
-2.  Translate each step into precise, structured tool calls from the list of available tools.
-3.  Ensure I do not exceed the tool budget of {{tool_budget}} calls for this turn.
-4.  Only use tools from this list: {{tool_names_list}}.
-
-An example of my output :
-[
-  {{
-    "tool_name": "{TOOL_NAME_SCHEMA_UPSERT}",
-    "arguments": {{
-      "property_name": "Attribute1",
-      "description": "A core stat for physical actions.",
-      "template": "stat",
-      "default_value": 10,
-      "min_value": 1,
-      "max_value": 20
-    }}
-  }},
-  {{
-    "tool_name": "{TOOL_NAME_SCHEMA_UPSERT}",
-    "arguments": {{
-      "property_name": "Resource1",
-      "description": "Maximum value based on [attribute].",
-      "template": "resource",
-      "default_value": 100,
-      "max_value": 100
-    }}
-  }},
-  {{
-    "tool_name": "{TOOL_NAME_SCHEMA_UPSERT}",
-    "arguments": {{
-      "property_name": "Resource2",
-      "description": "A resource that decreases and regenerates automatically.",
-      "template": "resource",
-      "default_value": 100,
-      "max_value": 100,
-      "regenerates": true
-    }}
-  }},
-  {{
-    "tool_name": "{TOOL_NAME_END_SETUP}",
-    "arguments": {{
-      "reason": "The player has confirmed that they are satisfied with the setup and that I should start the game by transitioning to GAMEPLAY mode."
-    }}
-  }}
-]
-"""
-
-TOOL_SELECTION_GAMEPLAY_TEMPLATE = """
-Okay. We are in GAMEPLAY mode, so let's continue.
-I have analyzed the player's intent, and concocted a "Step-by-step plan".
-
-Now, I will do the following:
-1.  Follow the step-by-step plan I created in the strategy phase.
-2.  Translate each step into precise, structured tool calls from the list of available tools.
-3.  Ensure I do not exceed the tool budget of {tool_budget} calls for this turn.
-4.  Only use tools from this list: {tool_names_list}.
+Selected tools :
 """
 
 # ==============================================================================
@@ -185,20 +116,19 @@ We are still in the SETUP game mode (Session Zero phase), so the player has not 
 Right now I need to get as much information as possible about the desired world, rules, tone, mechanics, etc, of the game's system or framework, efficiently. I should encourage the player to provide detailed information in their responses.
 
 There are a variety of examples I can take inspiration from for my suggestions:
- - Fantasy Adventure: Dungeons & Dragons, Pathfinder, The Elder Scrolls, Zork, King's Quest â†’ Stats like Strength, Intelligence, Mana, Hit Points, Alignment, Encumbrance.
- - Sci-Fi & Space Opera: Traveller, Starfinder, Mass Effect, Fallen London, Eventide â†’ Oxygen, Energy, Engineering, Reputation, Ship Integrity, Morale.
- - Cyberpunk & Dystopia: Shadowrun, Cyberpunk 2020/RED, Deus Ex, AI Dungeon â†’ Augmentation Level, Cred, Street Rep, Heat, Cyberpsychosis.
- - Mystery / Noir: GUMSHOE, Blades in the Dark, The Case of the Golden Idol, 80 Days â†’ Clues, Reputation, Vice, Stress, Insight.
- - Lighthearted / Slice of Life: Honey Heist, PokÃ©mon Tabletop, Animal Crossing, 80 Days, A Dark Room â†’ Friendship, Charm, Luck, Creativity, Chaos Meter.
- - Horror & Investigation: Call of Cthulhu, World of Darkness, Sunless Sea, Anchorhead â†’ Sanity, Stress, Willpower, Clue Points, Fear, Insight.
+ - Fantasy Adventure: Dungeons & Dragons, Pathfinder, The Elder Scrolls, Zork, King's Quest; Stats like Strength, Intelligence, Mana, Hit Points, Alignment, Encumbrance.
+ - Sci-Fi & Space Opera: Traveller, Starfinder, Mass Effect, Fallen London, Eventide; Oxygen, Energy, Engineering, Reputation, Ship Integrity, Morale.
+ - Cyberpunk & Dystopia: Shadowrun, Cyberpunk 2020/RED, Deus Ex, AI Dungeon; Augmentation Level, Cred, Street Rep, Heat, Cyberpsychosis.
+ - Mystery / Noir: GUMSHOE, Blades in the Dark, The Case of the Golden Idol, 80 Days; Clues, Reputation, Vice, Stress, Insight.
+ - Lighthearted / Slice of Life: Honey Heist, PokÃ©mon Tabletop, Animal Crossing, 80 Days, A Dark Room; Friendship, Charm, Luck, Creativity, Chaos Meter.
+ - Horror & Investigation: Call of Cthulhu, World of Darkness, Sunless Sea, Anchorhead; Sanity, Stress, Willpower, Clue Points, Fear, Insight.
 Etc.
 
-I'll do the following:
+Since we are not yet playing the game, I will not narrate or describe a scene. Instead, I'll do the following:
  - Summarize what's been defined so far
  - Acknowledge any new or updated properties and explain what each represents, how it might work in play, and how it fits the genre or tone we've been developing.
- - Ask what the player would like to do next: refine, add, or finalize the setup.
- - If appropriate, I'll suggest optional refinements, like adding modifiers, linking properties to dice mechanics, etc.
-
+ - Ask what the player would like to do next: refine, add, or finalize the Session Zero and begin the game (transition from SETUP mode to GAMEPLAY mode).
+ - If appropriate, I'll suggest optional refinements, like adding mechanics, game properties, rules, etc.
 """
 
 # ==============================================================================

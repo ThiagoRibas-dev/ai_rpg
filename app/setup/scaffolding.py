@@ -67,8 +67,8 @@ def get_genre_specific_scaffolding(genre: str) -> Dict[str, Any]:
     genre_suggestions = {
         # ... (genre_suggestions dict remains the same) ...
         "fantasy": {
-            "character_properties": {"Mana": 50, "Faith": 100},
-            "currency": {"gold": 10, "silver": 50},
+            "character_properties": {},
+            "currency": {"gold": 0, "silver": 0},
         },
         "scifi": {
             "character_properties": {"Energy": 100, "Radiation": 0, "Cybernetics": 0},
