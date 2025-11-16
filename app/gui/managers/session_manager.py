@@ -147,7 +147,7 @@ class SessionManager:
 
         # Update header with session info
         self.session_name_label.configure(text=session.name)
-        self.game_time_label.configure(text=f"🕐 {session.game_time}")
+        self.game_time_label.configure(text=f"{session.game_time}")
 
         # Update game mode indicator
         mode_text, mode_color = get_mode_display(session.game_mode)
@@ -244,7 +244,7 @@ class SessionManager:
                 self._clear_active_session_view()
 
             self.refresh_session_list(prompt_id)
-            self.bubble_manager.add_message("system", f"🗑️ Deleted session '{session_to_delete.name}'")
+            self.bubble_manager.add_message("system", f"Deleted session '{session_to_delete.name}'")
 
     def load_context(self, authors_note_textbox: ctk.CTkTextbox):
         """
@@ -255,7 +255,7 @@ class SessionManager:
         logger = logging.getLogger(__name__)
 
         if not self._selected_session:
-            logger.debug("⏭️  No session selected, skipping load_context")
+            logger.debug("No session selected, skipping load_context")
             return
 
         # Load context from database
@@ -268,11 +268,11 @@ class SessionManager:
             authors_note_textbox.insert("1.0", authors_note)
 
             logger.debug(
-                f"📖 Loaded author's note ({len(authors_note)} chars) for session {self._selected_session.id}"
+                f"Loaded author's note ({len(authors_note)} chars) for session {self._selected_session.id}"
             )
         else:
             logger.warning(
-                f"⚠️  No context found for session {self._selected_session.id}"
+                f"No context found for session {self._selected_session.id}"
             )
             authors_note_textbox.delete("1.0", "end")
 
@@ -288,8 +288,8 @@ class SessionManager:
         logger = logging.getLogger(__name__)
 
         if not self._selected_session:
-            logger.warning("❌ No session selected, cannot save context")
-            bubble_manager.add_message("system", "⚠️ Please load a game session first")
+            logger.warning("No session selected, cannot save context")
+            bubble_manager.add_message("system", "Please load a game session first")
             return
 
         try:
@@ -297,7 +297,7 @@ class SessionManager:
             authors_note = self.authors_note_textbox.get("1.0", "end-1c")
 
             logger.debug(
-                f"💾 Saving author's note for session {self._selected_session.id}"
+                f"Saving author's note for session {self._selected_session.id}"
             )
             logger.debug(f"   Author's Note length: {len(authors_note)} chars")
 
@@ -309,14 +309,14 @@ class SessionManager:
             )
 
             logger.info(
-                f"✅ Context saved successfully for session {self._selected_session.id}"
+                f"Context saved successfully for session {self._selected_session.id}"
             )
 
             # Show confirmation
-            bubble_manager.add_message("system", "✅ Author's Note saved")
+            bubble_manager.add_message("system", "Author's Note saved")
         except Exception as e:
-            logger.error(f"❌ Error saving context: {e}", exc_info=True)
-            bubble_manager.add_message("system", f"❌ Error saving: {e}")
+            logger.error(f"Error saving context: {e}", exc_info=True)
+            bubble_manager.add_message("system", f"Error saving: {e}")
 
     def _clear_active_session_view(self):
         """Resets the UI to a neutral state when a session is deleted or unloaded."""

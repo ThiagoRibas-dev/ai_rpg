@@ -48,6 +48,7 @@ class ToolExecutor:
         memory_tool_used = False
 
         if not tool_calls:
+            self.logger.warning("No tool calls provided for execution.")
             return results, memory_tool_used
 
         # Build context once for all tools
@@ -111,7 +112,7 @@ class ToolExecutor:
             # Notify UI of tool call
             if self.ui_queue:
                 try:
-                    self.logger.debug(f"📤 Sending tool_call to UI queue: {tool_name}")
+                    self.logger.debug(f"Sending tool_call to UI queue: {tool_name}")
                     self.ui_queue.put(
                         {"type": "tool_call", "name": tool_name, "args": tool_args}
                     )
@@ -183,6 +184,10 @@ class ToolExecutor:
             and isinstance(result, dict)
             and "new_time" in result
         ):
+            if not session:
+                self.logger.warning("Session is None in _post_hook for time.advance. Cannot update game time.")
+                return
+
             try:
                 self.db.update_session_game_time(session.id, result["new_time"])
                 session.game_time = result["new_time"]
@@ -192,4 +197,4 @@ class ToolExecutor:
                         {"type": "update_game_time", "new_time": result["new_time"]}
                     )
             except Exception as e:
-                self.logger.error(f"Failed to update game time: {e}")
+                self.logger.error(f"Failed to update game time: {e}", exc_info=True)

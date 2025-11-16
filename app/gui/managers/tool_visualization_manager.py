@@ -9,6 +9,9 @@ New responsibilities:
 
 import customtkinter as ctk
 from app.gui.styles import Theme, get_tool_call_style
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ToolVisualizationManager:
@@ -29,10 +32,7 @@ class ToolVisualizationManager:
         """
         Add a tool call to the dedicated tool calls panel.
         """
-        import logging
-
-        logger = logging.getLogger(__name__)
-        logger.debug(f"🔧 ToolVisualizationManager.add_tool_call: {name}")
+        logger.debug(f"ToolVisualizationManager.add_tool_call: {name}")
 
         style = get_tool_call_style()
 
@@ -47,7 +47,7 @@ class ToolVisualizationManager:
         # Header with tool name
         header = ctk.CTkLabel(
             call_frame,
-            text=f"🛠️ {name}",
+            text=f"{name}",
             font=Theme.fonts.subheading,
             text_color=style["header_color"],
         )
@@ -76,14 +76,14 @@ class ToolVisualizationManager:
             pady=(0, Theme.spacing.padding_sm),
         )
 
-        logger.debug("✅ Tool call card created and packed")
+        logger.debug("Tool call card created and packed")
 
         # Auto-scroll tool calls panel
         try:
             self.tool_calls_frame.after_idle(
                 lambda: self.tool_calls_frame._parent_canvas.yview_moveto(1.0)
             )
-            logger.debug("🔽 Scrolled to bottom")
+            logger.debug("Scrolled to bottom")
         except Exception as e:
             logger.warning(f"Auto-scroll failed: {e}")
 

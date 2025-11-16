@@ -292,7 +292,7 @@ class MainView(ctk.CTk):
         # Start UI queue polling
         self.ui_queue_handler.start_polling()
 
-        # ✅ Wire state viewer button
+        # Wire state viewer button
         self._wire_state_viewer_button()
 
     def _wire_state_viewer_button(self):
@@ -405,18 +405,14 @@ class MainView(ctk.CTk):
         """
         Save author's note.
         """
-        import logging
-
-        logger = logging.getLogger(__name__)
-
-        logger.debug("💾 MainView.save_context() called")
+        logger.debug("MainView.save_context() called")
 
         if not self.session_manager:
-            logger.error("❌ session_manager not initialized")
+            logger.error("session_manager not initialized")
             return
 
         if not self.bubble_manager:
-            logger.error("❌ bubble_manager not initialized")
+            logger.error("bubble_manager not initialized")
             return
 
         self.session_manager.save_context(self.bubble_manager)
@@ -491,7 +487,7 @@ class MainView(ctk.CTk):
         """
         if not self.session_manager or not self.session_manager.selected_session:
             self.bubble_manager.add_message(
-                "system", "⚠️ Please load a game session first"
+                "system", "Please load a game session first"
             )
             return
 

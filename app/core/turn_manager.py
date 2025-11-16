@@ -123,7 +123,7 @@ class TurnManager:
         # ===== STEP 1: PLAN (2-PHASE PROCESS for ALL modes) =====
         # --- Signal the start of the turn to the UI to show the loading indicator immediately ---
         self.ui_queue.put(
-            {"type": "planning_started", "content": "😑 Planning..."}
+            {"type": "planning_started", "content": "Planning..."}
         )
 
         # Phase 1: Create Plan (Analysis + Strategy)
@@ -146,6 +146,9 @@ class TurnManager:
             return
         analysis_text = turn_plan.analysis
         plan_steps = turn_plan.plan_steps
+
+        if not plan_steps:
+            self.logger.warning("LLM returned an empty list of plan steps.")
 
         # --- Iterative Tool Selection ---
         # Instead of one big call, we loop through each plan step and select tools individually.
@@ -284,11 +287,11 @@ class TurnManager:
                         self.ui_queue.put(
                             {
                                 "type": "tool_event",
-                                "message": f"{StateApplyPatch.model_fields['name'].default} âœ“ â†’ {result}",
+                                "message": f"{StateApplyPatch.model_fields['name'].default} ✔️ {result}",
                             }
                         )
                 except Exception as e:
-                    self.logger.error(f"Patch error: {e}")
+                    self.logger.error(f"Patch error: {e}", exc_info=True)
         mem_intents.apply(
             narrative.memory_intents,
             session_in_thread,

@@ -99,10 +99,10 @@ class ToolRegistry:
                 # Generate JSON schema for LLM
                 self._register_schema(schema_type)
                 
-                logger.info(f"✅ Registered tool: {tool_name} ({schema_type.__name__} ← {module_name}.py)")
+                logger.info(f"Registered tool: {tool_name} ({schema_type.__name__} ← {module_name}.py)")
                 
             except Exception as e:
-                logger.error(f"❌ Failed to load tool module {module_name}: {e}", exc_info=True)
+                logger.error(f"Failed to load tool module {module_name}: {e}", exc_info=True)
 
     def _register_schema(self, schema_type: Type[BaseModel]):
         """Generate JSON schema from Pydantic type for LLM consumption."""

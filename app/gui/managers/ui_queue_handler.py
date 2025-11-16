@@ -84,7 +84,7 @@ class UIQueueHandler:
             pass
         finally:
             if processed > 0:
-                logger.debug(f"📬 Processed {processed} UI messages")
+                logger.debug(f"Processed {processed} UI messages")
             # Re-schedule polling
             # Use orchestrator's view for after() call
             self.orchestrator.view.after(100, self._process_queue)
@@ -109,13 +109,13 @@ class UIQueueHandler:
             msg: Message dictionary with 'type' and type-specific fields
         """
         msg_type = msg.get("type")
-        logger.debug(f"📨 UI message received: {msg_type}")
+        logger.debug(f"UI message received: {msg_type}")
 
         # ---Handle the planning_started message ---
         # This message is sent right before the first LLM call.
         if msg_type == "planning_started":
             self.loading_label.configure(
-                text=msg.get("content", "🤔 AI is thinking...")
+                text=msg.get("content", "AI is thinking...")
             )
             self.loading_frame.grid(
                 row=2, column=0, columnspan=2, sticky="ew", padx=5, pady=5
@@ -134,14 +134,14 @@ class UIQueueHandler:
         # === Tool Call ===
         elif msg_type == "tool_call":
             logger.debug(
-                f"🔧 Processing tool_call: {msg.get('name')} with args: {msg.get('args')}"
+                f"Processing tool_call: {msg.get('name')} with args: {msg.get('args')}"
             )
             # self.add_tool_call → self.tool_viz_manager.add_tool_call
             try:
                 self.tool_viz_manager.add_tool_call(msg["name"], msg["args"])
-                logger.debug("✅ Tool call added to visualization")
+                logger.debug("Tool call added to visualization")
             except Exception as e:
-                logger.error(f"❌ Failed to add tool call to panel: {e}", exc_info=True)
+                logger.error(f"Failed to add tool call to panel: {e}", exc_info=True)
 
         # === Tool Result ===
         elif msg_type == "tool_result":
@@ -161,7 +161,7 @@ class UIQueueHandler:
         # === Error ===
         elif msg_type == "error":
             # self.add_message_bubble → self.bubble_manager.add_message
-            self.bubble_manager.add_message("system", f"❌ Error: {msg['message']}")
+            self.bubble_manager.add_message("system", f"Error: {msg['message']}")
 
         # === Turn Complete ===
         elif msg_type == "turn_complete":
@@ -184,7 +184,7 @@ class UIQueueHandler:
 
         # === Update Game Time ===
         elif msg_type == "update_game_time":
-            self.game_time_label.configure(text=f"🕐 {msg['new_time']}")
+            self.game_time_label.configure(text=f"{msg['new_time']}")
 
         # === Update Game Mode ===
         elif msg_type == "update_game_mode":

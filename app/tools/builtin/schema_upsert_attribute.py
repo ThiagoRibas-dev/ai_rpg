@@ -97,7 +97,6 @@ def handler(
 
         logger.info(f"Defined new property '{property_name}' for entity type '{entity_type}'.")
         return {"success": True, "property": prop_def.model_dump()}
-
     except ValueError as e:
         logger.error(f"Error defining property: {e}")
         return {"success": False, "error": str(e)}

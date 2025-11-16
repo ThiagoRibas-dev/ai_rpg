@@ -86,7 +86,7 @@ class HistoryManager:
             user_message = history[-2].content
 
         # Delete last assistant message from Session
-        logger.info("🔄 Rerolling: Removing last assistant message")
+        logger.info("Rerolling: Removing last assistant message")
         session.history.pop()  # Remove last message
 
         # Delete last bubble from UI
@@ -101,7 +101,7 @@ class HistoryManager:
         game_session.session_data = session.to_json()
         self.db_manager.update_session(game_session)
 
-        logger.info("✅ Reroll prepared, returning user message for regeneration")
+        logger.info("Reroll prepared, returning user message for regeneration")
         return user_message
 
     def delete_last_n_messages(self, game_session: GameSession, n: int) -> bool:
@@ -123,7 +123,7 @@ class HistoryManager:
 
         session = self.orchestrator.session
 
-        logger.info(f"🗑️ Deleting last {n} messages")
+        logger.info(f"Deleting last {n} messages")
 
         # Delete from Session history
         for _ in range(n):
@@ -143,10 +143,10 @@ class HistoryManager:
         game_session.session_data = session.to_json()
         self.db_manager.update_session(game_session)
 
-        logger.info(f"✅ Deleted {n} messages")
+        logger.info(f"Deleted {n} messages")
 
         # Show confirmation in chat
-        self.bubble_manager.add_message("system", f"🗑️ Deleted last {n} message(s)")
+        self.bubble_manager.add_message("system", f"Deleted last {n} message(s)")
 
         return True
 

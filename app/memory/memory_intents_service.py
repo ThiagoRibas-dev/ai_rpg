@@ -44,4 +44,4 @@ class MemoryIntentsService:
                 if tool_event_callback:
                     tool_event_callback(f"memory.upsert ✓ -> {result}")
             except Exception as e:
-                self.logger.error(f"Memory intent error: {e}")
+                self.logger.error(f"Memory intent error: {e}", exc_info=True)

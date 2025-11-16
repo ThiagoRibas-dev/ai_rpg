@@ -40,14 +40,14 @@ class VectorStore:
             name="turn_metadata", metadata={"hnsw:space": "cosine"}
         )
 
-        # 🆕 Get model name from environment variable
+        # Get model name from environment variable
         model_name = os.environ.get("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
 
         try:
             self.embed_model = TextEmbedding(model_name=model_name)
             logger.info(f"VectorStore initialized with fastembed model: {model_name}")
         except Exception as e:
-            logger.error(f"Failed to load embedding model '{model_name}': {e}")
+            logger.error(f"Failed to load embedding model '{model_name}': {e}", exc_info=True)
             logger.info("Falling back to default model: BAAI/bge-small-en-v1.5")
             self.embed_model = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
 
@@ -79,7 +79,7 @@ class VectorStore:
                 metadatas=[
                     {
                         "session_id": session_id,
-                        "prompt_id": prompt_id,  # 🆕 Track which prompt this session uses
+                        "prompt_id": prompt_id,  # Track which prompt this session uses
                         "round_number": round_number,
                         "summary": summary,
                         "tags": ",".join(tags),
@@ -182,7 +182,6 @@ class VectorStore:
                 ],
             )
         except Exception as e:
-            # ✅ FIX: Log the error
             logger.error(
                 f"upsert_memory failed for memory {memory_id}: {e}", exc_info=True
             )
@@ -193,7 +192,6 @@ class VectorStore:
         try:
             self.memories_col.delete(ids=[doc_id])
         except Exception as e:
-            # ✅ FIX: Log the error
             logger.error(
                 f"delete_memory failed for memory {memory_id}: {e}", exc_info=True
             )
@@ -255,7 +253,6 @@ class VectorStore:
                 ],
             )
         except Exception as e:
-            # ✅ FIX: Log the error
             logger.error(
                 f"upsert_world_info failed for WI {world_info_id}: {e}", exc_info=True
             )
@@ -266,7 +263,6 @@ class VectorStore:
         try:
             self.world_info_col.delete(ids=[doc_id])
         except Exception as e:
-            # ✅ FIX: Log the error
             logger.error(
                 f"delete_world_info failed for WI {world_info_id}: {e}", exc_info=True
             )

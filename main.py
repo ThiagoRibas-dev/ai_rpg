@@ -2,17 +2,14 @@ from app.gui.main_view import MainView
 from app.core.orchestrator import Orchestrator
 from app.database.db_manager import DBManager
 from dotenv import load_dotenv
-import logging # Import logging
+from app.utils.logger_config import setup_logging # Import the new setup function
 
 DB_PATH = "ai_rpg.db"
 
 
 def main():
-    # Configure logging
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
+    # Configure logging using the centralized setup
+    setup_logging()
     
     load_dotenv()
     with DBManager(DB_PATH) as db_manager:

@@ -20,7 +20,7 @@ class CharacterInspectorView(ctk.CTkFrame):
         self.all_characters = {}
         self.current_character_key = "player"  # Default to player
 
-        # ✅ FIX: Add character selector dropdown
+        # Add character selector dropdown
         selector_frame = ctk.CTkFrame(self)
         selector_frame.pack(fill="x", padx=5, pady=5)
 
@@ -38,7 +38,7 @@ class CharacterInspectorView(ctk.CTkFrame):
 
         # Refresh button
         refresh_btn = ctk.CTkButton(
-            self, text="🔄 Refresh", command=self.refresh, height=30
+            self, text="Refresh", command=self.refresh, height=30
         )
         refresh_btn.pack(fill="x", padx=5, pady=5)
 
@@ -46,20 +46,20 @@ class CharacterInspectorView(ctk.CTkFrame):
 
     def refresh(self):
         """Query all characters and update display."""
-        print("🔍 CharacterInspectorView.refresh() called")
+        logger.debug("CharacterInspectorView.refresh() called")
 
         if not self.orchestrator:
-            print("❌ No orchestrator!")
+            logger.error("No orchestrator!")
             self._show_error("No orchestrator connected")
             return
 
         if not self.orchestrator.session:
-            print("❌ No session loaded!")
+            logger.error("No session loaded!")
             self._show_error("No session loaded")
             return
 
         session_id = self.orchestrator.session.id
-        print(f"✅ Session ID: {session_id}")
+        logger.info(f"Session ID: {session_id}")
 
         try:
             from app.tools.registry import ToolRegistry
@@ -71,26 +71,26 @@ class CharacterInspectorView(ctk.CTkFrame):
                 "db_manager": self.db_manager,  # Use direct db_manager
             }
 
-            print(f"🔧 Querying state with context: {context}")
+            logger.debug(f"Querying state with context: {context}")
 
             # Query ALL characters using wildcard
             query = StateQuery(entity_type="character", key="*", json_path=".")
             result = registry.execute(query, context=context)
 
-            print(f"📦 Query result: {result}")
+            logger.debug(f"Query result: {result}")
 
             self.all_characters = result.get("value", {})
 
-            print(
-                f"👤 Found {len(self.all_characters)} characters: {list(self.all_characters.keys())}"
+            logger.info(
+                f"Found {len(self.all_characters)} characters: {list(self.all_characters.keys())}"
             )
 
             if not self.all_characters:
-                print("⚠️ No characters found, showing empty state")
+                logger.warning("No characters found, showing empty state")
                 self._show_empty()
                 return
 
-            # ✅ FIX: Update dropdown with found characters
+            # Update dropdown with found characters
             char_keys = list(self.all_characters.keys())
             self.character_selector.configure(values=char_keys)
 
@@ -98,13 +98,13 @@ class CharacterInspectorView(ctk.CTkFrame):
             if self.current_character_key not in char_keys:
                 self.current_character_key = char_keys[0]
 
-            print(f"📋 Selected character: {self.current_character_key}")
+            logger.info(f"Selected character: {self.current_character_key}")
 
             self.character_selector.set(self.current_character_key)
             self._on_character_selected(self.current_character_key)
 
         except Exception as e:
-            print(f"💥 Exception in refresh: {e}")
+            logger.error(f"Exception in refresh: {e}", exc_info=True)
             import traceback
 
             traceback.print_exc()
@@ -275,7 +275,7 @@ class InventoryInspectorView(ctk.CTkFrame):
         self.all_inventories = {}
         self.current_owner_key = "inventory:player"  # Default key
 
-        # ✅ FIX: Add inventory selector dropdown
+        # Add inventory selector dropdown
         selector_frame = ctk.CTkFrame(self)
         selector_frame.pack(fill="x", padx=5, pady=5)
 
@@ -320,20 +320,20 @@ class InventoryInspectorView(ctk.CTkFrame):
 
     def refresh(self):
         """Query all inventories."""
-        print("🔍 InventoryInspectorView.refresh() called")
+        logger.debug("InventoryInspectorView.refresh() called")
 
         if not self.orchestrator:
-            print("❌ No orchestrator!")
+            logger.error("No orchestrator!")
             self._show_error("No orchestrator connected")
             return
 
         if not self.orchestrator.session:
-            print("❌ No session loaded!")
+            logger.error("No session loaded!")
             self._show_error("No session loaded")
             return
 
         session_id = self.orchestrator.session.id
-        print(f"✅ Session ID: {session_id}")
+        logger.info(f"Session ID: {session_id}")
 
         try:
             from app.tools.registry import ToolRegistry
@@ -345,7 +345,7 @@ class InventoryInspectorView(ctk.CTkFrame):
                 "db_manager": self.db_manager,  # Use direct db_manager
             }
 
-            print(f"🔧 Querying inventories with context: {context}")
+            logger.debug(f"Querying inventories with context: {context}")
 
             # Try both "inventory" and "item" entity types
             inventories = {}
@@ -355,7 +355,7 @@ class InventoryInspectorView(ctk.CTkFrame):
                 result = registry.execute(query, context=context)
 
                 entities = result.get("value", {})
-                print(f"   Found {len(entities)} entities of type {entity_type}")
+                logger.info(f"Found {len(entities)} entities of type {entity_type}")
 
                 if entities:
                     for key, data in entities.items():
@@ -363,29 +363,29 @@ class InventoryInspectorView(ctk.CTkFrame):
 
             self.all_inventories = inventories
 
-            print(
-                f"🎒 Total inventories: {len(self.all_inventories)}, keys: {list(self.all_inventories.keys())}"
+            logger.info(
+                f"Total inventories: {len(self.all_inventories)}, keys: {list(self.all_inventories.keys())}"
             )
 
             if not self.all_inventories:
-                print("⚠️ No inventories found")
+                logger.warning("No inventories found")
                 self._show_empty()
                 return
 
-            # ✅ FIX: Update dropdown with found inventories
+            # Update dropdown with found inventories
             inv_keys = list(self.all_inventories.keys())
             self.owner_selector.configure(values=inv_keys)
 
             if self.current_owner_key not in inv_keys:
                 self.current_owner_key = inv_keys[0]
 
-            print(f"📋 Selected inventory: {self.current_owner_key}")
+            logger.info(f"Selected inventory: {self.current_owner_key}")
 
             self.owner_selector.set(self.current_owner_key)
             self._on_owner_selected(self.current_owner_key)
 
         except Exception as e:
-            print(f"💥 Exception in refresh: {e}")
+            logger.error(f"Exception in refresh: {e}", exc_info=True)
             import traceback
 
             traceback.print_exc()
@@ -424,6 +424,19 @@ class InventoryInspectorView(ctk.CTkFrame):
             ctk.CTkLabel(
                 self.items_frame, text="No items", text_color=Theme.colors.text_muted
             ).pack(pady=20)
+
+        # Render currency
+        currency = self.inventory_data.get("currency", {})
+        if currency:
+            currency_text = " | ".join([f"{v} {k}" for k, v in currency.items()])
+            ctk.CTkLabel(
+                self.currency_frame, text=f"{currency_text}", font=Theme.fonts.body
+            ).pack(padx=10, pady=5)
+
+    def _create_item_card(self, item):
+        """Create a card for a single item."""
+        card = ctk.CTkFrame(self.items_frame, border_width=1)
+        card.pack(fill="x", padx=5, pady=3)
 
         # Render currency
         currency = self.inventory_data.get("currency", {})
@@ -573,20 +586,20 @@ class QuestInspectorView(ctk.CTkFrame):
 
     def refresh(self):
         """Query all quests."""
-        print("🔍 QuestInspectorView.refresh() called")
+        logger.debug("QuestInspectorView.refresh() called")
 
         if not self.orchestrator:
-            print("❌ No orchestrator!")
+            logger.error("No orchestrator!")
             self._show_error("No orchestrator connected")
             return
 
         if not self.orchestrator.session:
-            print("❌ No session loaded!")
+            logger.error("No session loaded!")
             self._show_error("No session loaded")
             return
 
         session_id = self.orchestrator.session.id
-        print(f"✅ Session ID: {session_id}")
+        logger.info(f"Session ID: {session_id}")
 
         try:
             from app.tools.registry import ToolRegistry
@@ -598,24 +611,24 @@ class QuestInspectorView(ctk.CTkFrame):
                 "db_manager": self.db_manager,  # Use direct db_manager
             }
 
-            print(f"🔧 Querying quests with context: {context}")
+            logger.debug(f"Querying quests with context: {context}")
 
             # Query all quests using wildcard
             query = StateQuery(entity_type="quest", key="*", json_path=".")
             result = registry.execute(query, context=context)
 
-            print(f"📦 Query result: {result}")
+            logger.debug(f"Query result: {result}")
 
             self.quests_data = result.get("value", {})
 
-            print(
-                f"📜 Found {len(self.quests_data)} quests: {list(self.quests_data.keys())}"
+            logger.info(
+                f"Found {len(self.quests_data)} quests: {list(self.quests_data.keys())}"
             )
 
             self._render_quests()
 
         except Exception as e:
-            print(f"💥 Exception in refresh: {e}")
+            logger.error(f"Exception in refresh: {e}", exc_info=True)
             import traceback
 
             traceback.print_exc()
@@ -658,7 +671,6 @@ class QuestInspectorView(ctk.CTkFrame):
             text_color=status_color,
         )
         header.pack(fill="x", padx=10, pady=(10, 5))
-
         # Progress
         progress = quest.get("progress")
         if progress:

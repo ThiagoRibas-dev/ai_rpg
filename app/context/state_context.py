@@ -93,7 +93,7 @@ class StateContextBuilder:
 
         except Exception as e:
             if self.logger:
-                self.logger.debug(f"StateContextBuilder: failed to build state: {e}")
+                self.logger.debug(f"StateContextBuilder: failed to build state: {e}", exc_info=True)
             # fail silently into empty
 
         return "\n".join(lines) if lines else ""

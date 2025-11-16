@@ -20,10 +20,13 @@ class OpenAIConnector(LLMConnector):
         self.api_key = os.environ.get("OPENAI_API_KEY")
         self.model = os.environ.get("OPENAI_API_MODEL")
         if not self.base_url:
+            logger.error("OPENAI_API_BASE_URL environment variable not set.")
             raise ValueError("OPENAI_API_BASE_URL environment variable not set.")
         if not self.api_key:
+            logger.error("OPENAI_API_KEY environment variable not set.")
             raise ValueError("OPENAI_API_KEY environment variable not set.")
         if not self.model:
+            logger.error("OPENAI_API_MODEL environment variable not set.")
             raise ValueError("OPENAI_API_MODEL environment variable not set.")
         self.client = openai.OpenAI(base_url=self.base_url, api_key=self.api_key)
 
@@ -86,10 +89,10 @@ class OpenAIConnector(LLMConnector):
         content = resp.choices[0].message.content
 
         try:
-            # ✅ Parse and validate
+            # Parse and validate
             validated = output_schema.model_validate_json(content)
 
-            # ✅ Extra check for TurnPlan - log if tool_calls were filtered
+            # Extra check for TurnPlan - log if tool_calls were filtered
             if hasattr(validated, "tool_calls"):
                 logger.debug(
                     f"Validated response with {len(validated.tool_calls)} tool calls"
@@ -98,7 +101,7 @@ class OpenAIConnector(LLMConnector):
             return validated
 
         except ValidationError as e:
-            logger.error(f"Validation error in OpenAI response: {e}")
+            logger.error(f"Validation error in OpenAI response: {e}", exc_info=True)
             logger.error(f"Raw content: {content}")
             logger.error(f"Schema: {output_schema.__name__}")
 
@@ -115,7 +118,11 @@ class OpenAIConnector(LLMConnector):
             raise
 
         except json.JSONDecodeError as e:
-            logger.error(f"JSON decode error in OpenAI response: {e}")
+            logger.error(f"JSON decode error in OpenAI response: {e}", exc_info=True)
+            logger.error(f"Raw content: {content}")
+            raise
+        except Exception as e:
+            logger.error(f"An unexpected error occurred in get_structured_response: {e}", exc_info=True)
             logger.error(f"Raw content: {content}")
             raise
 
@@ -148,11 +155,22 @@ class OpenAIConnector(LLMConnector):
 
         if response_message.tool_calls:
             for tool_call in response_message.tool_calls:
-                tool_calls_data.append(
-                    {
-                        "name": tool_call.function.name,
-                        "arguments": json.loads(tool_call.function.arguments),
-                    }
-                )
+                try:
+                    tool_calls_data.append(
+                        {
+                            "name": tool_call.function.name,
+                            "arguments": json.loads(tool_call.function.arguments),
+                        }
+                    )
+                except json.JSONDecodeError as e:
+                    logger.error(f"Failed to decode tool call arguments for {tool_call.function.name}: {e}", exc_info=True)
+                    # Optionally, append an error entry or skip this tool call
+                    tool_calls_data.append(
+                        {
+                            "name": tool_call.function.name,
+                            "arguments": {},
+                            "error": f"Failed to parse arguments: {e}"
+                        }
+                    )
 
         return tool_calls_data

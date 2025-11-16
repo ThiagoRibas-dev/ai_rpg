@@ -57,7 +57,7 @@ class AuditorService:
                     context={"session_id": session.id, "db_manager": self.db},
                 )
             except Exception as e:
-                self.logger.error(f"Patch error during audit: {e}")
+                self.logger.error(f"Patch error during audit: {e}", exc_info=True)
         # Memory updates
         for mem in audit.memory_updates or []:
             try:
@@ -76,4 +76,4 @@ class AuditorService:
                     },
                 )
             except Exception as e:
-                self.logger.error(f"Memory upsert error during audit: {e}")
+                self.logger.error(f"Memory upsert error during audit: {e}", exc_info=True)

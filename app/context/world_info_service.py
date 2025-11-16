@@ -23,7 +23,7 @@ class WorldInfoService:
             self._indexed_prompt_ids.add(prompt_id)
         except Exception as e:
             self.logger.warning(
-                f"World Info indexing failed for prompt {prompt_id}: {e}"
+                f"World Info indexing failed for prompt {prompt_id}: {e}", exc_info=True
             )
 
     def search_for_history(
@@ -41,6 +41,6 @@ class WorldInfoService:
             return [h["text"] for h in hits] if hits else []
         except Exception as e:
             self.logger.warning(
-                f"World Info retrieval failed for prompt {prompt_id}: {e}"
+                f"World Info retrieval failed for prompt {prompt_id}: {e}", exc_info=True
             )
             return []

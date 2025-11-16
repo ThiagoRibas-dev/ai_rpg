@@ -62,7 +62,7 @@ class PromptManager:
         """
         self.session_manager = session_manager
 
-    def set_orchestrator(self, orchestrator): # ✅ Add this method
+    def set_orchestrator(self, orchestrator): # Add this method
         """Set the orchestrator instance."""
         self.orchestrator = orchestrator
 
@@ -72,13 +72,13 @@ class PromptManager:
         """
         from app.gui.panels.prompt_dialog import PromptDialog
 
-        # ✅ Get the LLM connector
+        # Get the LLM connector
         llm_connector = self.orchestrator._get_llm_connector()
 
         dialog = PromptDialog(
             self.prompt_scrollable_frame.winfo_toplevel(),
             title="New Prompt",
-            llm_connector=llm_connector # ✅ Pass connector to dialog
+            llm_connector=llm_connector # Pass connector to dialog
         )
         self.prompt_scrollable_frame.wait_window(dialog)  # Wait for dialog to close
 
@@ -101,14 +101,14 @@ class PromptManager:
 
         from app.gui.panels.prompt_dialog import PromptDialog
 
-        # ✅ Get the LLM connector
+        # Get the LLM connector
         llm_connector = self.orchestrator._get_llm_connector()
 
         dialog = PromptDialog(
             self.prompt_scrollable_frame.winfo_toplevel(),
             title="Edit Prompt",
             existing_prompt=self._selected_prompt,
-            llm_connector=llm_connector # ✅ Pass connector to dialog
+            llm_connector=llm_connector # Pass connector to dialog
         )
         self.prompt_scrollable_frame.wait_window(dialog)  # Wait for dialog to close
 
