@@ -30,8 +30,9 @@ After you confirm that you are satisfied with the system/framework, I'll finaliz
 
 
 I'd like a homebrew setting. High Fantasy with late medieval aesthetics. A world like the forgotten realms, sprawling and with many kinds of nations, biomes, places, etc in it, where magic is ever present but not pervasive. A commoner doesn't have access to magic usually, for example.
-I'd like a generally serious tone, but on the lighter side. Humor, horror, lewd, philosophycal, etc should be weaved naturally into the game.
+I'd like a generally serious tone, but on the lighter side. Humor, horror, lewd, philosophycal, sexually explicit, subversive, neutral, etc should be weaved naturally into the game.
 I don't have any specific themes in mind, so we can let the game flow and see where it takes us. To start, we can go with standard themes of adventure and exploration.
+I'd also like the game to have a somewhat slow pace.
 We could add something to keep track of mine and other characters notoriety and reputation. A simple system where we have a numeric reputation with each place, group, and person of importance.
 We could start with him travelling to a village away from his usual home town.
 

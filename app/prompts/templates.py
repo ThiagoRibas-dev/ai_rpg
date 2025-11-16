@@ -67,8 +67,8 @@ Your task is to identify and define the character Races or Species (e.g., 'Elf',
 
 GAMEPLAY_PLAN_TEMPLATE = """
 I am in the planning phase for a GAMEPLAY turn. I will perform two tasks and structure my output as a JSON object with 'analysis' and 'plan_steps'.
-1.  **Analysis**: Review the player's last message and the conversation history to determine their core intent.
-2.  **Plan Steps**: Based on my analysis and the current game state (character, inventory, quests, memories, world info), create a step-by-step plan of actions I will take. This includes identifying necessary tool calls.
+1. **Analysis**: Review the player's last message and the conversation history to determine their core intent.
+2. **Plan Steps**: Based on my analysis and the current game state (character, inventory, quests, memories, world info), create a step-by-step plan of actions I will take. This includes identifying necessary tool calls.
 """
 
 SETUP_PLAN_TEMPLATE = f"""
@@ -79,11 +79,11 @@ Okay, so I am in the planning phase for a SETUP turn and my goal is to help the 
 I will structure my output as a JSON object with 'analysis' and 'plan_steps'.
 
 I will perform two tasks:
-1.  **Analysis**: I will analyze the player's latest message to determine which game properties they want to create or modify.
-2.  **Plan Steps**: I will write a step-by-step plan.
+1. **Analysis**: I will analyze the player's latest message to determine which game properties they want to create or modify.
+2. **Plan Steps**: I will write a step-by-step plan for my actions right now, where:
     - For each new or updated property the player explicitly requested or agreed to, I will plan a call to the `{SchemaUpsertAttribute.model_fields["name"].default}` tool, describing what it does.
-    - I will plan clarifying questions if necessary.
-    - If the player is asking a question, I will plan my reply.
+    - When necessary, I will plan asking questions about the game's systems and rules, as well as clarifying questions in general.
+    - I'll plan a repsonse to the player's last message. If the player is asking a question, I will plan my reply.
 """
  
 # Per-Step Tool Selection Prompt ---
@@ -91,9 +91,10 @@ TOOL_SELECTION_PER_STEP_TEMPLATE = """
 I will now select the single best tool to accomplish the following plan step.
 
 For this response, I'll do exactly the following:
-1.  Analyze the provided "Plan Step" in the context of the overall "Analysis" and conversation history for what actions I need to take *now*.
-2.  If the step is an action that needs to be executed now, choose one or more tools that directly executes this step from the "Available Tools" list.
-3.  If the step is a future action,, is purely for dialogue, narration, doesn't require a tool, or if there isn't enough information to select a tool with the correct arguments, I will select the {deliberate_tool}.
+1. Analyze the provided "Plan Step" in the context of the overall "Analysis" and conversation history for what actions I need to take *now*.
+2. If the step is an action that needs to be executed now, choose one or more tools that directly executes this step from the "Available Tools" list.
+3. If the step is a future action,, is purely for dialogue, narration, doesn't require a tool, or if there isn't enough information to select a tool with the correct arguments, I will select the {deliberate_tool}.
+4. When faced with a step that mentions changing or transitioning the game's mode (SETUP, GAMEPLAY), I'll consider very carefully if that tool should be selected now, or if the intent is to do that later. In that case, I'll select the {deliberate_tool} 
 
 **Analysis**: {analysis}
 **Available Tools**: {tool_names_list}
@@ -129,6 +130,7 @@ Since we are not yet playing the game, I will not narrate or describe a scene. I
  - Acknowledge any new or updated properties and explain what each represents, how it might work in play, and how it fits the genre or tone we've been developing.
  - Ask what the player would like to do next: refine, add, or finalize the Session Zero and begin the game (transition from SETUP mode to GAMEPLAY mode).
  - If appropriate, I'll suggest optional refinements, like adding mechanics, game properties, rules, etc.
+ - Acknowledge that for now there will be no roleplay or narration. We are still setting the rules of the game up.
 """
 
 # ==============================================================================
@@ -136,12 +138,15 @@ Since we are not yet playing the game, I will not narrate or describe a scene. I
 # ==============================================================================
 
 NARRATIVE_TEMPLATE = f"""
-Okay. I am now in the narrative phase. My role is to:
-- Write the scene based on my planning intent and the tool results
+Okay. I am now in the narrative phase.
+My role as the Game Master is to:
+- Write the scene based on the conversation history so far, the player's last message, the planning intent, and the tool results
+- Balance the pace and speed of events, not too slow and not too fast by default
 - Use second person ("You...") perspective
 - Respect tool outcomes without fabricating mechanics
 - Ensure consistency with state.query results
 - Propose patches if I detect inconsistencies
+- And most crucial of all, respect the player's agency, always asking for his input, never assuming his actions, thoughts, feelings, etc
 
 MEMORY NOTES:
 - The memories shown in context were automatically retrieved and marked as accessed
@@ -157,6 +162,7 @@ After writing the narrative, I'll provide:
    3 = Normal gameplay, advancing the scene
    5 = Critical plot point, major revelation, dramatic turning point
 
+Now to respond as the Game Master and continue the game.
 """
 
 CHOICE_GENERATION_TEMPLATE = """

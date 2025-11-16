@@ -204,13 +204,14 @@ class TurnManager:
                     {
                         "type": "message_bubble",
                         "role": "system",
-                        "content": "âœ… Session Zero complete! Game starting...",
+                        "content": "✅… Session Zero complete! Game starting...",
                     }
                 )
                 self.orchestrator._update_game_in_thread(
                     game_session, thread_db_manager, session_in_thread
                 )
-
+                return self.execute_turn(game_session, thread_db_manager)
+        
         # ===== STEP 2.5: AUDIT (only in GAMEPLAY mode) =====
         if current_game_mode == "GAMEPLAY":
             audit_history = context_builder.get_truncated_history(
