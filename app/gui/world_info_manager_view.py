@@ -75,7 +75,7 @@ class WorldInfoManagerView(ctk.CTkToplevel):
         for widget in self.world_info_listbox.winfo_children():
             widget.destroy()
 
-        world_infos = self.db_manager.get_world_info_by_prompt(self.prompt_id)
+        world_infos = self.db_manager.world_info.get_by_prompt(self.prompt_id)
 
         for wi in world_infos:
             # Create a frame for each entry
@@ -111,7 +111,7 @@ class WorldInfoManagerView(ctk.CTkToplevel):
 
     def new_world_info(self):
         """Create a new world info entry."""
-        wi = self.db_manager.create_world_info(self.prompt_id, "New Entry", "")
+        wi = self.db_manager.world_info.create(self.prompt_id, "New Entry", "")
         if self.vector_store:
             try:
                 self.vector_store.upsert_world_info(self.prompt_id, wi.id, wi.content)
@@ -131,7 +131,7 @@ class WorldInfoManagerView(ctk.CTkToplevel):
         self.selected_world_info.keywords = keywords
         self.selected_world_info.content = content
 
-        self.db_manager.update_world_info(self.selected_world_info)
+        self.db_manager.world_info.update(self.selected_world_info)
         if self.vector_store:
             try:
                 self.vector_store.upsert_world_info(
@@ -146,7 +146,7 @@ class WorldInfoManagerView(ctk.CTkToplevel):
         if not self.selected_world_info:
             return
 
-        self.db_manager.delete_world_info(self.selected_world_info.id)
+        self.db_manager.world_info.delete(self.selected_world_info.id)
         if self.vector_store:
             try:
                 self.vector_store.delete_world_info(

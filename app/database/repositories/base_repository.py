@@ -1,14 +1,23 @@
 """Base repository for database operations."""
 
+from abc import ABC, abstractmethod
 import sqlite3
 from typing import List, Optional
 
 
-class BaseRepository:
+class BaseRepository(ABC):
     """Base class for all repositories with common DB operations."""
 
     def __init__(self, connection: sqlite3.Connection):
         self.conn = connection
+
+    @abstractmethod
+    def create_table(self):
+        """
+        Creates the necessary table(s) for this repository.
+        This method should be implemented by all subclasses.
+        """
+        pass
 
     def _execute(self, query: str, params: tuple = ()) -> sqlite3.Cursor:
         """Execute a query and return cursor."""

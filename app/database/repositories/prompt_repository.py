@@ -8,6 +8,22 @@ from .base_repository import BaseRepository
 class PromptRepository(BaseRepository):
     """Handles all prompt-related database operations."""
 
+    def create_table(self):
+        """Creates the prompts table."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS prompts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                content TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            """
+        )
+        self.conn.commit()
+
     def create(
         self,
         name: str,

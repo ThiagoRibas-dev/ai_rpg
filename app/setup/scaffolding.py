@@ -143,7 +143,7 @@ def inject_setup_scaffolding(session_id: int, prompt_content: str, db_manager):
     # Inject scaffolding into database
     for entity_type, entities in scaffolding.items():
         for entity_key, entity_data in entities.items():
-            db_manager.set_game_state_entity(
+            db_manager.game_state.set_entity(
                 session_id, entity_type, entity_key, entity_data
             )
     

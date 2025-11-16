@@ -90,7 +90,7 @@ class PromptManager:
             name, content, initial_message, rules_document, template_manifest = result
 
             # Create in database
-            self.db_manager.create_prompt(name, content, initial_message, rules_document, template_manifest)
+            self.db_manager.prompts.create(name, content, initial_message, rules_document, template_manifest)
 
             # Refresh list
             self.refresh_list()
@@ -127,7 +127,7 @@ class PromptManager:
             self._selected_prompt.template_manifest = template_manifest
 
             # Save to database
-            self.db_manager.update_prompt(self._selected_prompt)
+            self.db_manager.prompts.update(self._selected_prompt)
 
             # Refresh list
             self.refresh_list()
@@ -140,7 +140,7 @@ class PromptManager:
             return
 
         # Delete from database
-        self.db_manager.delete_prompt(self._selected_prompt.id)
+        self.db_manager.prompts.delete(self._selected_prompt.id)
         # Clear selection
         self._selected_prompt = None
         # Refresh list
@@ -183,7 +183,7 @@ class PromptManager:
             widget.destroy()
 
         # Get all prompts from database
-        prompts = self.db_manager.get_all_prompts()
+        prompts = self.db_manager.prompts.get_all()
 
         # Create button for each prompt
         for prompt in prompts:

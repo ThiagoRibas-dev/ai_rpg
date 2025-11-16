@@ -8,6 +8,29 @@ from .base_repository import BaseRepository
 class SessionRepository(BaseRepository):
     """Handles all session-related database operations."""
 
+    def create_table(self):
+        """Creates the sessions table."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS sessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                session_data TEXT NOT NULL,
+                prompt_id INTEGER NOT NULL,
+                memory TEXT,
+                authors_note TEXT,
+                game_time TEXT,
+                game_mode TEXT DEFAULT 'SETUP',
+                setup_phase_data TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (prompt_id) REFERENCES prompts (id) ON DELETE CASCADE
+            );
+            """
+        )
+        self.conn.commit()
+
     def create(
         self, name: str, session_data: str, prompt_id: int, setup_phase_data: str = "{}"
     ) -> GameSession:

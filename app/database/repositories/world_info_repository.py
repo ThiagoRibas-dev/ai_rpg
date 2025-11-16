@@ -8,6 +8,24 @@ from .base_repository import BaseRepository
 class WorldInfoRepository(BaseRepository):
     """Handles all world info related database operations."""
 
+    def create_table(self):
+        """Creates the world_info table."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS world_info (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                prompt_id INTEGER NOT NULL,
+                keywords TEXT NOT NULL,
+                content TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (prompt_id) REFERENCES prompts (id) ON DELETE CASCADE
+            );
+            """
+        )
+        self.conn.commit()
+
     def create(self, prompt_id: int, keywords: str, content: str) -> WorldInfo:
         """Create a new world info entry."""
         cursor = self._execute(
@@ -15,8 +33,11 @@ class WorldInfoRepository(BaseRepository):
             (prompt_id, keywords, content),
         )
         self._commit()
+        world_info_id = cursor.lastrowid
+        if world_info_id is None:
+            raise ValueError("Failed to retrieve world info ID after insertion.")
         return WorldInfo(
-            id=cursor.lastrowid, prompt_id=prompt_id, keywords=keywords, content=content
+            id=world_info_id, prompt_id=prompt_id, keywords=keywords, content=content
         )
 
     def get_by_prompt(self, prompt_id: int) -> List[WorldInfo]:

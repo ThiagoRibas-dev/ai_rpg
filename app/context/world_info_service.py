@@ -18,7 +18,7 @@ class WorldInfoService:
         if prompt_id in self._indexed_prompt_ids:
             return
         try:
-            for wi in self.db.get_world_info_by_prompt(prompt_id):
+            for wi in self.db.world_info.get_by_prompt(prompt_id):
                 self.vs.upsert_world_info(prompt_id, wi.id, wi.content)
             self._indexed_prompt_ids.add(prompt_id)
         except Exception as e:

@@ -45,7 +45,7 @@ class MemoryRetriever:
         )
         keywords = self.extract_keywords(recent_text)
 
-        all_memories = self.db.get_memories_by_session(session.id) or []
+        all_memories = self.db.memories.get_by_session(session.id) or []
         if not all_memories:
             return []
 
@@ -88,7 +88,7 @@ class MemoryRetriever:
         top = [m for s, m in scored[:limit] if s > 0]
         for mem in top:
             try:
-                self.db.update_memory_access(mem.id)
+                self.db.memories.update_access(mem.id)
             except Exception:
                 pass
         return top

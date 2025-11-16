@@ -15,7 +15,7 @@ class TurnMetadataService:
         importance: int,
     ):
         try:
-            self.db.create_turn_metadata(
+            self.db.turn_metadata.create(
                 session_id, prompt_id, round_number, summary, tags, importance
             )
         except Exception:

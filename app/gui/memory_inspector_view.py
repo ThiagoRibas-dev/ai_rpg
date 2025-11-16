@@ -1,6 +1,7 @@
 import customtkinter as ctk
 from typing import Optional
-from datetime import datetime
+from app.gui.panels.dialogs.memory_detail_dialog import MemoryDetailDialog
+from app.gui.panels.inspectors.inspector_utils import create_memory_card
 
 
 class MemoryInspectorView(ctk.CTkFrame):
@@ -110,7 +111,7 @@ class MemoryInspectorView(ctk.CTkFrame):
             return
 
         # Get all memories for session
-        all_memories = self.db_manager.get_memories_by_session(self.current_session_id)
+        all_memories = self.db_manager.memories.get_by_session(self.current_session_id)
 
         # Apply filters
         filtered_memories = []
@@ -129,7 +130,7 @@ class MemoryInspectorView(ctk.CTkFrame):
             filtered_memories.append(mem)
 
         # Update statistics
-        stats = self.db_manager.get_memory_statistics(self.current_session_id)
+        stats = self.db_manager.memories.get_statistics(self.current_session_id)
         self.total_label.configure(text=f"Total: {stats['total']}")
         by_kind = stats.get("by_kind", {})
         self.episodic_label.configure(text=f"📖 {by_kind.get('episodic', 0)}")
@@ -150,125 +151,11 @@ class MemoryInspectorView(ctk.CTkFrame):
 
         # Display memories
         for mem in filtered_memories:
-            self._create_memory_card(mem)
-
-    def _create_memory_card(self, memory):
-        """Create a visual card for a single memory."""
-        # Card frame
-        card = ctk.CTkFrame(self.memory_list_frame, border_width=2)
-        card.pack(fill="x", padx=5, pady=5)
-
-        # Header row
-        header = ctk.CTkFrame(card)
-        header.pack(fill="x", padx=5, pady=5)
-
-        # Kind badge
-        kind_colors = {
-            "episodic": "#3498db",
-            "semantic": "#2ecc71",
-            "lore": "#9b59b6",
-            "user_pref": "#e67e22",
-        }
-        kind_badge = ctk.CTkLabel(
-            header,
-            text=memory.kind.upper(),
-            fg_color=kind_colors.get(memory.kind, "gray"),
-            corner_radius=5,
-            width=80,
-        )
-        kind_badge.pack(side="left", padx=2)
-
-        # Priority stars
-        priority_str = "★" * memory.priority + "☆" * (5 - memory.priority)
-        priority_label = ctk.CTkLabel(header, text=priority_str)
-        priority_label.pack(side="left", padx=5)
-
-        # ID
-        id_label = ctk.CTkLabel(header, text=f"ID: {memory.id}", text_color="gray")
-        id_label.pack(side="right", padx=5)
-
-        # Access count
-        access_label = ctk.CTkLabel(
-            header, text=f"↺ {memory.access_count}", text_color="gray"
-        )
-        access_label.pack(side="right", padx=5)
-
-        # Content
-        content_preview = memory.content[:150] + (
-            "..." if len(memory.content) > 150 else ""
-        )
-        content_label = ctk.CTkLabel(
-            card, text=content_preview, wraplength=400, justify="left", anchor="w"
-        )
-        content_label.pack(fill="x", padx=10, pady=5)
-
-        # Tags
-        if memory.tags_list():
-            tags_frame = ctk.CTkFrame(card)
-            tags_frame.pack(fill="x", padx=10, pady=5)
-
-            for tag in memory.tags_list():
-                tag_label = ctk.CTkLabel(
-                    tags_frame, text=f"#{tag}", fg_color="gray30", corner_radius=3
-                )
-                tag_label.pack(side="left", padx=2)
-
-        # Created date
-        try:
-            created = datetime.fromisoformat(memory.created_at)
-            date_str = created.strftime("%Y-%m-%d %H:%M")
-        except (ValueError, AttributeError):
-            date_str = memory.created_at
-
-        date_label = ctk.CTkLabel(
-            card, text=f"Created: {date_str}", text_color="gray", font=("Arial", 10)
-        )
-        date_label.pack(anchor="w", padx=10, pady=2)
-
-        # Action buttons
-        actions_frame = ctk.CTkFrame(card)
-        actions_frame.pack(fill="x", padx=5, pady=5)
-
-        view_btn = ctk.CTkButton(
-            actions_frame,
-            text="View/Edit",
-            command=lambda m=memory: self.view_memory_detail(m),
-            width=80,
-        )
-        view_btn.pack(side="left", padx=2)
-
-        delete_btn = ctk.CTkButton(
-            actions_frame,
-            text="Delete",
-            command=lambda m=memory: self.delete_memory(m),
-            width=80,
-            fg_color="darkred",
-            hover_color="red",
-        )
-        delete_btn.pack(side="right", padx=2)
-
-        # Created date (show both real and fictional)
-        try:
-            created = datetime.fromisoformat(memory.created_at)
-            date_str = created.strftime("%Y-%m-%d %H:%M")
-        except (ValueError, AttributeError):
-            date_str = memory.created_at
-
-        # Show fictional time prominently
-        if memory.fictional_time:
-            time_display = f"🕐 {memory.fictional_time}"
-            fictional_label = ctk.CTkLabel(
-                card,
-                text=time_display,
-                text_color="#FFD700",  # Gold color for fictional time
-                font=("Arial", 11, "bold"),
-            )
-            fictional_label.pack(anchor="w", padx=10, pady=2)
-
-        date_label = ctk.CTkLabel(
-            card, text=f"Real: {date_str}", text_color="gray", font=("Arial", 9)
-        )
-        date_label.pack(anchor="w", padx=10, pady=2)
+            callbacks = {
+                'on_view': self.view_memory_detail,
+                'on_delete': self.delete_memory
+            }
+            create_memory_card(self.memory_list_frame, mem, callbacks)
 
     def on_filter_changed(self, value: str):
         """Handle filter dropdown change."""
@@ -293,7 +180,7 @@ class MemoryInspectorView(ctk.CTkFrame):
         result = dialog.get_input()
 
         if result == "DELETE":
-            self.db_manager.delete_memory(memory.id)
+            self.db_manager.memories.delete(memory.id)
             self.refresh_memories()
 
     def create_memory(self):
@@ -302,7 +189,7 @@ class MemoryInspectorView(ctk.CTkFrame):
             return
 
         # Create a blank memory
-        memory = self.db_manager.create_memory(
+        memory = self.db_manager.memories.create(
             session_id=self.current_session_id,
             kind="semantic",
             content="New memory - click to edit",
@@ -321,7 +208,7 @@ class MemoryInspectorView(ctk.CTkFrame):
         import json
         from tkinter import filedialog
 
-        memories = self.db_manager.get_memories_by_session(self.current_session_id)
+        memories = self.db_manager.memories.get_by_session(self.current_session_id)
 
         export_data = []
         for mem in memories:
@@ -361,7 +248,7 @@ class MemoryInspectorView(ctk.CTkFrame):
                 import_data = json.load(f)
 
             for mem_data in import_data:
-                self.db_manager.create_memory(
+                self.db_manager.memories.create(
                     session_id=self.current_session_id,
                     kind=mem_data.get("kind", "semantic"),
                     content=mem_data.get("content", ""),
@@ -385,133 +272,7 @@ class MemoryInspectorView(ctk.CTkFrame):
         result = dialog.get_input()
 
         if result == "DELETE ALL":
-            memories = self.db_manager.get_memories_by_session(self.current_session_id)
+            memories = self.db_manager.memories.get_by_session(self.current_session_id)
             for mem in memories:
-                self.db_manager.delete_memory(mem.id)
+                self.db_manager.memories.delete(mem.id)
             self.refresh_memories()
-
-
-class MemoryDetailDialog(ctk.CTkToplevel):
-    """Dialog for viewing and editing a single memory."""
-
-    def __init__(self, parent, db_manager, memory, on_save_callback):
-        super().__init__(parent)
-
-        self.db_manager = db_manager
-        self.memory = memory
-        self.on_save_callback = on_save_callback
-
-        self.title(f"Memory ID: {memory.id}")
-        self.geometry("600x500")
-        self.grab_set()  # Make modal
-
-        self._create_widgets()
-        self._load_memory_data()
-
-    def _create_widgets(self):
-        # Kind selector
-        kind_frame = ctk.CTkFrame(self)
-        kind_frame.pack(fill="x", padx=10, pady=5)
-
-        ctk.CTkLabel(kind_frame, text="Kind:").pack(side="left", padx=5)
-        self.kind_menu = ctk.CTkOptionMenu(
-            kind_frame, values=["episodic", "semantic", "lore", "user_pref"]
-        )
-        self.kind_menu.pack(side="left", padx=5)
-
-        # Priority slider
-        priority_frame = ctk.CTkFrame(self)
-        priority_frame.pack(fill="x", padx=10, pady=5)
-
-        ctk.CTkLabel(priority_frame, text="Priority:").pack(side="left", padx=5)
-        self.priority_slider = ctk.CTkSlider(
-            priority_frame, from_=1, to=5, number_of_steps=4
-        )
-        self.priority_slider.pack(side="left", padx=5, fill="x", expand=True)
-
-        self.priority_label = ctk.CTkLabel(priority_frame, text="3")
-        self.priority_label.pack(side="left", padx=5)
-
-        self.priority_slider.configure(command=self._update_priority_label)
-
-        # Tags entry
-        tags_frame = ctk.CTkFrame(self)
-        tags_frame.pack(fill="x", padx=10, pady=5)
-
-        ctk.CTkLabel(tags_frame, text="Tags (comma-separated):").pack(
-            anchor="w", padx=5
-        )
-        self.tags_entry = ctk.CTkEntry(tags_frame)
-        self.tags_entry.pack(fill="x", padx=5, pady=5)
-
-        # Content textbox
-        content_frame = ctk.CTkFrame(self)
-        content_frame.pack(fill="both", expand=True, padx=10, pady=5)
-
-        ctk.CTkLabel(content_frame, text="Content:").pack(anchor="w", padx=5)
-        self.content_textbox = ctk.CTkTextbox(content_frame)
-        self.content_textbox.pack(fill="both", expand=True, padx=5, pady=5)
-
-        # Metadata display
-        meta_frame = ctk.CTkFrame(self)
-        meta_frame.pack(fill="x", padx=10, pady=5)
-
-        self.meta_label = ctk.CTkLabel(
-            meta_frame, text="", text_color="gray", font=("Arial", 10)
-        )
-        self.meta_label.pack(padx=5, pady=5)
-
-        # Buttons
-        button_frame = ctk.CTkFrame(self)
-        button_frame.pack(fill="x", padx=10, pady=10)
-
-        save_btn = ctk.CTkButton(button_frame, text="Save", command=self.save_memory)
-        save_btn.pack(side="left", padx=5, expand=True, fill="x")
-
-        cancel_btn = ctk.CTkButton(button_frame, text="Cancel", command=self.destroy)
-        cancel_btn.pack(side="left", padx=5, expand=True, fill="x")
-
-    def _update_priority_label(self, value):
-        """Update the priority label when slider changes."""
-        priority = int(value)
-        self.priority_label.configure(text=str(priority))
-
-    def _load_memory_data(self):
-        """Load memory data into the form fields."""
-        self.kind_menu.set(self.memory.kind)
-        self.priority_slider.set(self.memory.priority)
-        self._update_priority_label(self.memory.priority)
-
-        tags_str = ", ".join(self.memory.tags_list())
-        self.tags_entry.insert(0, tags_str)
-
-        self.content_textbox.insert("1.0", self.memory.content)
-
-        # Metadata
-        meta_text = f"Created: {self.memory.created_at} | Access Count: {self.memory.access_count}"
-        if self.memory.last_accessed:
-            meta_text += f" | Last Accessed: {self.memory.last_accessed}"
-        self.meta_label.configure(text=meta_text)
-
-    def save_memory(self):
-        """Save changes to the memory."""
-        new_kind = self.kind_menu.get()
-        new_priority = int(self.priority_slider.get())
-        new_content = self.content_textbox.get("1.0", "end-1c")
-
-        tags_str = self.tags_entry.get()
-        new_tags = [t.strip() for t in tags_str.split(",") if t.strip()]
-
-        # Update in database
-        self.db_manager.update_memory(
-            self.memory.id,
-            kind=new_kind,
-            content=new_content,
-            priority=new_priority,
-            tags=new_tags,
-        )
-
-        if self.on_save_callback:
-            self.on_save_callback()
-
-        self.destroy()

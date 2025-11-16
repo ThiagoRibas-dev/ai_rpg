@@ -201,7 +201,7 @@ class SessionManager:
 
         if prompt_id:
             # Get sessions for this prompt
-            sessions = self.db_manager.get_sessions_by_prompt(prompt_id)
+            sessions = self.db_manager.sessions.get_by_prompt(prompt_id)
 
             # Create a frame with load/delete buttons for each session
             for session in sessions:
@@ -237,7 +237,7 @@ class SessionManager:
             prompt_id = session_to_delete.prompt_id
             is_current_session = self._selected_session and self._selected_session.id == session_to_delete.id
 
-            self.db_manager.delete_session(session_to_delete.id)
+            self.db_manager.sessions.delete(session_to_delete.id)
             self.orchestrator.vector_store.delete_session_data(session_to_delete.id)
 
             if is_current_session:
@@ -259,7 +259,7 @@ class SessionManager:
             return
 
         # Load context from database
-        context = self.db_manager.get_session_context(self._selected_session.id)
+        context = self.db_manager.sessions.get_context(self._selected_session.id)
 
         if context:
             # Populate author's note textbox
@@ -302,7 +302,7 @@ class SessionManager:
             logger.debug(f"   Author's Note length: {len(authors_note)} chars")
 
             # Save to database (memory field = empty string)
-            self.db_manager.update_session_context(
+            self.db_manager.sessions.update_context(
                 self._selected_session.id,
                 "",  # memory field always empty now
                 authors_note,

@@ -9,6 +9,28 @@ from .base_repository import BaseRepository
 class MemoryRepository(BaseRepository):
     """Handles all memory-related database operations."""
 
+    def create_table(self):
+        """Creates the memories table."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS memories (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id INTEGER NOT NULL,
+                kind TEXT NOT NULL,
+                content TEXT NOT NULL,
+                priority INTEGER DEFAULT 3,
+                tags TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                fictional_time TEXT,
+                last_accessed TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                access_count INTEGER DEFAULT 0,
+                FOREIGN KEY (session_id) REFERENCES sessions (id) ON DELETE CASCADE
+            );
+            """
+        )
+        self.conn.commit()
+
     def create(
         self,
         session_id: int,
@@ -29,7 +51,12 @@ class MemoryRepository(BaseRepository):
         )
         self._commit()
         memory_id = cursor.lastrowid
-        return self.get_by_id(memory_id)
+        if memory_id is None:
+            raise ValueError("Failed to retrieve memory ID after insertion.")
+        memory = self.get_by_id(memory_id)
+        if memory is None:
+            raise ValueError(f"Failed to retrieve created memory with ID {memory_id}.")
+        return memory
 
     def get_by_id(self, memory_id: int) -> Optional[Memory]:
         """Get a single memory by ID."""
@@ -171,6 +198,6 @@ class MemoryRepository(BaseRepository):
         row = self._fetchone(
             "SELECT COUNT(*) as total FROM memories WHERE session_id = ?", (session_id,)
         )
-        total = row["total"]
+        total = row["total"] if row else 0
 
         return {"total": total, "by_kind": by_kind, "most_accessed": most_accessed}

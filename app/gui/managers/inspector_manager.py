@@ -10,11 +10,10 @@ New responsibilities:
 
 import customtkinter as ctk
 import logging
-from app.gui.state_inspector_views import (
-    CharacterInspectorView,
-    InventoryInspectorView,
-    QuestInspectorView,
-)
+# COMMENT: Imports are updated to point to the new, modularized inspector files.
+from app.gui.panels.inspectors.character_inspector import CharacterInspectorView
+from app.gui.panels.inspectors.inventory_inspector import InventoryInspectorView
+from app.gui.panels.inspectors.quest_inspector import QuestInspectorView
 from app.gui.memory_inspector_view import MemoryInspectorView
 from app.gui.styles import Theme
 

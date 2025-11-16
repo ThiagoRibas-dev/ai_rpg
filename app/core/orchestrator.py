@@ -82,7 +82,7 @@ class Orchestrator:
         if not game_session:
             return
         game_session.session_data = final_session_state.to_json()
-        db_manager.update_session(game_session)
+        db_manager.sessions.update(game_session)
         self.session = final_session_state
         self.session.id = game_session.id
 
@@ -101,7 +101,7 @@ class Orchestrator:
             return
         session_data = self.session.to_json()
         with DBManager(self.db_path) as db_manager:
-            game_session = db_manager.save_session(
+            game_session = db_manager.sessions.create(
                 name, session_data, prompt_id, self.session.setup_phase_data
             )
         if self.session: # Add check for None
@@ -110,7 +110,7 @@ class Orchestrator:
 
     def load_game(self, session_id: int):
         with DBManager(self.db_path) as db_manager:
-            game_session = db_manager.load_session(session_id)
+            game_session = db_manager.sessions.get_by_id(session_id)
         if game_session:
             self.session = Session.from_json(game_session.session_data)
             self.session.id = game_session.id

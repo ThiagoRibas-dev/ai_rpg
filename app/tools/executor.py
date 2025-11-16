@@ -189,7 +189,7 @@ class ToolExecutor:
                 return
 
             try:
-                self.db.update_session_game_time(session.id, result["new_time"])
+                self.db.sessions.update_game_time(session.id, result["new_time"])
                 session.game_time = result["new_time"]
 
                 if self.ui_queue:

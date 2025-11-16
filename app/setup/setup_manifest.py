@@ -27,7 +27,7 @@ class SetupManifest:
     
     def get_manifest(self, session_id: int) -> Dict[str, Any]:
         """Get current setup manifest."""
-        session = self.db.load_session(session_id)
+        session = self.db.sessions.get_by_id(session_id)
         
         if not session.setup_phase_data:
             # Initialize if empty
@@ -55,7 +55,7 @@ class SetupManifest:
         Returns:
             Updated manifest
         """
-        session = self.db.load_session(session_id)
+        session = self.db.sessions.get_by_id(session_id)
         
         if merge:
             current = self.get_manifest(session_id)
@@ -65,7 +65,7 @@ class SetupManifest:
             new_manifest = updates
         
         session.setup_phase_data = json.dumps(new_manifest)
-        self.db.update_session(session)
+        self.db.sessions.update(session)
         
         return new_manifest
     
@@ -97,7 +97,7 @@ class SetupManifest:
         
         # Verify properties actually exist in schema
         if props:
-            schema = self.db.get_schema_extensions(session_id, "character")
+            schema = self.db.schema_extensions.get_by_entity_type(session_id, "character")
             undefined = [p for p in props if p not in schema]
             if undefined:
                 warnings.append(
@@ -113,7 +113,7 @@ class SetupManifest:
             if isinstance(char_key, dict):
                 char_key = char_key.get("key", "player")
             
-            char_data = self.db.get_game_state_entity(session_id, "character", char_key)
+            char_data = self.db.game_state.get_entity(session_id, "character", char_key)
             if not char_data:
                 warnings.append(
                     f"Character '{char_key}' in manifest but not found in game state"
@@ -129,7 +129,7 @@ class SetupManifest:
                 loc_key = loc_key.get("key")
             
             if loc_key:
-                loc_data = self.db.get_game_state_entity(session_id, "location", loc_key)
+                loc_data = self.db.game_state.get_entity(session_id, "location", loc_key)
                 if not loc_data:
                     warnings.append(
                         f"Location '{loc_key}' in manifest but not found in game state"

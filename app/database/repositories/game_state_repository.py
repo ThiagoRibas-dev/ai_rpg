@@ -8,6 +8,27 @@ from .base_repository import BaseRepository
 class GameStateRepository(BaseRepository):
     """Handles all game state related database operations."""
 
+    def create_table(self):
+        """Creates the game_state table."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS game_state (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id INTEGER NOT NULL,
+                entity_type TEXT NOT NULL,
+                entity_key TEXT NOT NULL,
+                state_data TEXT NOT NULL,
+                version INTEGER DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE (session_id, entity_type, entity_key),
+                FOREIGN KEY (session_id) REFERENCES sessions (id) ON DELETE CASCADE
+            );
+            """
+        )
+        self.conn.commit()
+
     def get_entity(self, session_id: int, entity_type: str, entity_key: str) -> dict:
         """Retrieve a single entity's state."""
         row = self._fetchone(
@@ -118,7 +139,7 @@ class GameStateRepository(BaseRepository):
             "SELECT COUNT(*) as total FROM game_state WHERE session_id = ?",
             (session_id,),
         )
-        total = row["total"]
+        total = row["total"] if row else 0
 
         return {"total_entities": total, "by_type": by_type}
 

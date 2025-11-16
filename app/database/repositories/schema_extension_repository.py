@@ -8,6 +8,26 @@ from .base_repository import BaseRepository
 class SchemaExtensionRepository(BaseRepository):
     """Handles all schema extension related database operations."""
 
+    def create_table(self):
+        """Creates the schema_extensions table."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS schema_extensions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id INTEGER NOT NULL,
+                entity_type TEXT NOT NULL,
+                property_name TEXT NOT NULL,
+                definition TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE (session_id, entity_type, property_name),
+                FOREIGN KEY (session_id) REFERENCES sessions (id) ON DELETE CASCADE
+            );
+            """
+        )
+        self.conn.commit()
+
     def create(
         self,
         session_id: int,
@@ -52,7 +72,7 @@ class SchemaExtensionRepository(BaseRepository):
                ORDER BY entity_type, property_name""",
             (session_id,),
         )
-        results = {}
+        results: Dict[str, Dict[str, Dict[str, Any]]] = {}
         for row in rows:
             entity_type = row["entity_type"]
             if entity_type not in results:

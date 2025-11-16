@@ -28,7 +28,7 @@ def get_entity(
         raise ValueError("Missing session_id or db_manager")
 
     try:
-        return db_manager.get_game_state_entity(session_id, entity_type, key)
+        return db_manager.game_state.get_entity(session_id, entity_type, key)
     except Exception as e:
         logger.error(
             f"Error loading entity {entity_type}:{key} for session {session_id}: {e}"
@@ -56,7 +56,7 @@ def set_entity(
         raise ValueError("Missing session_id or db_manager")
 
     try:
-        version = db_manager.set_game_state_entity(session_id, entity_type, key, value)
+        version = db_manager.game_state.set_entity(session_id, entity_type, key, value)
         logger.debug(f"Updated {entity_type}:{key} to version {version}")
         return version
     except Exception as e:
@@ -82,7 +82,7 @@ def get_all_of_type(session_id: int, db_manager, entity_type: str) -> Dict[str, 
         raise ValueError("Missing session_id or db_manager")
 
     try:
-        return db_manager.get_all_entities_by_type(session_id, entity_type)
+        return db_manager.game_state.get_all_entities_by_type(session_id, entity_type)
     except Exception as e:
         logger.error(
             f"Error loading entities of type {entity_type} for session {session_id}: {e}"
@@ -104,7 +104,7 @@ def delete_entity(session_id: int, db_manager, entity_type: str, key: str):
         raise ValueError("Missing session_id or db_manager")
 
     try:
-        db_manager.delete_game_state_entity(session_id, entity_type, key)
+        db_manager.game_state.delete_entity(session_id, entity_type, key)
         logger.debug(f"Deleted {entity_type}:{key}")
     except Exception as e:
         logger.error(f"Error deleting entity {entity_type}:{key}: {e}")
