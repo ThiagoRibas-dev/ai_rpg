@@ -7,7 +7,8 @@ google.genai
 grpcio
 grpcio-status
 pydantic
-pydantic-settings  # 🆕 Required by chromadb
+# 🆕 Required by chromadb
+pydantic-settings
 python-dotenv
 customtkinter
 requests
