@@ -205,13 +205,15 @@ class SessionManager:
 
             # Create a frame with load/delete buttons for each session
             for session in sessions:
-                row_frame = ctk.CTkFrame(self.session_scrollable_frame, fg_color="transparent")
+                row_frame = ctk.CTkFrame(
+                    self.session_scrollable_frame, fg_color="transparent"
+                )
                 row_frame.pack(fill="x", pady=2, padx=5)
 
                 load_btn = ctk.CTkButton(
                     row_frame,
                     text=session.name,
-                    command=lambda s=session: self._on_button_click(s)
+                    command=lambda s=session: self._on_button_click(s),
                 )
                 load_btn.pack(side="left", expand=True, fill="x")
 
@@ -221,7 +223,7 @@ class SessionManager:
                     command=lambda s=session: self.delete_session(s),
                     width=40,
                     fg_color="darkred",
-                    hover_color="red"
+                    hover_color="red",
                 )
                 delete_btn.pack(side="left", padx=(5, 0))
 
@@ -229,13 +231,16 @@ class SessionManager:
         """Delete a session after confirmation."""
         dialog = ctk.CTkInputDialog(
             text=f"This is irreversible.\nType DELETE to remove '{session_to_delete.name}':",
-            title="Confirm Deletion"
+            title="Confirm Deletion",
         )
         result = dialog.get_input()
 
         if result == "DELETE":
             prompt_id = session_to_delete.prompt_id
-            is_current_session = self._selected_session and self._selected_session.id == session_to_delete.id
+            is_current_session = (
+                self._selected_session
+                and self._selected_session.id == session_to_delete.id
+            )
 
             self.db_manager.sessions.delete(session_to_delete.id)
             self.orchestrator.vector_store.delete_session_data(session_to_delete.id)
@@ -244,7 +249,9 @@ class SessionManager:
                 self._clear_active_session_view()
 
             self.refresh_session_list(prompt_id)
-            self.bubble_manager.add_message("system", f"Deleted session '{session_to_delete.name}'")
+            self.bubble_manager.add_message(
+                "system", f"Deleted session '{session_to_delete.name}'"
+            )
 
     def load_context(self, authors_note_textbox: ctk.CTkTextbox):
         """
@@ -271,9 +278,7 @@ class SessionManager:
                 f"Loaded author's note ({len(authors_note)} chars) for session {self._selected_session.id}"
             )
         else:
-            logger.warning(
-                f"No context found for session {self._selected_session.id}"
-            )
+            logger.warning(f"No context found for session {self._selected_session.id}")
             authors_note_textbox.delete("1.0", "end")
 
     def save_context(self, bubble_manager):
@@ -307,6 +312,9 @@ class SessionManager:
                 "",  # memory field always empty now
                 authors_note,
             )
+
+            # Updates the in-memory session object
+            self._selected_session.authors_note = authors_note
 
             logger.info(
                 f"Context saved successfully for session {self._selected_session.id}"
