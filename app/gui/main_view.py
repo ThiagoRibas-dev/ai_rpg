@@ -408,8 +408,31 @@ class MainView(ctk.CTk):
         self.input_manager.clear_input_text()
 
     def handle_send_button(self):
-        # COMMENT: This is now a thin wrapper that delegates to the InputManager.
-        self.input_manager.handle_send_input()
+        """
+        Handle send button click.
+        """
+        if not self.session_manager or not self.session_manager.selected_session:
+            return
+
+        # Disable to prevent concurrent turns
+        self.send_button.configure(state="disabled")
+
+        # Clear previous choices
+        for widget in self.choice_button_frame.winfo_children():
+            widget.destroy()
+        self.choice_button_frame.grid_remove()
+
+        # Start turn (non-blocking)
+        self.orchestrator.plan_and_execute(self.session_manager.selected_session)
+
+    def select_choice(self, choice: str):
+        """
+        Handle when a user clicks an action choice.
+        """
+        self.user_input.delete("1.0", "end")
+        self.user_input.insert("1.0", choice)
+        self.choice_button_frame.grid_remove()
+        self.handle_send_button()
 
     def save_context(self):
         """

@@ -13,6 +13,7 @@ import logging
 from typing import Optional
 from app.models.prompt import Prompt
 from app.gui.styles import get_button_style
+# COMMENT: Import the WorldInfoManagerView here, as this manager is now responsible for it.
 from app.gui.world_info_manager_view import WorldInfoManagerView
 
 logger = logging.getLogger(__name__)
@@ -28,7 +29,7 @@ class PromptManager:
         db_manager,
         orchestrator,
         prompt_scrollable_frame: ctk.CTkScrollableFrame,
-        # COMMENT: We need the main view (parent window) to create the modal dialog.
+        # COMMENT: The manager needs a reference to its parent view to create a modal dialog on top of it.
         parent_view: ctk.CTk,
         prompt_collapsible,
     ):
@@ -45,6 +46,7 @@ class PromptManager:
         self.orchestrator = orchestrator
         self.prompt_scrollable_frame = prompt_scrollable_frame
         self.prompt_collapsible = prompt_collapsible
+        self.parent_view = parent_view
         self._selected_prompt: Optional[Prompt] = None
         self.session_manager = None  # Will be set by MainView.set_orchestrator
 
