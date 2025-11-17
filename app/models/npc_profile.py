@@ -31,6 +31,10 @@ class NpcProfile(BaseModel):
         default_factory=list,
         description="The NPC's primary goals or driving forces, e.g., ['Avenge my family', 'Acquire wealth', 'Protect the village']."
     )
+    directive: str = Field(
+        "idle",
+        description="A simple, actionable goal for the NPC to pursue when off-screen, e.g., 'patrol the town walls', 'gather herbs in the woods'."
+    )
     knowledge_tags: List[str] = Field(
         default_factory=list,
         description="A list of tags linking to 'lore' memories that this NPC knows."

@@ -1,7 +1,9 @@
+import logging
 from app.context.context_builder import ContextBuilder
 from app.context.memory_retriever import MemoryRetriever
 from app.context.state_context import StateContextBuilder
 from app.core.metadata.turn_metadata_service import TurnMetadataService
+from app.models.npc_profile import NpcProfile
 from app.database.db_manager import DBManager
 from app.llm.auditor_service import AuditorService
 from app.llm.choices_service import ChoicesService
@@ -32,6 +34,8 @@ from app.tools.schemas import (
 
 MAX_HISTORY_MESSAGES = 50
 TOOL_BUDGET = 10
+
+logger = logging.getLogger(__name__)
 
 
 class TurnManager:
@@ -193,6 +197,11 @@ class TurnManager:
             current_game_time=getattr(game_session, "game_time", None),
         )
         if memory_tool_used and hasattr(self.orchestrator.view, "memory_inspector"):
+            # Special hook for time.advance to trigger world ticks
+            for result in tool_results:
+                if result.get("name") == "time.advance" and result.get("result"):
+                    self._execute_world_tick(game_session, thread_db_manager, result["result"])
+
             self.ui_queue.put({"type": "refresh_memory_inspector"})
 
         for result in tool_results:
@@ -319,3 +328,35 @@ class TurnManager:
         self.orchestrator._update_game_in_thread(
             game_session, thread_db_manager, session_in_thread
         )
+
+    def _execute_world_tick(self, game_session: GameSession, db: DBManager, time_advance_result: dict):
+        """
+        Simulates off-screen NPC actions during a time skip.
+        This is a non-LLM, logic-based process to create emergent story events.
+        """
+        duration_hours = time_advance_result.get("duration_hours", 0)
+        if duration_hours < 1:
+            return # Don't run simulation for short time skips
+
+        logger.info(f"Executing world tick for a duration of {duration_hours} hours...")
+
+        # Get all NPC profiles
+        all_profiles_data = db.game_state.get_all_entities_by_type(game_session.id, "npc_profile")
+
+        for npc_key, profile_data in all_profiles_data.items():
+            profile = NpcProfile(**profile_data)
+            if profile.directive and profile.directive != "idle":
+                # For now, create a simple memory reflecting their activity.
+                # In the future, this could involve dice rolls, state changes, etc.
+                summary = f"While you were away, {npc_key} continued to '{profile.directive}'."
+                
+                db.memories.create(
+                    session_id=game_session.id,
+                    kind="episodic",
+                    content=summary,
+                    priority=1, # Low priority, as it's background flavor
+                    tags=["world_tick", npc_key, profile.directive.split(" ")[0]],
+                    fictional_time=time_advance_result.get("new_time")
+                )
+
+        logger.info(f"World tick complete. Processed {len(all_profiles_data)} NPCs.")

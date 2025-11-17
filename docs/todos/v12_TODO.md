@@ -83,6 +83,6 @@
 
 *   **Goal:** To create the illusion of a living world with "off-screen" progression.
 *   **Implementation Steps:**
-    [ ] 1.  **Add `directive` Field:** Add a `directive: str` field to the `NpcProfile` model.
-    [ ] 2.  **Create Simulation Logic:** Implement a `_execute_world_tick(duration)` method in `TurnManager`.
-    [ ] 3.  **Trigger the Tick:** Modify the `time.advance` tool's handler to call the tick function on long time skips.
+    [x] 1.  **Add `directive` Field:** Add a `directive: str` field to the `NpcProfile` model.
+    [x] 2.  **Create Simulation Logic:** Implement a `_execute_world_tick(duration)` method in `TurnManager`.
+    [x] 3.  **Trigger the Tick:** Modify the `time.advance` tool's handler to call the tick function on long time skips.

@@ -299,7 +299,7 @@ class TimeAdvance(BaseModel):
     name: Literal["time.advance"] = "time.advance"
     description: str = Field(
         ...,
-        description="Human-readable time passage (e.g., '3 hours', 'until dawn', 'to the next day')",
+        description="Human-readable time passage (e.g., '3 hours passed', 'rested for a week', 'until dawn')",
     )
     new_time: str = Field(
         ...,
