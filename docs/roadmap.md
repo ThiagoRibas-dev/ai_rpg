@@ -76,3 +76,27 @@ This document outlines the planned features and development milestones for the A
 
 ## V10: Sequential Game Template Generation
 *   **Refactoring of single-shot Game Template Generation:** Refactor the single-shot `GameTemplate` generation into a more robust, multi-step pipeline. This approach improves reliability, quality, and enable context-passing between generation steps.
+
+## V11 Prompt Template Refactoring for LLM Caching
+
+**Goal:** Refactor `TemplateGenerationService` and its associated prompts to use a single, static system prompt for core instructions and rules, moving step-specific tasks into the user message. This optimizes for LLM providers utilizing prompt caching.
+
+## v12: Enhancements to the state model
+
+**Goal:** This version focuses on giving Non-Player Characters (NPCs) and the world itself a greater sense of agency, while making the AI's interaction with the state more intelligent, nuanced, and robust.
+
+*   **World Persistence & Agency ("The World Tick"):**
+    *   Implement an "off-screen" simulation system that processes NPC directives and world events during significant time skips.
+    *   This allows the world to change and evolve independently of the player's direct actions, creating emergent story hooks and a sense of a living world.
+
+*   **Deep NPC Modeling (`NpcProfile` & Relationships):**
+    *   Introduce a dedicated `NpcProfile` entity to explicitly track an NPC's personality, motivations, and knowledge.
+    *   Evolve the relationship model from simple strings to a structured object with quantifiable metrics (e.g., Trust, Attraction), giving the AI concrete data for nuanced roleplaying.
+
+*   **Intelligent Scene & Party Management:**
+    *   Implement a "Scene" entity to manage groups of characters as a single, atomic unit.
+    *   Provide high-level tools for group actions (e.g., moving the entire party), preventing state inconsistencies and simplifying the AI's planning logic.
+
+*   **Context-Aware Memory Retrieval:**
+    *   Enhance the memory retrieval system to prioritize memories related to the characters and relationships currently active in the scene.
+    *   This ensures the AI always has the most relevant interpersonal context, maintaining emotional continuity even in very long-running games.
