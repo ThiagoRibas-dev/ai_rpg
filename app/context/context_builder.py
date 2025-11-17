@@ -2,8 +2,27 @@ import logging
 from typing import List
 from app.models.session import Session
 from app.models.game_session import GameSession
-from app.models.npc_profile import NpcProfile
 from app.models.message import Message
+from app.models.npc_profile import NpcProfile
+# Imports for the new Just-in-Time simulation logic
+from app.core.simulation_service import SimulationService
+from app.tools.builtin.state_apply_patch import handler as apply_patch_handler
+import re
+
+# --- Helper for time calculation ---
+def _calculate_time_difference_in_hours(time1: str, time2: str) -> int:
+    """
+    A simple, non-robust helper to estimate time difference in hours.
+    This is a placeholder and should be replaced with a proper time parsing library
+    if the game's time format becomes more complex.
+    It currently only looks for 'Day X' and assumes 24 hours per day change.
+    """
+    try:
+        day1 = int(re.search(r'Day (\d+)', time1).group(1))
+        day2 = int(re.search(r'Day (\d+)', time2).group(1))
+        return (day2 - day1) * 24
+    except (AttributeError, ValueError):
+        return 0 # Cannot parse, assume no significant time has passed.
 
 class ContextBuilder:
     """Builds static and dynamic prompt components for caching optimization."""
@@ -14,14 +33,14 @@ class ContextBuilder:
         vector_store,
         state_builder,
         mem_retriever,
-        turnmeta,
+        simulation_service: SimulationService, # Added dependency
         logger: logging.Logger | None = None,
     ):
         self.db = db_manager
         self.vs = vector_store
         self.state_builder = state_builder
         self.mem_retriever = mem_retriever
-        self.turnmeta = turnmeta
+        self.simulation_service = simulation_service
         self.logger = logger or logging.getLogger(__name__)
 
     def build_static_system_instruction(
@@ -73,7 +92,11 @@ class ContextBuilder:
         state_text = self.state_builder.build(game_session.id)
         if state_text:
             sections.append(f"# CURRENT STATE #\n{state_text}")
-
+        
+        # --- NEW: Run Just-in-Time NPC Simulation ---
+        # This happens BEFORE memories are retrieved, so any new memories from the
+        # simulation can be included in the context for this turn.
+        self._run_jit_simulation(game_session)
         # Determine active NPCs in the scene for contextual retrieval
         active_npc_keys = self._get_active_npc_keys(game_session.id)
 
@@ -92,7 +115,7 @@ class ContextBuilder:
             sections.append(mem_text)
 
         # NPC context
-        npc_context_text = self._build_npc_context(game_session.id)
+        npc_context_text = self._build_npc_context_string(game_session.id)
         if npc_context_text:
             sections.append(npc_context_text)
 
@@ -122,7 +145,7 @@ class ContextBuilder:
         return [key for key in all_members if key != "player"]
 
 
-    def _build_npc_context(self, session_id: int) -> str:
+    def _build_npc_context_string(self, session_id: int) -> str:
         """
         Finds NPCs in the active scene and formats their profiles for context.
         """
@@ -145,6 +168,71 @@ class ContextBuilder:
                 continue
         
         return "\n".join(lines) if len(lines) > 1 else ""
+
+    def _run_jit_simulation(self, game_session: GameSession):
+        """
+        Checks active NPCs and runs on-demand simulation for any whose state is stale.
+        """
+        SIMULATION_THRESHOLD_HOURS = 6 # Simulate if more than 6 hours have passed
+
+        active_npc_keys = self._get_active_npc_keys(game_session.id)
+        if not active_npc_keys:
+            return
+
+        current_time = game_session.game_time
+
+        for npc_key in active_npc_keys:
+            try:
+                profile_data = self.db.game_state.get_entity(game_session.id, "npc_profile", npc_key)
+                if not profile_data:
+                    continue
+                
+                profile = NpcProfile(**profile_data)
+                
+                time_diff = _calculate_time_difference_in_hours(profile.last_updated_time, current_time)
+
+                if time_diff > SIMULATION_THRESHOLD_HOURS:
+                    self.logger.info(f"NPC '{npc_key}' is stale ({time_diff}h). Running JIT simulation.")
+                    
+                    char_data = self.db.game_state.get_entity(game_session.id, "character", npc_key)
+                    npc_name = char_data.get("name", npc_key)
+
+                    outcome = self.simulation_service.simulate_npc_downtime(
+                        npc_name=npc_name,
+                        profile=profile,
+                        current_time=current_time
+                    )
+
+                    if not outcome:
+                        continue
+                    
+                    # Apply simulation results
+                    if outcome.proposed_patches:
+                        for patch_intent in outcome.proposed_patches:
+                            patch_ops_dicts = [op.model_dump() for op in patch_intent.ops]
+                            apply_patch_handler(
+                                entity_type=patch_intent.entity_type,
+                                key=patch_intent.key,
+                                patch=patch_ops_dicts,
+                                session_id=game_session.id,
+                                db_manager=self.db
+                            )
+                    
+                    if outcome.is_significant:
+                        self.db.memories.create(
+                            session_id=game_session.id,
+                            kind="episodic",
+                            content=outcome.outcome_summary,
+                            priority=2,
+                            tags=["world_event", "simulation", npc_key],
+                            fictional_time=current_time
+                        )
+
+                    # CRITICAL: Update the timestamp to prevent re-simulation
+                    profile.last_updated_time = current_time
+                    self.db.game_state.set_entity(game_session.id, "npc_profile", npc_key, profile.model_dump())
+            except Exception as e:
+                self.logger.error(f"Error during JIT simulation for NPC '{npc_key}': {e}", exc_info=True)
 
     def get_truncated_history(
         self,

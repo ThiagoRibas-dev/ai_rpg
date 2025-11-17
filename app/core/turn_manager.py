@@ -1,34 +1,26 @@
 import logging
-import random  # Import the random module for probability checks
 from app.context.context_builder import ContextBuilder
 from app.context.memory_retriever import MemoryRetriever
 from app.context.state_context import StateContextBuilder
 from app.core.metadata.turn_metadata_service import TurnMetadataService
-from app.models.npc_profile import NpcProfile
+# --- NEW: Import SimulationService ---
+from app.core.simulation_service import SimulationService
 from app.database.db_manager import DBManager
-from app.llm.llm_connector import LLMConnector
 from app.llm.auditor_service import AuditorService
 from app.llm.choices_service import ChoicesService
 from app.llm.narrator_service import NarratorService
 from app.llm.planner_service import PlannerService
-from app.llm.schemas import WorldTickOutcome
-from app.memory.memory_intents_service import MemoryIntentsService
 from app.models.game_session import GameSession
 from app.models.session import Session
 from app.prompts.builder import build_lean_schema_reference
 from app.prompts.templates import (
-    GAMEPLAY_PLAN_TEMPLATE,
-    SETUP_PLAN_TEMPLATE,
     CHOICE_GENERATION_TEMPLATE,
     NARRATIVE_TEMPLATE,
-    SETUP_RESPONSE_TEMPLATE,
     TOOL_SELECTION_PER_STEP_TEMPLATE,
-    WORLD_TICK_SIMULATION_TEMPLATE,
 )
 from app.setup.setup_manifest import SetupManifest
 from app.tools.executor import ToolExecutor
 # Import the handler directly to apply patches without a full tool execution loop
-from app.tools.builtin.state_apply_patch import handler as apply_patch_handler
 from app.tools.schemas import (
     Deliberate,
     EndSetupAndStartGameplay,
@@ -42,40 +34,6 @@ MAX_HISTORY_MESSAGES = 50
 TOOL_BUDGET = 10
 
 logger = logging.getLogger(__name__)
-
-
-class WorldTickService:
-    """Encapsulates the LLM call for simulating NPC actions."""
-    def __init__(self, llm: LLMConnector, logger: logging.Logger):
-        self.llm = llm
-        self.logger = logger
-
-    def simulate_npc_action(
-        self, npc_name: str, profile: NpcProfile, duration_desc: str
-    ) -> WorldTickOutcome | None:
-        """Calls the LLM to get a simulated outcome for an NPC's directive."""
-        try:
-            prompt = WORLD_TICK_SIMULATION_TEMPLATE.format(
-                npc_name=npc_name,
-                personality=", ".join(profile.personality_traits),
-                motivations=", ".join(profile.motivations),
-                duration_desc=duration_desc,
-                directive=profile.directive,
-            )
-            
-            # We use a system prompt here as there is no conversational history.
-            outcome = self.llm.get_structured_response(
-                system_prompt=prompt,
-                chat_history=[],
-                output_schema=WorldTickOutcome,
-            )
-            return outcome # Mypy will infer this as WorldTickOutcome due to output_schema
-        except Exception as e:
-            self.logger.error(
-                f"World Tick LLM simulation failed for NPC {npc_name}: {e}",
-                exc_info=True,
-            )
-            return None
 
 
 class TurnManager:
@@ -103,13 +61,18 @@ class TurnManager:
         mem_retriever = MemoryRetriever(
             thread_db_manager, self.vector_store, self.logger
         )
+
+        # --- FIX: Re-instantiate the TurnMetadataService here ---
         turnmeta = TurnMetadataService(thread_db_manager, self.vector_store)
+
+        # --- NEW: Instantiate SimulationService ---
+        simulation_service = SimulationService(self.llm_connector, self.logger)
         context_builder = ContextBuilder(
             thread_db_manager,
             self.vector_store,
             state_builder,
             mem_retriever,
-            turnmeta,
+            simulation_service, # This is still correct
             self.logger,
         )
         executor = ToolExecutor(
@@ -126,9 +89,9 @@ class TurnManager:
             self.vector_store,
             self.logger,
         )
-        mem_intents = MemoryIntentsService(
-            self.tool_registry, thread_db_manager, self.vector_store, self.logger
-        )
+        # mem_intents = MemoryIntentsService( # Removed
+        #     self.tool_registry, thread_db_manager, self.vector_store, self.logger
+        # )
 
         # Determine game mode and available tools
         current_game_mode = game_session.game_mode
@@ -169,9 +132,9 @@ class TurnManager:
 
         # Phase 1: Create Plan (Analysis + Strategy)
         if current_game_mode == "SETUP":
-            plan_template = SETUP_PLAN_TEMPLATE
+            plan_template = "" # Removed SETUP_PLAN_TEMPLATE
         else:
-            plan_template = GAMEPLAY_PLAN_TEMPLATE
+            plan_template = "" # Removed GAMEPLAY_PLAN_TEMPLATE
 
         turn_plan = self.planner.create_plan(
             system_instruction=static_instruction,
@@ -236,14 +199,6 @@ class TurnManager:
             TOOL_BUDGET,
             current_game_time=getattr(game_session, "game_time", None),
         )
-        if memory_tool_used and hasattr(self.orchestrator.view, "memory_inspector"):
-            # Special hook for time.advance to trigger world ticks
-            for result in tool_results:
-                if result.get("name") == "time.advance" and result.get("result"):
-                    self._execute_world_tick(game_session, thread_db_manager, result["result"])
-
-            self.ui_queue.put({"type": "refresh_memory_inspector"})
-
         for result in tool_results:
             if result.get("name") == EndSetupAndStartGameplay.model_fields[
                 "name"
@@ -276,7 +231,7 @@ class TurnManager:
             game_session, chat_history
         )
         phase_template = (
-            SETUP_RESPONSE_TEMPLATE
+            "" # Removed SETUP_RESPONSE_TEMPLATE
             if current_game_mode == "SETUP"
             else NARRATIVE_TEMPLATE
         )
@@ -339,11 +294,11 @@ class TurnManager:
                         )
                 except Exception as e:
                     self.logger.error(f"Patch error: {e}", exc_info=True)
-        mem_intents.apply(
-            narrative.memory_intents,
-            session_in_thread,
-            tool_event_callback=self.orchestrator.tool_event_callback,
-        )
+        # mem_intents.apply( # Removed
+        #     narrative.memory_intents,
+        #     session_in_thread,
+        #     tool_event_callback=self.orchestrator.tool_event_callback,
+        # )
 
         # ===== STEP 5: Action choices =====
         if current_game_mode == "GAMEPLAY":
@@ -369,85 +324,5 @@ class TurnManager:
             game_session, thread_db_manager, session_in_thread
         )
 
-    def _execute_world_tick(self, game_session: GameSession, db: DBManager, time_advance_result: dict):
-        """
-        Simulates off-screen NPC actions during a time skip.
-        This is a non-LLM, logic-based process to create emergent story events.
-        """
-        TICK_EVENT_PROBABILITY_PER_DAY = 0.15 # 15% chance of a noteworthy event per NPC per day.
-
-        duration_hours = time_advance_result.get("duration_hours", 0)
-        if duration_hours < 1:
-            return # Don't run simulation for short time skips
-
-        logger.info(f"Executing world tick for a duration of {duration_hours} hours...")
-        
-        # Instantiate the service for LLM calls
-        tick_service = WorldTickService(self.llm_connector, self.logger)
-
-        # Get all NPC profiles
-        if db.game_state is None:
-            self.logger.error("DBManager.game_state is None, cannot execute world tick.")
-            return
-        all_profiles_data = db.game_state.get_all_entities_by_type(game_session.id, "npc_profile")
-        days_passed = max(1, duration_hours // 24)
-
-        for npc_key, profile_data in all_profiles_data.items():
-            profile = NpcProfile(**profile_data)
-            # Only process NPCs that have an active directive.
-            if not profile.directive or profile.directive == "idle":
-                continue
-
-            # Roll the dice for each day that passed to see if a noteworthy event occurs.
-            for _ in range(days_passed):
-                if random.random() < TICK_EVENT_PROBABILITY_PER_DAY:
-                    self.logger.info(f"World tick event triggered for NPC: {npc_key}")
-                    
-                    char_data = db.game_state.get_entity(game_session.id, "character", npc_key)
-                    npc_name = char_data.get("name", npc_key)
-                    
-                    # Call the LLM to determine the outcome
-                    outcome = tick_service.simulate_npc_action(
-                        npc_name=npc_name,
-                        profile=profile,
-                        duration_desc=time_advance_result.get("description", "some time")
-                    )
-
-                    if not outcome:
-                        continue # LLM call failed, move to next NPC
-
-                    # 1. Apply any state changes proposed by the LLM
-                    if outcome.proposed_patches:
-                        for patch_intent in outcome.proposed_patches:
-                            try:
-                                patch_ops_dicts = [op.model_dump() for op in patch_intent.ops]
-                                apply_patch_handler(
-                                    entity_type=patch_intent.entity_type,
-                                    key=patch_intent.key,
-                                    patch=patch_ops_dicts,
-                                    session_id=game_session.id,
-                                    db_manager=db
-                                )
-                                self.logger.info(f"Applied world tick patch for {patch_intent.key}: {patch_ops_dicts}")
-                            except Exception as e:
-                                self.logger.error(f"Failed to apply world tick patch: {e}", exc_info=True)
-
-                    # 2. Conditionally create a memory if the event was significant
-                    if outcome.is_significant:
-                        if db.memories is None:
-                            self.logger.error("DBManager.memories is None, cannot create memory.")
-                            continue
-                        db.memories.create(
-                            session_id=game_session.id,
-                            kind="episodic",
-                            content=outcome.outcome_summary,
-                            priority=2, # A bit higher than mundane ticks
-                            tags=["world_tick", "emergent_event", npc_key],
-                            fictional_time=time_advance_result.get("new_time")
-                        )
-                        self.logger.info(f"Created significant memory for {npc_key}: {outcome.outcome_summary}")
-                    
-                    # Only process one event per NPC per time skip to keep it clean.
-                    break 
-
-        logger.info(f"World tick complete. Processed {len(all_profiles_data)} NPCs.")
+    # NOTE: The _execute_world_tick method has been removed. Its functionality is being
+    # replaced by a just-in-time simulation service triggered by the ContextBuilder.

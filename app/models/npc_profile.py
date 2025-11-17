@@ -43,3 +43,7 @@ class NpcProfile(BaseModel):
         default_factory=dict,
         description="A dictionary mapping other entity keys (e.g., 'player') to their relationship status."
     )
+    last_updated_time: str = Field(
+        "Day 1, Dawn",
+        description="The in-game fictional time when this NPC's state was last simulated."
+    )

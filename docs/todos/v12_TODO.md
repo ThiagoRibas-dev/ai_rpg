@@ -136,23 +136,6 @@ Of course. This is an excellent architectural refinement. Here is a clear, actio
 
 ---
 
-### Architecture Refinement TODOs
-
-#### ✅ Gap 1: Implement a "Scene" Entity for Robust Group Management
-*(This section remains the same as it's a separate, completed task)*
-
-...
-
-#### ☐ Gap 2: Standardize High-Level Tool Behavior
-*(This section remains the same)*
-
-...
-
-#### ✅ Gap 3: Make the "World Tick" More Event-Driven
-*(This section can now be marked as superseded or removed in favor of the new approach)*
-
-...
-
 ### Architectural Refinement - Just-in-Time NPC Simulation
 
 *   **Goal:** Replace the expensive, proactive "World Tick" system with an efficient, on-demand "Lazy Simulation" model that only updates NPCs when they become relevant to the player.
