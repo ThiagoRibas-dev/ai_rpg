@@ -188,6 +188,7 @@ class TurnManager:
         tool_results, memory_tool_used = executor.execute(
             tool_calls,
             game_session,
+            manifest,
             TOOL_BUDGET,
             current_game_time=getattr(game_session, "game_time", None),
         )

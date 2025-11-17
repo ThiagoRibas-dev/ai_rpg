@@ -1,8 +1,11 @@
 import logging
 import queue
+import copy
 from typing import List, Dict, Any, Tuple
 from pydantic import BaseModel
 from app.tools import schemas
+from app.utils.state_validator import StateValidator, ValidationError
+from app.tools.builtin._state_storage import get_entity
 
 
 class ToolExecutor:
@@ -29,6 +32,7 @@ class ToolExecutor:
         self,
         tool_calls: List[BaseModel],
         session,
+        manifest: Dict[str, Any],
         tool_budget: int,
         current_game_time: str | None = None,
     ) -> Tuple[List[Dict[str, Any]], bool]:
@@ -46,6 +50,12 @@ class ToolExecutor:
         """
         results: List[Dict[str, Any]] = []
         memory_tool_used = False
+
+        # Initialize the validator for this turn
+        try:
+            validator = StateValidator(manifest)
+        except ValueError:
+            validator = None # Manifest might be empty in early setup
 
         if not tool_calls:
             self.logger.warning("No tool calls provided for execution.")
@@ -108,6 +118,34 @@ class ToolExecutor:
                     }
                 )
                 continue
+
+            # --- VALIDATION GATEKEEPER ---
+            # If the tool is state-modifying, validate its effect *before* executing.
+            if validator and isinstance(call, schemas.StateApplyPatch):
+                try:
+                    # 1. Load the current entity state
+                    current_entity = get_entity(ctx["session_id"], self.db, call.entity_type, call.key)
+                    # 2. Simulate the patch on a copy
+                    simulated_entity = copy.deepcopy(current_entity)
+                    # This is a simplified patch application for simulation.
+                    # For a more robust solution, a jsonpatch library would be better.
+                    for op in call.patch:
+                        if op.op == "replace":
+                            # Simplistic simulation for common cases
+                            path_parts = op.path.strip('/').split('/')
+                            temp = simulated_entity
+                            for part in path_parts[:-1]:
+                                temp = temp.setdefault(part, {})
+                            temp[path_parts[-1]] = op.value
+                    
+                    # 3. Validate the simulated result
+                    validator.validate_entity(call.entity_type, simulated_entity)
+                    self.logger.debug(f"Pre-execution validation PASSED for {tool_name}")
+
+                except ValidationError as e:
+                    self.logger.warning(f"Validation FAILED for {tool_name}: {e}")
+                    results.append({"name": tool_name, "arguments": tool_args, "error": f"Validation Error: {e}"})
+                    continue # Skip execution of this invalid tool call
 
             # Notify UI of tool call
             if self.ui_queue:

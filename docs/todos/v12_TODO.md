@@ -12,41 +12,14 @@
 | **World Persistence & Agency** | The world is static. State only changes in direct response to player actions. | Implement **NPC Directives** (simple goals). Create a **"World Tick"** system that simulates NPC actions and world events during significant time skips. | **A Living World.** The world progresses "off-screen," generating emergent story hooks and making the game feel more dynamic, persistent, and alive. |
 
 
-Excellent. It's always a good practice to track progress against a spec. Let's review the TODO file against the patches you've implemented.
-
-Based on the diffs, you have made significant progress, completing one major refactoring task and a critical feature enhancement.
-
-Here’s a breakdown of the completed tasks:
-
-1.  **Spec #5: Unified Lore System** - **This is functionally complete.**
-    *   The `WorldInfoService` and its direct dependencies have been removed from the core turn loop.
-    *   The `WorldInfoManagerView` has been successfully refactored into the `LoreEditorView`, which now correctly interacts with the `memories` table, filtering for `kind='lore'`.
-    *   The player is now empowered to directly edit the game's canon.
-    *   The only remaining task is a one-time operational step (data migration), but all the application code is in place.
-
-2.  **Spec #7: Enhanced Memory & Temporal Context** - **This is partially complete.**
-    *   **The "Fictional Time" sub-task is complete.** The `memory.upsert` tool now automatically timestamps new memories, the `MemoryRetriever` displays this time to the AI, and the `memory.query` tool has been updated to allow searching by time. This gives the AI crucial chronological awareness.
-    *   The "Relationship-Based Retrieval" sub-task is still outstanding as it depends on other specs.
-
----
-
-I've taken the liberty of updating the TODO file to reflect this progress. I've also restructured it into a more logical roadmap, grouping completed items and ordering the remaining tasks based on their dependencies. This should provide a much clearer path forward for development.
-
-### **Updated Project TODO Roadmap**
-
----
-### ✅ **Completed Tasks** ✅
----
-
-#### **Spec #5: Unified Lore System**
+#### **Spec: Unified Lore System**
 
 *   **Status:** **COMPLETE.** All application code has been refactored. The old `WorldInfo` system is fully deprecated in favor of a unified `memory` system where `kind='lore'`. The player-facing "Lorebook" is now functional.
 *   **Implementation Steps:**
     *   [x] **Deprecate Old System:** `WorldInfoService` has been removed from `ContextBuilder` and `TurnManager`.
     *   [x] **Refactor GUI:** `WorldInfoManagerView` has been renamed and refactored into `LoreEditorView`, now operating on the `memories` table for `kind='lore'`.
-    *   [ ] **Data Migration:** (Remaining one-time task) A script should be written to migrate any legacy `world_info` entries into the `memories` table.
 
-#### **Spec #7 (Part 1): Fictional Time Implementation**
+#### **Spec (Part 1): Fictional Time Implementation**
 
 *   **Status:** **COMPLETE.** The system for tracking and retrieving memories by in-game time is fully implemented.
 *   **Implementation Steps:**
@@ -55,11 +28,7 @@ I've taken the liberty of updating the TODO file to reflect this progress. I've 
     *   [x] **Display Timestamp:** `MemoryRetriever` now includes the `fictional_time` in the context string sent to the AI.
     *   [x] **Enable Time Queries:** The `MemoryQuery` tool and its handler now support filtering by `time_query`.
 
----
-### ⏳ **Remaining Roadmap** ⏳
----
-
-#### **1. Spec: Schema-Validated State Storage (Foundation)**
+#### **Spec: Schema-Validated State Storage (Foundation)**
 
 *   **Goal:** To enforce data consistency for all game entities by validating them against a session-specific schema.
 *   **Implementation Steps:**
@@ -69,7 +38,7 @@ I've taken the liberty of updating the TODO file to reflect this progress. I've 
     [ ] 4.  **Implement Validation Logic:** Handle validation for both `entity.create` and the results of `state.apply_patch`.
     [ ] 5.  **Error Handling:** Ensure validation failures return a clear error message to the AI.
 
-#### **2. Spec: NPC & Relationship Depth (Foundation)**
+#### **Spec: NPC & Relationship Depth (Foundation)**
 
 *   **Goal:** To give NPCs richer personalities and track relationship quality.
 *   **Implementation Steps:**
@@ -78,7 +47,7 @@ I've taken the liberty of updating the TODO file to reflect this progress. I've 
     [ ] 3.  **Update Context Builder:** Modify `ContextBuilder` to fetch and display the `NpcProfile` for active characters.
     [ ] 4.  **Create New Tool:** Implement the `npc.adjust_relationship` tool.
 
-#### **3. Spec: Scene & Party Management (Foundation)**
+#### **Spec: Scene & Party Management (Foundation)**
 
 *   **Goal:** To manage groups of characters as a single, atomic unit.
 *   **Implementation Steps:**
@@ -87,7 +56,7 @@ I've taken the liberty of updating the TODO file to reflect this progress. I've 
     [ ] 3.  **Implement Atomic `move_to` Handler:** Ensure the `scene.move_to` handler safely updates the location for all members.
     [ ] 4.  **Update Context Builder:** Use the `Scene` entity to determine which characters are "active".
 
-#### **4. Spec: High-Level, Intent-Based Tools**
+#### **Spec: High-Level, Intent-Based Tools**
 
 *   **Goal:** To simplify the AI's job by abstracting away complex JSON structures.
 *   **Implementation Steps:**
@@ -96,21 +65,21 @@ I've taken the liberty of updating the TODO file to reflect this progress. I've 
     [ ] 3.  **Implement Handlers as Translators:** Write handlers that convert simple inputs into the necessary `state.apply_patch` calls.
     [ ] 4.  **Update AI Prompts:** Guide the AI to prefer the new, simpler tools.
 
-#### **5. Spec: Dynamic Entity Creation**
+#### **Spec: Dynamic Entity Creation**
 
 *   **Goal:** To empower the AI to dynamically create new entities during gameplay.
 *   **Implementation Steps:**
     [ ] 1.  **Create Tool Schema:** Define the `EntityCreate` schema.
     [ ] 2.  **Create Handler:** Implement the handler, ensuring it calls the `StateValidator` before writing to the database.
 
-#### **6. Spec #7 (Part 2): Relationship-Based Memory Retrieval**
+#### **Spec #7 (Part 2): Relationship-Based Memory Retrieval**
 
 *   **Goal:** To prioritize memories related to the current social context.
 *   **Implementation Steps:**
     [ ] 1.  **Update `get_relevant`:** Modify `MemoryRetriever.get_relevant` to accept a list of active scene members.
     [ ] 2.  **Implement Score Bonus:** Inside the scoring loop, apply a significant score bonus to memories whose tags match the entity keys of the characters present in the scene.
 
-#### **7. Spec: World Persistence & Agency (Advanced)**
+#### **Spec: World Persistence & Agency (Advanced)**
 
 *   **Goal:** To create the illusion of a living world with "off-screen" progression.
 *   **Implementation Steps:**
