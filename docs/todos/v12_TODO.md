@@ -110,7 +110,7 @@ Of course. Here is a clear, actionable TODO list formatted with Markdown checkbo
 
 #### ☐ Gap 2: Standardize High-Level Tool Behavior
 
-*   [ ] **Review Tool Patterns:** Identify all high-level tools that are intended to modify state. The goal is to ensure they all *commit their own changes* rather than returning patch suggestions.
+*   [x] **Review Tool Patterns:** Identify all high-level tools that are intended to modify state. The goal is to ensure they all *commit their own changes* rather than returning patch suggestions.
 
 *   [x] **Refactor `inventory.add_item`:**
     *   [x] Change the handler in `inventory_add_item.py` to stop returning a `patch` dictionary.
@@ -141,30 +141,30 @@ Of course. This is an excellent architectural refinement. Here is a clear, actio
 *   **Goal:** Replace the expensive, proactive "World Tick" system with an efficient, on-demand "Lazy Simulation" model that only updates NPCs when they become relevant to the player.
 
 *   **Tasks:**
-    *   [ ] **1. Evolve the State Model:**
-        *   [ ] Modify the `NpcProfile` model (`app/models/npc_profile.py`) to include a new field: `last_updated_time: str`.
-        *   [ ] Ensure this field is given a default value (the current `game_time`) when a new `npc_profile` entity is created.
+    *   [x] **1. Evolve the State Model:**
+        *   [x] Modify the `NpcProfile` model (`app/models/npc_profile.py`) to include a new field: `last_updated_time: str`.
+        *   [x] Ensure this field is given a default value (the current `game_time`) when a new `npc_profile` entity is created.
 
-    *   [ ] **2. Deprecate the Old System:**
-        *   [ ] In `turn_manager.py`, locate the `_execute_world_tick` method.
-        *   [ ] Comment out or entirely remove the body of this method and the `WorldTickService` class. The hook in `ToolExecutor` that calls it can also be removed to prevent unnecessary calls.
+    *   [x] **2. Deprecate the Old System:**
+        *   [x] In `turn_manager.py`, locate the `_execute_world_tick` method.
+        *   [x] Comment out or entirely remove the body of this method and the `WorldTickService` class. The hook in `ToolExecutor` that calls it can also be removed to prevent unnecessary calls.
 
-    *   [ ] **3. Create the Just-in-Time Simulation Service:**
-        *   [ ] Create a new file, e.g., `app/core/simulation_service.py`.
-        *   [ ] Inside, create a `SimulationService` class.
-        *   [ ] Implement a method `simulate_npc_downtime(self, npc_profile: NpcProfile, current_time: str) -> WorldTickOutcome | None`.
-        *   [ ] This method will use a new, targeted LLM prompt that takes the NPC's profile and the time delta (`last_updated_time` vs `current_time`) to generate a `WorldTickOutcome` (summary, significance, and patches).
+    *   [x] **3. Create the Just-in-Time Simulation Service:**
+        *   [x] Create a new file, e.g., `app/core/simulation_service.py`.
+        *   [x] Inside, create a `SimulationService` class.
+        *   [x] Implement a method `simulate_npc_downtime(self, npc_profile: NpcProfile, current_time: str) -> WorldTickOutcome | None`.
+        *   [x] This method will use a new, targeted LLM prompt that takes the NPC's profile and the time delta (`last_updated_time` vs `current_time`) to generate a `WorldTickOutcome` (summary, significance, and patches).
 
-    *   [ ] **4. Implement the Simulation Trigger:**
-        *   [ ] In `context_builder.py`, modify the `_build_npc_context` method. This is the core of the new logic.
-        *   [ ] Before building the context string, loop through the `active_npc_keys`.
-        *   [ ] For each NPC, fetch their `NpcProfile`.
-        *   [ ] Compare the profile's `last_updated_time` with the current session `game_time`.
-        *   [ ] If the time difference is significant (e.g., more than a few hours), call the new `SimulationService.simulate_npc_downtime`.
-        *   [ ] **Apply the results immediately:**
-            *   [ ] If the simulation returns patches, use the `state_apply_patch` handler to apply them.
-            *   [ ] If the simulation result is marked as `is_significant`, use the `memory.upsert` tool/handler to create a new episodic memory.
-            *   [ ] **Crucially**, after a successful simulation, update the NPC's profile by setting its `last_updated_time` to the current `game_time` and save it back to the database. This prevents re-simulation on the next turn.
+    *   [x] **4. Implement the Simulation Trigger:**
+        *   [x] In `context_builder.py`, modify the `_build_npc_context` method. This is the core of the new logic.
+        *   [x] Before building the context string, loop through the `active_npc_keys`.
+        *   [x] For each NPC, fetch their `NpcProfile`.
+        *   [x] Compare the profile's `last_updated_time` with the current session `game_time`.
+        *   [x] If the time difference is significant (e.g., more than a few hours), call the new `SimulationService.simulate_npc_downtime`.
+        *   [x] **Apply the results immediately:**
+            *   [x] If the simulation returns patches, use the `state_apply_patch` handler to apply them.
+            *   [x] If the simulation result is marked as `is_significant`, use the `memory.upsert` tool/handler to create a new episodic memory.
+            *   [x] **Crucially**, after a successful simulation, update the NPC's profile by setting its `last_updated_time` to the current `game_time` and save it back to the database. This prevents re-simulation on the next turn.
 
-    *   [ ] **5. Integration & Wiring:**
-        *   [ ] Ensure the new `SimulationService` is properly instantiated within the `TurnManager` and passed down to the `ContextBuilder` so it can be called from within the context-building phase.
+    *   [x] **5. Integration & Wiring:**
+        *   [x] Ensure the new `SimulationService` is properly instantiated within the `TurnManager` and passed down to the `ContextBuilder` so it can be called from within the context-building phase.
