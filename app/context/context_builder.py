@@ -2,6 +2,7 @@ import logging
 from typing import List
 from app.models.session import Session
 from app.models.game_session import GameSession
+from app.models.npc_profile import NpcProfile
 from app.models.message import Message
 
 class ContextBuilder:
@@ -81,7 +82,46 @@ class ContextBuilder:
         if mem_text:
             sections.append(mem_text)
 
+        # NPC Context
+        npc_context_text = self._build_npc_context(game_session.id)
+        if npc_context_text:
+            sections.append(npc_context_text)
+
         return "\n\n".join(sections)
+
+    def _build_npc_context(self, session_id: int) -> str:
+        """
+        Finds NPCs in the player's location and formats their profiles for context.
+        """
+        try:
+            player = self.db.game_state.get_entity(session_id, "character", "player")
+            if not player or "location_key" not in player:
+                return ""
+
+            player_location = player["location_key"]
+            all_characters = self.db.game_state.get_all_entities_by_type(session_id, "character")
+
+            active_npcs = [
+                (key, char) for key, char in all_characters.items()
+                if key != "player" and char.get("location_key") == player_location
+            ]
+
+            if not active_npcs:
+                return ""
+
+            lines = ["# NPC CONTEXT #"]
+            for key, char in active_npcs:
+                profile_data = self.db.game_state.get_entity(session_id, "npc_profile", key)
+                if profile_data:
+                    profile = NpcProfile(**profile_data)
+                    rel = profile.relationships.get("player")
+                    rel_str = f" | Rel(Player): Trust({rel.trust}), Attract({rel.attraction}), Fear({rel.fear})" if rel else ""
+                    lines.append(f" - {char.get('name', key)}: Motives({', '.join(profile.motivations)}){rel_str}")
+            
+            return "\n".join(lines) if len(lines) > 1 else ""
+        except Exception as e:
+            self.logger.debug(f"Failed to build NPC context: {e}", exc_info=True)
+            return ""
 
     def get_truncated_history(
         self,

@@ -437,3 +437,24 @@ class SchemaQuery(BaseModel):
         None,
         description="Name of specific item to query. Leave blank for all of that type.",
     )
+
+class NpcAdjustRelationship(BaseModel):
+    """
+    Adjust the relationship metrics between an NPC and another entity (usually the player).
+    Use this to reflect the social outcomes of a conversation or action.
+    **Example:** After a successful persuasion, increase the NPC's trust.
+    npc.adjust_relationship({
+        "npc_key": "town_guard_captain",
+        "subject_key": "player",
+        "trust_change": 2,
+        "tags_to_add": ["helpful"]
+    })
+    """
+    name: Literal["npc.adjust_relationship"] = "npc.adjust_relationship"
+    npc_key: str = Field(..., description="The entity key of the NPC whose feelings are changing.")
+    subject_key: str = Field(..., description="The entity key of the subject of these feelings (e.g., 'player').")
+    trust_change: Optional[int] = Field(None, description="The amount to add or subtract from the trust score.")
+    attraction_change: Optional[int] = Field(None, description="The amount to add or subtract from the attraction score.")
+    fear_change: Optional[int] = Field(None, description="The amount to add or subtract from the fear score.")
+    tags_to_add: Optional[List[str]] = Field(None, description="A list of relationship tags to add.")
+    tags_to_remove: Optional[List[str]] = Field(None, description="A list of relationship tags to remove.")

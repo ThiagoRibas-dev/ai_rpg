@@ -40,21 +40,21 @@
 
 #### **Spec: NPC & Relationship Depth (Foundation)**
 
-*   **Goal:** To give NPCs richer personalities and track relationship quality.
+*   **Status:** **COMPLETE.** The core data models for NPC profiles and relationships are defined, the `npc.adjust_relationship` tool is implemented, and the `ContextBuilder` now exposes NPC profiles to the AI.
 *   **Implementation Steps:**
-    [ ] 1.  **Define New Models:** Create `RelationshipStatus` and `NpcProfile` Pydantic models.
-    [ ] 2.  **Store as an Entity:** Ensure `NpcProfile` can be stored in the `game_state` table.
-    [ ] 3.  **Update Context Builder:** Modify `ContextBuilder` to fetch and display the `NpcProfile` for active characters.
-    [ ] 4.  **Create New Tool:** Implement the `npc.adjust_relationship` tool.
+    [x] 1.  **Define New Models:** Create `RelationshipStatus` and `NpcProfile` Pydantic models.
+    [x] 2.  **Store as an Entity:** Ensure `NpcProfile` can be stored in the `game_state` table.
+    [x] 3.  **Update Context Builder:** Modify `ContextBuilder` to fetch and display the `NpcProfile` for active characters.
+    [x] 4.  **Create New Tool:** Implement the `npc.adjust_relationship` tool.
 
 #### **Spec: Scene & Party Management (Foundation)**
 
 *   **Goal:** To manage groups of characters as a single, atomic unit.
 *   **Implementation Steps:**
-    [ ] 1.  **Define Scene Entity:** Determine the structure for the `Scene` entity in `game_state`.
-    [ ] 2.  **Create Scene Tools:** Implement `scene.add_member`, `scene.remove_member`, and `scene.move_to`.
-    [ ] 3.  **Implement Atomic `move_to` Handler:** Ensure the `scene.move_to` handler safely updates the location for all members.
-    [ ] 4.  **Update Context Builder:** Use the `Scene` entity to determine which characters are "active".
+    [x] 1.  **Define Scene Entity:** Determine the structure for the `Scene` entity in `game_state`.
+    [x] 2.  **Create Scene Tools:** Implement `scene.add_member`, `scene.remove_member`, and `scene.move_to`.
+    [x] 3.  **Implement Atomic `move_to` Handler:** Ensure the `scene.move_to` handler safely updates the location for all members.
+    [x] 4.  **Update Context Builder:** Use the `Scene` entity to determine which characters are "active".
 
 #### **Spec: High-Level, Intent-Based Tools**
 
