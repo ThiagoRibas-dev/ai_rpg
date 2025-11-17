@@ -151,10 +151,10 @@ class ControlPanelBuilder:
         ).pack(**pack_config)
 
         # World Info button
-        # COMMENT: We will capture the button in a variable instead of creating it anonymously.
+        # This button opens the new LoreEditorView, which edits 'lore' kind memories.
         lore_editor_button = ctk.CTkButton(
-            context_content, text="Manage World Info", 
-            command=prompt_callbacks["world_info"] if prompt_callbacks else None,
+            context_content, text="Manage Lorebook",
+            command=prompt_callbacks.get("world_info") if prompt_callbacks else None,
         )
         lore_editor_button.pack(**pack_config)
 

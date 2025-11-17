@@ -118,7 +118,6 @@ class MainView(ctk.CTk):
                 "new": self._stub_new_prompt,
                 "edit": self._stub_edit_prompt,
                 "delete": self._stub_delete_prompt,
-                "world_info": self._stub_open_world_info,
             },
             session_callback=self._stub_new_game,
             save_context_callback=self.save_context,
@@ -384,9 +383,6 @@ class MainView(ctk.CTk):
         """Stub - replaced in set_orchestrator()."""
         logger.warning("New game button clicked before manager initialization")
         
-    def _stub_open_world_info(self):
-        """Stub - replaced in set_orchestrator()."""
-        logger.warning("World Info button clicked before manager initialization")
 
     # ==================== Thin delegation methods ====================
     # These remain for external callers (orchestrator, etc.)

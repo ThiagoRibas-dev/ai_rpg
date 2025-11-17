@@ -4,6 +4,7 @@ from chromadb.config import Settings
 from fastembed import TextEmbedding
 from typing import List, Dict, Any
 import logging
+from chromadb.api.types import Where
 
 logger = logging.getLogger(__name__)
 
@@ -55,9 +56,6 @@ class VectorStore:
         self.memories_col = self.client.get_or_create_collection(
             name="memories", metadata={"hnsw:space": "cosine"}
         )
-        self.world_info_col = self.client.get_or_create_collection(
-            name="world_info", metadata={"hnsw:space": "cosine"}
-        )
 
     def add_turn(
         self,
@@ -70,7 +68,7 @@ class VectorStore:
     ):
         """Add a turn's metadata to the vector store."""
         try:
-            embedding = list(self.embed_model.embed([summary]))[0]
+            embedding: List[float] = list(self.embed_model.embed([summary]))[0].tolist() # Convert numpy array to list[float]
 
             doc_id = f"{session_id}_{round_number}"
             self.collection.add(
@@ -98,18 +96,21 @@ class VectorStore:
     ) -> List[Dict[str, Any]]:
         """Semantic search for relevant past turns."""
         # Generate query embedding
-        query_embedding = list(self.embed_model.embed([query_text]))[0]
+        query_embedding: List[float] = list(self.embed_model.embed([query_text]))[0].tolist() # Convert numpy array to list[float]
+
+        # Define where clause with explicit types for mypy
+        where_clause: Where = {
+            "$and": [
+                {"session_id": {"$eq": session_id}},
+                {"importance": {"$gte": min_importance}},
+            ]
+        }
 
         # Search with filters
         results = self.collection.query(
             query_embeddings=[query_embedding],
             n_results=top_k,
-            where={
-                "$and": [
-                    {"session_id": {"$eq": session_id}},
-                    {"importance": {"$gte": min_importance}},
-                ]
-            },
+            where=where_clause,
         )
 
         # Format results
@@ -117,24 +118,28 @@ class VectorStore:
             return []
 
         formatted_results = []
-        for i, metadata in enumerate(results["metadatas"][0]):
-            formatted_results.append(
-                {
-                    "round_number": metadata["round_number"],
-                    "summary": metadata["summary"],
-                    "tags": metadata["tags"].split(",") if metadata["tags"] else [],
-                    "importance": metadata["importance"],
-                    "distance": results["distances"][0][i]
-                    if "distances" in results
-                    else None,
-                }
-            )
+        # Ensure metadatas and distances are not None before accessing
+        metadatas = results.get("metadatas")
+        distances = results.get("distances")
+
+        if metadatas and metadatas[0]:
+            for i, metadata in enumerate(metadatas[0]):
+                formatted_results.append(
+                    {
+                        "round_number": metadata["round_number"],
+                        "summary": metadata["summary"],
+                        "tags": metadata["tags"].split(",") if metadata["tags"] else [],
+                        "importance": metadata["importance"],
+                        "distance": distances[0][i] if distances and distances[0] else None,
+                    }
+                )
 
         return formatted_results
 
     def delete_session_turns(self, session_id: int):
         """Delete all turns for a session."""
-        all_items = self.collection.get(where={"session_id": {"$eq": session_id}})
+        where_clause: Where = {"session_id": {"$eq": session_id}}
+        all_items = self.collection.get(where=where_clause)
 
         if all_items["ids"]:
             self.collection.delete(ids=all_items["ids"])
@@ -148,7 +153,8 @@ class VectorStore:
         self.delete_session_turns(session_id)
 
         # Delete memories
-        all_memories = self.memories_col.get(where={"session_id": {"$eq": session_id}})
+        where_clause: Where = {"session_id": {"$eq": session_id}}
+        all_memories = self.memories_col.get(where=where_clause)
         if all_memories["ids"]:
             self.memories_col.delete(ids=all_memories["ids"])
             logger.info(
@@ -166,7 +172,7 @@ class VectorStore:
         priority: int,
     ):
         try:
-            emb = list(self.embed_model.embed([text]))[0]
+            emb: List[float] = list(self.embed_model.embed([text]))[0].tolist() # Convert numpy array to list[float]
             doc_id = f"{session_id}:{memory_id}"
             self.memories_col.upsert(
                 ids=[doc_id],
@@ -202,91 +208,39 @@ class VectorStore:
     ) -> List[Dict[str, Any]]:
         if not query_text.strip():
             return []
-        emb = list(self.embed_model.embed([query_text]))[0]
+        emb: List[float] = list(self.embed_model.embed([query_text]))[0].tolist() # Convert numpy array to list[float]
+
+        where_clause: Where = {
+            "$and": [
+                {"session_id": {"$eq": session_id}},
+                {"priority": {"$gte": int(min_priority)}},
+            ]
+        }
+
         res = self.memories_col.query(
             query_embeddings=[emb],
             n_results=k,
-            where={
-                "$and": [
-                    {"session_id": {"$eq": session_id}},
-                    {"priority": {"$gte": int(min_priority)}},
-                ]
-            },
+            where=where_clause,
         )
         if not res.get("ids") or not res["ids"] or not res["ids"][0]:
             return []
         out = []
-        for i, md in enumerate(res["metadatas"][0]):
-            out.append(
-                {
-                    "session_id": md["session_id"],
-                    "memory_id": md["memory_id"],
-                    "kind": md.get("kind"),
-                    "tags": (md.get("tags") or "").split(",") if md.get("tags") else [],
-                    "priority": md.get("priority", 3),
-                    "distance": res["distances"][0][i] if "distances" in res else None,
-                }
-            )
+        # Ensure metadatas and distances are not None before accessing
+        metadatas = res.get("metadatas")
+        distances = res.get("distances")
+
+        if metadatas and metadatas[0]:
+            for i, md in enumerate(metadatas[0]):
+                out.append(
+                    {
+                        "session_id": md["session_id"],
+                        "memory_id": md["memory_id"],
+                        "kind": md.get("kind"),
+                        "tags": (md.get("tags") or "").split(",") if md.get("tags") else [],
+                        "priority": md.get("priority", 3),
+                        "distance": distances[0][i] if distances and distances[0] else None,
+                    }
+                )
         return out
 
     # ===== World info embeddings =====
-    def upsert_world_info(
-        self,
-        prompt_id: int,
-        world_info_id: int,
-        text: str,
-        tags: List[str] | None = None,
-    ):
-        try:
-            emb = list(self.embed_model.embed([text]))[0]
-            doc_id = f"{prompt_id}:{world_info_id}"
-            self.world_info_col.upsert(
-                ids=[doc_id],
-                embeddings=[emb],
-                metadatas=[
-                    {
-                        "prompt_id": prompt_id,
-                        "world_info_id": world_info_id,
-                        "tags": ",".join(tags or []),
-                        "text": text[:4000],
-                    }
-                ],
-            )
-        except Exception as e:
-            logger.error(
-                f"upsert_world_info failed for WI {world_info_id}: {e}", exc_info=True
-            )
-            raise
-
-    def delete_world_info(self, prompt_id: int, world_info_id: int):
-        doc_id = f"{prompt_id}:{world_info_id}"
-        try:
-            self.world_info_col.delete(ids=[doc_id])
-        except Exception as e:
-            logger.error(
-                f"delete_world_info failed for WI {world_info_id}: {e}", exc_info=True
-            )
-            raise
-
-    def search_world_info(
-        self, prompt_id: int, query_text: str, k: int = 4
-    ) -> List[Dict[str, Any]]:
-        if not query_text.strip():
-            return []
-        emb = list(self.embed_model.embed([query_text]))[0]
-        res = self.world_info_col.query(
-            query_embeddings=[emb], n_results=k, where={"prompt_id": {"$eq": prompt_id}}
-        )
-        if not res.get("ids") or not res["ids"] or not res["ids"][0]:
-            return []
-        out = []
-        for i, md in enumerate(res["metadatas"][0]):
-            out.append(
-                {
-                    "world_info_id": md["world_info_id"],
-                    "text": md.get("text", ""),
-                    "tags": (md.get("tags") or "").split(",") if md.get("tags") else [],
-                    "distance": res["distances"][0][i] if "distances" in res else None,
-                }
-            )
-        return out
