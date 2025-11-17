@@ -74,20 +74,49 @@ class ContextBuilder:
         if state_text:
             sections.append(f"# CURRENT STATE #\n{state_text}")
 
+        # Determine active NPCs in the scene for contextual retrieval
+        active_npc_keys = self._get_active_npc_keys(game_session.id)
+
         # Retrieved memories
         session = Session.from_json(game_session.session_data)
         session.id = game_session.id
-        memories = self.mem_retriever.get_relevant(session, chat_history)
+
+        # Pass active NPCs to the retriever for contextual prioritization
+        memories = self.mem_retriever.get_relevant(
+            session,
+            chat_history,
+            active_npc_keys=active_npc_keys
+        )
         mem_text = self.mem_retriever.format_for_prompt(memories)
         if mem_text:
             sections.append(mem_text)
 
-        # NPC Context
+        # NPC context
         npc_context_text = self._build_npc_context(game_session.id)
         if npc_context_text:
             sections.append(npc_context_text)
 
         return "\n\n".join(sections)
+    
+    def _get_active_npc_keys(self, session_id: int) -> List[str]:
+        """Finds the entity keys of NPCs in the player's current location."""
+        try:
+            player = self.db.game_state.get_entity(session_id, "character", "player")
+            if not player or "location_key" not in player:
+                return []
+
+            player_location = player["location_key"]
+            all_characters = self.db.game_state.get_all_entities_by_type(session_id, "character")
+
+            active_npc_keys = [
+                key for key in all_characters.keys()
+                if key != "player" and all_characters[key].get("location_key") == player_location
+            ]
+            return active_npc_keys
+        except Exception as e:
+            self.logger.debug(f"Could not determine active NPCs: {e}", exc_info=True)
+            return []
+
 
     def _build_npc_context(self, session_id: int) -> str:
         """

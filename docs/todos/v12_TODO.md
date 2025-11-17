@@ -72,12 +72,12 @@
     [x] 1.  **Create Tool Schema:** Define the `EntityCreate` schema.
     [x] 2.  **Create Handler:** Implement the handler, ensuring it calls the `StateValidator` before writing to the database.
 
-#### **Spec #7 (Part 2): Relationship-Based Memory Retrieval**
+#### **Spec: (Part 2): Relationship-Based Memory Retrieval**
 
 *   **Goal:** To prioritize memories related to the current social context.
 *   **Implementation Steps:**
-    [ ] 1.  **Update `get_relevant`:** Modify `MemoryRetriever.get_relevant` to accept a list of active scene members.
-    [ ] 2.  **Implement Score Bonus:** Inside the scoring loop, apply a significant score bonus to memories whose tags match the entity keys of the characters present in the scene.
+    [x] 1.  **Update `get_relevant`:** Modify `MemoryRetriever.get_relevant` to accept a list of active scene members.
+    [x] 2.  **Implement Score Bonus:** Inside the scoring loop, apply a significant score bonus to memories whose tags match the entity keys of the characters present in the scene.
 
 #### **Spec: World Persistence & Agency (Advanced)**
 

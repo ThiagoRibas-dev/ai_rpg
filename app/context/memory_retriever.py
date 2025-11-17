@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import List, Any
+from typing import List, Any, Optional
 from datetime import datetime
 from app.models.message import Message
 
@@ -35,7 +35,11 @@ class MemoryRetriever:
 
     def get_relevant(
         self, session, recent_messages: List[Message], limit: int = 10
+        , active_npc_keys: Optional[List[str]] = None
     ) -> List[Any]:
+        if active_npc_keys is None:
+            active_npc_keys = []
+
         if not session or not session.id:
             return []
         recent_text = (
@@ -82,6 +86,12 @@ class MemoryRetriever:
             # semantic
             if mem.id in hit_ids:
                 score += 50
+            
+            # --- NEW: Relationship-Based Score Bonus ---
+            # Boost score if a memory is tagged with the key of a present NPC
+            for npc_key in active_npc_keys:
+                if npc_key in mem.tags_list():
+                    score += 60 # Significant bonus for social context
             scored.append((score, mem))
 
         scored.sort(key=lambda x: x[0], reverse=True)
