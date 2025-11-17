@@ -32,11 +32,11 @@
 
 *   **Goal:** To enforce data consistency for all game entities by validating them against a session-specific schema.
 *   **Implementation Steps:**
-    [ ] 1.  **Load Manifest:** In `TurnManager`, load the session's `template_manifest` at the start of `execute_turn`.
-    [ ] 2.  **Create Validation Service:** Implement a `StateValidator` utility that can validate a dictionary against the manifest's schemas.
-    [ ] 3.  **Intercept State Writes:** Modify `ToolExecutor.execute` to perform validation checks before running state-modifying tools.
-    [ ] 4.  **Implement Validation Logic:** Handle validation for both `entity.create` and the results of `state.apply_patch`.
-    [ ] 5.  **Error Handling:** Ensure validation failures return a clear error message to the AI.
+    [x] 1.  **Load Manifest:** In `TurnManager`, load the session's `template_manifest` at the start of `execute_turn`.
+    [x] 2.  **Create Validation Service:** Implement a `StateValidator` utility that can validate a dictionary against the manifest's schemas.
+    [x] 3.  **Intercept State Writes:** Modify `ToolExecutor.execute` to perform validation checks before running state-modifying tools.
+    [x] 4.  **Implement Validation Logic:** Handle validation for both `entity.create` and the results of `state.apply_patch`.
+    [x] 5.  **Error Handling:** Ensure validation failures return a clear error message to the AI.
 
 #### **Spec: NPC & Relationship Depth (Foundation)**
 
