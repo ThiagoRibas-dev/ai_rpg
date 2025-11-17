@@ -66,6 +66,7 @@ class ToolExecutor:
             "session_id": session.id,
             "db_manager": self.db,
             "vector_store": self.vs,
+            "manifest": manifest,
             "current_game_time": current_game_time,
         }
 

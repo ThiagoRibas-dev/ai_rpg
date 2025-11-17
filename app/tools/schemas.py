@@ -524,3 +524,25 @@ class QuestUpdateObjective(BaseModel):
     quest_key: str = Field(..., description="The unique key of the quest to update.")
     objective_text: str = Field(..., description="The descriptive text of the objective to update. Must be an exact match.")
     is_completed: bool = Field(True, description="The new completion status for the objective.")
+
+
+class EntityCreate(BaseModel):
+    """
+    Dynamically creates a new entity in the game world.
+    Use this to introduce new characters (NPCs), items, locations, or quests that don't exist yet.
+    The `data` provided MUST conform to the schema established during the SETUP phase.
+    **Example:** Create a new goblin NPC that the player encounters.
+    entity.create({
+        "entity_type": "character",
+        "entity_key": "goblin_scout_01",
+        "data": {
+            "name": "Gribble",
+            "attributes": {"hp_current": 7, "hp_max": 7},
+            "location_key": "whispering_woods_path"
+        }
+    })
+    """
+    name: Literal["entity.create"] = "entity.create"
+    entity_type: str = Field(..., description="The type of the entity to create (e.g., 'character', 'item', 'location', 'quest').")
+    entity_key: str = Field(..., description="A unique key for the new entity (e.g., 'goblin_scout_01', 'potion_of_healing_3').")
+    data: Dict[str, Any] = Field(..., description="A dictionary containing the full data for the new entity.")
