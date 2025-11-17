@@ -60,10 +60,10 @@
 
 *   **Goal:** To simplify the AI's job by abstracting away complex JSON structures.
 *   **Implementation Steps:**
-    [ ] 1.  **Identify Common Patterns:** Review logs for common `state.apply_patch` uses (e.g., inventory management).
-    [ ] 2.  **Design High-Level Schemas:** Create simple schemas like `InventoryAddItem`.
-    [ ] 3.  **Implement Handlers as Translators:** Write handlers that convert simple inputs into the necessary `state.apply_patch` calls.
-    [ ] 4.  **Update AI Prompts:** Guide the AI to prefer the new, simpler tools.
+    [x] 1.  **Identify Common Patterns:** Review logs for common `state.apply_patch` uses (e.g., inventory management).
+    [x] 2.  **Design High-Level Schemas:** Create simple schemas like `InventoryAddItem`.
+    [x] 3.  **Implement Handlers as Translators:** Write handlers that convert simple inputs into the necessary `state.apply_patch` calls.
+    [x] 4.  **Update AI Prompts:** Guide the AI to prefer the new, simpler tools.
 
 #### **Spec: Dynamic Entity Creation**
 

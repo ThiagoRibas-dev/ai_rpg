@@ -1,4 +1,4 @@
-from typing import List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -458,3 +458,69 @@ class NpcAdjustRelationship(BaseModel):
     fear_change: Optional[int] = Field(None, description="The amount to add or subtract from the fear score.")
     tags_to_add: Optional[List[str]] = Field(None, description="A list of relationship tags to add.")
     tags_to_remove: Optional[List[str]] = Field(None, description="A list of relationship tags to remove.")
+
+class InventoryAddItem(BaseModel):
+    """
+    Adds an item to an entity's inventory. **Preferred over `state.apply_patch` for adding items.**
+    This tool is intelligent: if the item already exists, it will increment the quantity. If not, it will create a new item entry.
+    **Example:** Give the player a health potion.
+    inventory.add_item({
+        "owner_key": "player",
+        "item_name": "Health Potion",
+        "quantity": 1
+    })
+    """
+    name: Literal["inventory.add_item"] = "inventory.add_item"
+    owner_key: str = Field(..., description="The entity key of the inventory's owner (e.g., 'player', 'shopkeeper').")
+    item_name: str = Field(..., description="The name of the item to add.")
+    quantity: int = Field(1, description="The number of items to add.", gt=0)
+    description: Optional[str] = Field(None, description="A brief description for the item if it's new.")
+    properties: Optional[Dict[str, Any]] = Field(None, description="A dictionary of custom properties for the item.")
+
+
+class InventoryRemoveItem(BaseModel):
+    """
+    Removes an item from an entity's inventory. **Preferred over `state.apply_patch` for removing items.**
+    This tool is intelligent: it will decrease the item's quantity and will only remove the item entry if the quantity reaches zero.
+    **Example:** The player drinks a health potion.
+    inventory.remove_item({
+        "owner_key": "player",
+        "item_name": "Health Potion",
+        "quantity": 1
+    })
+    """
+    name: Literal["inventory.remove_item"] = "inventory.remove_item"
+    owner_key: str = Field(..., description="The entity key of the inventory's owner (e.g., 'player').")
+    item_name: str = Field(..., description="The name of the item to remove.")
+    quantity: int = Field(1, description="The number of items to remove.", gt=0)
+
+
+class QuestUpdateStatus(BaseModel):
+    """
+    Updates the overall status of a quest. **Preferred over `state.apply_patch` for quest status changes.**
+    **Example:** The player completes the main quest.
+    quest.update_status({
+        "quest_key": "main_quest_01",
+        "new_status": "completed"
+    })
+    """
+    name: Literal["quest.update_status"] = "quest.update_status"
+    quest_key: str = Field(..., description="The unique key of the quest to update.")
+    new_status: Literal["active", "completed", "failed", "hidden"] = Field(..., description="The new status for the quest.")
+
+
+class QuestUpdateObjective(BaseModel):
+    """
+    Updates the completion status of a specific quest objective. **Preferred over `state.apply_patch` for objective changes.**
+    The tool finds the objective based on its descriptive text.
+    **Example:** Mark the 'Find the goblin camp' objective as complete.
+    quest.update_objective({
+        "quest_key": "main_quest_01",
+        "objective_text": "Find the goblin camp",
+        "is_completed": true
+    })
+    """
+    name: Literal["quest.update_objective"] = "quest.update_objective"
+    quest_key: str = Field(..., description="The unique key of the quest to update.")
+    objective_text: str = Field(..., description="The descriptive text of the objective to update. Must be an exact match.")
+    is_completed: bool = Field(True, description="The new completion status for the objective.")
