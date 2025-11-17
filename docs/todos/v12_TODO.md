@@ -86,3 +86,48 @@
     [x] 1.  **Add `directive` Field:** Add a `directive: str` field to the `NpcProfile` model.
     [x] 2.  **Create Simulation Logic:** Implement a `_execute_world_tick(duration)` method in `TurnManager`.
     [x] 3.  **Trigger the Tick:** Modify the `time.advance` tool's handler to call the tick function on long time skips.
+
+Of course. Here is a clear, actionable TODO list formatted with Markdown checkboxes to track the implementation of the fixes for the three main gaps we identified.
+
+---
+
+### Architecture Refinement TODOs
+
+#### ✅ Gap 1: Implement a "Scene" Entity for Robust Group Management
+
+*   [x] **State Model:** Create a new `entity_type="scene"` in the `game_state` table. A single, canonical entity (e.g., `entity_key="active_scene"`) should exist per session.
+    *   [x] **Schema:** The entity's data should include `location_key: str` and `members: List[str]` (where each member is a string like `"character:player"` or `"character:npc_goblin_1"`).
+
+*   [x] **Tooling:** Create a new suite of high-level tools for scene management in a `scene_tools.py` file (or similar).
+    *   [x] `scene.add_member(character_key: str)`: Adds a character to the `active_scene`.
+    *   [x] `scene.remove_member(character_key: str)`: Removes a character from the `active_scene`.
+    *   [x] `scene.move_to(new_location_key: str)`: Atomically updates the `location_key` in the `active_scene` entity *and* iterates through all members to update their individual `character` entity's `location_key`. This is the crucial safety feature.
+
+*   [x] **Context Refactor:** Update the `ContextBuilder` (`context_builder.py`) to be more efficient.
+    *   [x] Deprecate the existing logic that queries all characters and filters by location.
+    *   [x] Implement a single query to fetch the `active_scene` entity.
+    *   [x] Use the `members` list from the scene entity to determine who is present for building the NPC context and for the `MemoryRetriever`'s relationship bonus.
+
+#### ☐ Gap 2: Standardize High-Level Tool Behavior
+
+*   [ ] **Review Tool Patterns:** Identify all high-level tools that are intended to modify state. The goal is to ensure they all *commit their own changes* rather than returning patch suggestions.
+
+*   [ ] **Refactor `inventory.add_item`:**
+    *   [ ] Change the handler in `inventory_add_item.py` to stop returning a `patch` dictionary.
+    *   [ ] Instead, have it calculate the required JSON patch operations internally.
+    *   [ ] At the end of the handler, it should call the `state.apply_patch` handler (or a shared helper function) to apply the changes to the inventory entity directly before returning a simple success message.
+
+*   [ ] **Refactor `inventory.remove_item`:**
+    *   [ ] Apply the same pattern as above to the handler in `inventory_remove_item.py`. It should calculate the `remove` or `replace` operation for the item and apply it itself.
+
+#### ☐ Gap 3: Make the "World Tick" More Event-Driven
+
+*   [ ] **Review `_execute_world_tick`:** Open `turn_manager.py` and locate the world tick simulation logic.
+
+*   [ ] **Implement Probability Gate:** Modify the loop to be less verbose.
+    *   [ ] Inside the `for npc_key, profile_data in all_profiles_data.items():` loop, add a simple probability check (e.g., `if random.random() < 0.1:`).
+    *   [ ] Only create an episodic memory if this check passes. This will immediately reduce memory spam by ~90%.
+
+*   [ ] **(Optional/Advanced) Implement State-Change Logic:** For a more robust solution, evolve the tick logic further.
+    *   [ ] Instead of (or in addition to) creating a memory, have the tick modify the NPC's state directly based on their `directive`. For example, if `directive` is `"gather wealth"`, slightly increase their `currency` value in their `inventory` entity.
+    *   [ ] Only create a memory when a *significant event* or threshold is reached (e.g., the NPC has accumulated over 1000 gold, or a guard on patrol discovers something unusual). This makes the generated memories more meaningful and story-relevant.

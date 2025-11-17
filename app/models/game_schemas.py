@@ -158,3 +158,10 @@ class ClassList(BaseModel):
 class RaceList(BaseModel):
     """A list of races."""
     races: List[RaceDefinition] = Field(default_factory=list)
+
+
+class SceneDefinition(BaseModel):
+    """Defines the structure of a game scene."""
+    location_key: str = Field(..., description="The entity key of the current location of the scene.")
+    members: List[str] = Field(default_factory=list, description="A list of entity keys (e.g., 'character:player') currently in the scene.")
+    state_tags: List[str] = Field(default_factory=list, description="Descriptive tags for the current state of the scene (e.g., 'calm', 'combat', 'tense').")

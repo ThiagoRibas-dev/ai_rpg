@@ -98,59 +98,53 @@ class ContextBuilder:
 
         return "\n\n".join(sections)
     
-    def _get_active_npc_keys(self, session_id: int) -> List[str]:
-        """Finds the entity keys of NPCs in the player's current location."""
+    def _get_active_scene_members(self, session_id: int) -> List[str]:
+        """Helper to get a list of character keys from the active scene."""
         try:
-            player = self.db.game_state.get_entity(session_id, "character", "player")
-            if not player or "location_key" not in player:
+            scene = self.db.game_state.get_entity(session_id, "scene", "active_scene")
+            if not scene or "members" not in scene:
                 return []
-
-            player_location = player["location_key"]
-            all_characters = self.db.game_state.get_all_entities_by_type(session_id, "character")
-
-            active_npc_keys = [
-                key for key in all_characters.keys()
-                if key != "player" and all_characters[key].get("location_key") == player_location
+            
+            members = scene.get("members", [])
+            # Parse 'character:key' format
+            char_keys = [
+                member.split(":", 1)[1] for member in members
+                if member.startswith("character:")
             ]
-            return active_npc_keys
+            return char_keys
         except Exception as e:
-            self.logger.debug(f"Could not determine active NPCs: {e}", exc_info=True)
+            self.logger.debug(f"Could not retrieve active scene members: {e}", exc_info=True)
             return []
+
+    def _get_active_npc_keys(self, session_id: int) -> List[str]:
+        """Finds the entity keys of NPCs in the active scene."""
+        all_members = self._get_active_scene_members(session_id)
+        return [key for key in all_members if key != "player"]
 
 
     def _build_npc_context(self, session_id: int) -> str:
         """
-        Finds NPCs in the player's location and formats their profiles for context.
+        Finds NPCs in the active scene and formats their profiles for context.
         """
-        try:
-            player = self.db.game_state.get_entity(session_id, "character", "player")
-            if not player or "location_key" not in player:
-                return ""
-
-            player_location = player["location_key"]
-            all_characters = self.db.game_state.get_all_entities_by_type(session_id, "character")
-
-            active_npcs = [
-                (key, char) for key, char in all_characters.items()
-                if key != "player" and char.get("location_key") == player_location
-            ]
-
-            if not active_npcs:
-                return ""
-
-            lines = ["# NPC CONTEXT #"]
-            for key, char in active_npcs:
+        active_npc_keys = self._get_active_npc_keys(session_id)
+        if not active_npc_keys:
+            return ""
+        
+        lines = ["# NPC CONTEXT #"]
+        for key in active_npc_keys:
+            try:
+                char = self.db.game_state.get_entity(session_id, "character", key)
                 profile_data = self.db.game_state.get_entity(session_id, "npc_profile", key)
-                if profile_data:
+                if char and profile_data:
                     profile = NpcProfile(**profile_data)
                     rel = profile.relationships.get("player")
                     rel_str = f" | Rel(Player): Trust({rel.trust}), Attract({rel.attraction}), Fear({rel.fear})" if rel else ""
                     lines.append(f" - {char.get('name', key)}: Motives({', '.join(profile.motivations)}){rel_str}")
-            
-            return "\n".join(lines) if len(lines) > 1 else ""
-        except Exception as e:
-            self.logger.debug(f"Failed to build NPC context: {e}", exc_info=True)
-            return ""
+            except Exception as e:
+                self.logger.debug(f"Failed to build context for NPC '{key}': {e}", exc_info=True)
+                continue
+        
+        return "\n".join(lines) if len(lines) > 1 else ""
 
     def get_truncated_history(
         self,

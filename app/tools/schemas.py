@@ -546,3 +546,38 @@ class EntityCreate(BaseModel):
     entity_type: str = Field(..., description="The type of the entity to create (e.g., 'character', 'item', 'location', 'quest').")
     entity_key: str = Field(..., description="A unique key for the new entity (e.g., 'goblin_scout_01', 'potion_of_healing_3').")
     data: Dict[str, Any] = Field(..., description="A dictionary containing the full data for the new entity.")
+
+
+class SceneAddMember(BaseModel):
+    """
+    Adds a character to the active scene.
+    Use this when an NPC enters the player's immediate vicinity or joins the conversation/encounter.
+    This makes the system aware of them for contextual memory retrieval and group actions.
+    """
+    name: Literal["scene.add_member"] = "scene.add_member"
+    character_key: str = Field(..., description="The entity key of the character to add to the scene (e.g., 'npc_goblin_1').")
+
+
+class SceneRemoveMember(BaseModel):
+    """
+    Removes a character from the active scene.
+    Use this when an NPC leaves the area, is defeated, or is no longer relevant to the immediate encounter.
+    """
+    name: Literal["scene.remove_member"] = "scene.remove_member"
+    character_key: str = Field(..., description="The entity key of the character to remove from the scene.")
+
+
+class SceneMoveTo(BaseModel):
+    """
+    Moves all characters currently in the active scene to a new location.
+    This is the preferred, atomic way to handle group travel. It updates the scene and all its members at once.
+    **When to use:**
+    - When the player and their companions travel together.
+    - When a group of NPCs moves from one area to another.
+    **Example:** Move the party into the dungeon.
+    scene.move_to({
+        "new_location_key": "dungeon_entrance"
+    })
+    """
+    name: Literal["scene.move_to"] = "scene.move_to"
+    new_location_key: str = Field(..., description="The entity key of the new location.")
