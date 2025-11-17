@@ -131,3 +131,57 @@ Of course. Here is a clear, actionable TODO list formatted with Markdown checkbo
 *   [x] **(Optional/Advanced) Implement State-Change Logic:** For a more robust solution, evolve the tick logic further.
     *   [x] Instead of (or in addition to) creating a memory, have the tick modify the NPC's state directly based on their `directive`. For example, if `directive` is `"gather wealth"`, slightly increase their `currency` value in their `inventory` entity.
     *   [x] Only create a memory when a *significant event* or threshold is reached (e.g., the NPC has accumulated over 1000 gold, or a guard on patrol discovers something unusual). This makes the generated memories more meaningful and story-relevant.
+
+Of course. This is an excellent architectural refinement. Here is a clear, actionable list of tasks to add to your TODO document under a new section.
+
+---
+
+### Architecture Refinement TODOs
+
+#### ✅ Gap 1: Implement a "Scene" Entity for Robust Group Management
+*(This section remains the same as it's a separate, completed task)*
+
+...
+
+#### ☐ Gap 2: Standardize High-Level Tool Behavior
+*(This section remains the same)*
+
+...
+
+#### ✅ Gap 3: Make the "World Tick" More Event-Driven
+*(This section can now be marked as superseded or removed in favor of the new approach)*
+
+...
+
+### Architectural Refinement - Just-in-Time NPC Simulation
+
+*   **Goal:** Replace the expensive, proactive "World Tick" system with an efficient, on-demand "Lazy Simulation" model that only updates NPCs when they become relevant to the player.
+
+*   **Tasks:**
+    *   [ ] **1. Evolve the State Model:**
+        *   [ ] Modify the `NpcProfile` model (`app/models/npc_profile.py`) to include a new field: `last_updated_time: str`.
+        *   [ ] Ensure this field is given a default value (the current `game_time`) when a new `npc_profile` entity is created.
+
+    *   [ ] **2. Deprecate the Old System:**
+        *   [ ] In `turn_manager.py`, locate the `_execute_world_tick` method.
+        *   [ ] Comment out or entirely remove the body of this method and the `WorldTickService` class. The hook in `ToolExecutor` that calls it can also be removed to prevent unnecessary calls.
+
+    *   [ ] **3. Create the Just-in-Time Simulation Service:**
+        *   [ ] Create a new file, e.g., `app/core/simulation_service.py`.
+        *   [ ] Inside, create a `SimulationService` class.
+        *   [ ] Implement a method `simulate_npc_downtime(self, npc_profile: NpcProfile, current_time: str) -> WorldTickOutcome | None`.
+        *   [ ] This method will use a new, targeted LLM prompt that takes the NPC's profile and the time delta (`last_updated_time` vs `current_time`) to generate a `WorldTickOutcome` (summary, significance, and patches).
+
+    *   [ ] **4. Implement the Simulation Trigger:**
+        *   [ ] In `context_builder.py`, modify the `_build_npc_context` method. This is the core of the new logic.
+        *   [ ] Before building the context string, loop through the `active_npc_keys`.
+        *   [ ] For each NPC, fetch their `NpcProfile`.
+        *   [ ] Compare the profile's `last_updated_time` with the current session `game_time`.
+        *   [ ] If the time difference is significant (e.g., more than a few hours), call the new `SimulationService.simulate_npc_downtime`.
+        *   [ ] **Apply the results immediately:**
+            *   [ ] If the simulation returns patches, use the `state_apply_patch` handler to apply them.
+            *   [ ] If the simulation result is marked as `is_significant`, use the `memory.upsert` tool/handler to create a new episodic memory.
+            *   [ ] **Crucially**, after a successful simulation, update the NPC's profile by setting its `last_updated_time` to the current `game_time` and save it back to the database. This prevents re-simulation on the next turn.
+
+    *   [ ] **5. Integration & Wiring:**
+        *   [ ] Ensure the new `SimulationService` is properly instantiated within the `TurnManager` and passed down to the `ContextBuilder` so it can be called from within the context-building phase.
