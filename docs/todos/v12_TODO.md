@@ -112,13 +112,13 @@ Of course. Here is a clear, actionable TODO list formatted with Markdown checkbo
 
 *   [ ] **Review Tool Patterns:** Identify all high-level tools that are intended to modify state. The goal is to ensure they all *commit their own changes* rather than returning patch suggestions.
 
-*   [ ] **Refactor `inventory.add_item`:**
-    *   [ ] Change the handler in `inventory_add_item.py` to stop returning a `patch` dictionary.
-    *   [ ] Instead, have it calculate the required JSON patch operations internally.
-    *   [ ] At the end of the handler, it should call the `state.apply_patch` handler (or a shared helper function) to apply the changes to the inventory entity directly before returning a simple success message.
+*   [x] **Refactor `inventory.add_item`:**
+    *   [x] Change the handler in `inventory_add_item.py` to stop returning a `patch` dictionary.
+    *   [x] Instead, have it calculate the required JSON patch operations internally.
+    *   [x] At the end of the handler, it should call the `state.apply_patch` handler (or a shared helper function) to apply the changes to the inventory entity directly before returning a simple success message.
 
-*   [ ] **Refactor `inventory.remove_item`:**
-    *   [ ] Apply the same pattern as above to the handler in `inventory_remove_item.py`. It should calculate the `remove` or `replace` operation for the item and apply it itself.
+*   [x] **Refactor `inventory.remove_item`:**
+    *   [x] Apply the same pattern as above to the handler in `inventory_remove_item.py`. It should calculate the `remove` or `replace` operation for the item and apply it itself.
 
 #### ☐ Gap 3: Make the "World Tick" More Event-Driven
 
