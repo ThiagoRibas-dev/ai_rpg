@@ -69,8 +69,8 @@
 
 *   **Goal:** To empower the AI to dynamically create new entities during gameplay.
 *   **Implementation Steps:**
-    [ ] 1.  **Create Tool Schema:** Define the `EntityCreate` schema.
-    [ ] 2.  **Create Handler:** Implement the handler, ensuring it calls the `StateValidator` before writing to the database.
+    [x] 1.  **Create Tool Schema:** Define the `EntityCreate` schema.
+    [x] 2.  **Create Handler:** Implement the handler, ensuring it calls the `StateValidator` before writing to the database.
 
 #### **Spec #7 (Part 2): Relationship-Based Memory Retrieval**
 
