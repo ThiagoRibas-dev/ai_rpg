@@ -106,6 +106,30 @@ Selected tools :
 """
 
 # ==============================================================================
+# WORLD SIMULATION PROMPTS
+# ==============================================================================
+
+WORLD_TICK_SIMULATION_TEMPLATE = """
+You are a background world simulator. Your job is to determine a plausible outcome for an NPC's off-screen actions during a time skip.
+
+**INSTRUCTIONS:**
+1.  Review the NPC's profile and their directive.
+2.  Consider the duration of the time skip.
+3.  Generate a brief, plausible outcome. Not every action results in a grand discovery; minor progress or setbacks are common.
+4.  Decide if the outcome is **significant**. A significant event is something that changes the world state in a meaningful way, creates a new story hook, or would be important for the player to discover. Minor progress (e.g., 'continued guarding') is NOT significant.
+5.  If the outcome causes a direct change to a character or the world, create one or more JSON patches to reflect it.
+
+**CONTEXT:**
+- **NPC Name:** {npc_name}
+- **Personality:** {personality}
+- **Motivations:** {motivations}
+- **Time Skip Duration:** {duration_desc}
+- **Directive (Goal):** "{directive}"
+
+Now, provide the outcome as a JSON object.
+"""
+
+# ==============================================================================
 # SETUP MODE PROMPTS
 # ==============================================================================
 

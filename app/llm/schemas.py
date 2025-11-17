@@ -110,6 +110,26 @@ class ResponseStep(BaseModel):
         default_factory=list,
         description="A list of memories the LLM wants to record from this turn.",
     )
+
+
+class WorldTickOutcome(BaseModel):
+    """The simulated outcome of an NPC's off-screen actions during a time skip."""
+
+    outcome_summary: str = Field(
+        ...,
+        description="A brief, one-sentence summary of what happened as a result of the NPC's directive. This will become a memory if significant.",
+        example="The town guard captain, while patrolling, discovered tracks leading to a hidden goblin den.",
+    )
+    is_significant: bool = Field(
+        ...,
+        description="Whether this outcome is significant enough to create a persistent memory for the player to potentially discover.",
+        example=True,
+    )
+    proposed_patches: List[Patch] = Field(
+        default_factory=list,
+        description="A list of state changes to apply to the world as a result of this outcome. E.g., updating an NPC's inventory, location, or a relationship.",
+    )
+
     turn_summary: str = Field(
         description="A one-sentence summary of what happened this turn.",
         example="The player arrived in the city of Eldoria and decided to visit the blacksmith.",

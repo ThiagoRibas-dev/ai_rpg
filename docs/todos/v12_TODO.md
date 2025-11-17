@@ -120,14 +120,14 @@ Of course. Here is a clear, actionable TODO list formatted with Markdown checkbo
 *   [x] **Refactor `inventory.remove_item`:**
     *   [x] Apply the same pattern as above to the handler in `inventory_remove_item.py`. It should calculate the `remove` or `replace` operation for the item and apply it itself.
 
-#### ☐ Gap 3: Make the "World Tick" More Event-Driven
+#### ✅ Gap 3: Make the "World Tick" More Event-Driven
 
-*   [ ] **Review `_execute_world_tick`:** Open `turn_manager.py` and locate the world tick simulation logic.
+*   [x] **Review `_execute_world_tick`:** Open `turn_manager.py` and locate the world tick simulation logic.
 
-*   [ ] **Implement Probability Gate:** Modify the loop to be less verbose.
-    *   [ ] Inside the `for npc_key, profile_data in all_profiles_data.items():` loop, add a simple probability check (e.g., `if random.random() < 0.1:`).
-    *   [ ] Only create an episodic memory if this check passes. This will immediately reduce memory spam by ~90%.
+*   [x] **Implement Probability Gate:** Modify the loop to be less verbose.
+    *   [x] Inside the `for npc_key, profile_data in all_profiles_data.items():` loop, add a simple probability check (e.g., `if random.random() < 0.1:`).
+    *   [x] Only create an episodic memory if this check passes. This will immediately reduce memory spam by ~90%.
 
-*   [ ] **(Optional/Advanced) Implement State-Change Logic:** For a more robust solution, evolve the tick logic further.
-    *   [ ] Instead of (or in addition to) creating a memory, have the tick modify the NPC's state directly based on their `directive`. For example, if `directive` is `"gather wealth"`, slightly increase their `currency` value in their `inventory` entity.
-    *   [ ] Only create a memory when a *significant event* or threshold is reached (e.g., the NPC has accumulated over 1000 gold, or a guard on patrol discovers something unusual). This makes the generated memories more meaningful and story-relevant.
+*   [x] **(Optional/Advanced) Implement State-Change Logic:** For a more robust solution, evolve the tick logic further.
+    *   [x] Instead of (or in addition to) creating a memory, have the tick modify the NPC's state directly based on their `directive`. For example, if `directive` is `"gather wealth"`, slightly increase their `currency` value in their `inventory` entity.
+    *   [x] Only create a memory when a *significant event* or threshold is reached (e.g., the NPC has accumulated over 1000 gold, or a guard on patrol discovers something unusual). This makes the generated memories more meaningful and story-relevant.
