@@ -27,9 +27,11 @@ def handler(
     """
     session_id = context.get("session_id")
     db_manager = context.get("db_manager")
+    fictional_time = context.get("current_game_time") # Get fictional time from context
 
     if not session_id or not db_manager:
         raise ValueError("Missing session context")
+
 
     # ✅ MOVED FROM REGISTRY: Check for near-duplicates
     vs = context.get("vector_store")
@@ -89,7 +91,9 @@ def handler(
             )
 
     # No duplicate found - create new memory
-    memory = db_manager.create_memory(session_id, kind, content, priority, tags or [])
+    memory = db_manager.memories.create(
+        session_id, kind, content, priority, tags or [], fictional_time=fictional_time
+    )
 
     # If a vector store is available, embed
     if vs:

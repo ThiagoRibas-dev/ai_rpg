@@ -306,7 +306,7 @@ class MainView(ctk.CTk):
         self.prompt_edit_button.configure(command=self.prompt_manager.edit_prompt)
         self.prompt_delete_button.configure(command=self.prompt_manager.delete_prompt)
         # COMMENT: This is the new, robust line that REPLACES the fragile nametowidget call.
-        self.world_info_button.configure(command=self.prompt_manager.open_world_info_manager)
+        self.world_info_button.configure(command=self.prompt_manager.open_lore_editor)
         self.session_new_button.configure(
             command=lambda: self.session_manager.new_game(
                 self.prompt_manager.selected_prompt

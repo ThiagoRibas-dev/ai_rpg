@@ -1,7 +1,6 @@
 from app.context.context_builder import ContextBuilder
 from app.context.memory_retriever import MemoryRetriever
 from app.context.state_context import StateContextBuilder
-from app.context.world_info_service import WorldInfoService
 from app.core.metadata.turn_metadata_service import TurnMetadataService
 from app.database.db_manager import DBManager
 from app.llm.auditor_service import AuditorService
@@ -61,14 +60,12 @@ class TurnManager:
             thread_db_manager, self.vector_store, self.logger
         )
         turnmeta = TurnMetadataService(thread_db_manager, self.vector_store)
-        world_info = WorldInfoService(thread_db_manager, self.vector_store, self.logger)
         context_builder = ContextBuilder(
             thread_db_manager,
             self.vector_store,
             state_builder,
             mem_retriever,
             turnmeta,
-            world_info,
             self.logger,
         )
         executor = ToolExecutor(

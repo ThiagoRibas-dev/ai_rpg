@@ -104,11 +104,13 @@ class MemoryRetriever:
             "user_pref": "⚙️",
         }
         for mem in memories:
-            emoji = kind_emoji.get(mem.kind, "🗒️")
-            stars = "★" * int(mem.priority or 0)
+            emoji = kind_emoji.get(mem.kind, "ðŸ—’ï¸ ")
+            stars = "â˜…" * int(mem.priority or 0)
             tags_str = f" [{', '.join(mem.tags_list())}]" if mem.tags_list() else ""
+            time_str = f" (Time: {mem.fictional_time})" if mem.fictional_time else ""
+
             lines.append(
-                f"{emoji} [{mem.kind.title()}] (Priority: {stars}, ID: {mem.id}){tags_str}\n"
+                f"{emoji} [{mem.kind.title()}] (Priority: {stars}, ID: {mem.id}){tags_str}{time_str}\n"
                 f"   {mem.content}"
             )
         lines.append("")

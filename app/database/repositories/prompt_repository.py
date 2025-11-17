@@ -17,6 +17,9 @@ class PromptRepository(BaseRepository):
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL UNIQUE,
                 content TEXT NOT NULL,
+                initial_message TEXT DEFAULT '',
+                rules_document TEXT DEFAULT '',
+                template_manifest TEXT DEFAULT '{}',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );

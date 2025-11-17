@@ -5,7 +5,6 @@ from app.database.repositories import (
     SessionRepository,
     MemoryRepository,
     GameStateRepository,
-    WorldInfoRepository,
     TurnMetadataRepository,
     SchemaExtensionRepository,
 )
@@ -30,7 +29,6 @@ class DBManager:
         self.sessions: Optional[SessionRepository] = None
         self.memories: Optional[MemoryRepository] = None
         self.game_state: Optional[GameStateRepository] = None
-        self.world_info: Optional[WorldInfoRepository] = None
         self.turn_metadata: Optional[TurnMetadataRepository] = None
         self.schema_extensions: Optional[SchemaExtensionRepository] = None
 
@@ -43,7 +41,6 @@ class DBManager:
         self.sessions = SessionRepository(self.conn)
         self.memories = MemoryRepository(self.conn)
         self.game_state = GameStateRepository(self.conn)
-        self.world_info = WorldInfoRepository(self.conn)
         self.turn_metadata = TurnMetadataRepository(self.conn)
         self.schema_extensions = SchemaExtensionRepository(self.conn)
 
@@ -52,7 +49,6 @@ class DBManager:
         assert self.sessions is not None
         assert self.memories is not None
         assert self.game_state is not None
-        assert self.world_info is not None
         assert self.turn_metadata is not None
         assert self.schema_extensions is not None
 
@@ -81,7 +77,6 @@ class DBManager:
         repositories = [
             self.prompts,
             self.sessions,
-            self.world_info,
             self.memories,
             self.turn_metadata,
             self.schema_extensions,

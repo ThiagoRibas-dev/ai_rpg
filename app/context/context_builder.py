@@ -14,7 +14,6 @@ class ContextBuilder:
         state_builder,
         mem_retriever,
         turnmeta,
-        world_info,
         logger: logging.Logger | None = None,
     ):
         self.db = db_manager
@@ -22,7 +21,6 @@ class ContextBuilder:
         self.state_builder = state_builder
         self.mem_retriever = mem_retriever
         self.turnmeta = turnmeta
-        self.world_info = world_info
         self.logger = logger or logging.getLogger(__name__)
 
     def build_static_system_instruction(
@@ -82,13 +80,6 @@ class ContextBuilder:
         mem_text = self.mem_retriever.format_for_prompt(memories)
         if mem_text:
             sections.append(mem_text)
-
-        # World info
-        wi_entries = self.world_info.search_for_history(
-            game_session.prompt_id, chat_history
-        )
-        if wi_entries:
-            sections.append("# WORLD INFO #\n" + "\n".join(wi_entries))
 
         return "\n\n".join(sections)
 

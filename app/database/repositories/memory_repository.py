@@ -86,6 +86,7 @@ class MemoryRepository(BaseRepository):
         session_id: int,
         kind: str | None = None,
         tags: List[str] | None = None,
+        time_query: str | None = None,
         query_text: str | None = None,
         limit: int = 10,
     ) -> List[Memory]:
@@ -109,6 +110,10 @@ class MemoryRepository(BaseRepository):
             query += f" AND ({tag_conditions})"
             for tag in tags:
                 params.append(f'%"{tag}"%')
+        
+        if time_query:
+            query += " AND fictional_time LIKE ?"
+            params.append(f"%{time_query}%")
 
         query += " ORDER BY priority DESC, last_accessed DESC, created_at DESC LIMIT ?"
         params.append(limit)

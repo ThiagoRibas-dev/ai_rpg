@@ -152,11 +152,11 @@ class ControlPanelBuilder:
 
         # World Info button
         # COMMENT: We will capture the button in a variable instead of creating it anonymously.
-        world_info_button = ctk.CTkButton(
+        lore_editor_button = ctk.CTkButton(
             context_content, text="Manage World Info", 
             command=prompt_callbacks["world_info"] if prompt_callbacks else None,
         )
-        world_info_button.pack(**pack_config)
+        lore_editor_button.pack(**pack_config)
 
         # === Game State Inspector Section ===
         inspector_collapsible = CollapsibleFrame(control_panel, "Game State Inspector")
@@ -195,5 +195,5 @@ class ControlPanelBuilder:
             "authors_note_textbox": authors_note_textbox,
             "game_state_inspector_tabs": game_state_inspector_tabs,
             # COMMENT: We add the new button reference to the dictionary here.
-            "world_info_button": world_info_button,
+            "world_info_button": lore_editor_button, # Keep old key for compatibility in MainView
         }

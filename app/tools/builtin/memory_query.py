@@ -3,12 +3,13 @@ def handler(
     kind: str | None = None,
     tags: list[str] | None = None,
     query_text: str | None = None,
+    time_query: str | None = None,
     limit: int = 5,
     semantic: bool = False,
     **context,
-) -> dict:
+) -> list[dict]:
     """
-    Search for memories. Context should contain session_id and db_manager.
+    Query memories. Context should contain session_id and db_manager.
     """
     session_id = context.get("session_id")
     db_manager = context.get("db_manager")
@@ -17,8 +18,8 @@ def handler(
         raise ValueError("Missing session context")
 
     # Start with SQL filters
-    memories = db_manager.query_memories(
-        session_id, kind=kind, tags=tags, query_text=query_text, limit=limit
+    memories = db_manager.memories.query(
+        session_id, kind=kind, tags=tags, time_query=time_query, query_text=query_text, limit=limit
     )
 
     # If semantic requested and vector store available, blend with semantic top-k

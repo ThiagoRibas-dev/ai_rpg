@@ -247,6 +247,9 @@ class MemoryQuery(BaseModel):
     semantic: Optional[bool] = Field(
         False, description="Use semantic retrieval when true (blended with filters)"
     )
+    time_query: Optional[str] = Field(
+        None, description="Filter memories by fictional time (e.g., 'Day 1', 'Nightfall')"
+    )
 
 
 class MemoryUpdate(BaseModel):

@@ -13,8 +13,8 @@ import logging
 from typing import Optional
 from app.models.prompt import Prompt
 from app.gui.styles import get_button_style
-# COMMENT: Import the WorldInfoManagerView here, as this manager is now responsible for it.
-from app.gui.world_info_manager_view import WorldInfoManagerView
+from app.gui.lore_editor_view import LoreEditorView
+
 
 logger = logging.getLogger(__name__)
 
@@ -205,23 +205,24 @@ class PromptManager:
         else:
             logger.warning("Prompt button clicked but session_manager not wired yet")
 
-    def open_world_info_manager(self):
+    def open_lore_editor(self):
         """
-        Open world info manager dialog.
-        COMMENT: This logic is moved from MainView. It belongs here because
-        World Info is tied to the currently selected prompt.
+        Open the Lorebook Editor for the currently active session.
+        Lore is session-specific, not prompt-specific, so this requires an
+        active game session.
         """
-        if not self.selected_prompt:
-            # We need a bubble manager reference to show this message.
-            # This will be wired in MainView.
+        if not self.session_manager or not self.session_manager.selected_session:
             if hasattr(self, 'bubble_manager') and self.bubble_manager:
-                self.bubble_manager.add_message("system", "Please select a prompt first")
+                self.bubble_manager.add_message("system", "Please load a game session to manage its lore.")
             return
+        
+        session_id = self.session_manager.selected_session.id
+        vector_store = getattr(self.orchestrator, "vector_store", None)
 
-        world_info_view = WorldInfoManagerView(
+        lore_editor = LoreEditorView(
             self.parent_view,
             self.db_manager,
-            self.selected_prompt.id,
-            getattr(self.orchestrator, "vector_store", None),
+            session_id,
+            vector_store,
         )
-        world_info_view.grab_set()
+        lore_editor.grab_set()
