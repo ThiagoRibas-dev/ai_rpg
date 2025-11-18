@@ -66,6 +66,10 @@ class OpenAIConnector(LLMConnector):
         messages = [{"role": "system", "content": system_prompt}]
         messages.extend(self._convert_chat_history_to_messages(chat_history))
 
+        # Generate and clean the schema to satisfy strict backends
+        json_schema = output_schema.model_json_schema()
+        self._clean_schema(json_schema)
+
         resp = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
@@ -74,14 +78,14 @@ class OpenAIConnector(LLMConnector):
             top_p=0.9,
             response_format={
                 "type": "json_object",
-                "schema": output_schema.model_json_schema(),
+                "schema": json_schema,
             },
             extra_body={
                 "chat_template_kwargs": {"enable_thinking": False},
                 "top_k": 40,
                 "response_format": {
                     "type": "json_object",
-                    "schema": output_schema.model_json_schema(),
+                    "schema": json_schema,
                 },
             },
         )
@@ -115,6 +119,15 @@ class OpenAIConnector(LLMConnector):
                 )
                 pass
 
+            raise
+
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON decode error in OpenAI response: {e}", exc_info=True)
+            logger.error(f"Raw content: {content}")
+            raise
+        except Exception as e:
+            logger.error(f"An unexpected error occurred in get_structured_response: {e}", exc_info=True)
+            logger.error(f"Raw content: {content}")
             raise
 
         except json.JSONDecodeError as e:
@@ -174,3 +187,18 @@ class OpenAIConnector(LLMConnector):
                     )
 
         return tool_calls_data
+
+    def _clean_schema(self, schema: Dict[str, Any]):
+        """
+        Recursively remove 'title' and 'default' fields from JSON schema.
+        This is necessary because some local LLM servers (like llama.cpp) fail to parse
+        schemas that contain metadata fields without explicit types, or strict defaults.
+        """
+        if isinstance(schema, dict):
+            schema.pop("title", None)
+            schema.pop("default", None)
+            for value in schema.values():
+                self._clean_schema(value)
+        elif isinstance(schema, list):
+            for item in schema:
+                self._clean_schema(item)

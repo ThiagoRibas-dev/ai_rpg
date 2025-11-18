@@ -263,13 +263,22 @@ class PromptDialog(ctk.CTkToplevel):
             self.template_textbox.delete("1.0", "end")
             self.template_textbox.insert("1.0", template_json)
             
-            # Calculate property count for status
-            prop_count = len(template.get("entity_schemas", {}).get("character", {}).get("attributes", []))
-            prop_count += len(template.get("entity_schemas", {}).get("character", {}).get("resources", []))
-            prop_count += len(template.get("skills", []))
-            prop_count += len(template.get("conditions", []))
-            prop_count += len(template.get("classes", []))
-            prop_count += len(template.get("races", []))
+            # Calculate property count for status using the NEW structure
+            prop_count = 0
+            
+            # 1. Count Ruleset items
+            ruleset = template.get("ruleset", {})
+            compendium = ruleset.get("compendium", {})
+            prop_count += len(compendium.get("skills", []))
+            prop_count += len(compendium.get("conditions", []))
+            prop_count += len(ruleset.get("tactical_rules", []))
+            
+            # 2. Count Stat Template items
+            stat_template = template.get("stat_template", {})
+            prop_count += len(stat_template.get("abilities", []))
+            prop_count += len(stat_template.get("vitals", []))
+            prop_count += len(stat_template.get("tracks", []))
+            prop_count += len(stat_template.get("slots", []))
             
             self.generate_status.configure(
                 text=f"✅ Generated {prop_count} properties",

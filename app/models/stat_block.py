@@ -3,7 +3,7 @@ Models for the StatBlock Template (Entity Structure).
 These define the 'shape' of a character sheet.
 """
 
-from typing import List, Optional, Literal, Any
+from typing import List, Optional, Literal, Union
 from pydantic import BaseModel, Field
 
 
@@ -16,7 +16,7 @@ class AbilityDef(BaseModel):
     abbr: Optional[str] = None
     description: Optional[str] = None
     data_type: Literal["integer", "die_code", "dots", "float"] = "integer"
-    default: Any = 10
+    default: Union[int, str, float] = 10
     
     # Validations
     range_min: Optional[float] = None
