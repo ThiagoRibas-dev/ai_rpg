@@ -1,24 +1,42 @@
 import importlib
+import logging
 import pkgutil
 from pathlib import Path
-import logging
-from typing import Dict, Any, Callable, List, Type
+from typing import Any, Callable, Dict, List, Type
+
 from pydantic import BaseModel
+
 from app.tools import schemas as tool_schemas
 
 logger = logging.getLogger(__name__)
 
 
-def _remove_default_field(d: Any):
-    """Recursively traverses a dictionary or list and removes the 'default' key."""
+def _clean_schema(d: Any):
+    """
+    Recursively cleans the schema for Gemini compatibility.
+    Removes keys that are not supported or cause issues in the Gemini API.
+    """
     if isinstance(d, dict):
-        if "default" in d:
-            del d["default"]
+        # Keys to remove
+        # 'additionalProperties' is not supported by Gemini function calling.
+        # 'default' and 'title' are also often problematic or unnecessary.
+        keys_to_remove = [
+            "default",
+            "title",
+            "additionalProperties",
+            "additional_properties",
+        ]
+        for key in keys_to_remove:
+            if key in d:
+                del d[key]
+
+        # Recurse into values
         for value in d.values():
-            _remove_default_field(value)
+            _clean_schema(value)
+
     elif isinstance(d, list):
         for item in d:
-            _remove_default_field(item)
+            _clean_schema(item)
 
 
 class ToolRegistry:
@@ -35,74 +53,81 @@ class ToolRegistry:
     def _discover_tools(self):
         """
         Automatically discovers and registers tools using name-based matching.
-        
+
         NEW APPROACH:
         - Scan app.tools.builtin for Python files with handler() functions
         - Match module names to Pydantic schema types by tool name
         - No more redundant schema dicts needed!
         """
         import app.tools.builtin as builtin_tools
-        
+
         package_path = Path(builtin_tools.__file__).parent
-        
-        # Build a map of tool names → Pydantic types by inspecting the schemas module
+
+        # Build a map of tool names -> Pydantic types by inspecting the schemas module
         name_to_type: Dict[str, Type[BaseModel]] = {}
-        
+
         for attr_name in dir(tool_schemas):
             attr = getattr(tool_schemas, attr_name)
-            
+
             # Check if it's a Pydantic model class with a 'name' field
-            if (isinstance(attr, type) and 
-                issubclass(attr, BaseModel) and 
-                attr is not BaseModel and
-                hasattr(attr, "model_fields") and
-                "name" in attr.model_fields):
-                
+            if (
+                isinstance(attr, type)
+                and issubclass(attr, BaseModel)
+                and attr is not BaseModel
+                and hasattr(attr, "model_fields")
+                and "name" in attr.model_fields
+            ):
                 # Extract the tool name from the Literal field
                 tool_name = attr.model_fields["name"].default
                 name_to_type[tool_name] = attr
-        
+
         logger.debug(f"Found {len(name_to_type)} Pydantic tool schemas")
-        
-        # Build reverse map: expected module name → tool name
-        # e.g., "memory_upsert" → "memory.upsert"
+
+        # Build reverse map: expected module name -> tool name
+        # e.g., "memory.upsert" -> "memory_upsert"
         module_name_to_tool_name: Dict[str, str] = {}
         for tool_name in name_to_type.keys():
-            # Convert "memory.upsert" → "memory_upsert"
+            # Convert "memory.upsert" -> "memory_upsert"
             expected_module = tool_name.replace(".", "_")
             module_name_to_tool_name[expected_module] = tool_name
-        
+
         # Auto-discover handler modules
         for _, module_name, _ in pkgutil.iter_modules([str(package_path)]):
             if module_name.startswith("_"):
                 continue  # Skip private modules
-            
+
             try:
                 module = importlib.import_module(f"app.tools.builtin.{module_name}")
-                
+
                 # Check if module has a handler function
                 if not hasattr(module, "handler"):
                     logger.debug(f"Skipping {module_name}: no handler() function")
                     continue
-                
+
                 # Match module name to tool name
                 if module_name not in module_name_to_tool_name:
-                    logger.warning(f"Module {module_name} has no matching Pydantic schema (expected tool name: {module_name.replace('_', '.')})")
+                    logger.warning(
+                        f"Module {module_name} has no matching Pydantic schema (expected tool name: {module_name.replace('_', '.')})"
+                    )
                     continue
-                
+
                 tool_name = module_name_to_tool_name[module_name]
                 schema_type = name_to_type[tool_name]
-                
-                # Register: Type → Handler
+
+                # Register: Type -> Handler
                 self._handlers[schema_type] = module.handler
-                
+
                 # Generate JSON schema for LLM
                 self._register_schema(schema_type)
-                
-                logger.info(f"Registered tool: {tool_name} ({schema_type.__name__} ← {module_name}.py)")
-                
+
+                logger.info(
+                    f"Registered tool: {tool_name} ({schema_type.__name__} <- {module_name}.py)"
+                )
+
             except Exception as e:
-                logger.error(f"Failed to load tool module {module_name}: {e}", exc_info=True)
+                logger.error(
+                    f"Failed to load tool module {module_name}: {e}", exc_info=True
+                )
 
     def _register_schema(self, schema_type: Type[BaseModel]):
         """Generate JSON schema from Pydantic type for LLM consumption."""
@@ -113,10 +138,8 @@ class ToolRegistry:
         properties = schema.get("properties", {}).copy()
         properties.pop("name", None)
 
-        # Clean up schema for LLM (remove titles, defaults)
-        for prop_schema in properties.values():
-            prop_schema.pop("title", None)
-        _remove_default_field(properties)
+        # Clean up schema for LLM (remove titles, defaults, additionalProperties)
+        _clean_schema(properties)
 
         # Extract required fields, excluding 'name'
         required = [r for r in schema.get("required", []) if r != "name"]

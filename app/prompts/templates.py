@@ -94,26 +94,26 @@ GENERATE_TRACKS_SLOTS_INSTRUCTION = """
 """
 
 # ==============================================================================
-# Two-Phase Planning Prompts (NEW)
+# Two-Phase Planning Prompts
 # ==============================================================================
 
 GAMEPLAY_PLAN_TEMPLATE = """
 I am in the planning phase for a GAMEPLAY turn. I will perform two tasks and structure my output as a JSON object with 'analysis' and 'plan_steps'.
 1. **Analysis**: Review the player's last message and the conversation history to determine their core intent.
-2. **Plan Steps**: Based on my analysis and the current game state (character, inventory, quests, memories, world info), create a step-by-step plan of actions I will take. This includes identifying necessary tool calls.
+2. **Plan Steps**: Based on my analysis and the current game state (character, inventory, quests, memories, world info, etc), create a step-by-step plan of actions I will take. This includes naming the necessary tool calls.
 """
 
 SETUP_PLAN_TEMPLATE = f"""
 What is the current game mode?
 - CURRENT GAME MODE: SETUP (Session Zero)
 
-Okay, so I am in the planning phase for a SETUP turn and my goal is to help the player build the game's mechanics before we begin the game.
-I will structure my output as a JSON object with 'analysis' and 'plan_steps'.
+Okay, so I am in the planning phase for a SETUP turn and my goal, instead of narrating a scene or roleplay, is to help the player build the game's mechanics before we begin the game.
+I will structure my output as a JSON object with 'analysis' and 'plan_steps' for setting the rules of the game up.
 
 I will perform two tasks:
-1. **Analysis**: I will analyze the player's latest message to determine which game properties they want to create or modify.
+1. **Analysis**: Review the player's last message and the conversation history to determine their core intent.
 2. **Plan Steps**: I will write a step-by-step plan for my actions right now, where:
-    - For each new or updated property the player explicitly requested or agreed to, I will plan a call to the `{SchemaUpsertAttribute.model_fields["name"].default}` tool, describing what it does.
+    - For each new or updated property the player explicitly requested or agreed to, I will plan a call to the `{SchemaUpsertAttribute.model_fields["name"].default}` tool, naming it more than once if necessary.
     - When necessary, I will plan asking questions about the game's systems and rules, as well as clarifying questions in general.
     - I'll plan a response to the player's last message. If the player is asking a question, I will plan my reply.
 """
@@ -168,8 +168,9 @@ SETUP_RESPONSE_TEMPLATE = """
 Alright. Let me check the current game mode:
  - CURRENT GAME MODE: SETUP (Session Zero)
 
-We are still in the SETUP game mode (Session Zero phase), so the player has not yet confirmed that the setup is complete.
-Right now I need to get as much information as possible about the desired world, rules, tone, mechanics, etc, of the game's system or framework, efficiently. I should encourage the player to provide detailed information in their responses.
+We are still in the SETUP game mode (Session Zero/pre-game phase), so the player has not yet confirmed that the setup is complete.
+Right now I need to get as much information as possible about the desired world, rules, tone, mechanics, etc, of the game's system or framework, efficiently.
+Instead of trying to narrate scenes or roleplay, I will encourage the player to provide detailed information in their responses until we are both satisfied with the details.
 
 There are a variety of examples I can take inspiration from for my suggestions:
  - Fantasy Adventure: Dungeons & Dragons, Pathfinder, The Elder Scrolls, Zork, King's Quest; Stats like Strength, Intelligence, Mana, Hit Points, Alignment, Encumbrance.
@@ -185,7 +186,7 @@ Since we are not yet playing the game, I will not narrate or describe a scene. I
  - Acknowledge any new or updated properties and explain what each represents, how it might work in play, and how it fits the genre or tone we've been developing.
  - Ask what the player would like to do next: refine, add, or finalize the Session Zero and begin the game (transition from SETUP mode to GAMEPLAY mode).
  - If appropriate, I'll suggest optional refinements, like adding mechanics, game properties, rules, etc.
- - Acknowledge that for now there will be no roleplay or narration. We are still setting the rules of the game up.
+ - Acknowledge that for now there will be no roleplay, describing scenes, or narration. We are still setting the rules of the game up.
 """
 
 # ==============================================================================

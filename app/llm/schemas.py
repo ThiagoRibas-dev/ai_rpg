@@ -110,6 +110,20 @@ class ResponseStep(BaseModel):
         default_factory=list,
         description="A list of memories the LLM wants to record from this turn.",
     )
+    turn_summary: str = Field(
+        description="A one-sentence summary of what happened this turn.",
+        example="The player arrived in the city of Eldoria and decided to visit the blacksmith.",
+    )
+    turn_tags: List[str] = Field(
+        description="3-5 tags categorizing this turn.",
+        example=["exploration", "city", "decision"],
+    )
+    turn_importance: int = Field(
+        ge=1,
+        le=5,
+        description="How important this turn is to the overall story (1=minor, 5=critical).",
+        example=3,
+    )
 
 
 class WorldTickOutcome(BaseModel):
@@ -128,21 +142,6 @@ class WorldTickOutcome(BaseModel):
     proposed_patches: List[Patch] = Field(
         default_factory=list,
         description="A list of state changes to apply to the world as a result of this outcome. E.g., updating an NPC's inventory, location, or a relationship.",
-    )
-
-    turn_summary: str = Field(
-        description="A one-sentence summary of what happened this turn.",
-        example="The player arrived in the city of Eldoria and decided to visit the blacksmith.",
-    )
-    turn_tags: List[str] = Field(
-        description="3-5 tags categorizing this turn.",
-        example=["exploration", "city", "decision"],
-    )
-    turn_importance: int = Field(
-        ge=1,
-        le=5,
-        description="How important this turn is to the overall story (1=minor, 5=critical).",
-        example=3,
     )
 
 

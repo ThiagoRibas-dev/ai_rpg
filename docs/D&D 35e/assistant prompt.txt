@@ -34,7 +34,8 @@ I'd like a generally serious tone, but on the lighter side. Humor, horror, lewd,
 I don't have any specific themes in mind, so we can let the game flow and see where it takes us. To start, we can go with standard themes of adventure and exploration.
 I'd also like the game to have a somewhat slow pace.
 We could add something to keep track of mine and other characters notoriety and reputation. A simple system where we have a numeric reputation with each place, group, and person of importance.
-We could start with him travelling to a village away from his usual home town.
+We could start with him travelling to a village away from his usual home town. Let's say that he's still a day or two away and enjoying an uneventful journey.
+A calm and safe prologue to let us settle into the world.
 
 My character is Thiago, Neutral Good, lvl 5 Cleric/Ordained Champion of a god much like Torm from the Forgotten Realms or Herironeous from Greyhawk. His chosen Domains would be War and Healing, later getting access to the Law Domain.
 Hhe is something between a Knights Hospitaller, a Hedge Knight, and a Mercenary. He goes around looking for adventure, people to help, and evil to slay because he both longs for adventure and and to respect his Deity's (something between Heironeous and Torm) dogma of worship and spreading their name by actions and deeds.
@@ -118,4 +119,4 @@ FORT	8	0	8
 REFLEX	1	0	1
 WILL	10	0	10
 
-Equipment: Full Plate Armor, Heavy Wooden Shield, Lognsword, light crossbow, case with 50 crossbow bolts, Spyglass, 50ft of Hempen Rope, silver holy symbol, Firmament Stone (Sun), spell component pouch, a bedrool, magic item: Travel Cloak (becomes tent), and 50 gp.
+Equipment: Full Plate Armor, Heavy Wooden Shield, Lognsword, light crossbow, case with 50 crossbow bolts, Spyglass, 50ft of Hempen Rope, silver holy symbol, Firmament Stone (Sun), spell component pouch, a bedrool, magic item: Travel Cloak (becomes tent), a Healer's Kit, and 50 gp.

@@ -143,8 +143,7 @@ class GeminiConnector(LLMConnector):
         )
 
         tool_calls = []
-        if response.candidates and response.candidates[0].finish_reason == "TOOL_CALLS":
-            for part in response.candidates[0].content.parts:
-                if fc := part.function_call:
-                    tool_calls.append({"name": fc.name, "arguments": dict(fc.args)})
+        for part in response.candidates[0].content.parts:
+            if fc := part.function_call:
+                tool_calls.append({"name": fc.name, "arguments": dict(fc.args)})
         return tool_calls

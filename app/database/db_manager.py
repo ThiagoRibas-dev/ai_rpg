@@ -35,7 +35,16 @@ class DBManager:
         self.stat_templates: Optional[StatTemplateRepository] = None
 
     def __enter__(self):
-        self.conn = sqlite3.connect(self.db_path)
+        # Set a long timeout (30s) so threads wait rather than crashing immediately
+        self.conn = sqlite3.connect(self.db_path, timeout=30.0)
+        
+        # Enable Write-Ahead Logging (WAL). 
+        # This allows simultaneous readers and writers, drastically reducing locks.
+        self.conn.execute("PRAGMA journal_mode=WAL;")
+        
+        # Enforce foreign keys (SQLite defaults to off)
+        self.conn.execute("PRAGMA foreign_keys=ON;")
+        
         self.conn.row_factory = sqlite3.Row
 
         # Initialize all repositories
