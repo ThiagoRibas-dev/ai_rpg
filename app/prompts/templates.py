@@ -19,6 +19,17 @@ Follow each task's instructions precisely and output ONLY the requested JSON obj
 
 # --- PHASE 1: RULESET ---
 
+ANALYZE_RULESET_INSTRUCTION = """
+**Task**: Analyze the text for Global Game Rules.
+
+Please list the following based **ONLY** on the provided text:
+1. The **Core Resolution Mechanic** (How do you roll for success?).
+2. Any **Tactical Rules** (Movement, Combat actions, Environmental hazards).
+3. **Compendium Items**: Lists of Conditions, Skills, and Damage Types explicitly mentioned.
+
+If a common mechanic (like "Magic" or "Sanity") is NOT in the text, explicitly state that it is absent.
+"""
+
 GENERATE_CORE_RESOLUTION_INSTRUCTION = """
 **Task**: Identify the game's **Core Resolution Mechanic**.
 
@@ -46,6 +57,18 @@ Extract lists of:
 """
 
 # --- PHASE 2: STATBLOCK ---
+
+ANALYZE_STATBLOCK_INSTRUCTION = """
+**Task**: Analyze the text for Character Sheet Structure.
+
+Please list the following based **ONLY** on the provided text:
+1. **Abilities/Attributes**: The core stats (e.g., STR, DEX). Are they numbers or dice codes?
+2. **Vitals/Resources**: Pools that fluctuate (e.g., HP). Is there a formula for them?
+3. **Tracks**: Abstract progress bars (e.g., XP, Clocks). 
+4. **Slots/Inventory**: How items or spells are carried.
+
+**CRITICAL**: Do not infer mechanics not present. If the text does not mention "Sanity", "Stress", or "Cyberware", explicitly note that they are NOT in the system.
+"""
 
 GENERATE_ABILITIES_INSTRUCTION = """
 **Task**: Define the **Abilities** (Core Stats) for a Player Character.

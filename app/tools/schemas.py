@@ -372,6 +372,9 @@ class EndSetupAndStartGameplay(BaseModel):
     Signal the end of the SETUP game mode (Session Zero) and start the game (GAMEPLAY mode).
     **When to use:** Only when the player has explicitly requested or agreed to start the game.
     **Effect:** Transitions game mode from SETUP to GAMEPLAY and starts the game.
+
+
+    **IMPORTANT:** Any sort of narration or roleplaying must happen AFTER this tool is used.
     """
 
     name: Literal["end_setup_and_start_gameplay"] = "end_setup_and_start_gameplay"

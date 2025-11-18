@@ -73,11 +73,10 @@ class GeminiConnector(LLMConnector):
         }
         generation_config = types.GenerateContentConfig(**config)
 
-        response = self.client.models.generate_content(
+        response = self.client.models.generate_content_stream(
             model=self.model_name,
             contents=contents,
             config=generation_config,
-            stream=True,
         )
         for chunk in response:
             if getattr(chunk, "text", None):
