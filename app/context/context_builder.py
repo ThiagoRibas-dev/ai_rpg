@@ -46,7 +46,7 @@ class ContextBuilder:
     def build_static_system_instruction(
         self,
         game_session: GameSession, # tool_schemas removed
-        schema_ref: str = "",
+        ruleset_text: str = "",
     ) -> str:
         """
         Build the cacheable system instruction.
@@ -63,10 +63,10 @@ class ContextBuilder:
         user_game_prompt = session_data.get_system_prompt()
         sections.append(user_game_prompt)
 
-        # 2. ✅ NEW: Lean schema reference (if exists)
-        if schema_ref:
-            sections.append("# GAME MECHANICS REFERENCE")
-            sections.append(schema_ref)
+        # 2. Ruleset Reference (The Physics)
+        if ruleset_text:
+            sections.append("# GAME RULES & MECHANICS")
+            sections.append(ruleset_text)
             sections.append("Use schema.query or state.query for detailed values.")
 
 

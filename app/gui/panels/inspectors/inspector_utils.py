@@ -14,6 +14,62 @@ def create_key_value_row(parent: ctk.CTkFrame, key: str, value: str):
         row, text=value, anchor="w", text_color=Theme.colors.text_secondary
     ).pack(side="left", expand=True, fill="x")
 
+def create_vital_display(parent: ctk.CTkFrame, name: str, current: float, maximum: float):
+    """Creates a labelled progress bar for Vitals (HP, Mana)."""
+    frame = ctk.CTkFrame(parent, fg_color="transparent")
+    frame.pack(fill="x", padx=10, pady=5)
+    
+    # Label row
+    header = ctk.CTkFrame(frame, fg_color="transparent")
+    header.pack(fill="x")
+    ctk.CTkLabel(header, text=name, font=Theme.fonts.body_small).pack(side="left")
+    ctk.CTkLabel(header, text=f"{current}/{maximum}", font=Theme.fonts.body_small).pack(side="right")
+    
+    # Bar
+    try:
+        pct = max(0.0, min(1.0, current / maximum)) if maximum > 0 else 0
+    except Exception:
+        pct = 0
+        
+    bar = ctk.CTkProgressBar(frame)
+    bar.pack(fill="x", pady=(2,0))
+    bar.set(pct)
+    
+    # Color coding logic could go here (red for low HP)
+    if "hp" in name.lower() or "health" in name.lower():
+        bar.configure(progress_color="#c0392b") # Red
+    elif "mana" in name.lower() or "magic" in name.lower():
+        bar.configure(progress_color="#2980b9") # Blue
+
+def create_track_display(parent: ctk.CTkFrame, name: str, current: int, maximum: int, style: str = "clock"):
+    """Creates a segmented display for Tracks (Clocks/Stress)."""
+    frame = ctk.CTkFrame(parent, border_width=1, border_color=Theme.colors.border_light)
+    frame.pack(fill="x", padx=10, pady=5)
+    
+    top = ctk.CTkFrame(frame, fg_color="transparent")
+    top.pack(fill="x", padx=5, pady=2)
+    ctk.CTkLabel(top, text=name, font=Theme.fonts.subheading).pack(side="left")
+    ctk.CTkLabel(top, text=f"{current}/{maximum}", text_color="gray").pack(side="right")
+    
+    # Segments
+    segments_frame = ctk.CTkFrame(frame, fg_color="transparent")
+    segments_frame.pack(fill="x", padx=5, pady=5)
+    
+    # Render segments
+    for i in range(maximum):
+        is_filled = i < current
+        color = Theme.colors.text_gold if is_filled else "gray30"
+        
+        if style == "clock":
+            # Wedge/Block visual
+            seg = ctk.CTkLabel(segments_frame, text="◕" if is_filled else "○", font=("Arial", 20), text_color=color)
+        elif style == "checkboxes":
+            seg = ctk.CTkLabel(segments_frame, text="☑" if is_filled else "☐", font=("Arial", 16), text_color=color)
+        else: # bar/dots
+            seg = ctk.CTkFrame(segments_frame, width=20, height=10, fg_color=color)
+            
+        seg.pack(side="left", padx=2, expand=True)
+
 def display_message_state(parent: ctk.CTkFrame, message: str, is_error: bool = False):
     """Clears the parent frame and displays a centered message (for empty or error states)."""
     for widget in parent.winfo_children():

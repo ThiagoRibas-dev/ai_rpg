@@ -3,6 +3,7 @@ from typing import List
 from app.tools.registry import ToolRegistry
 from app.tools.schemas import StateQuery
 
+from app.tools.builtin._state_storage import get_entity
 
 class StateContextBuilder:
     """Builds the CURRENT STATE section by querying game state via tools."""
@@ -27,54 +28,91 @@ class StateContextBuilder:
         ctx = {"session_id": session_id, "db_manager": self.db}
 
         try:
-            # Character
-            char_query = StateQuery(
-                entity_type="character", key="player", json_path="."
-            )
-            char_result = self.tools.execute(char_query, context=ctx)
+            # 1. Load Player Entity
+            player = get_entity(session_id, self.db, "character", "player")
+            if not player:
+                return "No character data found."
 
-            char = char_result.get("value", {}) or {}
-            if char:
-                name = char.get("name", "Player")
-                race = char.get("race", "")
-                char_class = char.get("class", "")
-                level = char.get("level", 1)
-                lines.append(
-                    f"**Character**: {name} ({race} {char_class}, Level {level})"
-                )
-                attrs = char.get("attributes", {})
-                if attrs:
-                    hp = f"{attrs.get('hp_current', '?')}/{attrs.get('hp_max', '?')}"
-                    lines.append(f"- HP: {hp}")
-                conditions = char.get("conditions", [])
-                if conditions:
-                    lines.append(f"- Conditions: {', '.join(conditions)}")
-                location = char.get("location")
-                if location:
-                    lines.append(f"- Location: {location}")
+            # 2. Load StatBlockTemplate
+            # (In a real implementation, we'd cache this or pass it in, but looking it up is safe for now)
+            template_id = player.get("template_id")
+            stat_template = None
+            if template_id:
+                stat_template = self.db.stat_templates.get_by_id(template_id)
+            
+            name = player.get("name", "Player")
+            lines.append(f"**Character**: {name}")
+            
+            if not stat_template:
+                 # Fallback for legacy/uninitialized
+                 lines.append("(No stat template defined)")
+                 return "\n".join(lines)
+
+            # 3. Format Abilities
+            # e.g. "Strength: 16", "Fight: d20"
+            abilities_data = player.get("abilities", {})
+            if stat_template.abilities:
+                lines.append("**Abilities**:")
+                attr_strs = []
+                for ab_def in stat_template.abilities:
+                    val = abilities_data.get(ab_def.name, ab_def.default)
+                    # Add simple modifier hint for integers (d20 systems)
+                    if ab_def.data_type == "integer" and isinstance(val, int) and val >= 10:
+                        mod = (val - 10) // 2
+                        val_str = f"{val} ({mod:+})"
+                    else:
+                        val_str = str(val)
+                    attr_strs.append(f"{ab_def.name}: {val_str}")
+                lines.append(", ".join(attr_strs))
                 lines.append("")
 
-            # Inventory
-            inv_query = StateQuery(entity_type="inventory", key="player", json_path=".")
-            inv_result = self.tools.execute(inv_query, context=ctx)
+            # 4. Format Vitals
+            # e.g. "HP: 12/20"
+            vitals_data = player.get("vitals", {})
+            if stat_template.vitals:
+                vital_strs = []
+                for vit_def in stat_template.vitals:
+                    # Vital data is stored as {current: X, max: Y} or just X
+                    data = vitals_data.get(vit_def.name, {})
+                    if isinstance(data, dict):
+                        curr = data.get("current", 0)
+                        mx = data.get("max", "?")
+                    else:
+                        curr = data
+                        mx = "?" # Max usually derived, might need extra logic to fetch
+                    vital_strs.append(f"{vit_def.name}: {curr}/{mx}")
+                if vital_strs:
+                    lines.append(f"**Vitals**: {', '.join(vital_strs)}")
+                lines.append("")
 
-            inv = inv_result.get("value", {}) or {}
-            if inv:
-                slots = f"{inv.get('slots_used', 0)}/{inv.get('slots_max', 10)}"
-                lines.append(f"**Inventory** ({slots} slots):")
-                items = inv.get("items", [])
+            # 5. Format Tracks (Clocks)
+            # e.g. "Stress: [X][X][ ][ ] (2/4)"
+            tracks_data = player.get("tracks", {})
+            if stat_template.tracks:
+                for track_def in stat_template.tracks:
+                    val = tracks_data.get(track_def.name, 0)
+                    if isinstance(val, dict):
+                        val = val.get("value", 0)
+                    mx = track_def.max_value
+                    # Visual representation
+                    filled = "■" * val
+                    empty = "□" * (mx - val)
+                    lines.append(f"**{track_def.name}**: {filled}{empty} ({val}/{mx})")
+                lines.append("")
+
+            # 6. Format Slots (Inventory/Spells)
+            slots_data = player.get("slots", {})
+            for slot_def in stat_template.slots:
+                items = slots_data.get(slot_def.name, [])
                 if items:
-                    for item in items[:5]:
-                        name = item.get("name", "Unknown")
+                    lines.append(f"**{slot_def.name}** ({len(items)} items):")
+                    for item in items[:5]: # Limit display
                         qty = item.get("quantity", 1)
-                        equipped = " (equipped)" if item.get("equipped") else ""
-                        qty_str = f" x{qty}" if qty and qty > 1 else ""
-                        lines.append(f"- {name}{qty_str}{equipped}")
-                currency = inv.get("currency", {})
-                if currency:
-                    curr_str = ", ".join([f"{v} {k}" for k, v in currency.items()])
-                    lines.append(f"- Currency: {curr_str}")
-                lines.append("")
+                        qty_str = f" x{qty}" if qty > 1 else ""
+                        lines.append(f"- {item['name']}{qty_str}")
+                    if len(items) > 5:
+                        lines.append(f"- ... and {len(items)-5} more")
+                    lines.append("")
 
             # Quests
             quest_query = StateQuery(entity_type="quests", key="*", json_path=".")

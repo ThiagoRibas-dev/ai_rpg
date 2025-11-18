@@ -7,58 +7,67 @@ from app.tools.schemas import (
 # RULES EXTRACTION PROMPTS
 # ==============================================================================
 
-TEMPLATE_GENERATION_SYSTEM_PROMPT = """You are a meticulous game system analyst. You will be provided with the full text of a game's rules. Following that, you will be given a series of specific tasks to extract and structure different parts of the game's mechanics into a JSON format. Follow each task's instructions precisely and output ONLY the requested JSON object.
+TEMPLATE_GENERATION_SYSTEM_PROMPT = """You are a meticulous game system analyst. You will be provided with the full text of a game's rules.
+
+Your job is to convert this text into a structured database format.
+You will perform this in two major phases:
+1. **Ruleset Extraction**: Defining the global physics, resolution mechanics, and content libraries (Compendium).
+2. **StatBlock Definition**: Defining the structure of a Player Character sheet (Abilities, Vitals, Tracks, Slots).
+
+Follow each task's instructions precisely and output ONLY the requested JSON object.
 """
 
-GENERATE_ENTITY_SCHEMA_INSTRUCTION = """
-Your task is to extract ONLY the core Attributes (like Strength, Dexterity, Intelligence) and Resources (like Health, MP, etc) that exist in the provided rules text.
+# --- PHASE 1: RULESET ---
 
-- Attributes: Fixed scores that characters possess.
-- Resources: Pools that can be spent or depleted.
+GENERATE_CORE_RESOLUTION_INSTRUCTION = """
+**Task**: Identify the game's **Core Resolution Mechanic**.
 
-For every attribute and resource, you MUST provide a concise, one-sentence description of its purpose in the game.
+This is the fundamental method used to resolve uncertainty (e.g., "d20 + Mod vs DC", "Roll Xd6, count 6s", "Percentile Roll under Skill").
+Also identify the **Dice System** used.
 """
 
-GENERATE_CORE_RULE_INSTRUCTION = """
-Based on the provided rules and the defined character attributes (provided as context), your task is to identify and define the single, primary action resolution mechanic. This is the core dice roll of the game (e.g., '1d20 + Attribute Modifier vs. DC/Difficulty Class', Dice Pool, Narrative, etc).
+GENERATE_TACTICAL_RULES_INSTRUCTION = """
+**Task**: Extract **Tactical & Environmental Rules**.
+
+Look for rules that apply to everyone, not just specific characters.
+- **Tactical**: Grappling, Flanking, Cover, Movement, Initiative, Range.
+- **Environmental**: Falling, Drowning, Illumination, Travel Pace, Starvation.
+
+Return a list of rule entries.
 """
 
-GENERATE_DERIVED_RULES_INSTRUCTION = """
-Your task is to define specific, derived game mechanics based on a foundational rule that has already been established.
+GENERATE_COMPENDIUM_INSTRUCTION = """
+**Task**: Build the **Compendium** (Global Library).
 
-You will be given the original rules text, the defined character attributes, and the core action resolution mechanic as context.
-
-Now, using the foundational mechanic as a pattern, extract and define other rules and systems. Some examples of the things you are looking for:
-- Armor Class (AC), Dodge, Parry, Soak, Damage Reduction, etc: How characters avoid or reduce harm (Defensive Systems).
-- Saving Throws, Resistance Checks, Willpower, etc: How characters endure non-physical effects like magic, poison, or fear (Resistance Mechanics).
-- Initiative, Turn Order, Action Points, etc: How the sequence of actions in a round is determined (Action Sequencing).
-- Speed, Difficult Terrain, Cover, Concealment: How movement and positioning are handled in the game world (Movement and Positioning).
-- Leveling, Experience Points (XP), Milestones: How characters improve over time (Character Advancement).
-- Magic, Spellcasting, Hacking, Netrunning, Social Combat, Crafting: Detailed rules for specific, complex activities (Specialized Subsystems).
-
-For each rule you create, ensure it is consistent with the provided foundational mechanic.
+Extract lists of:
+1. **Conditions**: Status effects (e.g., Prone, Blinded, Stunned).
+2. **Skills**: Learned abilities (e.g., Athletics, Stealth). If linked to an attribute (like DEX), note it.
+3. **Damage Types**: (e.g., Fire, Slashing, Mental).
 """
 
-GENERATE_ACTION_ECONOMY_INSTRUCTION = """
-Your task is to analyze the provided rules and determine the game's Action Economy - the structure of a character's turn. Identify the system type (e.g., Action Points, Fixed Action Types like 'Standard/Move/Bonus', etc.) and describe its components.
+# --- PHASE 2: STATBLOCK ---
+
+GENERATE_ABILITIES_INSTRUCTION = """
+**Task**: Define the **Abilities** (Core Stats) for a Player Character.
+
+Determine the `data_type`:
+- `integer`: Standard numbers (e.g., D&D Strength 1-20).
+- `die_code`: Polyhedral dice codes (e.g., Savage Worlds "d6", "d8").
+- `dots`: Small integers (e.g., Vampire 1-5).
 """
 
-GENERATE_SKILLS_INSTRUCTION = """
-Your task is to extract all Skills from the provided rules text.
-You will be given the list of Attributes that have already been defined.
-For each skill you identify, you MUST link it to one of the provided attributes in the `linked_attribute` field.
+GENERATE_VITALS_INSTRUCTION = """
+**Task**: Define **Vitals** (Resource Pools).
+
+These are pools that go up and down frequently (HP, Mana, Sanity, Stamina).
+If there is a formula for the maximum value (e.g., "10 + Constitution"), extract it.
 """
 
-GENERATE_CONDITIONS_INSTRUCTION = """
-Your task is to extract all status effects, also known as Conditions (e.g., 'Blinded', 'Poisoned', 'Stunned'), from the provided rules text. For each condition, provide a concise description of its mechanical effect.
-"""
+GENERATE_TRACKS_SLOTS_INSTRUCTION = """
+**Task**: Define **Tracks** and **Slots**.
 
-GENERATE_CLASSES_INSTRUCTION = """
-Your task is to identify and define the character Classes (e.g., 'Warrior', 'Mage', 'Rogue') from the rules. You will be provided with the game's attributes and skills for context. For each class, describe its primary role and key features.
-"""
-
-GENERATE_RACES_INSTRUCTION = """
-Your task is to identify and define the character Races or Species (e.g., 'Elf', 'Dwarf', 'Orc') from the rules. You will be provided with the game's attributes and skills for context. For each race, describe its unique traits.
+1. **Tracks**: Abstract progress bars or clocks (e.g., Experience Points, Stress, Corruption, Alert Level).
+2. **Slots**: Containers for items or features (e.g., Inventory, Spell Slots, Cyberware Capacity).
 """
 
 # ==============================================================================
@@ -83,7 +92,7 @@ I will perform two tasks:
 2. **Plan Steps**: I will write a step-by-step plan for my actions right now, where:
     - For each new or updated property the player explicitly requested or agreed to, I will plan a call to the `{SchemaUpsertAttribute.model_fields["name"].default}` tool, describing what it does.
     - When necessary, I will plan asking questions about the game's systems and rules, as well as clarifying questions in general.
-    - I'll plan a repsonse to the player's last message. If the player is asking a question, I will plan my reply.
+    - I'll plan a response to the player's last message. If the player is asking a question, I will plan my reply.
 """
  
 # Per-Step Tool Selection Prompt ---
@@ -98,7 +107,7 @@ For this response, I'll do exactly the following:
 
 **Analysis**: {analysis}
 **Available Tools**: {tool_names_list}
-**Plan Step to exeute**: "{plan_step}"
+**Plan Step to execute**: "{plan_step}"
 
 Now I'm ready to do this.
 

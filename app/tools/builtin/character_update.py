@@ -1,149 +1,97 @@
 import logging
 from typing import Any, Dict, List
 
-from app.models.entities import Character
-from app.models.property_definition import PropertyDefinition
 from app.tools.builtin._state_storage import get_entity, set_entity
+from app.utils.state_validator import StateValidator
 
 logger = logging.getLogger(__name__)
-
-
-def _get_python_type(type_str: str) -> type:
-    """Maps schema type strings to Python types."""
-    return {
-        "integer": int,
-        "string": str,
-        "boolean": bool,
-        "enum": str,
-        "resource": int,
-    }.get(type_str, object)
-
-
-def _is_core_attribute(char: Character, key: str) -> bool:
-    """Checks if a key corresponds to a core attribute of the Character model."""
-    return key in char.model_fields or (
-        hasattr(char, "attributes") and key in char.attributes.model_fields
-    )
-
-
-def _update_core_attribute(char: Character, key: str, value: Any):
-    """Updates a core attribute of the Character model."""
-    if key in char.model_fields:
-        setattr(char, key, value)
-    elif hasattr(char, "attributes") and key in char.attributes.model_fields:
-        setattr(char.attributes, key, value)
-    else:
-        raise ValueError(
-            f"Core attribute '{key}' not found on Character or CharacterAttributes."
-        )
-
-
-def _update_custom_property(
-    char: Character, key: str, value: Any, schema_defs: Dict[str, PropertyDefinition]
-):
-    """Updates a custom property with validation against its schema definition."""
-    if key not in schema_defs:
-        logger.warning(
-            f"Setting undefined custom property: {key}. No validation applied."
-        )
-        char.properties[key] = value
-        return
-
-    prop_def = schema_defs[key]
-
-    # Type validation
-    expected_type = _get_python_type(prop_def.type)
-    if not isinstance(value, expected_type):
-        raise TypeError(
-            f"Property '{key}' must be of type '{prop_def.type}', but received '{type(value).__name__}'."
-        )
-
-    # Range validation for integer/resource types
-    if prop_def.type in ["integer", "resource"]:
-        if prop_def.min_value is not None and value < prop_def.min_value:
-            raise ValueError(
-                f"Property '{key}' cannot be less than {prop_def.min_value}. Received {value}."
-            )
-        if prop_def.max_value is not None and value > prop_def.max_value:
-            raise ValueError(
-                f"Property '{key}' cannot exceed {prop_def.max_value}. Received {value}."
-            )
-
-    # Enum validation
-    if (
-        prop_def.type == "enum"
-        and prop_def.allowed_values is not None
-        and value not in prop_def.allowed_values
-    ):
-        raise ValueError(
-            f"Property '{key}' must be one of {prop_def.allowed_values}. Received '{value}'."
-        )
-
-    char.properties[key] = value
-
-
-def _apply_game_logic(char: Character):
-    """Applies game logic based on character state changes, e.g., death detection."""
-    if char.attributes.hp_current <= 0:
-        if "unconscious" not in char.conditions:
-            char.conditions.append("unconscious")
-        if char.attributes.hp_current <= -char.attributes.hp_max:
-            if "dead" not in char.conditions:
-                char.conditions.append("dead")
-    else:
-        # Remove death conditions if healed
-        char.conditions = [
-            c for c in char.conditions if c not in ("unconscious", "dead")
-        ]
-
 
 def handler(character_key: str, updates: List[Dict[str, Any]], **context) -> dict:
     """
     Handler for the character.update tool.
-    Updates character attributes and properties with validation.
+    Updates character abilities, vitals, or tracks using the StatBlockTemplate for validation.
     """
     session_id = context["session_id"]
     db = context["db_manager"]
 
-    # Load entity
-    char_data = get_entity(session_id, db, "character", character_key)
-
-    if not char_data:
+    # 1. Load Entity
+    entity = get_entity(session_id, db, "character", character_key)
+    if not entity:
         raise ValueError(f"Character '{character_key}' not found.")
 
-    # Load into Pydantic model for validation
-    try:
-        char = Character(**char_data)
-    except Exception as e:
-        raise ValueError(f"Invalid character data loaded from DB: {e}")
+    # 2. Load Template
+    # Fallback: if entity has no template_id, we might be in early setup or legacy mode.
+    # Ideally, we fetch the default template for the ruleset.
+    template_id = entity.get("template_id")
+    if not template_id:
+         # Try to fetch any template for the session's ruleset? 
+         # For MVP, assume we must have one.
+         # In a real scenario, we might fetch the 'default' template from the DB.
+         # Assuming the orchestrator or setup ensured this.
+         # Let's look for *any* template linked to the session's ruleset if possible, 
+         # but for now, we'll rely on 'manifest' context or explicit ID.
+         
+         # HACK: If 'manifest' is in context (passed by Executor), use that? 
+         # But 'manifest' is now just IDs.
+         # We will proceed optimistically or fail.
+         pass
+         
+    if template_id:
+        stat_template = db.stat_templates.get_by_id(template_id)
+    else:
+        # Fallback for robustness: Check if a validator is already in context (ToolExecutor might put it there)
+        # This supports the transition phase.
+        stat_template = context.get("stat_template")
+    
+    if not stat_template:
+        raise ValueError(f"No StatBlockTemplate found for character '{character_key}'.")
 
-    # Load schema definitions for custom properties
-    schema_defs_raw = db.get_schema_extensions(session_id, "character")
-    schema_defs = {
-        name: PropertyDefinition(**data) for name, data in schema_defs_raw.items()
-    }
-
-    # Apply updates with validation
+    # 3. Validate & Apply Updates
+    validator = StateValidator(stat_template)
+    
+    updated_keys = []
     for update_pair in updates:
         key = update_pair["key"]
         value = update_pair["value"]
-        try:
-            if _is_core_attribute(char, key):
-                _update_core_attribute(char, key, value)
+        
+        category = validator.validate_update(key, value)
+        
+        # Determine where to store it in the dict structure
+        # Structure: entity = { "abilities": {...}, "vitals": {...}, "tracks": {...} }
+        if category == "ability":
+            entity.setdefault("abilities", {})[key] = value
+        elif category == "vital":
+             # Vitals are complex objects {current, max}
+             # If value is int, assume 'current'
+             if isinstance(value, (int, float)):
+                 current_vital = entity.setdefault("vitals", {}).get(key, {})
+                 current_vital["current"] = value
+                 entity["vitals"][key] = current_vital
+             else:
+                 entity.setdefault("vitals", {})[key] = value
+        elif category == "track":
+            # Tracks can be simple integers (0) or objects {value: 0, max: 4}
+            if isinstance(value, int):
+                current_track = entity.setdefault("tracks", {}).get(key)
+                
+                # If it's already a dict, update the value field
+                if isinstance(current_track, dict):
+                    current_track["value"] = value
+                    entity["tracks"][key] = current_track
+                else:
+                    # Otherwise (it's an int or None), just set the int
+                    entity["tracks"][key] = value
             else:
-                _update_custom_property(char, key, value, schema_defs)
-        except (ValueError, TypeError) as e:
-            raise ValueError(f"Validation failed for property '{key}': {e}")
+                entity.setdefault("tracks", {})[key] = value
+                
+        updated_keys.append(key)
 
-    # Apply game logic hooks
-    _apply_game_logic(char)
-
-    # Save back
-    version = set_entity(session_id, db, "character", character_key, char.model_dump())
+    # 4. Save
+    version = set_entity(session_id, db, "character", character_key, entity)
 
     return {
         "success": True,
         "character_key": character_key,
-        "updated_fields": [upd["key"] for upd in updates],
+        "updated_fields": updated_keys,
         "version": version,
     }

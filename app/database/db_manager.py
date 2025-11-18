@@ -6,7 +6,8 @@ from app.database.repositories import (
     MemoryRepository,
     GameStateRepository,
     TurnMetadataRepository,
-    SchemaExtensionRepository,
+    RulesetRepository,
+    StatTemplateRepository,
 )
 
 
@@ -30,7 +31,8 @@ class DBManager:
         self.memories: Optional[MemoryRepository] = None
         self.game_state: Optional[GameStateRepository] = None
         self.turn_metadata: Optional[TurnMetadataRepository] = None
-        self.schema_extensions: Optional[SchemaExtensionRepository] = None
+        self.rulesets: Optional[RulesetRepository] = None
+        self.stat_templates: Optional[StatTemplateRepository] = None
 
     def __enter__(self):
         self.conn = sqlite3.connect(self.db_path)
@@ -42,7 +44,8 @@ class DBManager:
         self.memories = MemoryRepository(self.conn)
         self.game_state = GameStateRepository(self.conn)
         self.turn_metadata = TurnMetadataRepository(self.conn)
-        self.schema_extensions = SchemaExtensionRepository(self.conn)
+        self.rulesets = RulesetRepository(self.conn)
+        self.stat_templates = StatTemplateRepository(self.conn)
 
         # Assert that repositories are not None for Mypy
         assert self.prompts is not None
@@ -50,7 +53,8 @@ class DBManager:
         assert self.memories is not None
         assert self.game_state is not None
         assert self.turn_metadata is not None
-        assert self.schema_extensions is not None
+        assert self.rulesets is not None
+        assert self.stat_templates is not None
 
         return self
 
@@ -79,8 +83,9 @@ class DBManager:
             self.sessions,
             self.memories,
             self.turn_metadata,
-            self.schema_extensions,
             self.game_state,
+            self.rulesets,
+            self.stat_templates,
         ]
 
         # COMMENT: We loop through the list and call the new `create_table()`

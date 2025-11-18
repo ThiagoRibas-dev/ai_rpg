@@ -1,12 +1,11 @@
 # File: app/gui/panels/inspectors/character_inspector.py
-# --- NEW FILE ---
 
 import customtkinter as ctk
 import logging
 from typing import Callable
 from app.gui.styles import Theme
 from app.tools.schemas import StateQuery
-from .inspector_utils import create_key_value_row, display_message_state
+from .inspector_utils import create_key_value_row, display_message_state, create_vital_display, create_track_display
 
 logger = logging.getLogger(__name__)
 
@@ -111,16 +110,61 @@ class CharacterInspectorView(ctk.CTkFrame):
             anchor="w",
         ).pack(side="left")
         
-        attributes = self.character_data.get("attributes", {})
-        if attributes:
+        # 1. Get Template
+        template_id = self.character_data.get("template_id")
+        stat_template = None
+        if template_id:
+             stat_template = self.db_manager.stat_templates.get_by_id(template_id)
+        
+        if not stat_template:
+             # Fallback for raw data display if no template found
+             self._render_raw_dict(scroll_frame, self.character_data)
+             return
+
+        # 2. Render Abilities
+        abilities_data = self.character_data.get("abilities", {})
+        if stat_template.abilities:
             attr_frame = ctk.CTkFrame(scroll_frame)
             attr_frame.pack(fill="x", padx=10, pady=5)
             ctk.CTkLabel(
                 attr_frame,
-                text="Attributes",
+                text="Abilities",
                 font=Theme.fonts.subheading,
                 anchor="w",
             ).pack(fill="x", padx=10, pady=(5, 2))
-            for key, value in attributes.items():
-                # COMMENT: Using the new utility function for clean, consistent rows.
-                create_key_value_row(attr_frame, key.replace("_", " ").title(), str(value))
+            
+            for ab_def in stat_template.abilities:
+                val = abilities_data.get(ab_def.name, ab_def.default)
+                # Handle Dice Codes or Integers
+                val_display = str(val)
+                create_key_value_row(attr_frame, ab_def.name, val_display)
+
+        # 3. Render Vitals
+        vitals_data = self.character_data.get("vitals", {})
+        if stat_template.vitals:
+            for vit_def in stat_template.vitals:
+                data = vitals_data.get(vit_def.name, {})
+                # Handle {current, max} or raw value
+                if isinstance(data, dict):
+                    curr = data.get("current", 0)
+                    mx = data.get("max", 10) # Default or need formula parsing
+                else:
+                    curr = data
+                    mx = 10 
+                
+                create_vital_display(scroll_frame, vit_def.name, curr, mx)
+
+        # 4. Render Tracks
+        tracks_data = self.character_data.get("tracks", {})
+        if stat_template.tracks:
+            for track_def in stat_template.tracks:
+                val = tracks_data.get(track_def.name, 0)
+                if isinstance(val, dict):
+                    val = val.get("value", 0)
+                create_track_display(scroll_frame, track_def.name, val, track_def.max_value, track_def.visual_style)
+
+    def _render_raw_dict(self, parent, data):
+        """Fallback renderer."""
+        import json
+        txt = ctk.CTkLabel(parent, text=json.dumps(data, indent=2), justify="left", font=Theme.fonts.monospace)
+        txt.pack(fill="x", padx=10)

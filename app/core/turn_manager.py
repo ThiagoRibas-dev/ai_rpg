@@ -12,7 +12,7 @@ from app.llm.narrator_service import NarratorService
 from app.llm.planner_service import PlannerService
 from app.models.game_session import GameSession
 from app.models.session import Session
-from app.prompts.builder import build_lean_schema_reference
+from app.prompts.builder import build_ruleset_summary
 from app.prompts.templates import (
     CHOICE_GENERATION_TEMPLATE,
     NARRATIVE_TEMPLATE,
@@ -108,10 +108,16 @@ class TurnManager:
         # ===== BUILD STATIC SYSTEM INSTRUCTION =====
         manifest_mgr: SetupManifest = SetupManifest(thread_db_manager)
         manifest = manifest_mgr.get_manifest(game_session.id)
-        schema_ref = build_lean_schema_reference(manifest)
-        # Tool schemas are no longer passed into the static instruction
+        
+        ruleset_text = ""
+        if manifest.get("ruleset_id"):
+            ruleset = thread_db_manager.rulesets.get_by_id(manifest["ruleset_id"])
+            if ruleset:
+                ruleset_text = build_ruleset_summary(ruleset)
+
+        # Pass ruleset summary to context builder
         static_instruction = context_builder.build_static_system_instruction(
-            game_session, schema_ref
+            game_session, ruleset_text
         )
 
         # ===== BUILD CHAT HISTORY (ONCE, before all phases) =====

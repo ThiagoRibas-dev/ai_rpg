@@ -4,7 +4,8 @@ from .session_repository import SessionRepository
 from .memory_repository import MemoryRepository
 from .game_state_repository import GameStateRepository
 from .turn_metadata_repository import TurnMetadataRepository
-from .schema_extension_repository import SchemaExtensionRepository
+from .ruleset_repository import RulesetRepository
+from .stat_template_repository import StatTemplateRepository
 
 __all__ = [
     "BaseRepository",
@@ -13,5 +14,6 @@ __all__ = [
     "MemoryRepository",
     "GameStateRepository",
     "TurnMetadataRepository",
-    "SchemaExtensionRepository",
+    "RulesetRepository",
+    "StatTemplateRepository",
 ]

@@ -1,105 +1,122 @@
 import logging
-from typing import Any, Dict, Optional, List, Literal
-from app.models.property_definition import PropertyDefinition
-from app.tools.builtin.property_templates import apply_template
+from typing import Any, Dict, Optional
+from app.setup.setup_manifest import SetupManifest
+from app.models.stat_block import AbilityDef, VitalDef, TrackDef
+from app.tools.builtin._state_storage import get_entity, set_entity
 
 logger = logging.getLogger(__name__)
-
 
 def handler(
     property_name: str,
     description: str,
-    entity_type: Literal[
-        "character", "item", "location"
-    ] = "character",
-    template: Optional[str] = None,
-    type: Optional[Literal["integer", "string", "boolean", "enum", "resource"]] = None,
-    default_value: Any = None,
-    has_max: Optional[bool] = None,
-    min_value: Optional[int] = None,
-    max_value: Optional[int] = None,
-    allowed_values: Optional[List[str]] = None,
-    display_category: Optional[str] = None,
-    icon: Optional[str] = None,
-    display_format: Optional[Literal["number", "bar", "badge"]] = None,
-    regenerates: Optional[bool] = None,
-    regeneration_rate: Optional[int] = None,
+    template: Optional[str] = "stat", # Default to stat
+    default_value: Any = 10,
+    min_value: Optional[int] = 0,
+    max_value: Optional[int] = 20,
     **context: Any,
 ) -> Dict[str, Any]:
     """
-    Allows the AI to define a new custom attribute (property) for game entities.
-    These properties extend the core schema and are used to create dynamic game mechanics.
-
-    Args:
-        property_name (str): The programmatic name of the property (e.g., 'Sanity', 'Mana').
-        description (str): A human-readable description of what the property represents.
-        entity_type (Literal["character", "item", "location"]): The type of entity this property applies to.
-        template (Optional[str]): A predefined template to use (e.g., 'resource', 'stat', 'reputation', 'flag', 'enum', 'string').
-                                  If provided, other parameters will override template defaults.
-        type (Optional[Literal["integer", "string", "boolean", "enum", "resource"]]): The data type of the property. Required if no template is used.
-        default_value (Any): The initial value for this property. Required if no template is used.
-        has_max (Optional[bool]): For 'resource' types, indicates if there's a maximum value.
-        min_value (Optional[int]): Minimum allowed integer value for 'integer' or 'resource' types.
-        max_value (Optional[int]): Maximum allowed integer value for 'integer' or 'resource' types.
-        allowed_values (Optional[List[str]]): For 'enum' types, a list of allowed string values.
-        display_category (Optional[str]): Category for UI display (e.g., 'Resources', 'Stats').
-        icon (Optional[str]): An emoji or short string to use as an icon in the UI.
-        display_format (Optional[Literal["number", "bar", "badge"]]): How the property should be displayed in the UI.
-        regenerates (Optional[bool]): For 'resource' types, indicates if the property regenerates over time.
-        regeneration_rate (Optional[int]): For 'resource' types, the rate at which it regenerates per game turn.
-        context (Any): The tool execution context, including session_id and db_manager.
-
-    Returns:
-        Dict[str, Any]: A dictionary indicating success and the defined property.
+    Updates the StatBlockTemplate to include a new property.
+    Maps generic requests to specific StatBlock definitions (Abilities, Vitals, Tracks).
     """
     session_id = context.get("session_id")
-    db_manager = context.get("db_manager")
+    db = context.get("db_manager")
 
-    if not session_id or not db_manager:
-        logger.error(
-            "Session ID or DB Manager not found in context for schema.upsert_attibute."
-        )
+    if not session_id or not db:
         return {"success": False, "error": "Missing session context."}
 
-    overrides: Dict[str, Any] = {
-        "property_name": property_name,
-        "description": description,
-        "default_value": default_value,
-        "type": type,
-        "has_max": has_max,
-        "min_value": min_value,
-        "max_value": max_value,
-        "allowed_values": allowed_values,
-        "display_category": display_category,
-        "icon": icon,
-        "display_format": display_format,
-        "regenerates": regenerates,
-        "regeneration_rate": regeneration_rate,
-    }
-    # Filter out None values from overrides
-    overrides = {k: v for k, v in overrides.items() if v is not None}
+    # 1. Get the active template
+    manifest = SetupManifest(db).get_manifest(session_id)
+    template_id = manifest.get("stat_template_id")
+    
+    if not template_id:
+        return {"success": False, "error": "No active StatBlockTemplate found. Please generate the template from rules first."}
 
-    try:
-        if template:
-            prop_def = apply_template(template, overrides)
-        else:
-            # If no template, 'type' and 'default_value' are mandatory
-            if "type" not in overrides or "default_value" not in overrides:
-                raise ValueError(
-                    "When no template is provided, 'type' and 'default_value' are required."
-                )
-            prop_def = PropertyDefinition(**overrides)
+    stat_template = db.stat_templates.get_by_id(template_id)
+    if not stat_template:
+        return {"success": False, "error": "StatBlockTemplate not found in DB."}
 
-        # Save to DB
-        db_manager.create_schema_extension(
-            session_id, entity_type, property_name, prop_def.model_dump()
+    category_added = "unknown"
+
+    # 2. Map "Template" to Schema Type
+    # This logic translates user/AI intent into our strict schema
+    
+    if template in ["stat", "attribute", "integer"]:
+        # Add as Ability
+        new_def = AbilityDef(
+            name=property_name,
+            description=description,
+            data_type="integer",
+            default=default_value,
+            range_min=min_value,
+            range_max=max_value
         )
+        # Remove existing if same name
+        stat_template.abilities = [x for x in stat_template.abilities if x.name != property_name]
+        stat_template.abilities.append(new_def)
+        category_added = "abilities"
 
-        logger.info(f"Defined new property '{property_name}' for entity type '{entity_type}'.")
-        return {"success": True, "property": prop_def.model_dump()}
-    except ValueError as e:
-        logger.error(f"Error defining property: {e}")
-        return {"success": False, "error": str(e)}
-    except Exception as e:
-        logger.error(f"An unexpected error occurred: {e}", exc_info=True)
-        return {"success": False, "error": f"An unexpected error occurred: {e}"}
+    elif template in ["resource", "vital"]:
+        # Add as Vital
+        new_def = VitalDef(
+            name=property_name,
+            description=description,
+            min_value=min_value or 0,
+            has_max=True # Assume max for resources
+        )
+        stat_template.vitals = [x for x in stat_template.vitals if x.name != property_name]
+        stat_template.vitals.append(new_def)
+        category_added = "vitals"
+        
+    elif template in ["flag", "reputation", "tracker", "clock"]:
+        # Add as Track
+        style = "clock" if template == "clock" else "bar"
+        if template == "flag":
+            style = "checkboxes"
+        
+        new_def = TrackDef(
+            name=property_name,
+            description=description,
+            max_value=max_value or 4,
+            visual_style=style
+        )
+        stat_template.tracks = [x for x in stat_template.tracks if x.name != property_name]
+        stat_template.tracks.append(new_def)
+        category_added = "tracks"
+        
+    else:
+        # Fallback: Add as Ability (String/Misc)
+        new_def = AbilityDef(
+            name=property_name,
+            description=description,
+            data_type="integer", # Defaulting to integer for safety
+            default=default_value
+        )
+        stat_template.abilities = [x for x in stat_template.abilities if x.name != property_name]
+        stat_template.abilities.append(new_def)
+        category_added = "abilities"
+
+    # 3. Save Template
+    db.stat_templates.update(template_id, stat_template)
+
+    # 4. Backfill Player Entity
+    # We need to ensure the current player object has a default value for this new key
+    player = get_entity(session_id, db, "character", "player")
+    if player:
+        if category_added == "abilities":
+            player.setdefault("abilities", {})[property_name] = default_value
+        elif category_added == "vitals":
+            # Vitals need {current, max} structure
+            player.setdefault("vitals", {})[property_name] = {"current": default_value, "max": default_value}
+        elif category_added == "tracks":
+            player.setdefault("tracks", {})[property_name] = 0
+            
+        set_entity(session_id, db, "character", "player", player)
+
+    logger.info(f"Upserted '{property_name}' into {category_added} of template {template_id}")
+    return {
+        "success": True, 
+        "property": property_name, 
+        "category": category_added,
+        "note": "Player entity updated with default value."
+    }

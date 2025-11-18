@@ -1,150 +1,93 @@
-# File: D:\Projects\Game Dev\ai-rpg\app\setup\scaffolding.py
+import json
+import logging
+from app.models.ruleset import Ruleset
+from app.models.stat_block import StatBlockTemplate, AbilityDef, VitalDef, SlotDef
+from app.setup.setup_manifest import SetupManifest
 
-# This file combines the original scaffolding_templates.py content
-# and the genre detection/injection logic from SessionManager.
+logger = logging.getLogger(__name__)
 
-from typing import Dict, Any
-from app.models.entities import Character, CharacterAttributes, Item, Location
-# Assuming DBManager import for injection:
-# from app.database.db_manager import DBManager 
-
-def get_setup_scaffolding() -> Dict[str, Any]:
-    """
-    Returns the initial scaffolding structure for a new game in SETUP mode.
-    ... (Rest of original get_setup_scaffolding content) ...
-    """
-    # Use Pydantic models for type safety
-    player_character = Character(
-        key="player",
-        name="PLACEHOLDER",
-        attributes=CharacterAttributes(hp_current=0, hp_max=0),
-        conditions=[],
-        location_key="starting_location",
-        inventory_key="inventory:player",
-        properties={
-            "race": "PLACEHOLDER",
-            "classes": ["PLACEHOLDER"],
-            "level": 1,
-        },
+def _get_default_scaffolding():
+    """Returns a minimal default Ruleset and Template for raw prompts."""
+    ruleset = Ruleset(
+        meta={"name": "Default System", "genre": "Generic"},
+        resolution_mechanic="Narrative / Freeform",
     )
-
-    starting_item = Item(
-        key="starter_item_01",
-        name="PLACEHOLDER EQUIPMENT",
-        description="PLACEHOLDER DESCRIPTION",
-        properties={"quantity": 1, "equipped": False},
-    )
-
-    starting_location = Location(
-        key="starting_location",
-        name="PLACEHOLDER LOCATION",
-        description="PLACEHOLDER DESCRIPTION",
-        properties={},
-    )
-
-    # Serialize to dicts for database storage
-    return {
-        "character": {"player": player_character.model_dump()},
-        "inventory": {
-            "player": {
-                "owner": "player",
-                "items": [starting_item.model_dump()],
-                "currency": {"gold": 0},
-                "slots_used": 1,
-                "slots_max": 10,
-            }
-        },
-        "location": {"starting_location": starting_location.model_dump()},
-    }
-
-
-def get_genre_specific_scaffolding(genre: str) -> Dict[str, Any]:
-    """
-    Returns genre-specific scaffolding with suggested custom properties.
-    ... (Rest of original get_genre_specific_scaffolding content) ...
-    """
-    base_scaffolding = get_setup_scaffolding()
-    genre_suggestions = {
-        # ... (genre_suggestions dict remains the same) ...
-        "fantasy": {
-            "character_properties": {},
-            "currency": {"gold": 0, "silver": 0},
-        },
-        "scifi": {
-            "character_properties": {"Energy": 100, "Radiation": 0, "Cybernetics": 0},
-            "currency": {"credits": 100},
-        },
-        "horror": {
-            "character_properties": {"Sanity": 100, "Stress": 0, "Insight": 1},
-            "currency": {"dollars": 50},
-        },
-        "cyberpunk": {
-            "character_properties": {
-                "Street_Cred": 0,
-                "Heat": 0,
-                "Augmentation_Slots": 3,
-            },
-            "currency": {"eddies": 200},
-        },
-    }
-
-    if genre.lower() in genre_suggestions:
-        suggestions = genre_suggestions[genre.lower()]
-        if "character_properties" in suggestions:
-            base_scaffolding["character"]["player"]["properties"].update(
-                suggestions["character_properties"]
-            )
-        if "currency" in suggestions:
-            base_scaffolding["inventory"]["player"]["currency"] = suggestions[
-                "currency"
-            ]
-
-    return base_scaffolding
-
-
-def detect_genre_from_prompt(prompt_content: str) -> str:
-    """
-    Simple heuristic to detect genre from prompt content.
-    Returns 'generic' if no clear match.
-    ... (Rest of original detect_genre_from_prompt content) ...
-    """
-    prompt_lower = prompt_content.lower()
-    if any(word in prompt_lower for word in ["cyberpunk", "cyber", "netrunner", "chrome"]):
-        return "cyberpunk"
-    elif any(word in prompt_lower for word in ["horror", "lovecraft", "cosmic", "sanity", "terror"]):
-        return "horror"
-    elif any(word in prompt_lower for word in ["sci-fi", "scifi", "space", "starship", "alien"]):
-        return "scifi"
-    elif any(word in prompt_lower for word in ["fantasy", "magic", "dragon", "sword", "wizard"]):
-        return "fantasy"
-    else:
-        return "generic"
-        
-# -----------------------------------------------
-# NEWLY MOVED FUNCTIONALITY (from session_manager.py)
-# -----------------------------------------------
-
-def inject_setup_scaffolding(session_id: int, prompt_content: str, db_manager):
-    """
-    Inject initial scaffolding structure for SETUP mode.
-
-    Args:
-        session_id: Current session ID
-        prompt_content: The prompt content (used for genre detection)
-        db_manager: Database manager instance
-    """
-    genre = detect_genre_from_prompt(prompt_content)
-
-    if genre != "generic":
-        scaffolding = get_genre_specific_scaffolding(genre)
-    else:
-        scaffolding = get_setup_scaffolding()
-
-    # Inject scaffolding into database
-    for entity_type, entities in scaffolding.items():
-        for entity_key, entity_data in entities.items():
-            db_manager.game_state.set_entity(
-                session_id, entity_type, entity_key, entity_data
-            )
     
-    # NOTE: Logging should be handled by the caller (SessionManager)
+    template = StatBlockTemplate(
+        template_name="Adventurer",
+        abilities=[
+            AbilityDef(name="Strength", default=10, data_type="integer"),
+            AbilityDef(name="Agility", default=10, data_type="integer"),
+            AbilityDef(name="Mind", default=10, data_type="integer"),
+        ],
+        vitals=[
+            VitalDef(name="HP", min_value=0, max_formula="10")
+        ],
+        slots=[
+            SlotDef(name="Inventory", fixed_capacity=10)
+        ]
+    )
+    return ruleset, template
+
+def inject_setup_scaffolding(session_id: int, prompt_manifest_json: str, db_manager):
+    """
+    Inject initial scaffolding. Falls back to defaults if manifest is empty.
+    """
+    ruleset_model = None
+    st_model = None
+
+    # 1. Try to parse Prompt Manifest
+    if prompt_manifest_json and prompt_manifest_json != "{}":
+        try:
+            data = json.loads(prompt_manifest_json)
+            if data.get("ruleset") and data.get("stat_template"):
+                ruleset_model = Ruleset(**data["ruleset"])
+                st_model = StatBlockTemplate(**data["stat_template"])
+        except Exception as e:
+            logger.error(f"Manifest parse error: {e}. Using defaults.")
+
+    # 2. Fallback if missing
+    if not ruleset_model or not st_model:
+        logger.warning("No valid manifest found. Using default scaffolding.")
+        ruleset_model, st_model = _get_default_scaffolding()
+
+    try:
+        # 3. Create Active Records
+        rs_id = db_manager.rulesets.create(ruleset_model)
+        st_id = db_manager.stat_templates.create(rs_id, st_model)
+        
+        logger.info(f"Scaffolding: Ruleset {rs_id}, Template {st_id}")
+
+        # 4. Update Session Manifest
+        manifest_mgr = SetupManifest(db_manager)
+        manifest_mgr.update_manifest(session_id, {
+            "ruleset_id": rs_id, 
+            "stat_template_id": st_id,
+            "genre": ruleset_model.meta.get("genre", "Generic"),
+            "tone": ruleset_model.meta.get("tone", "Neutral")
+        })
+
+        # 5. Instantiate Player
+        abilities = {a.name: a.default for a in st_model.abilities}
+        vitals = {}
+        for v in st_model.vitals:
+            # Default to max=10 if not calculable yet
+            vitals[v.name] = {"current": 10, "max": 10} 
+            
+        tracks = {t.name: 0 for t in st_model.tracks}
+        slots = {s.name: [] for s in st_model.slots}
+
+        player_data = {
+            "name": "Player",
+            "template_id": st_id,
+            "abilities": abilities,
+            "vitals": vitals,
+            "tracks": tracks,
+            "slots": slots,
+            "conditions": []
+        }
+
+        db_manager.game_state.set_entity(session_id, "character", "player", player_data)
+        
+    except Exception as e:
+        logger.error(f"Error during scaffolding injection: {e}", exc_info=True)

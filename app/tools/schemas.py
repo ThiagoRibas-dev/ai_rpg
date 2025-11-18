@@ -545,6 +545,7 @@ class EntityCreate(BaseModel):
     name: Literal["entity.create"] = "entity.create"
     entity_type: str = Field(..., description="The type of the entity to create (e.g., 'character', 'item', 'location', 'quest').")
     entity_key: str = Field(..., description="A unique key for the new entity (e.g., 'goblin_scout_01', 'potion_of_healing_3').")
+    template_name: Optional[str] = Field(None, description="The name of the StatBlockTemplate to use (e.g. 'Basic Monster', 'NPC'). If omitted, uses default.")
     data: Dict[str, Any] = Field(..., description="A dictionary containing the full data for the new entity.")
 
 

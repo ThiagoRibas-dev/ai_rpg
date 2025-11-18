@@ -97,12 +97,17 @@ class SessionManager:
         # Save to get session ID
         self.orchestrator.save_game(session_name, selected_prompt.id)
 
-        # Inject scaffolding now using the centralized helper
+        # Inject scaffolding (Create Ruleset/Template DB rows and Player Entity)
         session_id = self.orchestrator.session.id
         if session_id:
             inject_setup_scaffolding(
-                session_id, selected_prompt.content, self.db_manager
+                session_id, 
+                selected_prompt.template_manifest, 
+                self.db_manager
             )
+            # Update session object to reflect changes made by scaffolding (e.g. setup_phase_data)
+            self.orchestrator.load_game(session_id)
+            logger.info(f"Injected scaffolding for session {session_id}")
             logger.info(f"Injected scaffolding for session {session_id}")
 
         # Refresh session list to show new session

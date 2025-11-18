@@ -212,23 +212,33 @@ class PromptDialog(ctk.CTkToplevel):
         thread.start()
 
     def _generate_template_background(self, rules_text: str):
-        """Background thread for AI processing using the new service."""
+        """
+        Background thread for AI processing.
+        Now returns a tuple: (ruleset_dict, stat_template_dict) wrapped in a container dict for the UI.
+        """
         try:
             from app.setup.template_generation_service import TemplateGenerationService
             
             if not self.llm_connector:
                 raise ValueError("LLMConnector not provided to PromptDialog")
 
-            # The service takes a callback function to post updates to the GUI
             generator = TemplateGenerationService(
                 self.llm_connector, 
                 rules_text, 
                 status_callback=lambda msg: self.after(0, self._update_generation_status, msg)
             )
-            template = generator.generate_template()
+            
+            # Returns (Ruleset, StatBlockTemplate) models
+            ruleset, stat_template = generator.generate_template()
+            
+            # Combine for display in the single text box (temporary visualization)
+            combined_result = {
+                "ruleset": ruleset.model_dump(exclude_none=True),
+                "stat_template": stat_template.model_dump(exclude_none=True)
+            }
             
             # Update final UI on main thread
-            self.after(0, self._on_template_generated, template, None)
+            self.after(0, self._on_template_generated, combined_result, None)
             
         except Exception as e:
             logging.exception("Template generation failed in background thread")

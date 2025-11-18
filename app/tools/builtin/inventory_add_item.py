@@ -11,46 +11,75 @@ def handler(
     properties: Optional[Dict[str, Any]] = None,
     **context: Any,
 ) -> dict:
-    """
-    Handler for inventory.add_item. It intelligently handles adding a new item
-    or incrementing the quantity of an existing one.
-    """
+    """Handler for inventory.add_item. Adds item to an appropriate Slot in the character's StatBlock."""
     session_id = context["session_id"]
     db = context["db_manager"]
 
-    inventory = get_entity(context["session_id"], context["db_manager"], "inventory", owner_key)
+    # 1. Load Owner (Character)
+    owner = get_entity(session_id, db, "character", owner_key)
+    if not owner:
+        raise ValueError(f"Owner '{owner_key}' not found.")
 
-    if not inventory:
-        # If no inventory exists, create a basic one.
-        inventory = {"owner": owner_key, "items": [], "currency": {}, "slots_used": 0, "slots_max": 10}
-
-    items = inventory.get("items", [])
+    # 2. Determine Slot
+    # We need to find a slot definition that accepts items.
+    template_id = owner.get("template_id")
+    stat_template = None
+    if template_id:
+        stat_template = db.stat_templates.get_by_id(template_id)
     
-    item_found_and_incremented = False
-    # Check if item already exists
-    for i, item in enumerate(items):
-        if item.get("name", "").lower() == item_name.lower():
-            # Item found, increment quantity
-            inventory["items"][i]["quantity"] = item.get("quantity", 1) + quantity
-            item_found_and_incremented = True
+    target_slot_name = "Inventory" # Default fallback
+    
+    if stat_template:
+        # Find the first slot that accepts "item" or has "inventory" in name
+        for slot_def in stat_template.slots:
+            if "item" in slot_def.accepts_tags or "Inventory" in slot_def.name:
+                target_slot_name = slot_def.name
+                break
+    
+    # 3. Access Slot Data
+    slots_data = owner.setdefault("slots", {})
+    target_slot_items = slots_data.setdefault(target_slot_name, [])
+    
+    # 4. Logic: Increment or Add
+    action = "added"
+    found = False
+    
+    for item in target_slot_items:
+        if item.get("name") == item_name:
+            item["quantity"] = item.get("quantity", 1) + quantity
+            found = True
+            action = "incremented"
             break
     
-    if not item_found_and_incremented:
-        # Item not found, create and add it
+    if not found:
         new_item = {
             "id": f"item_{int(time.time())}",
             "name": item_name,
             "quantity": quantity,
             "description": description or "",
-            "equipped": False,
-            "properties": properties or {},
+            "properties": properties or {}
         }
-        inventory.setdefault("items", []).append(new_item)
-        
-        # Also update slots_used if the inventory has that property
-        if "slots_used" in inventory:
-            inventory["slots_used"] = inventory.get("slots_used", 0) + 1
+        target_slot_items.append(new_item)
+    
+    # 5. Capacity Check (Simple count check for now)
+    # Ideally we use StateValidator._validate_slot, but for now simple length check if fixed capacity exists
+    if stat_template:
+        slot_def = next((s for s in stat_template.slots if s.name == target_slot_name), None)
+        if slot_def and slot_def.fixed_capacity:
+            # Simple logic: count distinct items or sum quantities? 
+            # Let's assume sum quantities for simplicity in this patch
+            total_count = sum(i.get("quantity", 1) for i in target_slot_items)
+            if total_count > slot_def.fixed_capacity:
+                 if slot_def.overflow_behavior == "prevent":
+                     raise ValueError(f"Slot '{target_slot_name}' is full (Capacity: {slot_def.fixed_capacity}).")
+                 # Else warn?
+    
+    # 6. Save
+    set_entity(session_id, db, "character", owner_key, owner)
 
-    set_entity(session_id, db, "inventory", owner_key, inventory)
-
-    return {"success": True, "action": "incremented" if item_found_and_incremented else "added", "item_name": item_name}
+    return {
+        "success": True, 
+        "action": action, 
+        "item_name": item_name,
+        "slot": target_slot_name
+    }
