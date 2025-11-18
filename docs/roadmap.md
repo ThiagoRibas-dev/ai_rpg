@@ -100,3 +100,22 @@ This document outlines the planned features and development milestones for the A
 *   **Context-Aware Memory Retrieval:**
     *   Enhance the memory retrieval system to prioritize memories related to the characters and relationships currently active in the scene.
     *   This ensures the AI always has the most relevant interpersonal context, maintaining emotional continuity even in very long-running games.
+
+## v13: Schema Generalization and AI-Assisted Rules Curation
+
+**Goal:** Evolve the game template system from a rigid, pre-defined schema to a highly flexible, descriptive structure that can accurately model a wider variety of TTRPGs, including narrative-first and mechanically unique systems. This is paired with a new "human-in-the-loop" UI for rules processing that dramatically improves AI accuracy and user control.
+
+*   **Generalized Data Models (`Mechanic`, `Trackable`):**
+    *   Introduce a universal `Mechanic` block to replace separate definitions for rules, skills, and actions. This new model can describe any game procedure by its trigger, cost, resolution steps, and narrative outcomes, gracefully handling systems like *Blades in the Dark*'s "Position & Effect" or *Call of Cthulhu*'s "Pushing a Roll."
+    *   Introduce a generalized `Trackable` model to replace the rigid `ResourceDefinition`. This can model anything from a simple HP pool to a segmented progress clock, a single reputation meter, or a list of status effects, using "thresholds" to define narrative consequences.
+    *   Add a `GenerativeSystem` model to explicitly describe component-based systems (e.g., *Ars Magica*'s Verb+Noun magic), which were previously impossible to represent.
+
+*   **Hybrid Character Schema (Core + Custom):**
+    *   Refactor the character state model to include a small set of "canonical" fixed fields for ubiquitous concepts like Health (`hp`), Name, and Level.
+    *   All other game-specific stats and resources will be modeled using the new flexible `Trackable` and `Mechanic` blocks. This provides UI consistency for common features while retaining maximum flexibility for unique game systems.
+
+*   **AI-Powered Rules Organization with User Review:**
+    *   Enhance the "New Prompt" dialog with an AI-powered pre-processing step. The user can paste an entire, unorganized rules document into a single text field.
+    *   An "Analyze & Organize Rules" button will trigger an AI call that categorizes the text into logical chunks (e.g., Core Rules, Character Creation, Special Systems).
+    *   These AI-generated chunks will then populate a series of dedicated text fields in the UI, allowing the user to **review, edit, and correct** the AI's categorization.
+    *   This "human-in-the-loop" workflow combines the ease of automation with the accuracy of human oversight, ensuring the final template generation pipeline receives perfectly organized and contextually rich data.
