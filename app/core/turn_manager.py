@@ -17,6 +17,8 @@ from app.prompts.templates import (
     CHOICE_GENERATION_TEMPLATE,
     NARRATIVE_TEMPLATE,
     TOOL_SELECTION_PER_STEP_TEMPLATE,
+    SETUP_PLAN_TEMPLATE,
+    GAMEPLAY_PLAN_TEMPLATE
 )
 from app.setup.setup_manifest import SetupManifest
 from app.tools.executor import ToolExecutor
@@ -138,9 +140,14 @@ class TurnManager:
 
         # Phase 1: Create Plan (Analysis + Strategy)
         if current_game_mode == "SETUP":
-            plan_template = "" # Removed SETUP_PLAN_TEMPLATE
+            # Check confirmation status to inject into the dynamic prompt
+            is_pending = manifest_mgr.is_pending_confirmation(game_session.id)
+            status_str = "WAITING FOR CONFIRMATION (Summary Presented)" if is_pending else "IN PROGRESS (Defining Game)"
+            
+            # Inject status into the template placeholder
+            plan_template = SETUP_PLAN_TEMPLATE.format(setup_status=status_str)
         else:
-            plan_template = "" # Removed GAMEPLAY_PLAN_TEMPLATE
+            plan_template = GAMEPLAY_PLAN_TEMPLATE
 
         turn_plan = self.planner.create_plan(
             system_instruction=static_instruction,

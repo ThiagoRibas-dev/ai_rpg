@@ -4,6 +4,7 @@ from typing import List, Dict, Any, Tuple
 from pydantic import BaseModel
 from app.tools import schemas
 # from app.utils.state_validator import StateValidator, ValidationError # Removed global validation
+from app.setup.setup_manifest import SetupManifest
 
 
 class ToolExecutor:
@@ -62,6 +63,17 @@ class ToolExecutor:
             "current_game_time": current_game_time,
         }
 
+        # Define tools that are "safe" and don't invalidate the setup summary
+        SAFE_SETUP_TOOLS = [
+            "request_setup_confirmation", 
+            "end_setup_and_start_gameplay", 
+            "deliberate", 
+            "state.query", 
+            "schema.query",
+            "memory.query",
+            "time.now"
+        ]
+
         for i, call in enumerate(tool_calls[:tool_budget]):
             # Debug logging to see what we actually got
             call_type = type(call)
@@ -118,6 +130,18 @@ class ToolExecutor:
             # Notify UI of tool call
             if self.ui_queue:
                 try:
+                    # Invalidation Logic for Setup Mode
+                    if getattr(session, "game_mode", "") == "SETUP":
+                        try:
+                            tool_name_str = getattr(call, "name", "")
+                            if tool_name_str not in SAFE_SETUP_TOOLS:
+                                manifest_mgr = SetupManifest(self.db)
+                                if manifest_mgr.is_pending_confirmation(session.id):
+                                    manifest_mgr.clear_pending_confirmation(session.id)
+                                    self.logger.info(f"Tool {tool_name_str} invalidated pending setup confirmation.")
+                        except Exception as e:
+                            self.logger.warning(f"Failed to run setup invalidation check: {e}")
+
                     self.logger.debug(f"Sending tool_call to UI queue: {tool_name}")
                     self.ui_queue.put(
                         {"type": "tool_call", "name": tool_name, "args": tool_args}

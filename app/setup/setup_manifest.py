@@ -68,6 +68,28 @@ class SetupManifest:
         self.db.sessions.update(session)
         
         return new_manifest
+
+    def set_pending_confirmation(self, session_id: int, summary: str):
+        """Sets the flag indicating the AI has summarized and is waiting for a 'Yes'."""
+        self.update_manifest(session_id, {
+            "confirmation_pending": True,
+            "last_summary": summary
+        })
+
+    def clear_pending_confirmation(self, session_id: int):
+        """
+        Invalidates the confirmation. 
+        Call this when the state changes (e.g. user changes a stat).
+        """
+        manifest = self.get_manifest(session_id)
+        if manifest.get("confirmation_pending"):
+            self.update_manifest(session_id, {
+                "confirmation_pending": False
+            })
+
+    def is_pending_confirmation(self, session_id: int) -> bool:
+        """Checks if we are in the 'waiting for yes' state."""
+        return self.get_manifest(session_id).get("confirmation_pending", False)
     
     def validate(self, session_id: int) -> SetupValidation:
         """
@@ -221,5 +243,7 @@ class SetupManifest:
             "core_properties": [],
             "player_character": None,
             "starting_location": None,
-            "ready_to_play": False
+            "ready_to_play": False,
+            "confirmation_pending": False,
+            "last_summary": ""
         }

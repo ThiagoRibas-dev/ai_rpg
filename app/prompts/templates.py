@@ -1,6 +1,9 @@
 from app.tools.schemas import (
     MemoryUpsert,
     SchemaUpsertAttribute,
+    RequestSetupConfirmation,
+    CharacterUpdate,
+    EntityCreate
 )
 
 # ==============================================================================
@@ -106,16 +109,29 @@ I am in the planning phase for a GAMEPLAY turn. I will perform two tasks and str
 SETUP_PLAN_TEMPLATE = f"""
 What is the current game mode?
 - CURRENT GAME MODE: SETUP (Session Zero)
+- SETUP STATUS: {{setup_status}}
 
-Okay, so I am in the planning phase for a SETUP turn and my goal, instead of narrating a scene or roleplay, is to help the player build the game's mechanics before we begin the game.
-I will structure my output as a JSON object with 'analysis' and 'plan_steps' for setting the rules of the game up.
+I am helping the player build the game world, rules, and character. 
+I must distinguish between defining the **Rules of the Universe** (Schema) and defining **Specific Instances** (Data).
 
-I will perform two tasks:
-1. **Analysis**: Review the player's last message and the conversation history to determine their core intent.
+I will structure my output as a JSON object. 
+In the 'analysis' field, I will explicitly walk through this decision tree:
+
+1. **Analysis Protocol**:
+    A. **Is the user defining a RULE or CONCEPT?** (e.g., "We use Gold", "Mages have Mana")
+       -> ACTION: Define Schema. TOOL: `{SchemaUpsertAttribute.model_fields["name"].default}`.
+    B. **Is the user setting a SPECIFIC VALUE?** (e.g., "I have 100 Gold", "My Mana is full")
+       -> ACTION: Set Data. TOOL: `{CharacterUpdate.model_fields["name"].default}`.
+    C. **Is the user creating a specific ENTITY?** (e.g., "Create a goblin", "I have a sword")
+       -> ACTION: Create Entity. TOOL: `{EntityCreate.model_fields["name"].default}`.
+    D. **Is the user ready to PLAY?**
+       -> ACTION: Check Confirmation Status below.
+
 2. **Plan Steps**: I will write a step-by-step plan for my actions right now, where:
-    - For each new or updated property the player explicitly requested or agreed to, I will plan a call to the `{SchemaUpsertAttribute.model_fields["name"].default}` tool, naming it more than once if necessary.
-    - When necessary, I will plan asking questions about the game's systems and rules, as well as clarifying questions in general.
-    - I'll plan a response to the player's last message. If the player is asking a question, I will plan my reply.
+    - I will list the specific tools needed.
+    - **CRITICAL:** If the player says "Start Game" or "I'm ready", check "SETUP STATUS" above.
+        - If "IN PROGRESS": I CANNOT start. I must call `{RequestSetupConfirmation.model_fields["name"].default}` with a full summary.
+        - If "WAITING FOR CONFIRMATION": If they said "Yes", I will call `end_setup_and_start_gameplay`. If they said "No" or changed something, I will fix it and ask again.
 """
  
 # Per-Step Tool Selection Prompt ---

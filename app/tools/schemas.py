@@ -309,7 +309,8 @@ class TimeAdvance(BaseModel):
 
 class SchemaUpsertAttribute(BaseModel):
     """
-        Creates or updates a new basic attribute for game entities during SETUP mode (Session Zero).
+        **DEFINES RULES ONLY.** Creates a new property definition in the game's ruleset (e.g., "There is a stat called Sanity").
+        **DO NOT USE** to set a specific character's value (e.g., "Player has 50 Sanity"). Use `character.update` for values.
         **Entity types:** 'character', 'item', 'location'
         **Example:** Define a Points resource
         {
@@ -367,6 +368,19 @@ class SchemaUpsertAttribute(BaseModel):
     )
 
 
+class RequestSetupConfirmation(BaseModel):
+    """
+    Summarize the current game setup (Rules, Character, Setting) and request player confirmation to start the game.
+    **CRITICAL:** You CANNOT use `end_setup_and_start_gameplay` until you have called this tool and the user has replied with a clear "Yes" or confirmation.
+    If the user rejects the summary or asks for changes, you must make those changes and then call this tool again.
+    """
+    name: Literal["request_setup_confirmation"] = "request_setup_confirmation"
+    summary: str = Field(
+        ..., 
+        description="A comprehensive summary of the Genre, Ruleset, Player Character stats, and Starting Scenario."
+    )
+
+
 class EndSetupAndStartGameplay(BaseModel):
     """
     Signal the end of the SETUP game mode (Session Zero) and start the game (GAMEPLAY mode).
@@ -398,7 +412,8 @@ class Deliberate(BaseModel):
 
 class CharacterUpdate(BaseModel):
     """
-    Update character attributes and properties with automatic validation and game logic.
+    **SETS VALUES ONLY.** Updates the specific numbers or text on a character sheet (e.g. "Set Strength to 18").
+    **DO NOT USE** to create new rules or stats (e.g. "Add a new stat called Honor"). Use `schema.upsert_attribute` for that.
     **When to use:**
     - Modifying HP, stats, conditions, or custom properties
     - Any character data changes (damage, healing, stat adjustments)
