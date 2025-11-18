@@ -1,256 +1,79 @@
-#### ✅ **Phase 1: Refactor Core Data Models**
+Here is the implementation checklist, broken down into logical phases. This moves the system from a monolithic "Simulationist" schema to the flexible **Ruleset + StatBlock** architecture.
 
-The goal is to move from a rigid schema to a flexible, descriptive "building block" approach.
+### Phase 1: Data Modeling & Database (The Foundation)
+*Goal: Define the new data structures and prepare the database to store them.*
 
--   **[ ] 1.1: Create the new Generic `Mechanic` Model.**
-    *   This will eventually replace `RuleSchema`, `SkillDefinition`, and `ActionEconomyDefinition`. It is the new workhorse for describing any game procedure.
-    *   **File:** `app/models/game_schemas.py`
+- [ ] **1. Create New Pydantic Models (`app/models/ruleset.py`)**
+    - [ ] Define `Ruleset` root model.
+    - [ ] Define `Compendium` (dictionaries for skills, conditions, items).
+    - [ ] Define `RuleEntry` (for text-based rules like "Grappling").
+- [ ] **2. Create New Pydantic Models (`app/models/stat_block.py`)**
+    - [ ] Define `StatBlockTemplate` root model.
+    - [ ] Define `AbilityDef` (support `data_type`: "integer", "die_code", "dots").
+    - [ ] Define `VitalDef` (Resource pools with min/max/recover).
+    - [ ] Define `TrackDef` (Clocks/Progress bars).
+    - [ ] Define `SlotDef` (Containers with capacity/filters).
+- [ ] **3. Update Database Schema (`app/database/repositories/`)**
+    - [ ] Create `ruleset_repository.py`: Table `rulesets` (id, name, json_data).
+    - [ ] Create `stat_template_repository.py`: Table `stat_templates` (id, ruleset_id, name, json_data).
+    - [ ] **Migration:** Update `sessions` table to link to a `ruleset_id`.
+    - [ ] **Migration:** Update `game_state` entities to link to a `stat_template_id` (so the validator knows which template to check against).
+- [ ] **4. Refactor `DBManager`**
+    - [ ] Register the new repositories in `__enter__`.
+    - [ ] Update table creation scripts.
 
-      ```python
-      # In app/models/game_schemas.py
+### Phase 2: AI Extraction Logic (The Input)
+*Goal: Update the setup phase to generate these new structures from rulebooks.*
 
-      from pydantic import BaseModel, Field
-      from typing import List, Dict, Optional, Literal
+- [ ] **1. Update Prompts (`app/prompts/templates.py`)**
+    - [ ] Create `GENERATE_RULESET_PROMPT`: Focus on resolution mechanics, text rules, and the "Compendium" (lists of skills/conditions).
+    - [ ] Create `GENERATE_STATBLOCK_PROMPT`: Focus on the *structure* of a PC (Attributes, Vitals, Slots).
+- [ ] **2. Update Generation Service (`app/setup/template_generation_service.py`)**
+    - [ ] Refactor `generate_template()` to run in two distinct stages:
+        1.  **Global Extraction:** Produce the `Ruleset`.
+        2.  **Template Construction:** Produce the `StatBlockTemplate` (using the Ruleset as context).
+    - [ ] Ensure "Dice Codes" (d4, d6) are recognized as valid types during extraction.
+- [ ] **3. Update Setup Manifest (`app/setup/setup_manifest.py`)**
+    - [ ] Track `ruleset_id` and `pc_template_id` instead of the old generic manifest.
 
-      class Mechanic(BaseModel):
-          """A universal block for describing any discrete game procedure."""
-          name: str = Field(..., description="The unique name of the mechanic, e.g., 'Skill Check', 'Pushing a Roll', 'Flashback'.")
-          description: str = Field(..., description="A concise explanation of what this mechanic is for and when it's used.")
-          
-          type: Literal["core_resolution", "skill", "combat_action", "meta_player_ability", "sub_system_rule", "character_trait"] = Field(..., description="Categorizes the mechanic for easier lookup.")
-          trigger: str = Field(..., description="A natural language description of when this mechanic is activated, e.g., 'When attempting a challenging action', 'Immediately after a failed roll'.")
-          
-          cost: Optional[str] = Field(None, description="The resource or narrative cost to use this mechanic, e.g., '1 Action', '1 Stress', 'Take a Devil's Bargain'.")
+### Phase 3: Runtime Logic & Validation (The Brain)
+*Goal: Teach the system how to enforce the new rules.*
 
-          resolution_formula: Optional[str] = Field(None, description="For simple systems, the dice formula, e.g., '1d20 + MOD vs DC'.")
-          resolution_steps: List[str] = Field(default_factory=list, description="For narrative or complex systems, a step-by-step breakdown of the procedure.")
-          
-          outcomes: Dict[str, str] = Field(default_factory=dict, description="Descriptive outcomes for different results, keys can be 'success', 'partial_success', 'failure', etc.")
-      ```
+- [ ] **1. Refactor `StateValidator` (`app/utils/state_validator.py`)**
+    - [ ] **Init:** Load `StatBlockTemplate` instead of the old manifest.
+    - [ ] **Validation Logic:**
+        - [ ] `_validate_ability`: Allow strings if type is `die_code` (Regex check: `^d[4,6,8,10,12,20]$`).
+        - [ ] `_validate_track`: Ensure updates don't exceed `max_segments`.
+        - [ ] `_validate_slot`: Check capacity (count or weight) before allowing an add.
+- [ ] **2. Update `character.update` Tool**
+    - [ ] Handle `Track` updates (increment/decrement logic).
+    - [ ] Handle `Vital` updates (clamping to Min/Max defined in template).
+- [ ] **3. Update `inventory.add_item` Tool**
+    - [ ] Check the target `Slot` definition.
+    - [ ] Enforce `capacity` limits defined in the `StatBlockTemplate`.
+    - [ ] Enforce `filter` logic (e.g., "Cyberware slot only accepts items with tag 'cyberware'").
 
--   **[ ] 1.2: Create the new Generic `Trackable` Model.**
-    *   This will replace `ResourceDefinition` and can model HP, clocks, sanity, etc. The key is the `thresholds` list for narrative consequences.
-    *   **File:** `app/models/game_schemas.py`
+### Phase 4: Context Injection (The Interface)
+*Goal: Ensure the LLM sees the rules and the character sheet correctly.*
 
-      ```python
-      # In app/models/game_schemas.py
+- [ ] **1. Update Context Builder (`app/context/context_builder.py`)**
+    - [ ] `build_static_system_instruction`: Inject the `Ruleset` summary (Core Resolution + Action Economy).
+    - [ ] `build_dynamic_context`: Inject the specific character's `StatBlock` state.
+- [ ] **2. Optimize Token Usage**
+    - [ ] *Optimization:* Only inject the `Compendium` definitions (e.g., specific Spell text) if they are currently relevant (RAG search or Active Inventory), rather than dumping the whole rulebook.
 
-      class Threshold(BaseModel):
-          """Defines a narrative or mechanical consequence when a Trackable's value crosses a certain point."""
-          condition: str = Field(..., description="The condition that triggers this threshold, e.g., '== 0', '> 5', '< 25%'.")
-          description: str = Field(..., description="The narrative or mechanical effect, e.g., 'You acquire a new Phobia.', 'The alarm is raised.'")
-          effect_mechanic: Optional[str] = Field(None, description="Optional link to a Mechanic's name for resolution, e.g., 'Roll on Indefinite Insanity table'.")
+### Phase 5: GUI Visualization (The Visuals)
+*Goal: Make the new data types visible to the player.*
 
-      class Trackable(BaseModel):
-          """A generalized model for any value that needs to be tracked, from HP to clocks to sanity."""
-          name: str = Field(..., description="The unique name of the trackable, e.g., 'Hit Points', 'Stress', 'Humanity', 'Progress Clock'.")
-          description: str = Field(..., description="What this value represents in the game world.")
+- [ ] **1. Update Character Inspector (`app/gui/panels/inspectors/character_inspector.py`)**
+    - [ ] **Abilities:** Render generic values (Integer or String/Die Code).
+    - [ ] **Vitals:** Render standard bars (Current/Max).
+    - [ ] **Tracks (NEW):** Render Clocks (Pie charts using `ctk` canvas or simple text `(â— â— â—‹â—‹)`) or Checkboxes.
+- [ ] **2. Update Inventory Inspector**
+    - [ ] Group items by **Slot** (e.g., "Backpack", "Belt", "Memory Units") instead of one big list.
+    - [ ] Show Capacity usage per slot (e.g., "Backpack: 15/20 lbs").
 
-          type: Literal["pool", "meter", "clock", "condition_track"] = Field(..., description="The UI/conceptual model: Pool (HP), Meter (Glory), Clock (progress), Track (Harm).")
-          value_type: Literal["integer", "boolean", "string_list"] = Field(..., description="The data type of the value being tracked.")
-
-          min_value: Any = Field(0, description="The minimum value.")
-          max_value: Any = Field(10, description="The maximum value or size.")
-          current_value: Any = Field(10, description="The current value.")
-          
-          thresholds: List[Threshold] = Field(default_factory=list, description="A list of consequences triggered at certain values.")
-      ```
-
--   **[ ] 1.3: Create the `GenerativeSystem` Model.**
-    *   This is a special-purpose block for component-based systems like Ars Magica.
-    *   **File:** `app/models/game_schemas.py`
-
-      ```python
-      # In app/models/game_schemas.py
-
-      class Component(BaseModel):
-          name: str
-          description: str
-
-      class GenerativeSystem(BaseModel):
-          """Describes a system where rules are generated by combining components, like Ars Magica's Verb+Noun magic."""
-          name: str = Field(..., description="The name of the generative system, e.g., 'Hermetic Magic'.")
-          description: str = Field(..., description="A high-level explanation of how the system works.")
-          
-          components: Dict[str, List[Component]] = Field(..., description="A dictionary of component categories and their items, e.g., {'Techniques': [...], 'Forms': [...]).")
-          combination_rule: str = Field(..., description="A natural language description of how to combine components to create an effect.")
-      ```
-
--   **[ ] 1.4: Update the main `GameTemplate` Model.**
-    *   Simplify it to be a container for these new, flexible blocks.
-    *   **File:** `app/models/game_schemas.py`
-
-      ```python
-      # In app/models/game_schemas.py
-
-      class GameTemplate(BaseModel):
-          """The new, flexible game system template."""
-          genre: Dict[str, Any]
-          tone: Dict[str, Any]
-          
-          mechanics: List[Mechanic] = Field(default_factory=list, description="A list of all discrete game mechanics and rules.")
-          trackables: List[Trackable] = Field(default_factory=list, description="A list of all trackable values, from HP to clocks.")
-          generators: List[GenerativeSystem] = Field(default_factory=list, description="A list of any component-based generative systems.")
-          
-          # Classes and Races can remain as they are mostly descriptive bundles.
-          classes: List[ClassDefinition] = Field(default_factory=list)
-          races: List[RaceDefinition] = Field(default_factory=list)
-      ```
-
--   **[ ] 1.5: (Optional but Recommended) Implement the Hybrid `Character` State.**
-    *   Update the character entity in `game_state` to have a fixed "core" and a flexible "custom" section. This will improve UI consistency.
-    *   **File:** `app/models/entities.py` (or similar location for game state models)
-
-      ```python
-      # This is a conceptual change for the data stored in the game_state table for a character.
-      # Example of the new JSON structure:
-      {
-        "name": "Vex",
-        "level": 0,
-        "class": "Whisper",
-        "race": "Akorosi Human",
-        
-        "attributes": { "Insight": 2, "Prowess": 1, "Resolve": 1 },
-        
-        "core_trackables": {
-          "hp": null,
-          "primary_resource": null,
-          "secondary_resource": { "name": "Stress", "current": 2, "max": 9 }
-        },
-        
-        "custom_trackables": {
-          "harm_level": { "name": "Harm", "type": "condition_track", ... },
-          "faction_clock_red_sashes": { "name": "Red Sashes Hostility", "type": "clock", ... }
-        }
-      }
-      ```
-
----
-
-#### ✅ **Phase 2: Implement the "Human-in-the-Loop" Rules Generation Flow**
-
-This phase redesigns the `PromptDialog` to support the AI-assisted chunking and user review process.
-
--   **[ ] 2.1: Update the `PromptDialog` UI.**
-    *   Keep the single large textbox for initial input.
-    *   Add a new button: `Analyze & Organize Rules`.
-    *   Add new, initially hidden textboxes for "Core Rules," "Character Creation," "Skills & Feats," and "Special Systems."
-    *   **File:** `app/gui/panels/prompt_dialog.py`
-
-      ```python
-      # In PromptDialog._create_widgets()
-
-      # ... (name, content, initial_message fields) ...
-
-      # --- Main Rules Input ---
-      self.main_rules_textbox = ctk.CTkTextbox(main_frame, height=300)
-      self.main_rules_textbox.pack(fill="both", expand=True)
-
-      # --- New AI Organizer Button ---
-      self.organize_btn = ctk.CTkButton(main_frame, text="ðŸ§  Analyze & Organize Rules", command=self._run_ai_organizer)
-      self.organize_btn.pack(pady=10)
-
-      # --- New Collapsible Frame for Organized Chunks ---
-      self.organized_frame = CollapsibleFrame(main_frame, "Organized Rule Sections (Review & Edit)")
-      self.organized_frame.pack(fill="both", expand=True, pady=10)
-      content = self.organized_frame.get_content_frame()
-      
-      # Add labeled textboxes inside the collapsible frame
-      ctk.CTkLabel(content, text="Core Rules & World Primer:").pack(anchor="w")
-      self.core_rules_chunk = ctk.CTkTextbox(content, height=150)
-      self.core_rules_chunk.pack(fill="x", pady=5)
-      
-      ctk.CTkLabel(content, text="Character Creation (Races/Classes):").pack(anchor="w")
-      self.char_creation_chunk = ctk.CTkTextbox(content, height=150)
-      self.char_creation_chunk.pack(fill="x", pady=5)
-      
-      # ... (add textboxes for skills_feats_chunk and special_systems_chunk) ...
-      ```
-
--   **[ ] 2.2: Implement the AI "Chunking" Logic.**
-    *   Create a new method in `PromptDialog` that runs in a background thread.
-    *   This method will make a single LLM call to categorize the text from `main_rules_textbox`.
-    *   **File:** `app/gui/panels/prompt_dialog.py`
-
-      ```python
-      # In PromptDialog class
-
-      def _run_ai_organizer(self):
-          # Disable button, show status, run in background thread...
-          rules_text = self.main_rules_textbox.get("1.0", "end-1c")
-          # ... thread setup ...
-          
-      def _run_ai_organizer_background(self, rules_text: str):
-          # Define the Pydantic schema for the AI's output
-          class RuleChunks(BaseModel):
-              core_rules: str
-              character_creation: str
-              skills_and_feats: str
-              special_systems: str
-
-          # Define the prompt for the AI
-          chunking_prompt = "You are a technical writer... categorize the following text... output only JSON..."
-          
-          # Make the LLM call
-          try:
-              # This is a conceptual call; adapt to your LLMConnector
-              chunks = self.llm_connector.get_structured_response(
-                  system_prompt=chunking_prompt,
-                  chat_history=[Message(role="user", content=rules_text)],
-                  output_schema=RuleChunks
-              )
-              self.after(0, self._populate_chunk_textboxes, chunks)
-          except Exception as e:
-              # Handle error...
-              
-      def _populate_chunk_textboxes(self, chunks: RuleChunks):
-          # This method runs on the main UI thread to update the textboxes
-          self.core_rules_chunk.insert("1.0", chunks.core_rules)
-          self.char_creation_chunk.insert("1.0", chunks.character_creation)
-          # ... and so on for the other boxes.
-          self.organized_frame.pack(fill="both", expand=True) # Make the frame visible
-      ```
-
--   **[ ] 2.3: Modify the `TemplateGenerationService`.**
-    *   Update its methods to accept the organized chunks of text.
-    *   When generating, it will combine the `core_rules` chunk with the relevant focused chunk for each task.
-    *   **File:** `app/setup/template_generation_service.py`
-
-      ```python
-      # In TemplateGenerationService
-
-      # Modify the constructor
-      def __init__(self, llm: LLMConnector, rule_chunks: Dict[str, str], ...):
-          self.llm = llm
-          self.rule_chunks = rule_chunks # Store the dict of chunked text
-          # ...
-      
-      # Modify a generation method to use the chunks
-      def _generate_classes(self):
-          # Combine the core context with the focused text for this task
-          combined_text_context = f"""
-          # CORE RULES CONTEXT
-          ---
-          {self.rule_chunks.get('core_rules', '')}
-          ---
-
-          # FOCUSED TEXT FOR THIS TASK
-          ---
-          {self.rule_chunks.get('character_creation', '')}
-          ---
-          """
-          
-          # The system prompt now just includes the combined text
-          system_prompt = f"{TEMPLATE_GENERATION_SYSTEM_PROMPT}\n\n{combined_text_context}"
-          
-          # The user instruction is now simpler
-          user_instruction = "Extract all Classes from the FOCUSED TEXT provided above, using the CORE RULES for context."
-          
-          # Make the LLM call...
-      ```
-
--   **[ ] 2.4: Update the Final "Generate" Button.**
-    *   The `_generate_template` method in `PromptDialog` now needs to:
-        1.  Collect the text from all the *chunked* textboxes.
-        2.  Pass this dictionary of chunks to the `TemplateGenerationService`.
-        3.  Proceed with the generation pipeline as before.
+### Phase 6: Cleanup & Verification
+- [ ] **1. Wipe Database:** Since the schema structure is fundamentally different, delete `ai_rpg.db` and start fresh.
+- [ ] **2. Test "Kids on Bikes":** Import a rule snippet using dice as stats (d4, d20). Verify the AI extracts it as `die_code` and the Validator allows strings.
+- [ ] **3. Test "Blades in the Dark":** Import a rule snippet with a "Clock". Verify the Inspector renders a track and the AI can increment it.
