@@ -41,7 +41,7 @@ class StateContextBuilder:
                 stat_template = self.db.stat_templates.get_by_id(template_id)
             
             name = player.get("name", "Player")
-            lines.append(f"**Character**: {name}")
+            lines.append(f"**Player Character**: {name}")
             
             if not stat_template:
                  # Fallback for legacy/uninitialized
@@ -95,8 +95,8 @@ class StateContextBuilder:
                         val = val.get("value", 0)
                     mx = track_def.max_value
                     # Visual representation
-                    filled = "■" * val
-                    empty = "□" * (mx - val)
+                    filled = "[ ]" * val
+                    empty = "[x]" * (mx - val)
                     lines.append(f"**{track_def.name}**: {filled}{empty} ({val}/{mx})")
                 lines.append("")
 

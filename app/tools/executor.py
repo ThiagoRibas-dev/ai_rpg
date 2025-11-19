@@ -1,10 +1,23 @@
 import logging
 import queue
-from typing import List, Dict, Any, Tuple
+from typing import Any, Dict, List, Tuple
+
 from pydantic import BaseModel
-from app.tools import schemas
-# from app.utils.state_validator import StateValidator, ValidationError # Removed global validation
+
 from app.setup.setup_manifest import SetupManifest
+from app.tools.schemas import (
+    Deliberate,
+    EndSetupAndStartGameplay,
+    RequestSetupConfirmation,
+    SchemaQuery,
+    StateQuery,
+    TimeNow,
+    TimeAdvance,
+    MemoryQuery,
+    MemoryUpsert,
+    MemoryUpdate,
+    MemoryDelete,
+)
 
 
 class ToolExecutor:
@@ -49,7 +62,7 @@ class ToolExecutor:
         """
         results: List[Dict[str, Any]] = []
         memory_tool_used = False
- 
+
         if not tool_calls:
             self.logger.warning("No tool calls provided for execution.")
             return results, memory_tool_used
@@ -65,13 +78,13 @@ class ToolExecutor:
 
         # Define tools that are "safe" and don't invalidate the setup summary
         SAFE_SETUP_TOOLS = [
-            "request_setup_confirmation", 
-            "end_setup_and_start_gameplay", 
-            "deliberate", 
-            "state.query", 
-            "schema.query",
-            "memory.query",
-            "time.now"
+            RequestSetupConfirmation.model_fields["name"].default,
+            EndSetupAndStartGameplay.model_fields["name"].default,
+            Deliberate.model_fields["name"].default,
+            SchemaQuery.model_fields["name"].default,
+            StateQuery.model_fields["name"].default,
+            MemoryQuery.model_fields["name"].default,
+            TimeNow.model_fields["name"].default,
         ]
 
         for i, call in enumerate(tool_calls[:tool_budget]):
@@ -123,7 +136,7 @@ class ToolExecutor:
                     }
                 )
                 continue
- 
+
             # Validation is now delegated to individual tool handlers (e.g. character.update)
             # StateApplyPatch is considered a low-level "superuser" tool without schema validation.
 
@@ -138,9 +151,13 @@ class ToolExecutor:
                                 manifest_mgr = SetupManifest(self.db)
                                 if manifest_mgr.is_pending_confirmation(session.id):
                                     manifest_mgr.clear_pending_confirmation(session.id)
-                                    self.logger.info(f"Tool {tool_name_str} invalidated pending setup confirmation.")
+                                    self.logger.info(
+                                        f"Tool {tool_name_str} invalidated pending setup confirmation."
+                                    )
                         except Exception as e:
-                            self.logger.warning(f"Failed to run setup invalidation check: {e}")
+                            self.logger.warning(
+                                f"Failed to run setup invalidation check: {e}"
+                            )
 
                     self.logger.debug(f"Sending tool_call to UI queue: {tool_name}")
                     self.ui_queue.put(
@@ -173,10 +190,10 @@ class ToolExecutor:
                 if isinstance(
                     call,
                     (
-                        schemas.MemoryUpsert,
-                        schemas.MemoryQuery,
-                        schemas.MemoryUpdate,
-                        schemas.MemoryDelete,
+                        MemoryUpsert,
+                        MemoryQuery,
+                        MemoryUpdate,
+                        MemoryDelete,
                     ),
                 ):
                     memory_tool_used = True
@@ -210,12 +227,14 @@ class ToolExecutor:
         """
         # Special handling for time.advance
         if (
-            tool_name == schemas.TimeAdvance.model_fields["name"].default
+            tool_name == TimeAdvance.model_fields["name"].default
             and isinstance(result, dict)
             and "new_time" in result
         ):
             if not session:
-                self.logger.warning("Session is None in _post_hook for time.advance. Cannot update game time.")
+                self.logger.warning(
+                    "Session is None in _post_hook for time.advance. Cannot update game time."
+                )
                 return
 
             try:

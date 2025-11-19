@@ -66,6 +66,21 @@ class MemoryUpsert(BaseModel):
     )
 
 
+class MemoryUpdate(BaseModel):
+    """
+    Modify an existing memory.
+
+    **Example:**
+    `memory.update(memory_id=123, priority=5, tags=["important", "traitor"])`
+    """
+
+    name: Literal["memory.update"] = "memory.update"
+    memory_id: int = Field(..., description="ID of the memory.")
+    content: Optional[str] = Field(None, description="New text content.")
+    priority: Optional[int] = Field(None, description="New priority (1-5).")
+    tags: Optional[List[str]] = Field(None, description="New tag list.")
+
+
 class RagSearch(BaseModel):
     """
     Search the vector database for static lore or background information.
@@ -237,21 +252,6 @@ class MemoryQuery(BaseModel):
     )
 
 
-class MemoryUpdate(BaseModel):
-    """
-    Modify an existing memory.
-
-    **Example:**
-    `memory.update(memory_id=123, priority=5, tags=["important", "traitor"])`
-    """
-
-    name: Literal["memory.update"] = "memory.update"
-    memory_id: int = Field(..., description="ID of the memory.")
-    content: Optional[str] = Field(None, description="New text content.")
-    priority: Optional[int] = Field(None, description="New priority (1-5).")
-    tags: Optional[List[str]] = Field(None, description="New tag list.")
-
-
 class MemoryDelete(BaseModel):
     """
     Permanently delete a memory.
@@ -359,7 +359,7 @@ class RequestSetupConfirmation(BaseModel):
 
     name: Literal["request_setup_confirmation"] = "request_setup_confirmation"
     summary: str = Field(
-        ..., description="Full summary of Genre, Rules, Character, and Location."
+        ..., description="Full summary of decisions made during the SETUP process of the game."
     )
 
 

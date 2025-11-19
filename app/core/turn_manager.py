@@ -4,8 +4,6 @@ from app.context.context_builder import ContextBuilder
 from app.context.memory_retriever import MemoryRetriever
 from app.context.state_context import StateContextBuilder
 from app.core.metadata.turn_metadata_service import TurnMetadataService
-
-# --- NEW: Import SimulationService ---
 from app.core.simulation_service import SimulationService
 from app.database.db_manager import DBManager
 from app.llm.auditor_service import AuditorService
@@ -21,21 +19,20 @@ from app.prompts.templates import (
     NARRATIVE_TEMPLATE,
     SETUP_PLAN_TEMPLATE,
     TOOL_SELECTION_PER_STEP_TEMPLATE,
+    SETUP_RESPONSE_TEMPLATE,
 )
 from app.setup.setup_manifest import SetupManifest
 from app.tools.executor import ToolExecutor
-
-# Import the handler directly to apply patches without a full tool execution loop
 from app.tools.schemas import (
+    CharacterUpdate,
     Deliberate,
     EndSetupAndStartGameplay,
+    EntityCreate,
     Patch,
+    RequestSetupConfirmation,
     SchemaQuery,
     SchemaUpsertAttribute,
     StateApplyPatch,
-    RequestSetupConfirmation,
-    CharacterUpdate,
-    EntityCreate,
 )
 
 MAX_HISTORY_MESSAGES = 50
@@ -97,13 +94,10 @@ class TurnManager:
             self.vector_store,
             self.logger,
         )
-        # mem_intents = MemoryIntentsService( # Removed
-        #     self.tool_registry, thread_db_manager, self.vector_store, self.logger
-        # )
- 
+
         # Initialize manifest manager early for tool selection logic
         manifest_mgr = SetupManifest(thread_db_manager)
- 
+
         # Determine game mode and available tools
         current_game_mode = game_session.game_mode
         if current_game_mode == "SETUP":
@@ -114,26 +108,25 @@ class TurnManager:
                 EntityCreate.model_fields["name"].default,
                 Deliberate.model_fields["name"].default,
                 SchemaQuery.model_fields["name"].default,
+                RequestSetupConfirmation.model_fields["name"].default,
             ]
-            
+
             # Dynamic Tool Swapping based on Confirmation State
             # If we are waiting for confirmation, allow them to Finish (EndSetup) OR fix things (Base tools)
             # If we are defining, allow them to Summarize (RequestConfirmation) but NOT Finish
             if manifest_mgr.is_pending_confirmation(game_session.id):
-                setup_tool_names.append(EndSetupAndStartGameplay.model_fields["name"].default)
-                # We also keep RequestSetupConfirmation available in case they want to re-summarize after a fix
-                setup_tool_names.append(RequestSetupConfirmation.model_fields["name"].default)
-            else:
-                setup_tool_names.append(RequestSetupConfirmation.model_fields["name"].default)
+                setup_tool_names.append(
+                    EndSetupAndStartGameplay.model_fields["name"].default
+                )
 
             self.logger.debug(f"SETUP MODE TOOLS: {setup_tool_names}")
         else:  # GAMEPLAY mode
             setup_tool_names = self.tool_registry.get_all_tool_names()  # Use all tools
- 
+
         # ===== BUILD STATIC SYSTEM INSTRUCTION =====
         # manifest_mgr already initialized above
         manifest = manifest_mgr.get_manifest(game_session.id)
-        
+
         ruleset_text = ""
         if manifest.get("ruleset_id"):
             ruleset = thread_db_manager.rulesets.get_by_id(manifest["ruleset_id"])
@@ -273,16 +266,19 @@ class TurnManager:
             game_session, chat_history
         )
         phase_template = (
-            ""  # Removed SETUP_RESPONSE_TEMPLATE
+            SETUP_RESPONSE_TEMPLATE
             if current_game_mode == "SETUP"
             else NARRATIVE_TEMPLATE
         )
+
+        tool_result_list = "\n".join([str(result) for result in tool_results])
+
         narrative = self.narrator.write_step(
             system_instruction=static_instruction,
             phase_template=phase_template,
             dynamic_context=dynamic_context,
             plan_thought=plan_summary,
-            tool_results=str(tool_results),
+            tool_results=tool_result_list,
             chat_history=chat_history,
         )
         if not narrative:
@@ -336,11 +332,6 @@ class TurnManager:
                         )
                 except Exception as e:
                     self.logger.error(f"Patch error: {e}", exc_info=True)
-        # mem_intents.apply( # Removed
-        #     narrative.memory_intents,
-        #     session_in_thread,
-        #     tool_event_callback=self.orchestrator.tool_event_callback,
-        # )
 
         # ===== STEP 5: Action choices =====
         if current_game_mode == "GAMEPLAY":
@@ -361,7 +352,16 @@ class TurnManager:
         # ===== NOW add narrative to chat history (all phases complete) =====
         session_in_thread.add_message("assistant", narrative.response)
 
-        # Persist final session state
+        # We must reload the session metadata because tools like RequestSetupConfirmation
+        # updated the DB directly, but our 'game_session' object here is stale.
+        latest_session_state = thread_db_manager.sessions.get_by_id(game_session.id)
+        if latest_session_state:
+            game_session.setup_phase_data = latest_session_state.setup_phase_data
+            game_session.game_mode = latest_session_state.game_mode
+            # Note: game_time usually updates via tools too, so good to refresh
+            game_session.game_time = latest_session_state.game_time
+
+        # Now save the history (without overwriting the flags we just refreshed)
         self.orchestrator._update_game_in_thread(
             game_session, thread_db_manager, session_in_thread
         )

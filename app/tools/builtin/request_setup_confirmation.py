@@ -17,7 +17,7 @@ def handler(summary: str, **context: Any) -> Dict[str, Any]:
     return {
         "success": True, 
         "status": "waiting_for_user_confirmation",
-        "message": "Summary recorded. Ask the user to confirm if they are ready to play.",
-        "summary_to_present": summary,
-        "instruction": "Present this summary to the user and ask for 'Yes/No' confirmation."
+        "message": "Summary recorded. Ask the player to confirm if they are ready to switch to GAMEPLAY mode and start the game.",
+        "instruction": "Present this summary to the plater and ask for 'Yes/No' confirmation of definitions.",
+        "summary_to_present": summary
     }

@@ -136,7 +136,7 @@ In the 'analysis' field, I will explicitly walk through this decision tree:
  
 # Per-Step Tool Selection Prompt ---
 TOOL_SELECTION_PER_STEP_TEMPLATE = """
-I will now select the single best tool to accomplish the following plan step.
+Okay. Now I will select the single best tool to accomplish the following plan step.
 
 For this response, I'll do exactly the following:
 1. Analyze the provided "Plan Step" in the context of the overall "Analysis" and conversation history for what actions I need to take *now*.
