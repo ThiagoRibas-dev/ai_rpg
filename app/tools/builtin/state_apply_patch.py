@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 from app.tools.builtin._state_storage import get_entity, set_entity
 
@@ -65,7 +66,11 @@ def _set_path(obj: dict, path: str, value: Any, create: bool):
                 raise KeyError(f"Missing path segment: {p}")
             cur[p] = {}
         elif not isinstance(cur[p], dict):
-            raise TypeError(f"Path segment {p} is not a dict")
+            # Structure Mismatch: Path implies node is a container, but it is a scalar.
+            # Upgrade scalar to dict, preserving value.
+            # e.g. Strength: 18 -> Strength: { "value": 18 }
+            logging.getLogger(__name__).warning(f"Patch: Upgrading scalar '{p}' to dict to allow traversal.")
+            cur[p] = {"value": cur[p]}
         cur = cur[p]
 
     # Set the final key

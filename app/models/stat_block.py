@@ -15,7 +15,7 @@ class AbilityDef(BaseModel):
     name: str
     abbr: Optional[str] = None
     description: Optional[str] = None
-    data_type: Literal["integer", "die_code", "dots", "float"] = "integer"
+    data_type: Literal["integer", "die_code", "dots", "float", "string"] = "integer"
     default: Union[int, str, float] = 10
     
     # Validations

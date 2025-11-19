@@ -337,7 +337,7 @@ class SchemaUpsertAttribute(BaseModel):
     template: Optional[
         Literal["resource", "stat", "reputation", "flag", "enum", "string"]
     ] = Field(None, description="Predefined template to use")
-    type: Optional[Literal["integer", "string", "boolean", "enum", "resource"]] = Field(
+    type: Optional[str] = Field(
         None, description="Data type (required if no template)"
     )
     default_value: Optional[JSONValue] = Field(

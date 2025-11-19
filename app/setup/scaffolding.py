@@ -51,6 +51,18 @@ def inject_setup_scaffolding(session_id: int, prompt_manifest_json: str, db_mana
         logger.warning("No valid manifest found. Using default scaffolding.")
         ruleset_model, st_model = _get_default_scaffolding()
 
+    # Ensure Ruleset name is unique to this session to avoid DB constraints
+    # e.g. "Default System" -> "Default System (Session 12)"
+    original_name = ruleset_model.meta.get("name", "Untitled System")
+    unique_name = f"{original_name} (Session {session_id})"
+    ruleset_model.meta["name"] = unique_name
+    
+    # Ensure Ruleset name is unique to this session to avoid DB constraints
+    # e.g. "Default System" -> "Default System (Session 12)"
+    original_name = ruleset_model.meta.get("name", "Untitled System")
+    unique_name = f"{original_name} (Session {session_id})"
+    ruleset_model.meta["name"] = unique_name
+    
     try:
         # 3. Create Active Records
         rs_id = db_manager.rulesets.create(ruleset_model)

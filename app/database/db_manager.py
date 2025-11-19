@@ -36,7 +36,9 @@ class DBManager:
 
     def __enter__(self):
         # Set a long timeout (30s) so threads wait rather than crashing immediately
-        self.conn = sqlite3.connect(self.db_path, timeout=30.0)
+        # Set isolation_level=None to enable autocommit mode. 
+        # This prevents python's sqlite3 from implicitly holding transactions open, which causes locking issues in threaded apps.
+        self.conn = sqlite3.connect(self.db_path, timeout=30.0, isolation_level=None)
         
         # Enable Write-Ahead Logging (WAL). 
         # This allows simultaneous readers and writers, drastically reducing locks.

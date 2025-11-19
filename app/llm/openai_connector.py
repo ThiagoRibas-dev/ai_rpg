@@ -154,8 +154,9 @@ class OpenAIConnector(LLMConnector):
             messages=messages,
             tools=tools,
             max_completion_tokens=-1,
-            temperature=0.7,
-            top_p=0.9,
+            temperature=0,
+            top_p=1,
+            top_k=1,
             tool_choice="auto",
             extra_body={
                 "chat_template_kwargs": {"enable_thinking": False},

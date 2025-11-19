@@ -129,8 +129,9 @@ class GeminiConnector(LLMConnector):
         generation_config = types.GenerateContentConfig(
             system_instruction=[types.Part.from_text(text=system_prompt)],
             tools=[gemini_tool],
-            temperature=1,
-            top_p=0.9,
+            temperature=0,
+            top_p=1,
+            top_k=1,
             max_output_tokens=self.default_max_tokens,
             thinking_config=types.ThinkingConfig(
                 thinking_budget=self.default_thinking_budget
@@ -143,6 +144,15 @@ class GeminiConnector(LLMConnector):
         )
 
         tool_calls = []
+        if not response.candidates:
+            return tool_calls
+        
+        if not response.candidates[0].content:
+            return tool_calls
+        
+        if not response.candidates[0].content.parts:
+            return tool_calls
+            
         for part in response.candidates[0].content.parts:
             if fc := part.function_call:
                 tool_calls.append({"name": fc.name, "arguments": dict(fc.args)})

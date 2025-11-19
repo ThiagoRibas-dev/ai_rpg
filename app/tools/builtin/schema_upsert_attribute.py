@@ -25,6 +25,10 @@ def handler(
     if not session_id or not db:
         return {"success": False, "error": "Missing session context."}
 
+    # Ensure default_value is not None, as AbilityDef requires a strict value
+    if default_value is None:
+        default_value = 10
+
     # 1. Get the active template
     manifest = SetupManifest(db).get_manifest(session_id)
     template_id = manifest.get("stat_template_id")
@@ -86,10 +90,13 @@ def handler(
         
     else:
         # Fallback: Add as Ability (String/Misc)
+        # If default_value is a string, assume string type. Otherwise integer.
+        fallback_type = "string" if isinstance(default_value, str) else "integer"
+        
         new_def = AbilityDef(
             name=property_name,
             description=description,
-            data_type="integer", # Defaulting to integer for safety
+            data_type=fallback_type,
             default=default_value
         )
         stat_template.abilities = [x for x in stat_template.abilities if x.name != property_name]

@@ -142,7 +142,6 @@ For this response, I'll do exactly the following:
 1. Analyze the provided "Plan Step" in the context of the overall "Analysis" and conversation history for what actions I need to take *now*.
 2. If the step is an action that needs to be executed now, choose one or more tools that directly executes this step from the "Available Tools" list.
 3. If the step is a future action,, is purely for dialogue, narration, doesn't require a tool, or if there isn't enough information to select a tool with the correct arguments, I will select the {deliberate_tool}.
-4. When faced with a step that mentions changing or transitioning the game's mode (SETUP, GAMEPLAY), I'll consider very carefully if that tool should be selected now, or if the intent is to do that later. In that case, I'll select the {deliberate_tool} 
 
 **Analysis**: {analysis}
 **Available Tools**: {tool_names_list}

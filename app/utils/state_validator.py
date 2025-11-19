@@ -71,7 +71,10 @@ class StateValidator:
                  raise ValidationError(f"Ability '{definition.name}' (dots) expects integer, got {type(value).__name__}")
             if not (0 <= value <= 5): # Hardcoded standard for dots, could use range_max
                  raise ValidationError(f"Dots for {definition.name} must be between 0 and 5.")
-
+ 
+        elif definition.data_type == "string":
+            if not isinstance(value, str):
+                raise ValidationError(f"Ability '{definition.name}' expects string, got {type(value).__name__}")
     def _validate_vital(self, definition: VitalDef, value: Any):
         # Vitals can be updated as a single number (current) or a dict {current, max}
         if isinstance(value, (int, float)):

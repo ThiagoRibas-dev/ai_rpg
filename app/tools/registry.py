@@ -2,6 +2,7 @@ import importlib
 import logging
 import pkgutil
 from pathlib import Path
+import copy
 from typing import Any, Callable, Dict, List, Type
 
 from pydantic import BaseModel
@@ -37,6 +38,31 @@ def _clean_schema(d: Any):
     elif isinstance(d, list):
         for item in d:
             _clean_schema(item)
+
+
+def _resolve_refs(schema_part: Any, defs: Dict[str, Any]) -> Any:
+    """
+    Recursively resolves $ref in the schema by inlining definitions from $defs.
+    This is required because the Gemini SDK does not support $ref pointers in FunctionDeclarations.
+    """
+    if isinstance(schema_part, dict):
+        if "$ref" in schema_part:
+            ref_path = schema_part["$ref"]
+            # Pydantic v2 uses #/$defs/, v1 used #/definitions/
+            if ref_path.startswith("#/$defs/") or ref_path.startswith("#/definitions/"):
+                def_name = ref_path.split("/")[-1]
+                if def_name in defs:
+                    # Recursively resolve the definition itself before returning
+                    # Deepcopy ensures we don't mess up if the def is used multiple times
+                    return _resolve_refs(copy.deepcopy(defs[def_name]), defs)
+            return schema_part
+        
+        return {k: _resolve_refs(v, defs) for k, v in schema_part.items()}
+    
+    elif isinstance(schema_part, list):
+        return [_resolve_refs(item, defs) for item in schema_part]
+    
+    return schema_part
 
 
 class ToolRegistry:
@@ -134,9 +160,15 @@ class ToolRegistry:
         schema = schema_type.model_json_schema()
         description = schema_type.__doc__ or "No description available"
 
+        # Extract definitions (where Pydantic puts nested models like UpdatePair)
+        defs = schema.get("$defs", {}) or schema.get("definitions", {})
+
         # Extract properties, excluding the discriminator field 'name'
         properties = schema.get("properties", {}).copy()
         properties.pop("name", None)
+
+        # Resolve references (inline nested models)
+        properties = _resolve_refs(properties, defs)
 
         # Clean up schema for LLM (remove titles, defaults, additionalProperties)
         _clean_schema(properties)

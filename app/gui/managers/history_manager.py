@@ -99,7 +99,7 @@ class HistoryManager:
 
         # Update database
         game_session.session_data = session.to_json()
-        self.db_manager.update_session(game_session)
+        self.db_manager.sessions.update(game_session)
 
         logger.info("Reroll prepared, returning user message for regeneration")
         return user_message
@@ -141,7 +141,7 @@ class HistoryManager:
 
         # Update database
         game_session.session_data = session.to_json()
-        self.db_manager.update_session(game_session)
+        self.db_manager.sessions.update(game_session)
 
         logger.info(f"Deleted {n} messages")
 
