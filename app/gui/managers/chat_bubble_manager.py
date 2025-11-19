@@ -100,7 +100,7 @@ class ChatBubbleManager:
         )
         content_label.pack(
             anchor="w",
-            padx=Theme.spacing.padding_md,
+            padx=15,  # Increased padding to prevent clipping
             pady=(Theme.spacing.padding_xs, Theme.spacing.bubble_padding_y_bottom),
         )
 

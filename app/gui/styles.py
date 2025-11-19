@@ -249,7 +249,29 @@ def get_button_style(variant: str = "default") -> Dict[str, Any]:
 class DarkTheme(Theme):
     """Dark theme variant (default)."""
 
-    pass
+    colors = ColorScheme(
+        # Backgrounds - Deep Midnight
+        bg_primary="#121212",
+        bg_secondary="#1E1E1E",
+        bg_tertiary="#2D2D2D",
+
+        # Chat bubbles - Softer contrast
+        bubble_user="#2b5278",      # Muted Royal Blue
+        bubble_ai="#2e3b2b",        # Deep Forest Green
+        bubble_thought="#2d2d2d",   # Dark Gray
+        bubble_thought_border="#555555",
+
+        # Text
+        text_primary="#E0E0E0",
+        text_secondary="#B0B0B0",
+        text_muted="gray",
+        text_gold="#D4AF37",        # Metallic Gold
+
+        # Accents
+        mode_setup="#D4AF37",
+        mode_gameplay="#4CAF50",
+    )
+
 
 
 class LightTheme(Theme):

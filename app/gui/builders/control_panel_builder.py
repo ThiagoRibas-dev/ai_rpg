@@ -50,7 +50,8 @@ class ControlPanelBuilder:
                 'session_new_button': CTkButton,  # NEW: Store for rewiring
                 'memory_textbox': CTkTextbox,
                 'authors_note_textbox': CTkTextbox,
-                'game_state_inspector_tabs': CTkTabview,
+                'inspector_selector': CTkOptionMenu,  # REPLACED tabs
+                'inspector_container': CTkFrame,      # REPLACED tabs
             }
         """
         # === Control Panel (Scrollable) ===
@@ -169,17 +170,29 @@ class ControlPanelBuilder:
 
         inspector_content = inspector_collapsible.get_content_frame()
 
-        # Create tab view
-        game_state_inspector_tabs = ctk.CTkTabview(inspector_content)
-        game_state_inspector_tabs.pack(fill="both", expand=True)
+        # --- View Switcher Header ---
+        view_selector_frame = ctk.CTkFrame(inspector_content, fg_color="transparent")
+        view_selector_frame.pack(fill="x", padx=2, pady=(0, 5))
 
-        # Add tabs (actual inspector views are created by InspectorManager)
-        game_state_inspector_tabs.add("Characters")
-        game_state_inspector_tabs.add("Inventory")
-        game_state_inspector_tabs.add("Quests")
-        game_state_inspector_tabs.add("Memories")
-        game_state_inspector_tabs.add("Tool Calls")
-        game_state_inspector_tabs.add("State Viewer")
+        ctk.CTkLabel(view_selector_frame, text="View:", font=Theme.fonts.body_small).pack(side="left", padx=5)
+        
+        # The dropdown to select views
+        inspector_selector = ctk.CTkOptionMenu(
+            view_selector_frame,
+            values=[], # Will be populated by Manager
+            width=150,
+            height=28
+        )
+        inspector_selector.pack(side="right", fill="x", expand=True, padx=5)
+
+        # --- Content Container ---
+        # Increased height to 600 to allow scrolling within the panel without cramping
+        inspector_container = ctk.CTkFrame(
+            inspector_content, 
+            fg_color="transparent",
+            height=600 
+        )
+        inspector_container.pack(fill="both", expand=True)
 
         # === Return Widget References ===
         return {
@@ -193,7 +206,8 @@ class ControlPanelBuilder:
             "session_scrollable_frame": session_scrollable_frame,
             "session_new_button": session_new_button,  # NEW: For rewiring
             "authors_note_textbox": authors_note_textbox,
-            "game_state_inspector_tabs": game_state_inspector_tabs,
+            "inspector_selector": inspector_selector,
+            "inspector_container": inspector_container,
             # COMMENT: We add the new button reference to the dictionary here.
             "world_info_button": lore_editor_button, # Keep old key for compatibility in MainView
         }

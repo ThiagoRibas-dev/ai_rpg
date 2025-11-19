@@ -214,3 +214,5 @@ chroma_db/*
 .VSCodeCounter/*
 docs/assistant prompt.txt
 *.lnk
+ai_rpg.db-wal
+ai_rpg.db-shm

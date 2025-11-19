@@ -25,59 +25,83 @@ class InspectorManager:
     Manages all game state inspector views.
     """
 
-    def __init__(self, db_manager, tabs: ctk.CTkTabview):
+    def __init__(self, db_manager, container: ctk.CTkFrame, selector: ctk.CTkOptionMenu):
         """
         Initialize all inspector views.
 
         Args:
             db_manager: Database manager instance
-            tabs: TabView widget to create inspector tabs in
+            container: The frame where views will be packed
+            selector: The dropdown menu to switch views
         """
         self.db_manager = db_manager
-        self.tabs = tabs
+        self.container = container
+        self.selector = selector
+        self.views = {} 
+
+        # === Initialize Inspector Views ===
 
         # === Initialize Inspector Views ===
 
         # Character inspector
         self.character_inspector = CharacterInspectorView(
-            self.tabs.tab("Characters"), self.db_manager
+            self.container, self.db_manager
         )
-        self.character_inspector.pack(fill="both", expand=True)
+        self.views["Character"] = self.character_inspector
 
         # Inventory inspector
         self.inventory_inspector = InventoryInspectorView(
-            self.tabs.tab("Inventory"), self.db_manager
+            self.container, self.db_manager
         )
-        self.inventory_inspector.pack(fill="both", expand=True)
+        self.views["Inventory"] = self.inventory_inspector
 
         # Quest inspector
         self.quest_inspector = QuestInspectorView(
-            self.tabs.tab("Quests"), self.db_manager
+            self.container, self.db_manager
         )
-        self.quest_inspector.pack(fill="both", expand=True)
+        self.views["Quests"] = self.quest_inspector
 
         # Memory inspector
         self.memory_inspector = MemoryInspectorView(
-            self.tabs.tab("Memories"),
+            self.container,
             self.db_manager,
             None,  # Orchestrator will be set later
         )
-        self.memory_inspector.pack(fill="both", expand=True)
+        self.views["Memories"] = self.memory_inspector
 
         # Tool calls frame (used by ToolVisualizationManager)
         self.tool_calls_frame = ctk.CTkScrollableFrame(
-            self.tabs.tab("Tool Calls"), fg_color=Theme.colors.bg_secondary
+            self.container, fg_color=Theme.colors.bg_secondary
         )
-        self.tool_calls_frame.pack(fill="both", expand=True)
+        self.views["Tool Calls"] = self.tool_calls_frame
 
         # State viewer button
-        state_viewer_frame = self.tabs.tab("State Viewer")
+        state_viewer_frame = ctk.CTkFrame(self.container, fg_color="transparent")
         ctk.CTkButton(
             state_viewer_frame,
-            text="🔍 Open State Viewer",
+            text="ðŸ”  Open State Viewer",
             command=self._open_state_viewer_stub,
             height=50,
-        ).pack(expand=True)
+        ).pack(expand=True, pady=20)
+        self.views["State Viewer"] = state_viewer_frame
+
+        # === Configure Selector ===
+        view_names = list(self.views.keys())
+        self.selector.configure(values=view_names, command=self.switch_view)
+        
+        # Default to Character view
+        self.selector.set("Character")
+        self.switch_view("Character")
+
+    def switch_view(self, view_name: str):
+        """Hides the current view and shows the selected one."""
+        # Hide all views
+        for view in self.views.values():
+            view.pack_forget()
+
+        # Show selected view
+        if view_name in self.views:
+            self.views[view_name].pack(fill="both", expand=True, padx=2, pady=2)
 
     def set_orchestrator(self, orchestrator):
         """

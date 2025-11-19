@@ -201,18 +201,18 @@ class MainPanelBuilder:
             button_frame, text="Send", state="disabled", command=send_callback
         )
         send_button.pack(
+            side="left",
             expand=True,
-            fill="both",
+            fill="x",
             padx=Theme.spacing.padding_xs,
-            pady=Theme.spacing.padding_xs,
         )
 
         stop_button = ctk.CTkButton(button_frame, text="Stop")
         stop_button.pack(
+            side="left",
             expand=True,
-            fill="both",
+            fill="x",
             padx=Theme.spacing.padding_xs,
-            pady=Theme.spacing.padding_xs,
         )
 
         # === Return Widget References ===

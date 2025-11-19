@@ -81,7 +81,8 @@ class MainView(ctk.CTk):
         self.world_info_button = None
 
         self.authors_note_textbox = None
-        self.game_state_inspector_tabs = None
+        self.inspector_selector = None
+        self.inspector_container = None
 
         # Build UI
         self._setup_window()
@@ -166,7 +167,8 @@ class MainView(ctk.CTk):
         self.world_info_button = control_widgets["world_info_button"]
 
         self.authors_note_textbox = control_widgets["authors_note_textbox"]
-        self.game_state_inspector_tabs = control_widgets["game_state_inspector_tabs"]
+        self.inspector_selector = control_widgets["inspector_selector"]
+        self.inspector_container = control_widgets["inspector_container"]
 
     def _init_managers(self):
         """
@@ -183,7 +185,9 @@ class MainView(ctk.CTk):
         # Inspector manager (must be created before others reference it)
         # REPLACES: Inspector initialization (lines 390-450)
         self.inspector_manager = InspectorManager(
-            self.db_manager, self.game_state_inspector_tabs
+            self.db_manager, 
+            self.inspector_container,
+            self.inspector_selector
         )
 
         # Tool visualization manager
@@ -331,7 +335,7 @@ class MainView(ctk.CTk):
         - Checks for active session before opening
         """
         # Find the State Viewer tab and replace button command
-        state_viewer_frame = self.inspector_manager.tabs.tab("State Viewer")
+        state_viewer_frame = self.inspector_manager.views["State Viewer"]
 
         # Clear existing widgets (the stub button)
         for widget in state_viewer_frame.winfo_children():

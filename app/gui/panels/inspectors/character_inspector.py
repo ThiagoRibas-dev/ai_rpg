@@ -19,7 +19,7 @@ class CharacterPanelBuilder:
         selector_frame.pack(fill="x", padx=5, pady=5)
         ctk.CTkLabel(selector_frame, text="Character:").pack(side="left", padx=5)
         character_selector = ctk.CTkOptionMenu(
-            selector_frame, values=["player"], command=selection_callback
+            selector_frame, values=["Player"], command=selection_callback
         )
         character_selector.pack(side="left", padx=5, fill="x", expand=True)
 
@@ -72,19 +72,23 @@ class CharacterInspectorView(ctk.CTkFrame):
                 return
 
             char_keys = list(self.all_characters.keys())
-            self.widgets["selector"].configure(values=char_keys)
+            # Pretty print keys
+            display_keys = [k.title() for k in char_keys]
+            self.widgets["selector"].configure(values=display_keys)
+            
             if self.current_character_key not in char_keys:
                 self.current_character_key = char_keys[0]
 
-            self.widgets["selector"].set(self.current_character_key)
-            self._on_character_selected(self.current_character_key)
+            self.widgets["selector"].set(self.current_character_key.title())
+            self._on_character_selected(self.current_character_key.title())
         except Exception as e:
             logger.error(f"Exception in refresh: {e}", exc_info=True)
             display_message_state(self.widgets["scroll_frame"], f"Error: {e}", is_error=True)
 
-    def _on_character_selected(self, character_key: str):
-        self.current_character_key = character_key
-        self.character_data = self.all_characters.get(character_key, {})
+    def _on_character_selected(self, display_name: str):
+        # Simple lowercase conversion for lookup
+        self.current_character_key = display_name.lower()
+        self.character_data = self.all_characters.get(self.current_character_key, {})
         self._render_character()
 
     def _render_character(self):

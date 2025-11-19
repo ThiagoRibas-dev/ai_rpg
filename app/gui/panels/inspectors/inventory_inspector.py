@@ -18,7 +18,7 @@ class InventoryPanelBuilder:
         selector_frame.pack(fill="x", padx=5, pady=5)
         ctk.CTkLabel(selector_frame, text="Owner:").pack(side="left", padx=5)
         owner_selector = ctk.CTkOptionMenu(
-            selector_frame, values=["inventory:player"], command=selection_callback
+            selector_frame, values=["Player"], command=selection_callback
         )
         owner_selector.pack(side="left", padx=5, fill="x", expand=True)
 
@@ -103,20 +103,33 @@ class InventoryInspectorView(ctk.CTkFrame):
                 self._render_inventory() # Will show empty state
                 return
 
+            # Format keys for display (remove 'character:' prefix and Title Case)
+            # Store a map of Display Name -> Real Key if needed, but for now we assume uniqueness
             inv_keys = list(self.all_inventories.keys())
-            self.widgets["owner_selector"].configure(values=inv_keys)
+            display_keys = [k.split(":")[-1].title() for k in inv_keys]
+            self.widgets["owner_selector"].configure(values=display_keys)
+            
             if self.current_owner_key not in inv_keys:
                 self.current_owner_key = inv_keys[0]
-
-            self.widgets["owner_selector"].set(self.current_owner_key)
-            self._on_owner_selected(self.current_owner_key)
+            self.widgets["owner_selector"].set(self.current_owner_key.split(":")[-1].title())
+            self._on_owner_selected(self.current_owner_key.split(":")[-1].title())
         except Exception as e:
             logger.error(f"Exception in refresh: {e}", exc_info=True)
             display_message_state(self.widgets["items_frame"], f"Error: {e}", is_error=True)
 
-    def _on_owner_selected(self, owner_key: str):
-        self.current_owner_key = owner_key
-        self.inventory_data = self.all_inventories.get(owner_key, {})
+    def _on_owner_selected(self, display_name: str):
+        # Convert display name back to key (simplistic assumption: lowercase)
+        # In a robust system, use a lookup dict.
+        key_guess = f"character:{display_name.lower()}"
+        
+        # Try to find the exact key in our data
+        if key_guess in self.all_inventories:
+             self.current_owner_key = key_guess
+        else:
+             # Fallback to first available if guess fails
+             pass 
+             
+        self.inventory_data = self.all_inventories.get(self.current_owner_key, {})
         self._render_inventory()
 
     def _render_inventory(self):
@@ -160,11 +173,14 @@ class InventoryInspectorView(ctk.CTkFrame):
 
     def _render_single_slot(self, parent, name, items, capacity=None):
         cap_str = f" (Max {capacity})" if capacity else ""
-        ctk.CTkLabel(parent, text=f"{name}{cap_str}", font=Theme.fonts.subheading, anchor="w").pack(fill="x", padx=5, pady=(10,2))
         
         if not items:
-            ctk.CTkLabel(parent, text="Empty", text_color="gray").pack(padx=15, anchor="w")
+            # Compact Empty Display
+            ctk.CTkLabel(parent, text=f"{name}: <Empty>", text_color="gray", anchor="w").pack(fill="x", padx=5, pady=2)
             return
+
+        # Normal Display
+        ctk.CTkLabel(parent, text=f"{name}{cap_str}", font=Theme.fonts.subheading, anchor="w").pack(fill="x", padx=5, pady=(10,2))
             
         for item in items:
             qty = item.get("quantity", 1)
@@ -194,22 +210,6 @@ class InventoryInspectorView(ctk.CTkFrame):
         try:
             from app.tools.registry import ToolRegistry
             registry = ToolRegistry()
-            # Use the new inventory_add_item tool instead of raw patch
-            
-            # HACK: We need to call the handler directly because ToolRegistry expects a Pydantic model
-            # and we are inside the GUI thread. 
-            # Ideally we should use the orchestrator to dispatch this.
-            
-            # For now, let's use the raw patch method as it was before, but adapted for Slots?
-            # Actually, the previous code used StateApplyPatch. 
-            # Let's stick to StateApplyPatch for manual adds if we don't have easy access to the tool logic
-            # OR, better, use the inventory_add_item tool logic if possible.
-            
-            # Reverting to StateApplyPatch for simplicity in this GUI context, 
-            # BUT we need to know which slot to add to. 
-            # The manual add dialog is too simple. 
-            # Let's just add to "Inventory" slot by default.
-            
             item_id = f"item_{int(time.time())}"
             # We need to know the target slot. 
             # Let's assume "Inventory" for manual adds.
