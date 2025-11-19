@@ -10,205 +10,201 @@ class UpdatePair(BaseModel):
     """A key-value pair for updating attributes or properties."""
 
     key: str = Field(
-        ..., description="The name of the attribute or property to update."
+        ...,
+        description="The name of the attribute or property to update (e.g., 'hp_current', 'strength').",
     )
-    value: JSONValue = Field(
-        ..., description="The new value for the attribute or property."
-    )
+    value: JSONValue = Field(..., description="The new value to assign.")
 
 
 class MathEval(BaseModel):
     """
-    Evaluates a simple mathematical expression.
-    **Supported operations:** +, -, *, /, ( )
-    **Example:** "2+3*4" → 14
+    Evaluates a mathematical expression.
+    Use this when you need to perform calculations (damage, currency exchange, XP totals) to ensure accuracy.
+
+    **Example:**
+    `math.eval(expression="(3 * 5) + 10")` -> Returns 25
     """
 
     name: Literal["math.eval"] = "math.eval"
-    expression: str = Field(..., description="Math expression, e.g., '2+3*4'")
+    expression: str = Field(
+        ...,
+        description="Math expression to evaluate. Supports +, -, *, /, and parentheses.",
+    )
 
 
 class MemoryUpsert(BaseModel):
     """
-    Create or update a memory entry with automatic deduplication.
+    Create or update a memory entry. This is the primary way to store long-term information.
+
     **When to use:**
-    - Recording important events (episodic)
-    - Storing facts about the world (semantic)
-    - Noting lore or backstory (lore)
-    - Tracking player preferences (user_pref)
-    **Automatic deduplication:**
-    If a very similar memory exists, it will be updated instead of creating a duplicate.
-    **Priority guide:**
-    - 1-2: Minor details, flavor text
-    - 3: Normal importance (default)
-    - 4: Important events, character development
-    - 5: Critical plot points, character-defining moments
+    - Recording narrative events ("The player met the King").
+    - Storing facts ("Goblins hate fire").
+    - Noting player preferences ("The player dislikes puzzles").
+
+    **Deduplication:**
+    The system will automatically update existing similar memories instead of creating duplicates.
+
     **Example:**
-    memory.upsert({
-        "kind": "episodic",
-        "content": "Defeated the goblin chieftain in single combat, earning respect of the tribe",
-        "priority": 4,
-        "tags": ["combat", "goblins", "reputation"]
-    })
+    `memory.upsert(kind="episodic", content="We explored the dank cave.", priority=3, tags=["cave", "exploration"])`
     """
 
     name: Literal["memory.upsert"] = "memory.upsert"
-    kind: str = Field(
+    kind: Literal["episodic", "semantic", "lore", "user_pref"] = Field(
         ...,
-        description="Memory type: 'episodic' (events), 'semantic' (facts), 'lore' (backstory), 'user_pref' (preferences)",
+        description="Category: 'episodic' (events), 'semantic' (facts), 'lore' (world info), 'user_pref' (player likes/dislikes).",
     )
-    content: str = Field(
-        ..., description="The memory content (be specific and descriptive)"
-    )
+    content: str = Field(..., description="The detailed content of the memory.")
     priority: int = Field(
-        3, description="Importance rating: 1=trivial, 3=normal, 5=critical", ge=1, le=5
+        3,
+        description="Importance: 1 (Trivial) to 5 (Critical/Core Memory).",
+        ge=1,
+        le=5,
     )
     tags: Optional[List[str]] = Field(
         None,
-        description="Tags for categorization (e.g., ['combat', 'magic', 'npc_name'])",
+        description="Keywords for retrieval (e.g., ['npc_name', 'location', 'quest_id']).",
     )
 
 
 class RagSearch(BaseModel):
     """
-    Search the RAG index for lore chunks.
-    **When to use:** Retrieving background information or world lore.
-    **Timeboxed:** Keep k small (2-4) to avoid overwhelming context.
+    Search the vector database for static lore or background information.
+
+    **When to use:**
+    - To look up historical facts, monster descriptions, or world details not currently in context.
+
+    **Example:**
+    `rag.search(query="weakness of frost giants", k=2)`
     """
 
     name: Literal["rag.search"] = "rag.search"
-    query: str = Field(..., description="The search query")
-    k: int = Field(2, description="Number of chunks to return (keep small: 2-4)")
+    query: str = Field(..., description="The natural language search query.")
+    k: int = Field(
+        2,
+        description="Number of results to return. Keep small (2-4) to save context window.",
+    )
     filters: Optional[dict] = Field(
-        None, description="Optional filter object, e.g., {'topic': 'ambush'}"
+        None, description="Metadata filters, e.g., {'source': 'monster_manual'}."
     )
 
 
 class RngRoll(BaseModel):
     """
     Roll dice using standard RPG notation.
-    **Syntax:** NdS±M where N=number of dice, S=sides, M=modifier
-    **Examples:**
-    - "1d20+5" → Roll d20, add 5
-    - "2d6-1" → Roll 2d6, subtract 1
-    - "3d8" → Roll 3d8, no modifier
-    **Returns:** Total result and individual roll values
+
+    **When to use:**
+    - Generating random outcomes for events not covered by specific rules.
+    - Rolling for loot tables or random encounters.
+
+    **Example:**
+    `rng.roll(dice="2d6+3")` -> Returns total and individual rolls.
     """
 
     name: Literal["rng.roll"] = "rng.roll"
     dice: Optional[str] = Field(
-        None, description="Dice specification (e.g., '1d20+3', '2d6-1')"
+        None, description="Dice specification (e.g., '1d20', '2d6+4', '3d8-1')."
     )
-    dice_spec: Optional[str] = Field(None, description="Alias for 'dice' parameter")
+    dice_spec: Optional[str] = Field(None, description="Alias for 'dice'.")
 
 
 class Modifier(BaseModel):
     source: str = Field(
-        ...,
-        description="The reason for the modifier (e.g., 'Player's Tech Skill', 'Magic Item Bonus').",
+        ..., description="Reason for modifier (e.g. 'Strength Bonus', 'Rainy Weather')."
     )
-    value: int = Field(..., description="The value of the modifier.")
+    value: int = Field(..., description="Integer value to add/subtract.")
 
 
 class ResolutionPolicy(BaseModel):
-    type: str = Field(
-        ...,
-        description="The type of resolution mechanic. Allowed value: 'skill_check'.",
-    )
-    dc: int = Field(
-        ...,
-        description="The final Difficulty Class for the check, as determined by the LLM.",
-    )
+    type: str = Field(..., description="Type of check (e.g., 'skill_check', 'save').")
+    dc: int = Field(..., description="The Target Number / Difficulty Class.")
     base_formula: str = Field(
-        ..., description="The base dice roll formula (e.g., '1d20')."
+        ..., description="The dice to roll (e.g., '1d20', '3d6')."
     )
     modifiers: Optional[List[Modifier]] = Field(
-        None, description="A list of all modifiers the LLM has decided to apply."
+        None, description="List of modifiers applying to this check."
     )
 
 
 class RulesResolveAction(BaseModel):
     """
-    Resolve an action using a dynamic resolution policy.
-    **When to use:** When an action requires a skill check or contested roll.
-    **You decide:** DC, modifiers, and resolution type based on context.
+    Resolves a complex action using a dynamic policy.
+
+    **When to use:**
+    - When the player attempts something risky (climbing a wall, persuading a guard).
+    - You determine the DC and modifiers based on the current situation.
+
+    **Example:**
+    `rules.resolve_action(action_id="Pick Lock", actor_id="player", resolution_policy={...})`
     """
 
     name: Literal["rules.resolve_action"] = "rules.resolve_action"
     action_id: str = Field(
-        ..., description="Descriptive label for the action (e.g., 'Open Humming Lock')"
+        ..., description="Descriptive name of action (e.g., 'Climb Wall')."
     )
-    actor_id: str = Field(..., description="ID of the actor performing the action")
+    actor_id: str = Field(..., description="Key of the entity acting (e.g., 'player').")
     resolution_policy: ResolutionPolicy = Field(
-        ..., description="Complete policy for resolving the action"
+        ..., description="The logic for the dice roll."
     )
 
 
 class Patch(BaseModel):
-    op: str = Field(..., description="Operation: 'add', 'replace', or 'remove'")
-    path: str = Field(
-        ..., description="JSON path to the value (e.g., '/attributes/hp_current')"
+    op: Literal["add", "replace", "remove"] = Field(
+        ..., description="JSON Patch operation."
     )
-    value: Optional[JSONValue] = Field(
-        None, description="The value to use (not needed for 'remove')"
-    )
+    path: str = Field(..., description="JSON path (e.g., '/attributes/hp').")
+    value: Optional[JSONValue] = Field(None, description="Value to add or replace.")
 
 
 class StateApplyPatch(BaseModel):
     """
-    Apply low-level JSON Patch operations to game state.
-    **When to use:**
-    - Array manipulations (add/remove items from lists)
-    - Complex nested updates across multiple paths
-    - Bulk changes that don't have a high-level tool
-    **When NOT to use:**
-    - Simple character updates → use character.update instead
-    - Reading state → use state.query instead
-    **Example:** Add item to inventory array
-    state.apply_patch({
-        "entity_type": "inventory",
-        "key": "player",
-        "patch": [{"op": "add", "path": "/items/-", "value": {"id": "sword_01", "name": "Iron Sword"}}]
-    })
+    Apply low-level JSON Patch operations to ANY game entity.
+
+    **âš ï¸  WARNING:** Use specific tools (like `character.update` or `inventory.add_item`) if possible.
+    Only use this for complex data structures or entities without dedicated tools.
+
+    **Example:**
+    `state.apply_patch(entity_type="location", key="tavern", patch=[{"op": "replace", "path": "/is_open", "value": false}])`
     """
 
     name: Literal["state.apply_patch"] = "state.apply_patch"
-    entity_type: str = Field(..., description="Type of entity to modify")
-    key: str = Field(..., description="Entity key")
-    patch: List[Patch] = Field(..., description="List of JSON Patch operations")
+    entity_type: str = Field(
+        ..., description="Type of entity (e.g., 'character', 'scene', 'location')."
+    )
+    key: str = Field(..., description="Unique key of the entity.")
+    patch: List[Patch] = Field(..., description="List of patch operations.")
 
 
 class StateQuery(BaseModel):
     """
-    Read any game state entity (characters, inventory, quests, etc.).
+    Read data from the game state.
+
     **When to use:**
-    - Before making decisions that depend on current state
-    - To verify facts (e.g., "Does the player have the key?")
-    - To check entity properties before modifying them
-    **Common patterns:**
-    - Read full character: state.query({"entity_type": "character", "key": "player", "json_path": "."})
-    - Read specific property: state.query({"entity_type": "character", "key": "player", "json_path": "attributes.hp_current"})
-    - Get all quests: state.query({"entity_type": "quest", "key": "*", "json_path": "."})
+    - Checking a player's stats before a roll.
+    - verifying if an item exists.
+    - checking quest status.
+
+    **Example:**
+    `state.query(entity_type="character", key="player", json_path="vitals.hp")`
     """
 
     name: Literal["state.query"] = "state.query"
     entity_type: str = Field(
-        ...,
-        description="Type of entity (e.g., 'character', 'inventory', 'quest', 'location')",
+        ..., description="Entity type (character, inventory, quest, location, scene)."
     )
     key: str = Field(
-        ..., description="Entity key. Use '*' to get all entities of this type."
+        ..., description="Entity key. Use '*' to get ALL entities of that type."
     )
     json_path: str = Field(
-        ...,
-        description="JSONPath expression. Use '.' for root, or 'attributes.hp' for nested properties.",
+        ..., description="JSONPath to specific data. Use '.' for the whole object."
     )
 
 
 class TimeNow(BaseModel):
     """
-    Get the current real-world timestamp in ISO 8601 format.
-    **When to use:** Logging events with real timestamps (rarely needed in gameplay).
+    Get the current real-world UTC timestamp.
+
+    **When to use:**
+    - Rarely needed for gameplay. Use `time.advance` for fictional time.
     """
 
     name: Literal["time.now"] = "time.now"
@@ -216,195 +212,176 @@ class TimeNow(BaseModel):
 
 class MemoryQuery(BaseModel):
     """
-    Search and retrieve memories based on filters.
+    Retrieve memories based on filters.
+
     **When to use:**
-    - Before making decisions to recall relevant past information
-    - To check what the player character knows or has experienced
-    - To verify past events or facts
-    **Filters:**
-    - kind: Filter by memory type
-    - tags: Match any of the provided tags
-    - query_text: Text search within memory content
-    - semantic: Use vector similarity search (slower but more relevant)
-    **Example:** Find combat-related memories
-    memory.query({"tags": ["combat"], "limit": 5})
+    - Recalling past interactions with an NPC.
+    - Checking what the player knows about a topic.
+
+    **Example:**
+    `memory.query(tags=["npc_gorn", "trust"], limit=5)`
     """
 
     name: Literal["memory.query"] = "memory.query"
     kind: Optional[str] = Field(
-        None,
-        description="Filter by memory kind: 'episodic', 'semantic', 'lore', or 'user_pref'",
+        None, description="Filter by kind (episodic, semantic, etc)."
     )
-    tags: Optional[List[str]] = Field(
-        None, description="Filter by tags (returns memories with any matching tag)"
-    )
-    query_text: Optional[str] = Field(
-        None, description="Search for text within memory content"
-    )
-    limit: int = Field(
-        5, description="Maximum number of memories to return (1-20)", ge=1, le=20
-    )
+    tags: Optional[List[str]] = Field(None, description="Filter by tags.")
+    query_text: Optional[str] = Field(None, description="Search content text.")
+    limit: int = Field(5, description="Max results.", ge=1, le=20)
     semantic: Optional[bool] = Field(
-        False, description="Use semantic retrieval when true (blended with filters)"
+        False, description="Enable vector/semantic search."
     )
     time_query: Optional[str] = Field(
-        None, description="Filter memories by fictional time (e.g., 'Day 1', 'Nightfall')"
+        None, description="Filter by fictional time string."
     )
 
 
 class MemoryUpdate(BaseModel):
     """
-    Update an existing memory's content, priority, or tags.
-    **When to use:** When information changes or becomes more/less important.
-    **Example:** Increase priority of a memory that became relevant
-    memory.update({"memory_id": 42, "priority": 5})
+    Modify an existing memory.
+
+    **Example:**
+    `memory.update(memory_id=123, priority=5, tags=["important", "traitor"])`
     """
 
     name: Literal["memory.update"] = "memory.update"
-    memory_id: int = Field(..., description="The ID of the memory to update")
-    content: Optional[str] = Field(None, description="New content for the memory")
-    priority: Optional[int] = Field(None, description="New priority (1-5)", ge=1, le=5)
-    tags: Optional[List[str]] = Field(None, description="New tags list")
+    memory_id: int = Field(..., description="ID of the memory.")
+    content: Optional[str] = Field(None, description="New text content.")
+    priority: Optional[int] = Field(None, description="New priority (1-5).")
+    tags: Optional[List[str]] = Field(None, description="New tag list.")
 
 
 class MemoryDelete(BaseModel):
     """
-    Delete a memory that is no longer relevant or was incorrect.
-    **When to use:** Sparingly - updating is usually better than deleting.
-    **Caution:** Deleted memories cannot be recovered.
+    Permanently delete a memory.
     """
 
     name: Literal["memory.delete"] = "memory.delete"
-    memory_id: int = Field(..., description="The ID of the memory to delete")
+    memory_id: int = Field(..., description="ID of the memory.")
 
 
 class TimeAdvance(BaseModel):
     """
-    Advance the fictional game time.
+    Advance the FICTIONAL game time.
+
     **When to use:**
-    - Scene transitions ("several hours later", "the next morning")
-    - Rest/sleep periods
-    - Travel montages
-    - Any narrative time skip
-    **Updates:**
-    - Session game_time field (displayed in UI)
-    - Can trigger memory associations with fictional_time
-    **Example:** Skip to next day
-    time.advance({
-        "description": "You rest until dawn",
-        "new_time": "Day 2, Morning"
-    })
+    - Traveling, sleeping, or waiting.
+    - Transitioning between scenes.
+
+    **Example:**
+    `time.advance(description="You sleep through the night.", new_time="Day 2, Morning")`
     """
 
     name: Literal["time.advance"] = "time.advance"
-    description: str = Field(
-        ...,
-        description="Human-readable time passage (e.g., '3 hours passed', 'rested for a week', 'until dawn')",
-    )
-    new_time: str = Field(
-        ...,
-        description="New fictional time (e.g., 'Day 2, Afternoon', 'Hour 12 of the siege')",
-    )
+    description: str = Field(..., description="Narrative description of time passing.")
+    new_time: str = Field(..., description="The new formatted time string.")
 
 
 class SchemaUpsertAttribute(BaseModel):
     """
-        **DEFINES RULES ONLY.** Creates a new property definition in the game's ruleset (e.g., "There is a stat called Sanity").
-        **DO NOT USE** to set a specific character's value (e.g., "Player has 50 Sanity"). Use `character.update` for values.
-        **Entity types:** 'character', 'item', 'location'
-        **Example:** Define a Points resource
-        {
-            "property_name": "Points",
-            "template": "resource",
-            "description": "Points than can be spent",
-            "max_value": 100,
-            "icon": "P",
-            "regenerates": true
-        }
+    **SETUP MODE ONLY.** Defines a RULE or CONCEPT in the game system.
+
+    **DO NOT USE** to set a specific character's value (e.g., "Player has 50 Sanity"). Use `character.update` for values.
+
+    **When to use:**
+    - "This game uses a stat called Sanity."
+    - "There is a resource called Mana."
+    - "Define a 'Reputation' track."
+
+    **Example:**
+    `schema.upsert_attribute(property_name="Sanity", template="stat", min_value=0, max_value=100, icon="ðŸ§ ")`
     """
 
     name: Literal["schema.upsert_attribute"] = "schema.upsert_attribute"
+
     property_name: str = Field(
         ...,
-        description="The programmatic name of the property (e.g., 'Sanity', 'Mana')",
+        description="The programmatic name of the property (e.g., 'Sanity', 'Mana', 'Allegiance').",
     )
     description: str = Field(
-        ..., description="A human-readable description of what the property represents"
+        ..., description="A human-readable description of what the property represents."
     )
     entity_type: Literal["character", "item", "location"] = Field(
-        "character", description="The type of entity this property applies to"
+        "character", description="The type of entity this property applies to."
     )
     template: Optional[
         Literal["resource", "stat", "reputation", "flag", "enum", "string"]
-    ] = Field(None, description="Predefined template to use")
-    type: Optional[str] = Field(
-        None, description="Data type (required if no template)"
+    ] = Field(
+        None,
+        description="Predefined behavior template. 'resource' has current/max, 'stat' is a fixed number, 'enum' is a list of options.",
     )
     default_value: Optional[JSONValue] = Field(
-        None, description="Initial value (required if no template)"
+        None, description="Initial value for new entities."
     )
-    has_max: Optional[bool] = Field(
-        None, description="For 'resource' types, whether there's a maximum value"
+    min_value: Optional[int] = Field(
+        None, description="Minimum allowed integer value (for stats/resources)."
     )
-    min_value: Optional[int] = Field(None, description="Minimum allowed integer value")
-    max_value: Optional[int] = Field(None, description="Maximum allowed integer value")
+    max_value: Optional[int] = Field(
+        None, description="Maximum allowed integer value (for stats/resources)."
+    )
+
+    # --- Restored Fields ---
     allowed_values: Optional[List[str]] = Field(
-        None, description="For 'enum' types, list of allowed string values"
+        None,
+        description="For 'enum' types, the specific list of allowed string options (e.g., ['Novice', 'Veteran', 'Master']).",
     )
     display_category: Optional[str] = Field(
-        None, description="Category for UI display (e.g., 'Resources', 'Stats')"
+        None,
+        description="Grouping header for the UI (e.g., 'Primary Stats', 'Social', 'Inventory').",
     )
     icon: Optional[str] = Field(
-        None, description="Emoji or short string to use as an icon in the UI"
+        None,
+        description="Emoji or short string to use as a visual icon in the UI (e.g., 'â ¤ï¸ ', 'ðŸ›¡ï¸ ').",
     )
-    display_format: Optional[Literal["number", "bar", "badge"]] = Field(
-        None, description="How to display in the UI"
+    display_format: Optional[
+        Literal["number", "bar", "badge", "clock", "checkboxes"]
+    ] = Field(
+        None,
+        description="Visual style hint for the UI. 'bar' for resources, 'clock' for tracks.",
     )
     regenerates: Optional[bool] = Field(
-        None, description="For 'resource' types, whether it regenerates over time"
+        None,
+        description="For 'resource' types, whether it automatically regenerates over time.",
     )
     regeneration_rate: Optional[int] = Field(
-        None, description="For 'resource' types, regeneration rate per game turn"
+        None, description="Amount to regenerate per game turn/rest."
     )
 
 
 class RequestSetupConfirmation(BaseModel):
     """
-    Summarize the current game setup (Rules, Character, Setting) and request player confirmation to start the game.
-    **CRITICAL:** You CANNOT use `end_setup_and_start_gameplay` until you have called this tool and the user has replied with a clear "Yes" or confirmation.
-    If the user rejects the summary or asks for changes, you must make those changes and then call this tool again.
+    **SETUP MODE ONLY.** Summarize the setup and ask the user to confirm.
+
+    **Usage:**
+    You MUST call this tool with a full summary before you can start the game.
     """
+
     name: Literal["request_setup_confirmation"] = "request_setup_confirmation"
     summary: str = Field(
-        ..., 
-        description="A comprehensive summary of the Genre, Ruleset, Player Character stats, and Starting Scenario."
+        ..., description="Full summary of Genre, Rules, Character, and Location."
     )
 
 
 class EndSetupAndStartGameplay(BaseModel):
     """
-    Signal the end of the SETUP game mode (Session Zero) and start the game (GAMEPLAY mode).
-    **When to use:** Only when the player has explicitly requested or agreed to start the game.
-    **Effect:** Transitions game mode from SETUP to GAMEPLAY and starts the game.
+    **SETUP MODE ONLY.** Transitions the game to GAMEPLAY mode.
 
-
-    **IMPORTANT:** Any sort of narration or roleplaying must happen AFTER this tool is used.
+    **Usage:**
+    Call this ONLY after the user has explicitly said "Yes" or "Ready" to your confirmation summary.
     """
 
     name: Literal["end_setup_and_start_gameplay"] = "end_setup_and_start_gameplay"
-    reason: str = Field(
-        ...,
-        description="A brief justification for why the setup is considered complete and gameplay should begin.",
-    )
+    reason: str = Field(..., description="Why setup is complete.")
 
 
 class Deliberate(BaseModel):
     """
-    A no-op tool that allows the AI to think or reflect without taking a concrete action.
+    Do nothing / Think.
+
     **When to use:**
-    - When you need to consider the next step without making any changes.
-    - If no other tool is appropriate for the current turn.
-    - To signal that you are waiting for more information from the player.
+    - You need to deliberate but no game state needs changing.
+    - You are waiting for user input.
     """
 
     name: Literal["deliberate"] = "deliberate"
@@ -412,39 +389,29 @@ class Deliberate(BaseModel):
 
 class CharacterUpdate(BaseModel):
     """
-    **SETS VALUES ONLY.** Updates the specific numbers or text on a character sheet (e.g. "Set Strength to 18").
-    **DO NOT USE** to create new rules or stats (e.g. "Add a new stat called Honor"). Use `schema.upsert_attribute` for that.
+    Updates specific values on a character sheet.
+
     **When to use:**
-    - Modifying HP, stats, conditions, or custom properties
-    - Any character data changes (damage, healing, stat adjustments)
-    - **Preferred over state.apply_patch** for character updates
-    **Example:** Update HP and custom Sanity property
-    character.update({
-        "character_key": "player",
-        "updates": [
-            {"key": "hp_current", "value": 25},
-            {"key": "sanity", "value": 80}
-        ]
-    })
+    - Taking damage or healing ("hp_current").
+    - Changing a stat ("strength", "gold").
+    - **DO NOT USE** to define new rules (use `schema.upsert_attribute`).
+
+    **Example:**
+    `character.update(character_key="player", updates=[{"key": "hp_current", "value": 15}])`
     """
 
     name: Literal["character.update"] = "character.update"
-    character_key: str = Field(
-        ..., description="Character ID (e.g., 'player', 'npc_goblin_chief')"
-    )
-    updates: List[UpdatePair] = Field(
-        ...,
-        description="List of key-value pairs for updates. Supports core attributes (hp_current, hp_max, conditions, etc) and custom properties (str, dex, skill_spot, etc).",
-    )
+    character_key: str = Field(..., description="Character ID (usually 'player').")
+    updates: List[UpdatePair] = Field(..., description="List of keys and new values.")
 
 
 class SchemaQuery(BaseModel):
     """
-    Query detailed information about game mechanics.
-    Use this when you need to know:
-    - What a specific attribute/skill/class does
-    - What actions are available in combat
-    - Details about game mechanics
+    Look up game rules/mechanics.
+
+    **When to use:**
+    - "What does the 'Acrobatics' skill do?"
+    - "How does the 'Fatigued' condition work?"
     """
 
     name: Literal["schema.query"] = "schema.query"
@@ -452,151 +419,151 @@ class SchemaQuery(BaseModel):
         "attribute", "resource", "skill", "action_economy", "class", "race", "all"
     ]
     specific_name: Optional[str] = Field(
-        None,
-        description="Name of specific item to query. Leave blank for all of that type.",
+        None, description="Name of the item to look up."
     )
+
 
 class NpcAdjustRelationship(BaseModel):
     """
-    Adjust the relationship metrics between an NPC and another entity (usually the player).
-    Use this to reflect the social outcomes of a conversation or action.
-    **Example:** After a successful persuasion, increase the NPC's trust.
-    npc.adjust_relationship({
-        "npc_key": "town_guard_captain",
-        "subject_key": "player",
-        "trust_change": 2,
-        "tags_to_add": ["helpful"]
-    })
+    Adjust NPC relationship metrics (Trust, Attraction, Fear).
+
+    **When to use:**
+    - After social interactions.
+    - When the player helps or harms an NPC.
+
+    **Example:**
+    `npc.adjust_relationship(npc_key="guard", subject_key="player", trust_change=2)`
     """
+
     name: Literal["npc.adjust_relationship"] = "npc.adjust_relationship"
-    npc_key: str = Field(..., description="The entity key of the NPC whose feelings are changing.")
-    subject_key: str = Field(..., description="The entity key of the subject of these feelings (e.g., 'player').")
-    trust_change: Optional[int] = Field(None, description="The amount to add or subtract from the trust score.")
-    attraction_change: Optional[int] = Field(None, description="The amount to add or subtract from the attraction score.")
-    fear_change: Optional[int] = Field(None, description="The amount to add or subtract from the fear score.")
-    tags_to_add: Optional[List[str]] = Field(None, description="A list of relationship tags to add.")
-    tags_to_remove: Optional[List[str]] = Field(None, description="A list of relationship tags to remove.")
+    npc_key: str = Field(..., description="The NPC having the feeling.")
+    subject_key: str = Field(
+        ..., description="The target of the feeling (e.g. 'player')."
+    )
+    trust_change: Optional[int] = Field(
+        None, description="Add/Subtract trust (-10 to 10)."
+    )
+    attraction_change: Optional[int] = Field(
+        None, description="Add/Subtract attraction (-10 to 10)."
+    )
+    fear_change: Optional[int] = Field(None, description="Add/Subtract fear (0 to 10).")
+    tags_to_add: Optional[List[str]] = Field(
+        None, description="Add tags (e.g., 'rival', 'friend')."
+    )
+    tags_to_remove: Optional[List[str]] = Field(None, description="Remove tags.")
+
 
 class InventoryAddItem(BaseModel):
     """
-    Adds an item to an entity's inventory. **Preferred over `state.apply_patch` for adding items.**
-    This tool is intelligent: if the item already exists, it will increment the quantity. If not, it will create a new item entry.
-    **Example:** Give the player a health potion.
-    inventory.add_item({
-        "owner_key": "player",
-        "item_name": "Health Potion",
-        "quantity": 1
-    })
+    Add an item to inventory. Handles quantity increments automatically.
+
+    **Example:**
+    `inventory.add_item(owner_key="player", item_name="Potion", quantity=1)`
     """
+
     name: Literal["inventory.add_item"] = "inventory.add_item"
-    owner_key: str = Field(..., description="The entity key of the inventory's owner (e.g., 'player', 'shopkeeper').")
-    item_name: str = Field(..., description="The name of the item to add.")
-    quantity: int = Field(1, description="The number of items to add.", gt=0)
-    description: Optional[str] = Field(None, description="A brief description for the item if it's new.")
-    properties: Optional[Dict[str, Any]] = Field(None, description="A dictionary of custom properties for the item.")
+    owner_key: str = Field(..., description="Inventory owner.")
+    item_name: str = Field(..., description="Name of item.")
+    quantity: int = Field(1, description="Count to add.", gt=0)
+    description: Optional[str] = Field(None, description="Item description (if new).")
+    properties: Optional[Dict[str, Any]] = Field(None, description="Custom properties.")
 
 
 class InventoryRemoveItem(BaseModel):
     """
-    Removes an item from an entity's inventory. **Preferred over `state.apply_patch` for removing items.**
-    This tool is intelligent: it will decrease the item's quantity and will only remove the item entry if the quantity reaches zero.
-    **Example:** The player drinks a health potion.
-    inventory.remove_item({
-        "owner_key": "player",
-        "item_name": "Health Potion",
-        "quantity": 1
-    })
+    Remove or decrement an item.
+
+    **Example:**
+    `inventory.remove_item(owner_key="player", item_name="Potion", quantity=1)`
     """
+
     name: Literal["inventory.remove_item"] = "inventory.remove_item"
-    owner_key: str = Field(..., description="The entity key of the inventory's owner (e.g., 'player').")
-    item_name: str = Field(..., description="The name of the item to remove.")
-    quantity: int = Field(1, description="The number of items to remove.", gt=0)
+    owner_key: str = Field(..., description="Inventory owner.")
+    item_name: str = Field(..., description="Name of item.")
+    quantity: int = Field(1, description="Count to remove.", gt=0)
 
 
 class QuestUpdateStatus(BaseModel):
     """
-    Updates the overall status of a quest. **Preferred over `state.apply_patch` for quest status changes.**
-    **Example:** The player completes the main quest.
-    quest.update_status({
-        "quest_key": "main_quest_01",
-        "new_status": "completed"
-    })
+    Change the overall status of a quest.
+
+    **Example:**
+    `quest.update_status(quest_key="q_main", new_status="completed")`
     """
+
     name: Literal["quest.update_status"] = "quest.update_status"
-    quest_key: str = Field(..., description="The unique key of the quest to update.")
-    new_status: Literal["active", "completed", "failed", "hidden"] = Field(..., description="The new status for the quest.")
+    quest_key: str = Field(..., description="Quest ID.")
+    new_status: Literal["active", "completed", "failed", "hidden"] = Field(
+        ..., description="New status."
+    )
 
 
 class QuestUpdateObjective(BaseModel):
     """
-    Updates the completion status of a specific quest objective. **Preferred over `state.apply_patch` for objective changes.**
-    The tool finds the objective based on its descriptive text.
-    **Example:** Mark the 'Find the goblin camp' objective as complete.
-    quest.update_objective({
-        "quest_key": "main_quest_01",
-        "objective_text": "Find the goblin camp",
-        "is_completed": true
-    })
+    Complete or un-complete a specific objective within a quest.
+
+    **Example:**
+    `quest.update_objective(quest_key="q_main", objective_text="Find the map", is_completed=true)`
     """
+
     name: Literal["quest.update_objective"] = "quest.update_objective"
-    quest_key: str = Field(..., description="The unique key of the quest to update.")
-    objective_text: str = Field(..., description="The descriptive text of the objective to update. Must be an exact match.")
-    is_completed: bool = Field(True, description="The new completion status for the objective.")
+    quest_key: str = Field(..., description="Quest ID.")
+    objective_text: str = Field(..., description="Exact text of the objective.")
+    is_completed: bool = Field(True, description="Completion status.")
 
 
 class EntityCreate(BaseModel):
     """
-    Dynamically creates a new entity in the game world.
-    Use this to introduce new characters (NPCs), items, locations, or quests that don't exist yet.
-    The `data` provided MUST conform to the schema established during the SETUP phase.
-    **Example:** Create a new goblin NPC that the player encounters.
-    entity.create({
-        "entity_type": "character",
-        "entity_key": "goblin_scout_01",
-        "data": {
-            "name": "Gribble",
-            "attributes": {"hp_current": 7, "hp_max": 7},
-            "location_key": "whispering_woods_path"
-        }
-    })
+    Spawn a new entity (NPC, Item, Location) into the game DB.
+
+    **When to use:**
+    - The player enters a new room (Location).
+    - A wild monster appears (Character).
+    - Loot is generated (Item).
+
+    **Example:**
+    `entity.create(entity_type="character", entity_key="goblin_1", data={"name": "Goblin"})`
     """
+
     name: Literal["entity.create"] = "entity.create"
-    entity_type: str = Field(..., description="The type of the entity to create (e.g., 'character', 'item', 'location', 'quest').")
-    entity_key: str = Field(..., description="A unique key for the new entity (e.g., 'goblin_scout_01', 'potion_of_healing_3').")
-    template_name: Optional[str] = Field(None, description="The name of the StatBlockTemplate to use (e.g. 'Basic Monster', 'NPC'). If omitted, uses default.")
-    data: Dict[str, Any] = Field(..., description="A dictionary containing the full data for the new entity.")
+    entity_type: str = Field(
+        ..., description="Type: 'character', 'item', 'location', 'quest'."
+    )
+    entity_key: str = Field(..., description="Unique ID.")
+    template_name: Optional[str] = Field(
+        None, description="StatBlockTemplate to use (e.g. 'Monster')."
+    )
+    data: Dict[str, Any] = Field(..., description="Full entity data dictionary.")
 
 
 class SceneAddMember(BaseModel):
     """
-    Adds a character to the active scene.
-    Use this when an NPC enters the player's immediate vicinity or joins the conversation/encounter.
-    This makes the system aware of them for contextual memory retrieval and group actions.
+    Add a character to the active scene context.
+    Use this when an NPC enters the area so they are included in context retrieval.
     """
+
     name: Literal["scene.add_member"] = "scene.add_member"
-    character_key: str = Field(..., description="The entity key of the character to add to the scene (e.g., 'npc_goblin_1').")
+    character_key: str = Field(..., description="Character ID to add.")
 
 
 class SceneRemoveMember(BaseModel):
     """
-    Removes a character from the active scene.
-    Use this when an NPC leaves the area, is defeated, or is no longer relevant to the immediate encounter.
+    Remove a character from the active scene.
+    Use this when an NPC leaves, dies, or the player moves away.
     """
+
     name: Literal["scene.remove_member"] = "scene.remove_member"
-    character_key: str = Field(..., description="The entity key of the character to remove from the scene.")
+    character_key: str = Field(..., description="Character ID to remove.")
 
 
 class SceneMoveTo(BaseModel):
     """
-    Moves all characters currently in the active scene to a new location.
-    This is the preferred, atomic way to handle group travel. It updates the scene and all its members at once.
-    **When to use:**
-    - When the player and their companions travel together.
-    - When a group of NPCs moves from one area to another.
-    **Example:** Move the party into the dungeon.
-    scene.move_to({
-        "new_location_key": "dungeon_entrance"
-    })
+    Move the entire party (active scene) to a new location.
+    Updates the location of all characters currently in the scene.
+
+    **Example:**
+    `scene.move_to(new_location_key="dungeon_entrance")`
     """
+
     name: Literal["scene.move_to"] = "scene.move_to"
-    new_location_key: str = Field(..., description="The entity key of the new location.")
+    new_location_key: str = Field(..., description="ID of the destination location.")
