@@ -189,7 +189,7 @@ class SetupWizard(ctk.CTkToplevel):
 
         ctk.CTkButton(
             world_frame,
-            text="ðŸŽ² Randomize World",
+            text="🎲 Randomize World",
             command=self._randomize_world,
             fg_color="transparent",
             border_width=1,
@@ -231,7 +231,7 @@ class SetupWizard(ctk.CTkToplevel):
 
         ctk.CTkButton(
             char_frame,
-            text="ðŸŽ² Randomize Character",
+            text="🎲 Randomize Character",
             command=self._randomize_char,
             fg_color="transparent",
             border_width=1,
