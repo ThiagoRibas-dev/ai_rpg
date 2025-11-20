@@ -116,3 +116,8 @@ This document outlines the planned features and development milestones for the A
 
 *   **Game-Native Terminology:**
     *   Refactor internal naming to match RPG concepts (`Vitals`, `Tracks`, `Slots`, `Compendium`) to improve AI context understanding and developer readability.
+
+## v14: Reactive Side Panel, Visual Dice Rolls, and Hybrid Math features
+*   **Reactive Side Panel:** Ensure your CustomTkinter `InspectorManager` updates *immediately* after a tool executes, rather than waiting for the next turn planning phase.
+*   **Visual Dice Rolls:** The React app shows the breakdown of the roll in the chat. Your Python app executes `rng_roll` internally; exposing that visibly to the user adds excitement.
+*   **Hybrid Math:** Even if your Python engine is generic, you can allow the `Ruleset` to define Python lambda functions for derived stats (like `(STR-10)//2`) so the engine handles the math deterministically, rather than asking the LLM to "update mod to +3".
