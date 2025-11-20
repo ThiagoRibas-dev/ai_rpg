@@ -59,7 +59,7 @@ class MainView(ctk.CTk):
         self.loading_frame = None
         self.loading_label = None
         self.history_toolbar = None
-        self.navigation_frame = None # NEW
+        self.navigation_frame = None  # NEW
         self.reroll_button = None
         self.delete_last_button = None
         self.trim_button = None
@@ -153,7 +153,9 @@ class MainView(ctk.CTk):
         self.user_input = main_widgets["user_input"]
         self.send_button = main_widgets["send_button"]
         self.stop_button = main_widgets["stop_button"]
-        self.navigation_frame = main_widgets.get("navigation_frame") # Will need to update builder
+        self.navigation_frame = main_widgets.get(
+            "navigation_frame"
+        )  # Will need to update builder
 
         # Control panel widgets
         self.control_panel = control_widgets["control_panel"]
@@ -187,9 +189,7 @@ class MainView(ctk.CTk):
         # Inspector manager (must be created before others reference it)
         # REPLACES: Inspector initialization (lines 390-450)
         self.inspector_manager = InspectorManager(
-            self.db_manager, 
-            self.inspector_container,
-            self.inspector_selector
+            self.db_manager, self.inspector_container, self.inspector_selector
         )
 
         # Tool visualization manager
@@ -203,11 +203,11 @@ class MainView(ctk.CTk):
         # It needs the orchestrator, so it will be fully wired in set_orchestrator.
         # We can partially initialize it here with the widgets it needs.
         self.input_manager = InputManager(
-            orchestrator=None, # Will be set later
-            session_manager=None, # Will be set later
+            orchestrator=None,  # Will be set later
+            session_manager=None,  # Will be set later
             user_input_widget=self.user_input,
             send_button_widget=self.send_button,
-            choice_button_frame=self.choice_button_frame
+            choice_button_frame=self.choice_button_frame,
         )
 
         # Session manager and UI queue handler will be initialized in set_orchestrator()
@@ -225,12 +225,12 @@ class MainView(ctk.CTk):
         # Prompt manager
         # REPLACES: Prompt methods (lines 621-700)
         self.prompt_manager = PromptManager(
-            self.db_manager, 
-            orchestrator, 
-            self.prompt_scrollable_frame, 
+            self.db_manager,
+            orchestrator,
+            self.prompt_scrollable_frame,
             # Pass the main view as the parent for dialogs
-            parent_view=self, 
-            prompt_collapsible=self.prompt_collapsible
+            parent_view=self,
+            prompt_collapsible=self.prompt_collapsible,
         )
 
         # Refresh prompt list
@@ -294,7 +294,7 @@ class MainView(ctk.CTk):
             self.send_button,
             self.game_time_label,
             self.game_mode_label,
-            self.navigation_frame, # Pass nav frame
+            self.navigation_frame,  # Pass nav frame
             {
                 "character": self.inspector_manager.character_inspector,
                 "inventory": self.inspector_manager.inventory_inspector,
@@ -302,7 +302,9 @@ class MainView(ctk.CTk):
                 "memory": self.inspector_manager.memory_inspector,
             },
         )
-        self.ui_queue_handler.on_choice_selected = self.input_manager.handle_choice_selected
+        self.ui_queue_handler.on_choice_selected = (
+            self.input_manager.handle_choice_selected
+        )
 
         # Wire inspectors
         self.inspector_manager.set_orchestrator(orchestrator)
@@ -327,11 +329,20 @@ class MainView(ctk.CTk):
         self._wire_state_viewer_button()
 
     def open_setup_wizard(self):
-        """Launch the Session Zero wizard."""
-        from app.gui.panels.setup_wizard import SetupWizard
-        wizard = SetupWizard(self, self.db_manager, self.orchestrator)
-        # This makes the wizard modal
-        self.wait_window(wizard)
+        """Launch the Session Zero wizard via SessionManager."""
+        # 1. Get the currently selected prompt from the PromptManager
+        if not self.prompt_manager or not self.prompt_manager.selected_prompt:
+            self.bubble_manager.add_message(
+                "system", "⚠ Please select a Prompt first to start a new game."
+            )
+            return
+
+        selected_prompt = self.prompt_manager.selected_prompt
+
+        # 2. Delegate to SessionManager to handle the wizard instantiation
+        # The SessionManager.new_game method (updated in Step 1) knows how to
+        # pass the correct arguments (prompt, session_manager, etc.) to SetupWizard.
+        self.session_manager.new_game(selected_prompt)
 
     def _wire_state_viewer_button(self):
         """
@@ -392,7 +403,6 @@ class MainView(ctk.CTk):
     def _stub_new_game(self):
         """Stub - replaced in set_orchestrator()."""
         logger.warning("New game button clicked before manager initialization")
-        
 
     # ==================== Thin delegation methods ====================
     # These remain for external callers (orchestrator, etc.)
@@ -416,7 +426,7 @@ class MainView(ctk.CTk):
         """Handle send button click."""
         # This logic is now fully owned by the InputManager.
         self.input_manager.handle_send_input()
-        
+
     def select_choice(self, choice: str):
         """Handle when a user clicks an action choice."""
         # This logic is also fully owned by the InputManager.
