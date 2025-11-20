@@ -121,3 +121,12 @@ This document outlines the planned features and development milestones for the A
 *   **Reactive Side Panel:** Ensure your CustomTkinter `InspectorManager` updates *immediately* after a tool executes, rather than waiting for the next turn planning phase.
 *   **Visual Dice Rolls:** The React app shows the breakdown of the roll in the chat. Your Python app executes `rng_roll` internally; exposing that visibly to the user adds excitement.
 *   **Hybrid Math:** Even if your Python engine is generic, you can allow the `Ruleset` to define Python lambda functions for derived stats (like `(STR-10)//2`) so the engine handles the math deterministically, rather than asking the LLM to "update mod to +3".
+
+## v15: Domain-Specific Engine & Narrative Continuity
+
+**Goal:** Transition from a generic state editor to a robust RPG engine where **Python handles the physics and the AI handles the intent**, solving cognitive load issues and spatial hallucinations.
+
+*   **Domain-Specific Tooling:** Replace risky generic tools (`state.apply_patch`) with strict, logic-driven actions (`character.apply_damage`, `npc.spawn`, `journal.add_entry`) that handle math and game logic deterministically.
+*   **Spatial Graph System:** Implement a directed Location Graph with explicit connections. Refactor movement logic to validate paths against this graph, preventing AI teleportation errors.
+*   **Scene-Based Memory:** Switch context management from pure keyword-search to a "Scene & Summary" architecture. Automatically summarize completed scenes to maintain a linear, coherent narrative history.
+*   **Visual UX Overhaul:** Introduce "Location Cards" for scene transitions, dynamic "Navigation Buttons" based on valid exits, and a "World Gen Wizard" for structured pre-game setup.
