@@ -173,7 +173,7 @@ class SetupWizard(ctk.CTkToplevel):
         world_frame.pack(side="left", fill="both", expand=True, padx=(0, 10))
 
         ctk.CTkLabel(
-            world_frame, text="ðŸŒ  The World", font=Theme.fonts.subheading
+            world_frame, text="🌐 The World", font=Theme.fonts.subheading
         ).pack(pady=10)
 
         ctk.CTkLabel(
@@ -200,7 +200,7 @@ class SetupWizard(ctk.CTkToplevel):
         char_frame.pack(side="right", fill="both", expand=True, padx=(10, 0))
 
         ctk.CTkLabel(
-            char_frame, text="ðŸ‘¤ The Protagonist", font=Theme.fonts.subheading
+            char_frame, text="🎭 The Protagonist", font=Theme.fonts.subheading
         ).pack(pady=10)
 
         # POLISH: Dynamic System Hint
