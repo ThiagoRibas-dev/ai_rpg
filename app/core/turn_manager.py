@@ -11,6 +11,7 @@ from app.llm.choices_service import ChoicesService
 from app.llm.narrator_service import NarratorService
 from app.llm.planner_service import PlannerService
 from app.llm.schemas import SceneSummary
+from app.memory.memory_intents_service import MemoryIntentsService
 from app.models.game_session import GameSession
 from app.models.session import Session
 from app.prompts.builder import build_ruleset_summary
@@ -63,19 +64,23 @@ class TurnManager:
             thread_db_manager, self.vector_store, self.logger
         )
 
-        # --- FIX: Re-instantiate the TurnMetadataService here ---
+        # Turn Metadata Service
         turnmeta = TurnMetadataService(thread_db_manager, self.vector_store)
 
-        # --- NEW: Instantiate SimulationService ---
+        # Simulation Service
         simulation_service = SimulationService(self.llm_connector, self.logger)
+        
+        # Context Builder
         context_builder = ContextBuilder(
             thread_db_manager,
             self.vector_store,
             state_builder,
             mem_retriever,
-            simulation_service,  # This is still correct
+            simulation_service,
             self.logger,
         )
+        
+        # Tool Executor
         executor = ToolExecutor(
             self.tool_registry,
             thread_db_manager,
@@ -83,12 +88,23 @@ class TurnManager:
             ui_queue=self.ui_queue,
             logger=self.logger,
         )
+        
+        # Auditor Service
         auditor = AuditorService(
             self.llm_connector,
             self.tool_registry,
             thread_db_manager,
             self.vector_store,
             self.logger,
+        )
+
+        # --- NEW: Memory Intents Service ---
+        # Handles persisting memories generated during the narrative phase
+        memory_intents_service = MemoryIntentsService(
+            self.tool_registry,
+            thread_db_manager,
+            self.vector_store,
+            self.logger
         )
 
         # Initialize manifest manager early for tool selection logic
@@ -271,6 +287,16 @@ class TurnManager:
                 "content": narrative.response,
             }
         )
+
+        # ===== STEP 3.1: PROCESS MEMORY INTENTS =====
+        # If the LLM identified new memories or facts during the narrative phase
+        # (e.g. "I realized the sword was glowing"), persist them now.
+        if narrative.memory_intents:
+            self.logger.info(f"Processing {len(narrative.memory_intents)} memory intents from narrative.")
+            memory_intents_service.apply(
+                narrative.memory_intents, 
+                session_in_thread
+            )
 
         # ===== STEP 3.5: Turn metadata =====
         if current_game_mode == "GAMEPLAY" and game_session.id:

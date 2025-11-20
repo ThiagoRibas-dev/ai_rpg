@@ -51,6 +51,9 @@ function Get-DirectoryTreeString {
     "*.exe",
     "*.dll",
     "*.ico",
+    "**.db",
+    "**.db-shm",
+    "**.db-wal",
     "*\.VSCodeCounter*",
     "*LICENSE",
     "*\chroma_db*",
@@ -64,7 +67,6 @@ function Get-DirectoryTreeString {
 	"*\tests\*",
     "*package-lock.json",
     "*.DS_Store", # macOS folder metadata file
-    "**.db",
     "*\docs*"        # Exclude documentation directory
 )
 
