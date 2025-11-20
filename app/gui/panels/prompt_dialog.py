@@ -16,9 +16,8 @@ class PromptDialog(ctk.CTkToplevel):
     Fields:
     - Name: Short identifier for the prompt
     - Content: System prompt that defines AI behavior/world
-    - Initial Message: First GM message when starting a new game
     """
-
+ 
     def __init__(self, parent, title: str = "New Prompt", existing_prompt=None, llm_connector: Optional[LLMConnector] = None):
         """
         Args:
@@ -32,8 +31,8 @@ class PromptDialog(ctk.CTkToplevel):
         self.title(title)
         self.geometry("1024x720")
         self.resizable(True, True)
-
-        self.result = None  # Will store (name, content, initial_message) tuple
+ 
+        self.result = None  # Will store (name, content, rules, template) tuple
         self.existing_prompt = existing_prompt
         self.llm_connector = llm_connector # ✅ NEW: Store the connector
 
@@ -86,30 +85,7 @@ class PromptDialog(ctk.CTkToplevel):
             main_frame, height=200, font=Theme.fonts.body, wrap="word"
         )
         self.content_textbox.pack(fill="both", expand=True, pady=(0, 15))
-
-        # === Initial Message Field ===
-        ctk.CTkLabel(
-            main_frame,
-            text="Initial Message (GM's Opening):",
-            font=Theme.fonts.subheading,
-            anchor="w",
-        ).pack(fill="x", pady=(0, 5))
-
-        ctk.CTkLabel(
-            main_frame,
-            text="The first message the Game Master will say when starting a new game. Should prompt the player for setup info.",
-            font=Theme.fonts.body_small,
-            text_color=Theme.colors.text_muted,
-            anchor="w",
-            wraplength=660,
-            justify="left",
-        ).pack(fill="x", pady=(0, 5))
-
-        self.initial_message_textbox = ctk.CTkTextbox(
-            main_frame, height=120, font=Theme.fonts.body, wrap="word"
-        )
-        self.initial_message_textbox.pack(fill="both", expand=True, pady=(0, 15))
-
+ 
         # ✅ NEW: Rules Document Section
         rules_label = ctk.CTkLabel(
             main_frame,
@@ -290,9 +266,6 @@ class PromptDialog(ctk.CTkToplevel):
         if self.existing_prompt:
             self.name_entry.insert(0, self.existing_prompt.name)
             self.content_textbox.insert("1.0", self.existing_prompt.content)
-            self.initial_message_textbox.insert(
-                "1.0", self.existing_prompt.initial_message or ""
-            )
             
             # ✅ NEW: Load rules document and template
             self.rules_textbox.insert("1.0", self.existing_prompt.rules_document or "")
@@ -302,7 +275,6 @@ class PromptDialog(ctk.CTkToplevel):
         """Validate and save the prompt."""
         name = self.name_entry.get().strip()
         content = self.content_textbox.get("1.0", "end-1c").strip()
-        initial_message = self.initial_message_textbox.get("1.0", "end-1c").strip()
         rules_document = self.rules_textbox.get("1.0", "end-1c").strip()
         template_manifest = self.template_textbox.get("1.0", "end-1c").strip()
         
@@ -310,15 +282,13 @@ class PromptDialog(ctk.CTkToplevel):
         if not name:
             self._show_error("Prompt name is required")
             return
-
+ 
         if not content:
             self._show_error("Prompt content is required")
             return
-
-        # Note: initial_message is optional (can be empty)
-
+ 
         # Store result and close
-        self.result = (name, content, initial_message, rules_document, template_manifest)
+        self.result = (name, content, rules_document, template_manifest)
         self.grab_release()
         self.destroy()
 
@@ -336,8 +306,8 @@ class PromptDialog(ctk.CTkToplevel):
     def get_result(self):
         """
         Get the dialog result after it closes.
-
+ 
         Returns:
-            Tuple of (name, content, initial_message) or None if cancelled
+            Tuple of (name, content, rules_document, template_manifest) or None if cancelled
         """
         return self.result

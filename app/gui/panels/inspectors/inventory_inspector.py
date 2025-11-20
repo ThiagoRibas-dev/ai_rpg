@@ -1,11 +1,13 @@
 # File: app/gui/panels/inspectors/inventory_inspector.py
 
-import customtkinter as ctk
 import logging
-import time
 from typing import Callable
+
+import customtkinter as ctk
+
 from app.gui.styles import Theme
-from app.tools.schemas import StateQuery, StateApplyPatch, Patch
+from app.tools.schemas import InventoryAddItem, StateQuery
+
 from .inspector_utils import display_message_state
 
 logger = logging.getLogger(__name__)
@@ -210,22 +212,18 @@ class InventoryInspectorView(ctk.CTkFrame):
         try:
             from app.tools.registry import ToolRegistry
             registry = ToolRegistry()
-            item_id = f"item_{int(time.time())}"
-            # We need to know the target slot. 
-            # Let's assume "Inventory" for manual adds.
             
-            patch_call = StateApplyPatch(
-                entity_type="character", # Changed from inventory to character
-                key="player", # Assuming player
-                patch=[
-                    Patch(
-                        op="add",
-                        path="/slots/Inventory/-", # Targeted path
-                        value={"id": item_id, "name": item_name, "quantity": 1, "equipped": False},
-                    )
-                ],
+            # CHANGE 2: Use the specific InventoryAddItem tool instead of generic Patch
+            # Extract the actual key from "character:player" -> "player"
+            owner_key_stripped = self.current_owner_key.split(":")[-1] if ":" in self.current_owner_key else self.current_owner_key
+            
+            tool_call = InventoryAddItem(
+                owner_key=owner_key_stripped,
+                item_name=item_name,
+                quantity=1
             )
-            registry.execute(patch_call, context={"session_id": session_id, "db_manager": self.db_manager})
+            
+            registry.execute(tool_call, context={"session_id": session_id, "db_manager": self.db_manager})
             self.refresh()
         except Exception as e:
             logger.error(f"Error adding item: {e}", exc_info=True)

@@ -28,6 +28,27 @@ class TurnMetadataRepository(BaseRepository):
             );
             """
         )
+        
+        # Scene History table (Logically linked to turns)
+        self._execute(
+            """
+            CREATE TABLE IF NOT EXISTS scene_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id INTEGER NOT NULL,
+                location_key TEXT NOT NULL,
+                summary_text TEXT NOT NULL,
+                start_turn_id INTEGER,
+                end_turn_id INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (session_id) REFERENCES sessions (id) ON DELETE CASCADE
+            );
+            """
+        )
+        
+        # Optimization: Index for finding recent scenes quickly
+        self._execute(
+            "CREATE INDEX IF NOT EXISTS idx_scene_history_session ON scene_history(session_id);"
+        )
         self.conn.commit()
 
     def create(
@@ -97,3 +118,24 @@ class TurnMetadataRepository(BaseRepository):
                 }
             )
         return results
+
+    def create_scene_summary(self, session_id: int, location_key: str, summary: str, start_turn: int, end_turn: int):
+        """Store a summarized scene."""
+        self._execute(
+            """INSERT INTO scene_history (session_id, location_key, summary_text, start_turn_id, end_turn_id)
+               VALUES (?, ?, ?, ?, ?)""",
+            (session_id, location_key, summary, start_turn, end_turn)
+        )
+        self._commit()
+
+    def get_recent_scenes(self, session_id: int, limit: int = 3) -> List[Dict[str, Any]]:
+        """Get the most recent scene summaries."""
+        rows = self._fetchall(
+            """SELECT location_key, summary_text, created_at 
+               FROM scene_history 
+               WHERE session_id = ? 
+               ORDER BY id DESC LIMIT ?""",
+            (session_id, limit)
+        )
+        # Return in chronological order (oldest -> newest) for the prompt
+        return [{"location": r["location_key"], "summary": r["summary_text"]} for r in reversed(rows)]

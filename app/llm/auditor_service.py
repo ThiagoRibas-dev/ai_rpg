@@ -3,10 +3,25 @@ from typing import List, Dict, Any
 from app.models.message import Message
 from app.llm.llm_connector import LLMConnector
 from app.llm.schemas import AuditResult
-from app.tools.schemas import StateApplyPatch, Patch
 from app.tools.schemas import MemoryUpsert
 
-AUDIT_PROMPT = "You are a consistency auditor. In <=3 bullets, list contradictions between planned tool results and likely world state; else say OK. If patches are needed, propose minimal JSON patches."
+AUDIT_PROMPT = """
+You are a Game Engine Auditor. Your job is to ensure the Game State matches the Narrative.
+
+Review the last turn's Narrative and the Tools that were executed.
+
+1. **MOVEMENT CHECK**: Did the narrative describe the party entering a new location (room, building, region)? 
+   - If YES, was `scene.move_to` called? 
+   - If NO, you MUST add `scene.move_to` to `suggested_tool_calls`.
+
+2. **COMBAT/HEALTH CHECK**: Did the narrative describe a character taking damage, being hit, or healing?
+   - If YES, check if `character.apply_damage` or `character.restore_vital` was called.
+   - If NO, you MUST add the appropriate tool to `suggested_tool_calls`.
+
+3. **CONSISTENCY**: Are there logical errors? (e.g. Using an item they don't have).
+
+If the state is desynchronized from the text, fix it using `suggested_tool_calls`.
+"""
 
 
 class AuditorService:
@@ -44,20 +59,37 @@ class AuditorService:
     def apply_remediations(self, audit: AuditResult, session):
         if not audit or audit.ok:
             return
-        # Apply patches
-        for patch in audit.proposed_patches or []:
-            try:
-                patch_call = StateApplyPatch(
-                    entity_type=patch.entity_type,
-                    key=patch.key,
-                    patch=[Patch(**op.model_dump()) for op in patch.ops],
-                )
-                _ = self.tools.execute(
-                    patch_call,
-                    context={"session_id": session.id, "db_manager": self.db},
-                )
-            except Exception as e:
-                self.logger.error(f"Patch error during audit: {e}", exc_info=True)
+        
+        # Phase 1 Refactor: Audit patching disabled.
+
+        # --- AUTO-FIX: Execute Missed Tools ---
+        if audit.suggested_tool_calls:
+            # We need to map the generic ToolCall (name, args) back to the Pydantic model
+            # so the Registry can validate and execute it.
+            name_to_type = {
+                t.model_fields["name"].default: t 
+                for t in self.tools.get_all_tool_types()
+            }
+            
+            for tool_call in audit.suggested_tool_calls:
+                tool_name = tool_call.name
+                if tool_name in name_to_type:
+                    try:
+                        self.logger.info(f"Auditor applying fix: Executing {tool_name}")
+                        model_class = name_to_type[tool_name]
+                        # Instantiate and Validate
+                        tool_instance = model_class(**tool_call.arguments)
+                        
+                        # Execute
+                        context = {
+                            "session_id": session.id,
+                            "db_manager": self.db,
+                            "vector_store": self.vs
+                        }
+                        self.tools.execute(tool_instance, context=context)
+                    except Exception as e:
+                        self.logger.error(f"Failed to execute auditor suggestion '{tool_name}': {e}", exc_info=True)
+        
         # Memory updates
         for mem in audit.memory_updates or []:
             try:

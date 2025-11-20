@@ -175,9 +175,17 @@ class AuditResult(BaseModel):
     )
     proposed_patches: Optional[List[Patch]] = Field(
         default_factory=list,
-        description="Corrective patches to fix any inconsistencies found during the audit.",
+        description="DEPRECATED. Do not use.",
     )
     memory_updates: Optional[List[MemoryIntent]] = Field(
         default_factory=list,
         description="Memory updates to correct or add information based on the audit.",
     )
+    suggested_tool_calls: List[ToolCall] = Field(
+        default_factory=list,
+        description="Tools that should have been executed to match the narrative (e.g. scene.move_to, character.apply_damage). Use this to fix state desync."
+    )
+
+
+class SceneSummary(BaseModel):
+    summary_text: str = Field(..., description="The concise summary of the scene.")

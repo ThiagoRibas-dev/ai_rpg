@@ -6,12 +6,14 @@ New responsibilities:
 - Handle dynamic width calculations
 - Auto-scroll management
 - Clean up destroyed widgets
+- Support rich text and location cards
 """
 
 import tkinter
 import customtkinter as ctk
 from typing import List
-from app.gui.styles import Theme, get_chat_bubble_style
+from app.gui.styles import Theme, get_chat_bubble_style, get_location_card_style
+import re
 
 
 class ChatBubbleManager:
@@ -31,7 +33,7 @@ class ChatBubbleManager:
         self.window = window
 
         # Track bubble content labels for resize updates
-        self.bubble_labels: List[ctk.CTkLabel] = []
+        self.bubble_labels: List[ctk.CTkTextbox] = []
         self._last_chat_width = 0  # Track width changes
 
         # Setup resize handler
@@ -41,7 +43,7 @@ class ChatBubbleManager:
         """
         Bind window resize event to update bubble widths.
         """
-        self.window.bind("&lt;Configure&gt;", self._on_window_resize)
+        self.window.bind("<Configure>", self._on_window_resize)
 
     def add_message(self, role: str, content: str):
         """
@@ -89,25 +91,88 @@ class ChatBubbleManager:
         # Calculate dynamic width
         bubble_width = self._calculate_bubble_width()
 
-        # Content label with wrapping
-        content_label = ctk.CTkLabel(
+        # RICH TEXT SUPPORT: Use CTkTextbox instead of Label
+        lines = content.count('\n') + (len(content) // 80) + 1
+        height = min(max(lines * 20, 40), 600)
+
+        content_box = ctk.CTkTextbox(
             bubble,
-            text=content,
+            height=height,
+            width=bubble_width,
             font=Theme.fonts.body if role != "thought" else Theme.fonts.body_italic,
             text_color=style["text_color"],
-            wraplength=bubble_width,
-            justify="left",
+            fg_color="transparent",
+            wrap="word",
+            activate_scrollbars=False
         )
-        content_label.pack(
+        content_box.pack(
             anchor="w",
-            padx=15,  # Increased padding to prevent clipping
+            padx=15,
             pady=(Theme.spacing.padding_xs, Theme.spacing.bubble_padding_y_bottom),
         )
+        
+        # Insert text and parse markdown-style **Entities**
+        self._insert_rich_text(content_box, content)
+        content_box.configure(state="disabled") # Read-only
 
         # Store reference to the label for resize updates
-        self.bubble_labels.append(content_label)
+        self.bubble_labels.append(content_box)
 
         # Auto-scroll to bottom
+        self._scroll_to_bottom()
+
+    def _insert_rich_text(self, textbox, content):
+        """Parses **Name** syntax and applies formatting tags."""
+        # Reset
+        textbox.configure(state="normal")
+        textbox.delete("1.0", "end")
+
+        # Correct regex for **text**
+        parts = re.split(r'(\*\*.*?\*\*)', content)
+
+        for part in parts:
+            if part.startswith("**") and part.endswith("**"):
+                # It's an entity
+                text = part[2:-2]  # Strip the **
+                textbox.insert("end", text, "entity")
+            else:
+                textbox.insert("end", part)
+
+        # Configure tag style (Gold color for entities)
+        # Note: CTkTextbox passes tags to underlying tk.Text
+        textbox._textbox.tag_config("entity", foreground=Theme.colors.text_gold, font=Theme.fonts.heading)
+        textbox.configure(state="disabled")
+
+    def add_location_card(self, location_data: dict):
+        """Renders a visual card for a location change."""
+        style = get_location_card_style()
+        
+        container = ctk.CTkFrame(self.chat_frame, fg_color="transparent")
+        container.pack(fill="x", padx=Theme.spacing.padding_lg, pady=15)
+        
+        card = ctk.CTkFrame(container, **style)
+        card.pack(fill="x", expand=True)
+        
+        # Header
+        name = location_data.get("name", "Unknown Location")
+        ctk.CTkLabel(
+            card, 
+            text=f"📍 {name}", 
+            font=("Arial", 24, "bold"),
+            text_color=Theme.colors.text_gold
+        ).pack(anchor="w", padx=20, pady=(15, 5))
+        
+        # Visual Description (Italic)
+        desc = location_data.get("description_visual", "No visual description.")
+        ctk.CTkLabel(
+            card,
+            text=desc,
+            font=("Arial", 14, "italic"),
+            text_color=Theme.colors.text_secondary,
+            wraplength=500,
+            justify="left"
+        ).pack(anchor="w", padx=20, pady=(0, 15))
+        
         self._scroll_to_bottom()
 
     def clear_history(self):
@@ -116,68 +181,40 @@ class ChatBubbleManager:
         """
         for widget in self.chat_frame.winfo_children():
             widget.destroy()
-        # ✅ FIX: Clear the bubble_labels list immediately
         self.bubble_labels.clear()
 
     def _calculate_bubble_width(self) -> int:
         """
         Calculate the appropriate bubble width based on chat frame width.
-        - No logic changes
-
-        Returns:
-            Calculated bubble width in pixels
         """
-        # Get the actual width of the chat frame
         frame_width = self.chat_frame.winfo_width()
-
-        # If window hasn't been drawn yet, use a default
         if frame_width <= 1:
             frame_width = Theme.dimensions.window_width * 0.75
-
-        # Subtract scrollbar width and padding
         usable_width = frame_width - 30
-
-        # Calculate percentage-based width
         bubble_width = int(usable_width * Theme.spacing.bubble_width_percent)
-
-        # Ensure minimum width
         bubble_width = max(bubble_width, Theme.spacing.bubble_min_width)
-
         return bubble_width
 
     def _on_window_resize(self, event):
-        """
-        Update all bubble widths when the window is resized.
-
-        Args:
-            event: Tkinter resize event
-        """
-        # Only update if the window width actually changed significantly
+        """Update all bubble widths when the window is resized."""
         current_width = self.window.winfo_width()
 
-        if (
-            abs(current_width - self._last_chat_width) > 50
-        ):  # 50+ pixels change threshold
+        if abs(current_width - self._last_chat_width) > 50:
             self._last_chat_width = current_width
             new_width = self._calculate_bubble_width()
 
-            # ✅ FIX: Clean up destroyed widgets while updating
             active_labels = []
             for label in self.bubble_labels:
                 try:
                     if label.winfo_exists():
-                        label.configure(wraplength=new_width)
-                        active_labels.append(label)  # Keep only active widgets
+                        label.configure(width=new_width) # Textbox uses width, not wraplength
+                        active_labels.append(label)
                 except (tkinter.TclError, AttributeError, RuntimeError):
-                    # Widget is destroyed or invalid - skip it
                     pass
-
-            # ✅ FIX: Replace list with only active widgets
             self.bubble_labels = active_labels
 
     def _scroll_to_bottom(self):
         """
         Scroll the chat to the bottom.
         """
-        # Use after_idle to ensure the frame is updated before scrolling
         self.window.after_idle(lambda: self.chat_frame._parent_canvas.yview_moveto(1.0))

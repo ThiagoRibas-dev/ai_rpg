@@ -29,6 +29,11 @@ class ColorScheme:
     bubble_dice_bg: str = "#2c2c3a"
     bubble_dice_border: str = "#5c5c7a"
 
+    # Location Cards
+    location_card_bg: str = "#1c2e2e" # Deep swamp/forest green-black
+    location_card_border: str = "#2d4a2b"
+    location_text: str = "#a3c9a8"
+
     # Tool calls
     tool_call_bg: str = "#2d4a2b"
     tool_success: str = "#B6D7A8"
@@ -205,6 +210,16 @@ def get_chat_bubble_style(role: str) -> Dict[str, Any]:
         }
 
 
+def get_location_card_style() -> Dict[str, Any]:
+    """Get style for location cards."""
+    return {
+        "fg_color": ACTIVE_THEME.colors.location_card_bg,
+        "border_color": ACTIVE_THEME.colors.location_card_border,
+        "border_width": 2,
+        "corner_radius": 0, # Square corners for "Card" feel
+    }
+
+
 def get_dice_bubble_style() -> Dict[str, Any]:
     """Get style configuration for dice roll bubbles."""
     return {
@@ -277,6 +292,11 @@ class DarkTheme(Theme):
         bubble_thought_border="#555555",
         bubble_dice_bg="#2c2c3a",   # Dark Purple-Grey
         bubble_dice_border="#5c5c7a",
+
+        # Location Cards
+        location_card_bg="#1c2e2e",
+        location_card_border="#2d4a2b",
+        location_text="#a3c9a8",
 
         # Text
         text_primary="#E0E0E0",
@@ -364,6 +384,7 @@ __all__ = [
     "LightTheme",
     "ACTIVE_THEME",
     "get_chat_bubble_style",
+    "get_location_card_style",
     "get_dice_bubble_style",
     "get_tool_call_style",
     "get_memory_kind_color",

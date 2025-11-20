@@ -33,6 +33,7 @@ class UIQueueHandler:
         send_button: ctk.CTkButton,
         game_time_label: ctk.CTkLabel,
         game_mode_label: ctk.CTkLabel,
+        navigation_frame: ctk.CTkFrame,
         inspectors: Dict[str, Any],
     ):
         """
@@ -48,6 +49,7 @@ class UIQueueHandler:
             send_button: Send button to enable/disable
             game_time_label: Label for game time updates
             game_mode_label: Label for game mode updates
+            navigation_frame: Frame for navigation buttons
             inspectors: Dictionary of inspector instances
         """
         self.orchestrator = orchestrator
@@ -59,6 +61,7 @@ class UIQueueHandler:
         self.send_button = send_button
         self.game_time_label = game_time_label
         self.game_mode_label = game_mode_label
+        self.navigation_frame = navigation_frame
         self.inspectors = inspectors
 
         # Callback for choice selection (set externally by MainView)
@@ -114,9 +117,7 @@ class UIQueueHandler:
         # ---Handle the planning_started message ---
         # This message is sent right before the first LLM call.
         if msg_type == "planning_started":
-            self.loading_label.configure(
-                text=msg.get("content", "AI is thinking...")
-            )
+            self.loading_label.configure(text=msg.get("content", "AI is thinking..."))
             self.loading_frame.grid(
                 row=2, column=0, columnspan=2, sticky="ew", padx=5, pady=5
             )
@@ -150,6 +151,18 @@ class UIQueueHandler:
                 msg["result"], msg.get("is_error", False)
             )
 
+            # Special Handling: Location Change event from tool result
+            if (
+                isinstance(msg["result"], dict)
+                and msg["result"].get("ui_event") == "location_change"
+            ):
+                loc_data = msg["result"].get("location_data", {})
+                self.bubble_manager.add_location_card(loc_data)
+
+                # Clear navigation until next turn refresh
+                for widget in self.navigation_frame.winfo_children():
+                    widget.destroy()
+
         # === Choices ===
         elif msg_type == "choices":
             if self.on_choice_selected:
@@ -177,6 +190,26 @@ class UIQueueHandler:
             if "quest" in self.inspectors and self.inspectors["quest"]:
                 self.inspectors["quest"].refresh()
 
+        # === Update Navigation ===
+        elif msg_type == "update_nav":
+            # Clear old buttons
+            for widget in self.navigation_frame.winfo_children():
+                widget.destroy()
+
+            exits = msg.get("exits", [])
+            if exits:
+                ctk.CTkLabel(
+                    self.navigation_frame, text="Exits:", font=("Arial", 12, "bold")
+                ).pack(side="left", padx=5)
+                for exit_name in exits:
+                    btn = ctk.CTkButton(
+                        self.navigation_frame,
+                        text=exit_name,
+                        width=60,
+                        command=lambda e=exit_name: self._send_nav_command(e),
+                    )
+                    btn.pack(side="left", padx=2, pady=2)
+
         # === Refresh Memory Inspector ===
         elif msg_type == "refresh_memory_inspector":
             if "memory" in self.inspectors and self.inspectors["memory"]:
@@ -200,3 +233,12 @@ class UIQueueHandler:
         # === Unknown Message Type ===
         else:
             logger.warning(f"Unknown UI message type: {msg_type}")
+
+    def _send_nav_command(self, direction: str):
+        """Injects a move command into the input."""
+        # We need reference to input_manager, or hack it via orchestrator/view
+        # Ideally UIQueueHandler shouldn't do this, but for MVP:
+        if self.orchestrator.view:
+            self.orchestrator.view.input_manager.handle_choice_selected(
+                f"I go {direction}"
+            )

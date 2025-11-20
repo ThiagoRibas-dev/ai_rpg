@@ -82,14 +82,14 @@ class PromptManager:
             llm_connector=llm_connector # Pass connector to dialog
         )
         self.prompt_scrollable_frame.wait_window(dialog)  # Wait for dialog to close
-
+ 
         result = dialog.get_result()
         if result:
-            name, content, initial_message, rules_document, template_manifest = result
-
+            name, content, rules_document, template_manifest = result
+ 
             # Create in database
-            self.db_manager.prompts.create(name, content, initial_message, rules_document, template_manifest)
-
+            self.db_manager.prompts.create(name, content, rules_document, template_manifest)
+ 
             # Refresh list
             self.refresh_list()
 
@@ -112,15 +112,14 @@ class PromptManager:
             llm_connector=llm_connector # Pass connector to dialog
         )
         self.prompt_scrollable_frame.wait_window(dialog)  # Wait for dialog to close
-
+ 
         result = dialog.get_result()
         if result:
-            name, content, initial_message, rules_document, template_manifest = result
-
+            name, content, rules_document, template_manifest = result
+ 
             # Update prompt object
             self._selected_prompt.name = name
             self._selected_prompt.content = content
-            self._selected_prompt.initial_message = initial_message
             self._selected_prompt.rules_document = rules_document
             self._selected_prompt.template_manifest = template_manifest
 

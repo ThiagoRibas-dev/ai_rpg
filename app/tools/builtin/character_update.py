@@ -14,6 +14,15 @@ def handler(character_key: str, updates: List[Dict[str, Any]], **context) -> dic
     """
     session_id = context["session_id"]
     db = context["db_manager"]
+    
+    # PHASE 1 SAFETY CHECK: Restrict direct updates during gameplay
+    # The AI must use specific tools like 'apply_damage', 'inventory.add', etc.
+    # This prevents the AI from bypassing game rules or hallucinating math.
+    # We check if the session object (passed in context via executor) has game_mode set.
+    # Note: The ToolExecutor puts the *session object* into context? No, usually just IDs.
+    # We need to check how Executor builds context. It passes 'manifest'.
+    if context.get("manifest", {}).get("ready_to_play") is True:
+         raise ValueError("character.update is disabled during GAMEPLAY. Use specific tools like 'character.apply_damage' or 'inventory.add_item'.")
 
     # 1. Load Entity
     entity = get_entity(session_id, db, "character", character_key)

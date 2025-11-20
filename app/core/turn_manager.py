@@ -10,6 +10,7 @@ from app.llm.auditor_service import AuditorService
 from app.llm.choices_service import ChoicesService
 from app.llm.narrator_service import NarratorService
 from app.llm.planner_service import PlannerService
+from app.llm.schemas import SceneSummary
 from app.models.game_session import GameSession
 from app.models.session import Session
 from app.prompts.builder import build_ruleset_summary
@@ -18,6 +19,7 @@ from app.prompts.templates import (
     GAMEPLAY_PLAN_TEMPLATE,
     NARRATIVE_TEMPLATE,
     SETUP_PLAN_TEMPLATE,
+    SCENE_SUMMARIZATION_TEMPLATE,
     TOOL_SELECTION_PER_STEP_TEMPLATE,
     SETUP_RESPONSE_TEMPLATE,
 )
@@ -26,18 +28,12 @@ from app.tools.executor import ToolExecutor
 from app.tools.schemas import (
     CharacterUpdate,
     Deliberate,
-    EndSetupAndStartGameplay,
-    EntityCreate,
-    Patch,
-    RequestSetupConfirmation,
     SchemaQuery,
-    SchemaUpsertAttribute,
-    StateApplyPatch,
 )
 
 MAX_HISTORY_MESSAGES = 50
-TOOL_BUDGET = 10
-
+TOOL_BUDGET = 20
+ 
 logger = logging.getLogger(__name__)
 
 
@@ -103,40 +99,22 @@ class TurnManager:
         if current_game_mode == "SETUP":
             # Base tools available in all Setup states
             setup_tool_names = [
-                SchemaUpsertAttribute.model_fields["name"].default,
                 CharacterUpdate.model_fields["name"].default,
-                EntityCreate.model_fields["name"].default,
                 Deliberate.model_fields["name"].default,
                 SchemaQuery.model_fields["name"].default,
-                RequestSetupConfirmation.model_fields["name"].default,
             ]
-
-            # Dynamic Tool Swapping based on Confirmation State
-            # If we are waiting for confirmation, allow them to Finish (EndSetup) OR fix things (Base tools)
-            # If we are defining, allow them to Summarize (RequestConfirmation) but NOT Finish
-            if manifest_mgr.is_pending_confirmation(game_session.id):
-                setup_tool_names.append(
-                    EndSetupAndStartGameplay.model_fields["name"].default
-                )
 
             self.logger.debug(f"SETUP MODE TOOLS: {setup_tool_names}")
         else:  # GAMEPLAY mode
-            setup_tool_names = [
-                tool_name
-                for tool_name in self.tool_registry.get_all_tool_names()
-                if tool_name
-                not in [
-                    RequestSetupConfirmation.model_fields["name"].default,
-                    EndSetupAndStartGameplay.model_fields["name"].default,
-                ]
-            ]
+            # If not in SETUP, all tools are available except the setup-specific ones.
+            setup_tool_names = self.tool_registry.get_all_tool_names()
 
         # ===== BUILD STATIC SYSTEM INSTRUCTION =====
         # manifest_mgr already initialized above
         manifest = manifest_mgr.get_manifest(game_session.id)
 
         ruleset_text = ""
-        if manifest.get("ruleset_id"):
+        if manifest.get("ruleset_id") and thread_db_manager.rulesets:
             ruleset = thread_db_manager.rulesets.get_by_id(manifest["ruleset_id"])
             if ruleset:
                 ruleset_text = build_ruleset_summary(ruleset)
@@ -242,23 +220,14 @@ class TurnManager:
             TOOL_BUDGET,
             current_game_time=getattr(game_session, "game_time", None),
         )
+
+        # Check for Scene Change Trigger
+        scene_changed = False
+
         for result in tool_results:
-            if result.get("name") == EndSetupAndStartGameplay.model_fields[
-                "name"
-            ].default and result.get("result", {}).get("setup_complete"):
-                game_session.game_mode = "GAMEPLAY"
-                self.ui_queue.put({"type": "update_game_mode", "new_mode": "GAMEPLAY"})
-                self.ui_queue.put(
-                    {
-                        "type": "message_bubble",
-                        "role": "system",
-                        "content": "✅… Session Zero complete! Game starting...",
-                    }
-                )
-                self.orchestrator._update_game_in_thread(
-                    game_session, thread_db_manager, session_in_thread
-                )
-                return self.execute_turn(game_session, thread_db_manager)
+            # Phase 4: Detect Location Change
+            if result.get("ui_event") == "location_change":
+                scene_changed = True
 
         # ===== STEP 2.5: AUDIT (only in GAMEPLAY mode) =====
         if current_game_mode == "GAMEPLAY":
@@ -315,31 +284,19 @@ class TurnManager:
                 importance=narrative.turn_importance,
             )
 
-        # ===== STEP 4: Apply patches and memory intents =====
+            # Phase 4: Trigger Scene Summarization if location changed
+            if scene_changed:
+                self._summarize_previous_scene(
+                    game_session, thread_db_manager, round_number
+                )
+
+        # ===== STEP 4: Apply patches (DEPRECATED/REMOVED) =====
+        # Phase 1 Refactor: We no longer allow the LLM to output raw JSON patches via Narrative.
+        # Any state change must happen via Tools in Step 2.
         if narrative.proposed_patches:
-            for patch in narrative.proposed_patches:
-                try:
-                    patch_call = StateApplyPatch(
-                        entity_type=patch.entity_type,
-                        key=patch.key,
-                        patch=[Patch(**op.model_dump()) for op in patch.ops],
-                    )
-                    result = self.tool_registry.execute(
-                        patch_call,
-                        context={
-                            "session_id": game_session.id,
-                            "db_manager": thread_db_manager,
-                        },
-                    )
-                    if self.orchestrator.tool_event_callback:
-                        self.ui_queue.put(
-                            {
-                                "type": "tool_event",
-                                "message": f"{StateApplyPatch.model_fields['name'].default} ✔️ {result}",
-                            }
-                        )
-                except Exception as e:
-                    self.logger.error(f"Patch error: {e}", exc_info=True)
+            self.logger.warning(
+                "Narrative contained proposed_patches, but patch application is disabled in v15 engine."
+            )
 
         # ===== STEP 5: Action choices =====
         if current_game_mode == "GAMEPLAY":
@@ -362,17 +319,59 @@ class TurnManager:
 
         # We must reload the session metadata because tools like RequestSetupConfirmation
         # updated the DB directly, but our 'game_session' object here is stale.
-        latest_session_state = thread_db_manager.sessions.get_by_id(game_session.id)
-        if latest_session_state:
-            game_session.setup_phase_data = latest_session_state.setup_phase_data
-            game_session.game_mode = latest_session_state.game_mode
-            # Note: game_time usually updates via tools too, so good to refresh
-            game_session.game_time = latest_session_state.game_time
+        if thread_db_manager.sessions:
+            latest_session_state = thread_db_manager.sessions.get_by_id(game_session.id)
+            if latest_session_state:
+                game_session.setup_phase_data = latest_session_state.setup_phase_data
+                game_session.game_mode = latest_session_state.game_mode
+                # Note: game_time usually updates via tools too, so good to refresh
+                game_session.game_time = latest_session_state.game_time
 
         # Now save the history (without overwriting the flags we just refreshed)
         self.orchestrator._update_game_in_thread(
             game_session, thread_db_manager, session_in_thread
         )
+
+    def _summarize_previous_scene(self, game_session, db, current_round):
+        """
+        Gathers turns from the previous scene and condenses them into a summary.
+        """
+        try:
+            # 1. Find start of current scene (last time a summary was made)
+            last_scenes = db.turn_metadata.get_recent_scenes(game_session.id, limit=1)
+            # start_turn = 0
+            if last_scenes:
+                # This is approximate; ideally we store 'end_turn_id' in the scene table
+                # For MVP, we assume scene boundary is implied.
+                pass
+
+            # 2. Get Turn Metadata since then
+            # We need a way to query turns *since* the last summary.
+            # This requires the scene_history table to track 'end_turn_id'.
+            # Let's assume we fetch the last 20 turns and rely on the LLM to figure it out?
+            # Better: Fetch all turns, but that's expensive.
+            # Optimization: Just summarize the *chat history* currently in the context window
+            # before we clear it for the new scene.
+
+            history_text = "\n".join(
+                [
+                    f"{m.role}: {m.content}"
+                    for m in Session.from_json(game_session.session_data).get_history()[
+                        -20:
+                    ]
+                ]
+            )
+
+            prompt = SCENE_SUMMARIZATION_TEMPLATE.format(history=history_text)
+
+            response_obj = self.llm_connector.get_structured_response(
+                prompt, [], SceneSummary
+            )
+            summary = response_obj.summary_text
+            self.logger.info(f"Scene summarization triggered. Summary: {summary}")
+
+        except Exception as e:
+            self.logger.error(f"Scene summarization failed: {e}")
 
     # NOTE: The _execute_world_tick method has been removed. Its functionality is being
     # replaced by a just-in-time simulation service triggered by the ContextBuilder.

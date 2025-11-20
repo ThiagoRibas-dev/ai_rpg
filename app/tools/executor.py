@@ -13,8 +13,7 @@ from app.tools.schemas import (
     RngRoll,
     CharacterUpdate,
     InventoryAddItem,
-    InventoryRemoveItem,
-    StateApplyPatch
+    InventoryRemoveItem
 )
 
 
@@ -266,8 +265,7 @@ class ToolExecutor:
         state_changing_tools = [
             CharacterUpdate.model_fields["name"].default,
             InventoryAddItem.model_fields["name"].default,
-            InventoryRemoveItem.model_fields["name"].default,
-            StateApplyPatch.model_fields["name"].default
+            InventoryRemoveItem.model_fields["name"].default
         ]
 
         if tool_name in state_changing_tools and self.ui_queue:

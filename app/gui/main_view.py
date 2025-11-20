@@ -59,6 +59,7 @@ class MainView(ctk.CTk):
         self.loading_frame = None
         self.loading_label = None
         self.history_toolbar = None
+        self.navigation_frame = None # NEW
         self.reroll_button = None
         self.delete_last_button = None
         self.trim_button = None
@@ -152,6 +153,7 @@ class MainView(ctk.CTk):
         self.user_input = main_widgets["user_input"]
         self.send_button = main_widgets["send_button"]
         self.stop_button = main_widgets["stop_button"]
+        self.navigation_frame = main_widgets.get("navigation_frame") # Will need to update builder
 
         # Control panel widgets
         self.control_panel = control_widgets["control_panel"]
@@ -292,6 +294,7 @@ class MainView(ctk.CTk):
             self.send_button,
             self.game_time_label,
             self.game_mode_label,
+            self.navigation_frame, # Pass nav frame
             {
                 "character": self.inspector_manager.character_inspector,
                 "inventory": self.inspector_manager.inventory_inspector,
@@ -310,11 +313,7 @@ class MainView(ctk.CTk):
         self.prompt_delete_button.configure(command=self.prompt_manager.delete_prompt)
         # COMMENT: This is the new, robust line that REPLACES the fragile nametowidget call.
         self.world_info_button.configure(command=self.prompt_manager.open_lore_editor)
-        self.session_new_button.configure(
-            command=lambda: self.session_manager.new_game(
-                self.prompt_manager.selected_prompt
-            )
-        )
+        self.session_new_button.configure(command=self.open_setup_wizard)
 
         # Wire history control buttons
         self.reroll_button.configure(command=self.handle_reroll)
@@ -326,6 +325,13 @@ class MainView(ctk.CTk):
 
         # Wire state viewer button
         self._wire_state_viewer_button()
+
+    def open_setup_wizard(self):
+        """Launch the Session Zero wizard."""
+        from app.gui.panels.setup_wizard import SetupWizard
+        wizard = SetupWizard(self, self.db_manager, self.orchestrator)
+        # This makes the wizard modal
+        self.wait_window(wizard)
 
     def _wire_state_viewer_button(self):
         """

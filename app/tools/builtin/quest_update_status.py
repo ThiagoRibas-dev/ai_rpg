@@ -1,5 +1,5 @@
 from typing import Any
-from app.tools.builtin.state_apply_patch import handler as apply_patch
+from app.tools.builtin._state_storage import get_entity, set_entity
 
 
 def handler(
@@ -8,11 +8,16 @@ def handler(
     **context: Any,
 ) -> dict:
     """
-    Handler for quest.update_status. Translates the call into a simple
-    state.apply_patch operation.
+    Handler for quest.update_status. Directly updates the entity.
     """
-    patch = [{"op": "replace", "path": "/status", "value": new_status}]
+    session_id = context["session_id"]
+    db = context["db_manager"]
+
+    quest = get_entity(session_id, db, "quest", quest_key)
+    if not quest:
+        return {"success": False, "error": f"Quest '{quest_key}' not found."}
     
-    result = apply_patch("quest", quest_key, patch, **context)
-    result.update({"quest_key": quest_key, "new_status": new_status})
-    return result
+    quest["status"] = new_status
+    version = set_entity(session_id, db, "quest", quest_key, quest)
+    
+    return {"success": True, "quest_key": quest_key, "new_status": new_status, "version": version}

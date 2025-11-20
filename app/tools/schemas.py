@@ -170,25 +170,6 @@ class Patch(BaseModel):
     value: Optional[JSONValue] = Field(None, description="Value to add or replace.")
 
 
-class StateApplyPatch(BaseModel):
-    """
-    Apply low-level JSON Patch operations to ANY game entity.
-
-    **âš ï¸  WARNING:** Use specific tools (like `character.update` or `inventory.add_item`) if possible.
-    Only use this for complex data structures or entities without dedicated tools.
-
-    **Example:**
-    `state.apply_patch(entity_type="location", key="tavern", patch=[{"op": "replace", "path": "/is_open", "value": false}])`
-    """
-
-    name: Literal["state.apply_patch"] = "state.apply_patch"
-    entity_type: str = Field(
-        ..., description="Type of entity (e.g., 'character', 'scene', 'location')."
-    )
-    key: str = Field(..., description="Unique key of the entity.")
-    patch: List[Patch] = Field(..., description="List of patch operations.")
-
-
 class StateQuery(BaseModel):
     """
     Read data from the game state.
@@ -276,107 +257,6 @@ class TimeAdvance(BaseModel):
     name: Literal["time.advance"] = "time.advance"
     description: str = Field(..., description="Narrative description of time passing.")
     new_time: str = Field(..., description="The new formatted time string.")
-
-
-class SchemaUpsertAttribute(BaseModel):
-    """
-    **SETUP MODE ONLY.** Defines a RULE or CONCEPT in the game system.
-
-    **DO NOT USE** to set a specific character's value (e.g., "Player has 50 Sanity"). Use `character.update` for values.
-
-    **When to use:**
-    - "This game uses a stat called Sanity."
-    - "There is a resource called Mana."
-    - "Define a 'Reputation' track."
-
-    **Example:**
-    `schema.upsert_attribute(property_name="Sanity", template="stat", min_value=0, max_value=100, icon="ðŸ§ ")`
-    """
-
-    name: Literal["schema.upsert_attribute"] = "schema.upsert_attribute"
-
-    property_name: str = Field(
-        ...,
-        description="The programmatic name of the property (e.g., 'Sanity', 'Mana', 'Allegiance').",
-    )
-    description: str = Field(
-        ..., description="A human-readable description of what the property represents."
-    )
-    entity_type: Literal["character", "item", "location"] = Field(
-        "character", description="The type of entity this property applies to."
-    )
-    template: Optional[
-        Literal["resource", "stat", "reputation", "flag", "enum", "string"]
-    ] = Field(
-        None,
-        description="Predefined behavior template. 'resource' has current/max, 'stat' is a fixed number, 'enum' is a list of options.",
-    )
-    default_value: Optional[JSONValue] = Field(
-        None, description="Initial value for new entities."
-    )
-    min_value: Optional[int] = Field(
-        None, description="Minimum allowed integer value (for stats/resources)."
-    )
-    max_value: Optional[int] = Field(
-        None, description="Maximum allowed integer value (for stats/resources)."
-    )
-    formula: Optional[str] = Field(
-        None,
-        description="For 'stat' templates, a math formula to calculate this value (e.g. '10 + DEX'). Variables must match other property names."
-    )
-
-    # --- Restored Fields ---
-    allowed_values: Optional[List[str]] = Field(
-        None,
-        description="For 'enum' types, the specific list of allowed string options (e.g., ['Novice', 'Veteran', 'Master']).",
-    )
-    display_category: Optional[str] = Field(
-        None,
-        description="Grouping header for the UI (e.g., 'Primary Stats', 'Social', 'Inventory').",
-    )
-    icon: Optional[str] = Field(
-        None,
-        description="Emoji or short string to use as a visual icon in the UI (e.g., 'â ¤ï¸ ', 'ðŸ›¡ï¸ ').",
-    )
-    display_format: Optional[
-        Literal["number", "bar", "badge", "clock", "checkboxes"]
-    ] = Field(
-        None,
-        description="Visual style hint for the UI. 'bar' for resources, 'clock' for tracks.",
-    )
-    regenerates: Optional[bool] = Field(
-        None,
-        description="For 'resource' types, whether it automatically regenerates over time.",
-    )
-    regeneration_rate: Optional[int] = Field(
-        None, description="Amount to regenerate per game turn/rest."
-    )
-
-
-class RequestSetupConfirmation(BaseModel):
-    """
-    **SETUP MODE ONLY.** Summarize the setup and ask the user to confirm.
-
-    **Usage:**
-    You MUST call this tool with a full summary before you can start the game.
-    """
-
-    name: Literal["request_setup_confirmation"] = "request_setup_confirmation"
-    summary: str = Field(
-        ..., description="Full summary of decisions made during the SETUP process of the game."
-    )
-
-
-class EndSetupAndStartGameplay(BaseModel):
-    """
-    **SETUP MODE ONLY.** Transitions the game to GAMEPLAY mode.
-
-    **Usage:**
-    Call this ONLY after the user has explicitly said "Yes" or "Ready" to your confirmation summary.
-    """
-
-    name: Literal["end_setup_and_start_gameplay"] = "end_setup_and_start_gameplay"
-    reason: str = Field(..., description="Why setup is complete.")
 
 
 class Deliberate(BaseModel):
@@ -502,44 +382,6 @@ class QuestUpdateStatus(BaseModel):
     )
 
 
-class QuestUpdateObjective(BaseModel):
-    """
-    Complete or un-complete a specific objective within a quest.
-
-    **Example:**
-    `quest.update_objective(quest_key="q_main", objective_text="Find the map", is_completed=true)`
-    """
-
-    name: Literal["quest.update_objective"] = "quest.update_objective"
-    quest_key: str = Field(..., description="Quest ID.")
-    objective_text: str = Field(..., description="Exact text of the objective.")
-    is_completed: bool = Field(True, description="Completion status.")
-
-
-class EntityCreate(BaseModel):
-    """
-    Spawn a new entity (NPC, Item, Location) into the game DB.
-
-    **When to use:**
-    - The player enters a new room (Location).
-    - A wild monster appears (Character).
-    - Loot is generated (Item).
-
-    **Example:**
-    `entity.create(entity_type="character", entity_key="goblin_1", data={"name": "Goblin"})`
-    """
-
-    name: Literal["entity.create"] = "entity.create"
-    entity_type: str = Field(
-        ..., description="Type: 'character', 'item', 'location', 'quest'."
-    )
-    entity_key: str = Field(..., description="Unique ID.")
-    template_name: Optional[str] = Field(
-        None, description="StatBlockTemplate to use (e.g. 'Monster')."
-    )
-    data: Dict[str, Any] = Field(..., description="Full entity data dictionary.")
-
-
 class SceneAddMember(BaseModel):
     """
     Add a character to the active scene context.
@@ -560,6 +402,85 @@ class SceneRemoveMember(BaseModel):
     character_key: str = Field(..., description="Character ID to remove.")
 
 
+class LocationCreate(BaseModel):
+    """
+    Create a new location in the world database.
+    Use this to define distinct areas (rooms, clearings, streets).
+    """
+    name: Literal["location.create"] = "location.create"
+    key: str = Field(..., description="Unique ID (e.g., 'crypt_entrance').")
+    name_display: str = Field(..., description="Display name (e.g., 'The Crypt Mouth').")
+    description_visual: str = Field(..., description="Visuals: lighting, architecture, layout.")
+    description_sensory: str = Field(..., description="Smell, sound, temperature.")
+    type: Literal["indoor", "outdoor", "dungeon", "city"] = Field(..., description="General environment type.")
+
+
+class LocationConnect(BaseModel):
+    """
+    Connect two existing locations in the world graph.
+    Usually creates a two-way connection unless 'one_way' is True.
+    """
+    name: Literal["location.connect"] = "location.connect"
+    from_key: str = Field(..., description="ID of the starting location.")
+    to_key: str = Field(..., description="ID of the destination location.")
+    direction: str = Field(..., description="Direction/Method (e.g., 'north', 'up', 'portal').")
+    back_direction: Optional[str] = Field(None, description="Return direction (e.g., 'south'). Required if not one_way.")
+    display_name: str = Field(..., description="Narrative name of the exit (e.g. 'Heavy Iron Door').")
+    is_hidden: bool = Field(False, description="If true, exit is not immediately obvious.")
+    is_locked: bool = Field(False, description="If true, requires a key or check to open.")
+    one_way: bool = Field(False, description="If true, connection is one-way only.")
+
+
+class CharacterApplyDamage(BaseModel):
+    """
+    Apply damage to a character's Vital (usually HP).
+    Handles math and checks for death/unconscious state automatically.
+    """
+    name: Literal["character.apply_damage"] = "character.apply_damage"
+    target_key: str = Field(..., description="Key of the character taking damage.")
+    amount: int = Field(..., description="Amount of damage to deal.")
+    vital_name: str = Field("HP", description="The vital to reduce (e.g. 'HP', 'Sanity', 'Stamina').")
+    damage_type: Literal["physical", "fire", "cold", "poison", "psychic", "magic"] = Field("physical", description="Source of damage.")
+    explanation: str = Field(..., description="Narrative reason (e.g. 'Hit by goblin arrow').")
+
+
+class CharacterRestoreVital(BaseModel):
+    """
+    Heal or restore a character's Vital (HP, Mana, etc).
+    Automatically clamps to the maximum value defined in the character's sheet.
+    """
+    name: Literal["character.restore_vital"] = "character.restore_vital"
+    target_key: str = Field(..., description="Key of the character being restored.")
+    vital_name: str = Field("HP", description="The vital to restore.")
+    amount: int = Field(..., description="Amount to restore.")
+
+
+class CharacterModifyStat(BaseModel):
+    """
+    Buff or Debuff a core attribute temporarily or permanently.
+    Use this for spells, potions, or narrative consequences.
+    """
+    name: Literal["character.modify_stat"] = "character.modify_stat"
+    target_key: str = Field(..., description="Key of the character.")
+    stat_name: str = Field(..., description="Name of the stat (e.g. 'Strength', 'Agility').")
+    amount: int = Field(..., description="Value to add (positive) or subtract (negative).")
+    duration: Literal["permanent", "scene", "turn"] = Field(..., description="How long the effect lasts.")
+
+
+class NpcSpawn(BaseModel):
+    """
+    Create a new NPC and add them to the current location and active scene.
+    Use this when a new character enters the story.
+    """
+    name: Literal["npc.spawn"] = "npc.spawn"
+    key: str = Field(..., description="Unique ID (e.g. 'goblin_grunt_1').")
+    name_display: str = Field(..., description="Name shown to player (e.g. 'Goblin Grunt').")
+    visual_description: str = Field(..., description="Physical appearance for UI tooltip.")
+    stat_template: str = Field(..., description="Name of the StatBlockTemplate to use (e.g. 'Monster', 'Commoner').")
+    initial_disposition: Literal["hostile", "neutral", "friendly"] = Field("neutral", description="Starting attitude toward player.")
+    location_key: Optional[str] = Field(None, description="Location ID. If omitted, uses current active scene location.")
+
+
 class SceneMoveTo(BaseModel):
     """
     Move the entire party (active scene) to a new location.
@@ -571,3 +492,15 @@ class SceneMoveTo(BaseModel):
 
     name: Literal["scene.move_to"] = "scene.move_to"
     new_location_key: str = Field(..., description="ID of the destination location.")
+
+
+class JournalAddEntry(BaseModel):
+    """
+    Record a plot-relevant event, clue, or quest step in the player's journal.
+    Replaces generic memory upserts for tracking story progress.
+    """
+    name: Literal["journal.add_entry"] = "journal.add_entry"
+    title: str = Field(..., description="Short headline (e.g. 'The King's Request').")
+    content: str = Field(..., description="Details of the entry.")
+    tags: List[str] = Field(default_factory=list, description="Keywords.")
+    is_secret: bool = Field(False, description="If true, player doesn't see this immediately (GM note).")

@@ -1,6 +1,6 @@
 import logging
 from typing import Any, List, Callable, Optional, Type, TypeVar, Tuple
-from pydantic import BaseModel, create_model
+from pydantic import BaseModel, create_model, Field
 
 from app.llm.llm_connector import LLMConnector
 from app.models.message import Message
@@ -106,7 +106,7 @@ class TemplateGenerationService:
         # 2. Tactical Rules
         self._update_status("Extracting Tactical Rules...")
         # Define wrapper for list extraction
-        RuleList = create_model("RuleList", rules=(List[RuleEntry], ...), __base__=BaseModel)
+        RuleList = create_model("RuleList", rules=(List[RuleEntry], Field(default_factory=list)), __base__=BaseModel)
         tactical_result = self.llm.get_structured_response(
             system_prompt=self.static_system_prompt,
             chat_history=[Message(role="user", content=f"{ruleset_analysis_context}\n\n{GENERATE_TACTICAL_RULES_INSTRUCTION}")],
@@ -147,7 +147,7 @@ class TemplateGenerationService:
         # 4. Abilities
         self._update_status("Structuring Character Abilities...")
         # Context: Ruleset implies what stats are needed
-        AbilityList = create_model("AbilityList", abilities=(List[AbilityDef], ...), __base__=BaseModel)
+        AbilityList = create_model("AbilityList", abilities=(List[AbilityDef], Field(default_factory=list)), __base__=BaseModel)
         
         abilities_result = self.llm.get_structured_response(
             system_prompt=self.static_system_prompt,
@@ -158,7 +158,7 @@ class TemplateGenerationService:
         
         # 5. Vitals
         self._update_status("Structuring Vitals (HP/Mana)...")
-        VitalList = create_model("VitalList", vitals=(List[VitalDef], ...), __base__=BaseModel)
+        VitalList = create_model("VitalList", vitals=(List[VitalDef], Field(default_factory=list)), __base__=BaseModel)
         vitals_result = self.llm.get_structured_response(
             system_prompt=self.static_system_prompt,
             chat_history=[Message(role="user", content=f"{statblock_analysis_context}\n\n{GENERATE_VITALS_INSTRUCTION}\n\n# CONTEXT: RULESET\n{ruleset_context}")],
@@ -182,7 +182,7 @@ class TemplateGenerationService:
 
         # 7. Derived Stats
         self._update_status("Calculating Derived Statistics formulas...")
-        DerivedList = create_model("DerivedList", derived=(List[DerivedStatDef], ...), __base__=BaseModel)
+        DerivedList = create_model("DerivedList", derived=(List[DerivedStatDef], Field(default_factory=list)), __base__=BaseModel)
         
         # Inject generated abilities as context so LLM knows variable names (e.g. "STR" vs "Strength")
         abilities_summary = ", ".join([a.name for a in abilities])

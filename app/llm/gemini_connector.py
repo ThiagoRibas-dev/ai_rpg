@@ -1,4 +1,6 @@
 import os
+import json
+import logging
 from google import genai
 from google.genai import types
 from pydantic import BaseModel
@@ -6,6 +8,8 @@ from pydantic import BaseModel
 from typing import Type, List, Generator, Dict, Any
 from app.llm.llm_connector import LLMConnector
 from app.models.message import Message
+
+logger = logging.getLogger(__name__)
 
 
 class GeminiConnector(LLMConnector):
@@ -87,6 +91,8 @@ class GeminiConnector(LLMConnector):
         system_prompt: str,
         chat_history: List[Message],
         output_schema: Type[BaseModel],
+        temperature: float = 0.7,
+        top_p: float = 0.9,
     ) -> BaseModel:
         # We intentionally do NOT pass tools here, because Gemini FunctionDeclarations
         # are picky and don't allow $ref/anyOf/etc. We stick to Structured Output.
@@ -97,8 +103,8 @@ class GeminiConnector(LLMConnector):
             # Generate JSON schema from the Pydantic model
             response_json_schema=output_schema.model_json_schema(),
             system_instruction=[types.Part.from_text(text=system_prompt)],
-            temperature=1,
-            top_p=0.9,
+            temperature=temperature,
+            top_p=top_p,
             max_output_tokens=self.default_max_tokens,
             thinking_config=types.ThinkingConfig(
                 thinking_budget=self.default_thinking_budget
@@ -109,7 +115,21 @@ class GeminiConnector(LLMConnector):
         response = self.client.models.generate_content(
             model=self.model_name, contents=contents, config=generation_config
         )
-        return output_schema.model_validate(response.parsed)
+        
+        if response.parsed:
+            return output_schema.model_validate(response.parsed)
+            
+        # Fallback: If SDK failed to parse but returned text, try manual parsing
+        # This handles cases where response.parsed is None due to minor schema deviations
+        if response.text:
+            try:
+                data = json.loads(response.text)
+                return output_schema.model_validate(data)
+            except Exception as e:
+                logger.error(f"Gemini structured response failure. Raw text: {response.text}")
+                raise ValueError(f"Failed to parse Gemini response: {e}")
+        
+        raise ValueError("Gemini returned empty response (blocked or error).")
 
     def get_tool_calls(
         self,

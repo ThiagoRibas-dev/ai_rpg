@@ -1,11 +1,10 @@
 from app.tools.schemas import (
-    MemoryUpsert,
-    SchemaUpsertAttribute,
-    RequestSetupConfirmation,
     CharacterUpdate,
-    EntityCreate
+    InventoryAddItem,
+    MemoryUpsert,
+    NpcSpawn,
 )
-
+ 
 # ==============================================================================
 # RULES EXTRACTION PROMPTS
 # ==============================================================================
@@ -124,25 +123,23 @@ I must distinguish between defining the **Rules of the Universe** (Schema) and d
 
 I will structure my output as a JSON object. 
 In the 'analysis' field, I will explicitly walk through this decision tree:
-
+ 
 1. **Analysis Protocol**:
-    A. **Is the user defining a RULE or CONCEPT?** (e.g., "We use Gold", "Mages have Mana")
-       -> ACTION: Define Schema. TOOL: `{SchemaUpsertAttribute.model_fields["name"].default}`.
+    A. **Is the user defining a RULE or CONCEPT?**
+       -> ACTION: Define Schema. (Deprecated workflow).
     B. **Is the user setting a SPECIFIC VALUE?** (e.g., "I have 100 Gold", "My Mana is full")
        -> ACTION: Set Data. TOOL: `{CharacterUpdate.model_fields["name"].default}`.
     C. **Is the user creating a specific ENTITY?** (e.g., "Create a goblin", "I have a sword")
-       -> ACTION: Create Entity. TOOL: `{EntityCreate.model_fields["name"].default}`.
-    D. **Is the user ready to PLAY?**
-       -> ACTION: Check Confirmation Status below.
-
+       -> ACTION: Add Entity. TOOL: `{NpcSpawn.model_fields["name"].default}` or `{InventoryAddItem.model_fields["name"].default}`.
+    D. **Is the user stating a FACT about the world?** (e.g., "The king is dead", "The sword is cursed")
+       -> ACTION: Memorize. TOOL: `{MemoryUpsert.model_fields["name"].default}`.
+ 
 2. **Plan Steps**: I will write a step-by-step plan for my actions right now, where:
     - I will list the specific tools needed.
-    - **CRITICAL:** If the player says "Start Game" or "I'm ready", check "SETUP STATUS" above.
-        - If "IN PROGRESS": I CANNOT start. I must call `{RequestSetupConfirmation.model_fields["name"].default}` with a full summary.
-        - If "WAITING FOR CONFIRMATION": If they said "Yes", I will call `end_setup_and_start_gameplay`. If they said "No" or changed something, I will fix it and ask again.
-"""
+    - **CRITICAL:** If the player says "Start Game" or "I'm ready", I will prepare to transition to gameplay.
+ """
  
-# Per-Step Tool Selection Prompt ---
+ # Per-Step Tool Selection Prompt ---
 TOOL_SELECTION_PER_STEP_TEMPLATE = """
 Okay. Now I will select the single best tool to accomplish the following plan step.
 
@@ -163,7 +160,7 @@ Selected tools :
 # ==============================================================================
 # WORLD SIMULATION PROMPTS
 # ==============================================================================
- 
+
 JIT_SIMULATION_TEMPLATE = """
 You are a Just-In-Time world simulator. An NPC who has been "off-screen" is now relevant to the player. Your job is to determine what plausibly happened to them in the intervening time.
 
@@ -180,7 +177,23 @@ You are a Just-In-Time world simulator. An NPC who has been "off-screen" is now 
 - **Directive (Goal):** "{directive}"
 - **Time Passed:** From '{last_updated_time}' to '{current_time}'
 
-Now, provide the outcome as a JSON object conforming to the WorldTickOutcome schema.
+Provide the outcome as a JSON object conforming to the WorldTickOutcome schema.
+"""
+
+# ==============================================================================
+# SUMMARIZATION PROMPTS
+# ==============================================================================
+
+SCENE_SUMMARIZATION_TEMPLATE = """
+You are a narrative condenser. Read the following chat history of a roleplaying game scene.
+
+Write a 1-paragraph summary of the events.
+- Focus on facts, decisions, inventory changes, and location changes.
+- Discard dialogue and minor descriptions.
+- Refer to the player as "The Protagonist".
+
+HISTORY:
+{history}
 """
 
 # ==============================================================================
@@ -253,6 +266,61 @@ Each choice should be:
 - Written from the player's perspective (what they would say/do)
 - Relevant to the current situation
 - Distinct from other choices
-- Offering diverse options (e.g., combat, diplomacy, investigation, stealth)
+ - Offering diverse options (e.g., combat, diplomacy, investigation, stealth)
+ 
+ """
 
+# ==============================================================================
+# PRE-GAME EXTRACTION PROMPTS (WIZARD)
+# ==============================================================================
+
+CHARACTER_EXTRACTION_PROMPT = """
+You are a Character Sheet Parser. Your job is to convert a natural language description of a character into a structured JSON object that matches a specific game system.
+
+**INPUT DESCRIPTION:**
+"{description}"
+
+**TARGET RULES SYSTEM (Template):**
+{template}
+
+**INSTRUCTIONS:**
+1. **Extract Details**: Identify the Name, Visual Description, and Biography.
+2. **Map Stats**: Look at the 'suggested_stats' field. Map the character's described strengths/weaknesses to the Abilities defined in the Template.
+   - If the description says "strong", give a high value for the Strength-equivalent stat.
+   - If the description implies magic use, give high Mental stats.
+   - Infer reasonable defaults for anything not mentioned.
+3. **Inventory**: Extract any equipment mentioned (weapons, armor, tools).
+4. **Companions**: If the text mentions a pet, familiar, or sidekick, create an entry in 'companions'.
+
+Return ONLY the JSON object matching the CharacterExtraction schema.
+"""
+
+WORLD_EXTRACTION_PROMPT = """
+You are a World Building Engine. Convert the following setting description into a structured starting scenario.
+
+**INPUT DESCRIPTION:**
+"{description}"
+
+**INSTRUCTIONS:**
+1. **Starting Location**: Create a `location.create` object for where the player begins. Be specific with visuals and sensory details.
+2. **Lore**: Extract 3-5 key facts about the world (factions, history, threats) as `memory.upsert` entries.
+3. **NPCs**: Identify any NPCs present in the scene and create `npc.spawn` entries for them.
+
+Return ONLY the JSON object matching the WorldExtraction schema.
+"""
+
+OPENING_CRAWL_PROMPT = """
+You are the Narrator of a roleplaying game. Write the opening scene.
+
+**Protagonist**: {name} ({visual_desc})
+**Location**: {location}
+**Setting Details**: {loc_desc}
+**Background**: {bio}
+
+**INSTRUCTIONS:**
+- Write in the **Second Person** ("You stand...", "You see...").
+- Set the scene vividly. Describe the atmosphere, lighting, and immediate situation.
+- Acknowledge the character's background in the narrative hook.
+- End with a call to action or "What do you do?".
+- Do NOT write dialogue for the player.
 """

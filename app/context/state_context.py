@@ -56,8 +56,11 @@ class StateContextBuilder:
                 attr_strs = []
                 for ab_def in stat_template.abilities:
                     val = abilities_data.get(ab_def.name, ab_def.default)
-                    # Add simple modifier hint for integers (d20 systems)
-                    if ab_def.data_type == "integer" and isinstance(val, int) and val >= 10:
+                    # Add simple modifier hint ONLY for integer stats in standard D&D range (e.g. > 5)
+                    # This is a heuristic to avoid showing "-4" for a 1-dot stat in Vampire.
+                    if (ab_def.data_type == "integer" and 
+                        isinstance(val, int) and 
+                        val > 5 and val < 30): # Heuristic range for D20 systems
                         mod = (val - 10) // 2
                         val_str = f"{val} ({mod:+})"
                     else:

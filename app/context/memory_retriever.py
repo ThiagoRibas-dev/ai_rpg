@@ -35,10 +35,13 @@ class MemoryRetriever:
 
     def get_relevant(
         self, session, recent_messages: List[Message], limit: int = 10
-        , active_npc_keys: Optional[List[str]] = None
+        , active_npc_keys: Optional[List[str]] = None,
+        extra_tags: Optional[List[str]] = None
     ) -> List[Any]:
         if active_npc_keys is None:
             active_npc_keys = []
+        if extra_tags is None:
+            extra_tags = []
 
         if not session or not session.id:
             return []
@@ -92,6 +95,12 @@ class MemoryRetriever:
             for npc_key in active_npc_keys:
                 if npc_key in mem.tags_list():
                     score += 60 # Significant bonus for social context
+            
+            # --- NEW: Knowledge-Based Score Bonus ---
+            # If an NPC knows about a topic (tag), boost that memory
+            if set(mem.tags_list()) & set(extra_tags):
+                score += 40
+                
             scored.append((score, mem))
 
         scored.sort(key=lambda x: x[0], reverse=True)

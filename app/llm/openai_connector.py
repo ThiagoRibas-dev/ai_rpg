@@ -62,6 +62,8 @@ class OpenAIConnector(LLMConnector):
         system_prompt: str,
         chat_history: List[Message],
         output_schema: Type[BaseModel],
+        temperature: float = 0.7,
+        top_p: float = 0.9,
     ) -> BaseModel:
         messages = [{"role": "system", "content": system_prompt}]
         messages.extend(self._convert_chat_history_to_messages(chat_history))
@@ -74,8 +76,8 @@ class OpenAIConnector(LLMConnector):
             model=self.model,
             messages=messages,
             max_completion_tokens=-1,
-            temperature=0.7,
-            top_p=0.9,
+            temperature=temperature,
+            top_p=top_p,
             response_format={
                 "type": "json_object",
                 "schema": json_schema,

@@ -177,10 +177,20 @@ class MainPanelBuilder:
         )
         history_info_label.pack(side="right", padx=10)
 
+        # === Navigation Frame (NEW) ===
+        navigation_frame = ctk.CTkFrame(main_panel, fg_color="transparent", height=40)
+        navigation_frame.grid(
+            row=4, # Shift input down
+            column=0,
+            columnspan=2,
+            sticky="ew",
+            padx=Theme.spacing.padding_sm
+        )
+
         # === User Input ===
         user_input = ctk.CTkTextbox(main_panel, height=Theme.spacing.input_height)
         user_input.grid(
-            row=4,
+            row=5, # Shifted down
             column=0,
             sticky="ew",
             padx=Theme.spacing.padding_sm,
@@ -190,7 +200,7 @@ class MainPanelBuilder:
         # === Button Frame ===
         button_frame = ctk.CTkFrame(main_panel)
         button_frame.grid(
-            row=4,
+            row=5, # Shifted down
             column=1,
             sticky="ns",
             padx=Theme.spacing.padding_sm,
@@ -231,6 +241,7 @@ class MainPanelBuilder:
             "delete_last_button": delete_last_button,
             "trim_button": trim_button,
             "history_info_label": history_info_label,
+            "navigation_frame": navigation_frame,
             "user_input": user_input,
             "send_button": send_button,
             "stop_button": stop_button,

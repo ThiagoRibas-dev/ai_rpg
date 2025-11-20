@@ -17,7 +17,6 @@ class PromptRepository(BaseRepository):
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL UNIQUE,
                 content TEXT NOT NULL,
-                initial_message TEXT DEFAULT '',
                 rules_document TEXT DEFAULT '',
                 template_manifest TEXT DEFAULT '{}',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -31,21 +30,19 @@ class PromptRepository(BaseRepository):
         self,
         name: str,
         content: str,
-        initial_message: str = "",
         rules_document: str = "",
         template_manifest: str = "{}",
     ) -> Prompt:
         """Create a new prompt."""
         cursor = self._execute(
-            "INSERT INTO prompts (name, content, initial_message, rules_document, template_manifest) VALUES (?, ?, ?, ?, ?)",
-            (name, content, initial_message, rules_document, template_manifest),
+            "INSERT INTO prompts (name, content, rules_document, template_manifest) VALUES (?, ?, ?, ?)",
+            (name, content, rules_document, template_manifest),
         )
         self._commit()
         return Prompt(
             id=cursor.lastrowid,
             name=name,
             content=content,
-            initial_message=initial_message,
             rules_document=rules_document,
             template_manifest=template_manifest,
         )
@@ -53,14 +50,14 @@ class PromptRepository(BaseRepository):
     def get_all(self) -> List[Prompt]:
         """Get all prompts."""
         rows = self._fetchall(
-            "SELECT id, name, content, initial_message, rules_document, template_manifest FROM prompts"
+            "SELECT id, name, content, rules_document, template_manifest FROM prompts"
         )
         return [Prompt(**dict(row)) for row in rows]
 
     def get_by_id(self, prompt_id: int) -> Prompt | None:
         """Get a prompt by ID."""
         row = self._fetchone(
-            "SELECT id, name, content, initial_message, rules_document, template_manifest FROM prompts WHERE id = ?",
+            "SELECT id, name, content, rules_document, template_manifest FROM prompts WHERE id = ?",
             (prompt_id,),
         )
         return Prompt(**dict(row)) if row else None
@@ -68,11 +65,10 @@ class PromptRepository(BaseRepository):
     def update(self, prompt: Prompt):
         """Update a prompt."""
         self._execute(
-            "UPDATE prompts SET name = ?, content = ?, initial_message = ?, rules_document = ?, template_manifest = ? WHERE id = ?",
+            "UPDATE prompts SET name = ?, content = ?, rules_document = ?, template_manifest = ? WHERE id = ?",
             (
                 prompt.name,
                 prompt.content,
-                prompt.initial_message,
                 prompt.rules_document,
                 prompt.template_manifest,
                 prompt.id,
