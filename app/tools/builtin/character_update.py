@@ -3,6 +3,7 @@ from typing import Any, Dict, List
 
 from app.tools.builtin._state_storage import get_entity, set_entity
 from app.utils.state_validator import StateValidator
+from app.utils.math_engine import recalculate_derived_stats
 
 logger = logging.getLogger(__name__)
 
@@ -48,11 +49,17 @@ def handler(character_key: str, updates: List[Dict[str, Any]], **context) -> dic
 
     # 3. Validate & Apply Updates
     validator = StateValidator(stat_template)
+    derived_stats_keys = {d.name for d in stat_template.derived_stats}
     
     updated_keys = []
     for update_pair in updates:
         key = update_pair["key"]
         value = update_pair["value"]
+
+        # Safety: Prevent AI from overwriting Derived Stats directly
+        if key in derived_stats_keys:
+            logger.warning(f"Ignored direct update to derived stat '{key}'. AI should update base abilities instead.")
+            continue
         
         category = validator.validate_update(key, value)
         
@@ -62,13 +69,26 @@ def handler(character_key: str, updates: List[Dict[str, Any]], **context) -> dic
             entity.setdefault("abilities", {})[key] = value
         elif category == "vital":
              # Vitals are complex objects {current, max}
+             # Check if this vital has a max_formula
+             vital_def = next((v for v in stat_template.vitals if v.name == key), None)
+             has_formula = vital_def and vital_def.max_formula
+
              # If value is int, assume 'current'
              if isinstance(value, (int, float)):
                  current_vital = entity.setdefault("vitals", {}).get(key, {})
                  current_vital["current"] = value
                  entity["vitals"][key] = current_vital
              else:
-                 entity.setdefault("vitals", {})[key] = value
+                 # If it's a dict, we might need to filter out 'max' if it's calculated
+                 if has_formula and isinstance(value, dict) and "max" in value:
+                     logger.info(f"Ignoring manual max update for '{key}' due to formula.")
+                     value.pop("max")
+                     # Merge with existing to preserve current if not sent, or update current
+                     current_vital = entity.setdefault("vitals", {}).get(key, {})
+                     current_vital.update(value)
+                     entity["vitals"][key] = current_vital
+                 else:
+                     entity.setdefault("vitals", {})[key] = value
         elif category == "track":
             # Tracks can be simple integers (0) or objects {value: 0, max: 4}
             if isinstance(value, int):
@@ -86,7 +106,11 @@ def handler(character_key: str, updates: List[Dict[str, Any]], **context) -> dic
                 
         updated_keys.append(key)
 
-    # 4. Save
+    # 4. Recalculate Derived Stats & Formulas
+    # This ensures that changing "STR" automatically updates "STR_mod", "AC", "Inventory Cap", etc.
+    entity = recalculate_derived_stats(entity, stat_template)
+
+    # 5. Save
     version = set_entity(session_id, db, "character", character_key, entity)
 
     return {

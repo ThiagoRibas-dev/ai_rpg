@@ -24,6 +24,10 @@ class ColorScheme:
     bubble_system: str = "#3d3d3d"
     bubble_thought: str = "#4a4a2d"
     bubble_thought_border: str = "#8a8a6d"
+    
+    # Dice bubbles
+    bubble_dice_bg: str = "#2c2c3a"
+    bubble_dice_border: str = "#5c5c7a"
 
     # Tool calls
     tool_call_bg: str = "#2d4a2b"
@@ -164,7 +168,7 @@ class Theme:
 
 
 def get_chat_bubble_style(role: str) -> Dict[str, Any]:
-    """Get style configuration for a chat bubble based on role."""
+    """Get style configuration for chat bubbles based on role."""
     if role == "user":
         return {
             "fg_color": Theme.colors.bubble_user,
@@ -199,6 +203,17 @@ def get_chat_bubble_style(role: str) -> Dict[str, Any]:
             "anchor": "w",
             "label": role.capitalize(),
         }
+
+
+def get_dice_bubble_style() -> Dict[str, Any]:
+    """Get style configuration for dice roll bubbles."""
+    return {
+        "fg_color": Theme.colors.bubble_dice_bg,
+        "border_color": Theme.colors.bubble_dice_border,
+        "border_width": 2,
+        "corner_radius": 8,
+        "text_color": Theme.colors.text_primary,
+    }
 
 
 def get_tool_call_style() -> Dict[str, Any]:
@@ -260,6 +275,8 @@ class DarkTheme(Theme):
         bubble_ai="#2e3b2b",        # Deep Forest Green
         bubble_thought="#2d2d2d",   # Dark Gray
         bubble_thought_border="#555555",
+        bubble_dice_bg="#2c2c3a",   # Dark Purple-Grey
+        bubble_dice_border="#5c5c7a",
 
         # Text
         text_primary="#E0E0E0",
@@ -288,6 +305,8 @@ class LightTheme(Theme):
         bubble_system="#d9d9d9",
         bubble_thought="#fff4e6",
         bubble_thought_border="#d4af37",
+        bubble_dice_bg="#f0f0ff",
+        bubble_dice_border="#d6d6e6",
         # Tool calls
         tool_call_bg="#e6f7ff",
         tool_success="#52c41a",
@@ -345,6 +364,7 @@ __all__ = [
     "LightTheme",
     "ACTIVE_THEME",
     "get_chat_bubble_style",
+    "get_dice_bubble_style",
     "get_tool_call_style",
     "get_memory_kind_color",
     "get_button_style",

@@ -320,6 +320,10 @@ class SchemaUpsertAttribute(BaseModel):
     max_value: Optional[int] = Field(
         None, description="Maximum allowed integer value (for stats/resources)."
     )
+    formula: Optional[str] = Field(
+        None,
+        description="For 'stat' templates, a math formula to calculate this value (e.g. '10 + DEX'). Variables must match other property names."
+    )
 
     # --- Restored Fields ---
     allowed_values: Optional[List[str]] = Field(

@@ -86,7 +86,7 @@ GENERATE_VITALS_INSTRUCTION = """
 **Task**: Define **Vitals** (Resource Pools).
 
 These are pools that go up and down frequently (HP, Mana, Sanity, Stamina).
-If there is a formula for the maximum value (e.g., "10 + Constitution"), extract it.
+**CRITICAL**: If there is a formula for the maximum value (e.g., "10 + Constitution" or "STR * 5"), you MUST extract it into the `max_formula` field.
 """
 
 GENERATE_TRACKS_SLOTS_INSTRUCTION = """
@@ -94,6 +94,14 @@ GENERATE_TRACKS_SLOTS_INSTRUCTION = """
 
 1. **Tracks**: Abstract progress bars or clocks (e.g., Experience Points, Stress, Corruption, Alert Level).
 2. **Slots**: Containers for items or features (e.g., Inventory, Spell Slots, Cyberware Capacity).
+"""
+
+GENERATE_DERIVED_STATS_INSTRUCTION = """
+**Task**: Define **Derived Statistics**.
+
+These are values calculated **entirely** from other attributes (e.g., "AC = 10 + Dexterity", "Save DC = 8 + Proficiency + Wisdom", "Parry = Fighting / 2").
+
+Return a list of these stats with their names and the **mathematical formula** using the names of the base Abilities you defined earlier.
 """
 
 # ==============================================================================

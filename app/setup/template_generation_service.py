@@ -9,7 +9,7 @@ from app.models.ruleset import (
     Ruleset, Compendium, RuleEntry
 )
 from app.models.stat_block import (
-    StatBlockTemplate, AbilityDef, VitalDef, TrackDef, SlotDef
+    StatBlockTemplate, AbilityDef, VitalDef, TrackDef, SlotDef, DerivedStatDef
 )
 # Import new prompts
 from app.prompts.templates import (
@@ -21,7 +21,8 @@ from app.prompts.templates import (
     GENERATE_COMPENDIUM_INSTRUCTION,
     GENERATE_ABILITIES_INSTRUCTION,
     GENERATE_VITALS_INSTRUCTION,
-    GENERATE_TRACKS_SLOTS_INSTRUCTION
+    GENERATE_TRACKS_SLOTS_INSTRUCTION,
+    GENERATE_DERIVED_STATS_INSTRUCTION
 )
 
 logger = logging.getLogger(__name__)
@@ -179,10 +180,19 @@ class TemplateGenerationService:
         tracks = getattr(tracks_slots_result, "tracks", [])
         slots = getattr(tracks_slots_result, "slots", [])
 
-        # 7. Derived Stats (Automated for now)
-        # We assume derived stats are often implied by Vitals (AC, etc). 
-        # For this pass, we'll skip explicit extraction or infer it later.
-        derived = []
+        # 7. Derived Stats
+        self._update_status("Calculating Derived Statistics formulas...")
+        DerivedList = create_model("DerivedList", derived=(List[DerivedStatDef], ...), __base__=BaseModel)
+        
+        # Inject generated abilities as context so LLM knows variable names (e.g. "STR" vs "Strength")
+        abilities_summary = ", ".join([a.name for a in abilities])
+        
+        derived_result = self.llm.get_structured_response(
+            system_prompt=self.static_system_prompt,
+            chat_history=[Message(role="user", content=f"{statblock_analysis_context}\n\n# DEFINED ABILITIES: {abilities_summary}\n\n{GENERATE_DERIVED_STATS_INSTRUCTION}")],
+            output_schema=DerivedList
+        )
+        derived = getattr(derived_result, "derived", [])
 
         # --- Final Assembly ---
         self._update_status("Assembling final template...")

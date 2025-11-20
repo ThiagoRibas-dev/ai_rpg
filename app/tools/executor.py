@@ -4,19 +4,17 @@ from typing import Any, Dict, List, Tuple
 
 from pydantic import BaseModel
 
-from app.setup.setup_manifest import SetupManifest
 from app.tools.schemas import (
-    Deliberate,
-    EndSetupAndStartGameplay,
-    RequestSetupConfirmation,
-    SchemaQuery,
-    StateQuery,
-    TimeNow,
     TimeAdvance,
     MemoryQuery,
     MemoryUpsert,
     MemoryUpdate,
     MemoryDelete,
+    RngRoll,
+    CharacterUpdate,
+    InventoryAddItem,
+    InventoryRemoveItem,
+    StateApplyPatch
 )
 
 
@@ -77,15 +75,15 @@ class ToolExecutor:
         }
 
         # Define tools that are "safe" and don't invalidate the setup summary
-        SAFE_SETUP_TOOLS = [
-            RequestSetupConfirmation.model_fields["name"].default,
-            EndSetupAndStartGameplay.model_fields["name"].default,
-            Deliberate.model_fields["name"].default,
-            SchemaQuery.model_fields["name"].default,
-            StateQuery.model_fields["name"].default,
-            MemoryQuery.model_fields["name"].default,
-            TimeNow.model_fields["name"].default,
-        ]
+        # SAFE_SETUP_TOOLS = [
+        #     RequestSetupConfirmation.model_fields["name"].default,
+        #     EndSetupAndStartGameplay.model_fields["name"].default,
+        #     Deliberate.model_fields["name"].default,
+        #     SchemaQuery.model_fields["name"].default,
+        #     StateQuery.model_fields["name"].default,
+        #     MemoryQuery.model_fields["name"].default,
+        #     TimeNow.model_fields["name"].default,
+        # ]
 
         for i, call in enumerate(tool_calls[:tool_budget]):
             # Debug logging to see what we actually got
@@ -169,6 +167,20 @@ class ToolExecutor:
             try:
                 # Execute using type-based dispatch
                 result = self.tools.execute(call, context=ctx)
+ 
+                # SPECIAL HANDLING: Dice Roll Visualization
+                # We emit a specific event for the UI to render a dice bubble
+                if isinstance(call, RngRoll) and self.ui_queue:
+                    try:
+                        self.ui_queue.put({
+                            "type": "dice_roll",
+                            "spec": tool_args.get("dice") or tool_args.get("dice_spec"),
+                            "rolls": result.get("rolls", []),
+                            "modifier": result.get("modifier", 0),
+                            "total": result.get("total", 0)
+                        })
+                    except Exception as e:
+                        self.logger.error(f"Failed to emit dice_roll event: {e}")
 
                 results.append(
                     {"name": tool_name, "arguments": tool_args, "result": result}
@@ -247,3 +259,25 @@ class ToolExecutor:
                     )
             except Exception as e:
                 self.logger.error(f"Failed to update game time: {e}", exc_info=True)
+
+        # Reactive UI Updates: Trigger Inspector Refreshes
+        # Check against string names to avoid importing every single tool class if not needed,
+        # though we imported some for the check.
+        state_changing_tools = [
+            CharacterUpdate.model_fields["name"].default,
+            InventoryAddItem.model_fields["name"].default,
+            InventoryRemoveItem.model_fields["name"].default,
+            StateApplyPatch.model_fields["name"].default
+        ]
+
+        if tool_name in state_changing_tools and self.ui_queue:
+            entity_type = "unknown"
+            if tool_name == CharacterUpdate.model_fields["name"].default:
+                entity_type = "character"
+            elif "inventory" in tool_name:
+                entity_type = "inventory"
+            
+            self.ui_queue.put({
+                "type": "state_changed",
+                "entity_type": entity_type
+            })

@@ -1,7 +1,7 @@
 import logging
 from typing import Any, Dict, Optional
 from app.setup.setup_manifest import SetupManifest
-from app.models.stat_block import AbilityDef, VitalDef, TrackDef
+from app.models.stat_block import AbilityDef, VitalDef, TrackDef, DerivedStatDef
 from app.tools.builtin._state_storage import get_entity, set_entity
 
 logger = logging.getLogger(__name__)
@@ -13,6 +13,7 @@ def handler(
     default_value: Any = 10,
     min_value: Optional[int] = 0,
     max_value: Optional[int] = 20,
+    formula: Optional[str] = None,
     **context: Any,
 ) -> Dict[str, Any]:
     """
@@ -45,7 +46,19 @@ def handler(
     # 2. Map "Template" to Schema Type
     # This logic translates user/AI intent into our strict schema
     
-    if template in ["stat", "attribute", "integer"]:
+    if formula:
+        # If a formula is provided, it MUST be a DerivedStat
+        new_def = DerivedStatDef(
+            name=property_name,
+            formula=formula
+        )
+        # Remove from abilities/vitals if it existed there previously to avoid duplicates/conflicts
+        stat_template.abilities = [x for x in stat_template.abilities if x.name != property_name]
+        stat_template.derived_stats = [x for x in stat_template.derived_stats if x.name != property_name]
+        stat_template.derived_stats.append(new_def)
+        category_added = "derived"
+
+    elif template in ["stat", "attribute", "integer"]:
         # Add as Ability
         new_def = AbilityDef(
             name=property_name,
@@ -117,6 +130,10 @@ def handler(
             player.setdefault("vitals", {})[property_name] = {"current": default_value, "max": default_value}
         elif category_added == "tracks":
             player.setdefault("tracks", {})[property_name] = 0
+        elif category_added == "derived":
+            # Derived stats are calculated, but we init with 0 or default
+            # The next recalculate_derived_stats pass will fix this
+            player.setdefault("derived", {})[property_name] = 0
             
         set_entity(session_id, db, "character", "player", player)
 

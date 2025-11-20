@@ -34,8 +34,8 @@ class VitalDef(BaseModel):
     has_max: bool = True
     
     # Formula to calculate max (e.g. "10 + CON_mod")
-    # Evaluated by AI or simple parser
-    max_formula: Optional[str] = None 
+    # Evaluated by app/utils/math_engine.py
+    max_formula: Optional[str] = Field(None, description="Math formula for dynamic max value (e.g. '10 + CON').")
     
     recover: Optional[str] = None  # Text description of recovery
 
@@ -78,7 +78,7 @@ class DerivedStatDef(BaseModel):
     Stats calculated entirely from other values (AC, Save DC).
     """
     name: str
-    formula: str  # e.g. "10 + DEX + Armor"
+    formula: str = Field(..., description="Math formula using Ability names (e.g. '10 + DEX').")
 
 
 class StatBlockTemplate(BaseModel):

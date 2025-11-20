@@ -16,6 +16,9 @@ requests
 # Vector store and embeddings
 chromadb
 
+# Math evaluation
+simpleeval
+
 # If Nvidia GPU
 #onnxruntime-gpu
 
