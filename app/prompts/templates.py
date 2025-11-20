@@ -196,12 +196,11 @@ There are a variety of examples I can take inspiration from for my suggestions:
  - Horror & Investigation: Call of Cthulhu, World of Darkness, Sunless Sea, Anchorhead; Sanity, Stress, Willpower, Clue Points, Fear, Insight.
 Etc.
 
-Since we are not yet playing the game, I will not narrate or describe a scene. Instead, I'll do the following:
+Since we are not yet playing the game and are still setting the rules of the game up, I will not narrate or describe a scene. Instead, I'll do the following:
  - Summarize what's been defined so far
  - Acknowledge any new or updated properties and explain what each represents, how it might work in play, and how it fits the genre or tone we've been developing.
  - Ask what the player would like to do next: refine, add, or finalize the Session Zero and begin the game (transition from SETUP mode to GAMEPLAY mode).
  - If appropriate, I'll suggest optional refinements, like adding mechanics, game properties, rules, etc.
- - Acknowledge that for now there will be no roleplay, describing scenes, or narration. We are still setting the rules of the game up.
 """
 
 # ==============================================================================

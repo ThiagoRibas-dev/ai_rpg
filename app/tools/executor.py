@@ -144,20 +144,20 @@ class ToolExecutor:
             if self.ui_queue:
                 try:
                     # Invalidation Logic for Setup Mode
-                    if getattr(session, "game_mode", "") == "SETUP":
-                        try:
-                            tool_name_str = getattr(call, "name", "")
-                            if tool_name_str not in SAFE_SETUP_TOOLS:
-                                manifest_mgr = SetupManifest(self.db)
-                                if manifest_mgr.is_pending_confirmation(session.id):
-                                    manifest_mgr.clear_pending_confirmation(session.id)
-                                    self.logger.info(
-                                        f"Tool {tool_name_str} invalidated pending setup confirmation."
-                                    )
-                        except Exception as e:
-                            self.logger.warning(
-                                f"Failed to run setup invalidation check: {e}"
-                            )
+                    # if getattr(session, "game_mode", "") == "SETUP":
+                    #     try:
+                    #         tool_name_str = getattr(call, "name", "")
+                    #         if tool_name_str not in SAFE_SETUP_TOOLS:
+                    #             manifest_mgr = SetupManifest(self.db)
+                    #             if manifest_mgr.is_pending_confirmation(session.id):
+                    #                 manifest_mgr.clear_pending_confirmation(session.id)
+                    #                 self.logger.info(
+                    #                     f"Tool {tool_name_str} invalidated pending setup confirmation."
+                    #                 )
+                    #     except Exception as e:
+                    #         self.logger.warning(
+                    #             f"Failed to run setup invalidation check: {e}"
+                    #         )
 
                     self.logger.debug(f"Sending tool_call to UI queue: {tool_name}")
                     self.ui_queue.put(

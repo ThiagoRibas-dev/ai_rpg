@@ -1,0 +1,496 @@
+# Dungeons & Dragons 3.5e: Comprehensive Rules Reference
+
+# Part I: The Basics
+
+### Introduction
+The book you hold in your hands is the definitive guide for how to play the 3.5 revision of the DUNGEONS & DRAGONS Roleplaying Game. It gathers resources from a wide variety of supplements, rules errata, and rules clarifications. When a preexisting core book or supplement differs with the rules herein, this document is meant to take precedence.
+
+Adjudication
+Essential to the D&D game is the Dungeon Master (DM). The DM is the referee and storyteller for the game, as well as the judge when the rules don't cover a particular topic. No set of rules can cover every possible circumstance in a game meant to mimic life in a fantasy world. DMs are expected to use knowledge of existing rules, common sense, real-world knowledge, and a sense of fun when dealing with special cases.
+
+### The Core Mechanic
+Whenever your character attempts an act that has some chance of failure, the process is:
+1. Roll a d20.
+2. Add all relevant modifiers (from ability scores, skills, feats, etc.).
+3. Compare the result to a Target Number (Difficulty Class or an opponent's roll).
+
+Formula: `d20 Roll + Modifiers ≥ Target Number` (Success)
+
+### Dice Notation
+	Standard Dice: An expression like `3d4+3` means: Roll three 4-sided dice, sum the results, and add 3.
+	Percentile Dice (d%): Roll two 10-sided dice (d10). Designate one as the "tens" digit and the other as the "ones" digit. A roll of `0` on the tens die and `5` on the ones die is 5. A roll of two `0`s is 100.
+
+### Mathematical Rules
+	Rounding: Always round down, even if the fraction is one-half or larger, unless a rule specifies a minimum of 1 (such as for Hit Points or damage).
+	Multiplying:
+		Abstract Values (Modifiers, Rolls): When multiple multipliers apply, combine them. The first multiplier works normally. Each additional multiplier adds 1 less than its value. (Example: A `x2` and another `x2` multiplier results in a `x3` multiplier (`2 + (2-1) = 3`). Three doubles results in a quadruple.)
+		Real-World Values (Distance, Weight): Use normal multiplication. (Example: Doubling weight (`x8`) then turning to stone (`x3`) results in `x24` total weight.)
+
+### Order of Rules Application
+The D&D game assumes a specific order of rules application: General to specific to exception. A general rule is a basic guideline, but a more specific rule takes precedence. An exception is a particular kind of specific rule that contradicts or breaks another rule.
+
+### Time
+Time works for characters in the imaginary world of D&D like it does in the real world. Minutes, hours, days, and months can pass as the characters explore and grow in power. Only during certain situations is the measure of time more precise. Then the round is used.
+	Round: Combat is played in rounds. Each round represents 6 seconds in the game world, regardless of how long it takes to play out the round. A minute contains 10 rounds.
+
+
+
+# Part II: Character Building Blocks
+
+### Ability Scores
+An ability score's modifier is calculated as: `(Score - 10) / 2`, rounded down.
+
+| Score | Modifier | Score | Modifier | Score | Modifier |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | -5 | 12-13 | +1 | 24-25 | +7 |
+| 2-3 | -4 | 14-15 | +2 | 26-27 | +8 |
+| 4-5 | -3 | 16-17 | +3 | 28-29 | +9 |
+| 6-7 | -2 | 18-19 | +4 | 30-31 | +10 |
+| 8-9 | -1 | 20-21 | +5 | etc. | ... |
+| 10-11 | +0 | 22-23 | +6 | | |
+
+The Six Abilities
+
+| Ability | Applies Modifier To | Key Skills |
+| :--- | :--- | :--- |
+| Strength (Str) | • Melee attack rolls<br>• Melee/Thrown weapon damage rolls<br>• Strength-based skill checks<br>• Strength checks (e.g., breaking doors) | Climb, Jump, Swim |
+| Dexterity (Dex) | • Ranged attack rolls<br>• Armor Class (AC)<br>• Reflex saving throws<br>• Dexterity-based skill checks | Balance, Escape Artist, Hide, Move Silently, Open Lock, Ride, Sleight of Hand, Tumble, Use Rope |
+| Constitution (Con) | • Hit Points per Hit Die (minimum 1 per level)<br>• Fortitude saving throws<br>• Constitution-based skill checks | Concentration |
+| Intelligence (Int) | • Skill points gained per level (minimum 1)<br>• Number of starting languages<br>• Intelligence-based skill checks<br>• Wizard bonus spells & spell DCs | Appraise, Craft, Decipher Script, Disable Device, Forgery, Knowledge, Search, Spellcraft |
+| Wisdom (Wis) | • Will saving throws<br>• Wisdom-based skill checks<br>• Cleric, Druid, Paladin, Ranger bonus spells & spell DCs | Heal, Listen, Profession, Sense Motive, Spot, Survival |
+| Charisma (Cha) | • Charisma-based skill checks<br>• Attempts to influence others<br>• Turning/Rebuking undead checks<br>• Sorcerer, Bard bonus spells & spell DCs | Bluff, Diplomacy, Disguise, Gather Information, Handle Animal, Intimidate, Perform, Use Magic Device |
+
+#### Ability Score Loss
+Some attacks deal damage to an ability score in the form of ability damage or ability drain.
+	Ability Damage: Temporarily reduces a score. If, during a 24-hour period, a creature gets a full 8 hours of sleep, that creature recovers 1 ability score point per damaged ability score. Complete bed rest doubles this rate. Long-term care (Heal check DC 15) can also double recovery.
+	Ability Drain: Permanently reduces a score. Only restored by magic (such as restoration).
+
+Losing All Points
+A score cannot drop below 0.
+	Strength 0: Helpless. Cannot move.
+	Dexterity 0: Helpless. Motionless and rigid.
+	Constitution 0: Dead.
+	Intelligence 0: Unconscious (comalike stupor). Helpless.
+	Wisdom 0: Unconscious (deep sleep with nightmares). Helpless.
+	Charisma 0: Unconscious (catatonic stupor). Helpless.
+
+#### Nonabilities
+Some creatures lack an ability score entirely (marked as "—"). The modifier is +0.
+	No Strength: Can't exert force. Physical manipulation is impossible.
+	No Dexterity: Can't move. Auto-fails Reflex saves.
+	No Constitution: No body or metabolism (undead/constructs). Immune to Fortitude saves (unless harmless/works on objects), ability damage/drain, fatigue, and exhaustion.
+	No Intelligence: Mindless. Immune to mind-affecting effects. Auto-fails Int checks. No feats/skills.
+	No Wisdom: Is an object, not a creature.
+	No Charisma: Is an object, not a creature.
+
+### Character Classes
+
+| Class | HD | BAB | Good Saves | Skills/Lvl | Key Ability | Proficiencies | Core Features |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| Barbarian | d12 | Full | Fort | 4 + Int | Str, Con | Simple & Martial Weapons, Light/Medium Armor, Shields | Rage, Fast Movement, Uncanny Dodge, Trap Sense, Damage Reduction |
+| Bard | d6 | 3/4 | Ref, Will | 6 + Int | Cha, Dex | Simple Weapons, specific martial weapons, Light Armor, Shields | Bardic Music, Bardic Knowledge, Arcane Spells (spontaneous, Cha-based) |
+| Cleric | d8 | 3/4 | Fort, Will | 2 + Int | Wis, Cha | Simple Weapons, All Armor, Shields | Divine Spells (prepared, Wis-based), Turn/Rebuke Undead, Domains, Spontaneous Casting |
+| Druid | d8 | 3/4 | Fort, Will | 4 + Int | Wis | Simple Weapons (specific), Light/Medium Armor (non-metal), Shields (non-metal) | Animal Companion, Wild Shape, Wild Empathy, Divine Spells (prepared, Wis-based), Spontaneous Casting |
+| Fighter | d10 | Full | Fort | 2 + Int | Str, Dex | All Simple & Martial Weapons, All Armor, All Shields | Bonus Combat Feats |
+| Monk | d8 | 3/4 | All | 4 + Int | Str, Dex, Wis | Simple Weapons (specific), Special Monk Weapons. No Armor/Shield proficiency. | Flurry of Blows, Unarmed Strike, AC Bonus, Fast Movement, Ki Strike, Evasion |
+| Paladin | d10 | Full | Fort | 2 + Int | Str, Cha, Wis | All Simple & Martial Weapons, All Armor, All Shields | Smite Evil, Divine Grace, Lay on Hands, Aura of Courage, Special Mount, Divine Spells (prepared, Wis-based), Turn Undead |
+| Ranger | d8 | Full | Fort, Ref | 6 + Int | Str, Dex, Wis | All Simple & Martial Weapons, Light Armor, Shields | Favored Enemy, Track, Combat Style, Animal Companion, Divine Spells (prepared, Wis-based) |
+| Rogue | d6 | 3/4 | Ref | 8 + Int | Dex, Int | Simple Weapons, specific martial weapons, Light Armor. | Sneak Attack, Trapfinding, Evasion, Uncanny Dodge, Trap Sense |
+| Sorcerer | d4 | 1/2 | Will | 2 + Int | Cha | Simple Weapons. No Armor/Shield proficiency. | Arcane Spells (spontaneous, Cha-based), Summon Familiar |
+| Wizard | d4 | 1/2 | Will | 2 + Int | Int | Simple Weapons (specific). No Armor/Shield proficiency. | Arcane Spells (prepared, Int-based), Scribe Scroll, Bonus Feats, Summon Familiar, School Specialization |
+
+### Size
+Creatures come in nine size categories: Fine, Diminutive, Tiny, Small, Medium, Large, Huge, Gargantuan, and Colossal. Size modifiers affect AC, Attack Bonus, Hide checks, and Grapple checks.
+	Little Creatures (Tiny, Diminutive, Fine): Take up less than 1 square. Have 0 reach (must enter opponent's square to attack, provoking AoO).
+	Big Creatures (Large+): Take up more than 1 square. Usually have Reach (10 ft+).
+
+### Skills
+General Skill Rules
+	Skill Check Formula: `d20 + Skill Ranks + Ability Modifier + Misc. Modifiers`
+	Skill Ranks:
+		Class Skill: 1 rank per skill point. Max rank = `Character Level + 3`.
+		Cross-Class Skill: 1/2 rank per skill point. Max rank = `(Character Level + 3) / 2`.
+
+Checks and Success
+	Take 10: When not threatened or distracted, you can opt for a result of 10 on the d20 roll.
+	Take 20: With ample time and no penalty for failure, you can opt for a result of 20 on the d20 roll. This takes 20 times longer than a normal check.
+	Degrees of Success: Usually, meeting the DC is enough. Sometimes beating it by 5 or 10 yields better results.
+	Aid Another: Make a DC 10 check with the same skill to give an ally a +2 bonus.
+	Skill Synergy: Having 5 or more ranks in one skill gives you a +2 bonus on checks with specific related skills.
+
+#### Skills Summary Matrix
+(ACP? = Armor Check Penalty applies)
+
+| Skill | Key Ability | Trained? | ACP? | Action | Description |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| Appraise | INT | No | No | 1 Minute | Estimate the monetary value of an item. |
+| Autohypnosis | WIS | Yes | No | Reaction | Resist effects using mental focus. |
+| Balance | DEX | No | Yes | Move | Keep footing on unstable surfaces. |
+| Bluff | CHA | No | No | Varies | Deceive others, feint, send secret messages. |
+| Climb | STR | No | Yes | Move | Scale walls and cliffs. |
+| Concentration | CON | No | No | None | Focus on tasks (casting) when distracted. |
+| Craft | INT | No | No | Long-Term | Make or repair items. |
+| Decipher Script | INT | Yes | No | Varies | Read unknown languages or codes. |
+| Diplomacy | CHA | No | No | 1 Minute | Persuade NPCs, negotiate. |
+| Disable Device | INT | Yes | No | Full-Round | Disarm traps, sabotage devices. |
+| Disguise | CHA | No | No | Minutes | Alter appearance. |
+| Escape Artist | DEX | No | Yes | Varies | Wriggle out of bonds/grapples. |
+| Forgery | INT | No | No | Minutes | Create/detect fake documents. |
+| Gather Info | CHA | No | No | Hours | Collect rumors/news. |
+| Handle Animal | CHA | Yes | No | Varies | Train/command animals. |
+| Heal | WIS | No | No | Varies | First aid, treat poison/disease. |
+| Hide | DEX | No | Yes | Move | Conceal yourself from sight. |
+| Intimidate | CHA | No | No | Varies | Frighten/coerce others. |
+| Jump | STR | No | Yes | Move | Leap horizontally or vertically. |
+| Knowledge | INT | Yes | No | None | Recall lore/facts. |
+| Listen | WIS | No | No | Reaction | Hear noises, detect invisible creatures. |
+| Move Silently | DEX | No | Yes | Move | Move without sound. |
+| Open Lock | DEX | Yes | No | Full-Round | Pick locks. |
+| Perform | CHA | No | No | Varies | Entertain audiences. |
+| Ride | DEX | No | No | Varies | Control a mount. |
+| Search | INT | No | No | Full-Round | Find hidden objects/traps. |
+| Sense Motive | WIS | No | No | Varies | Detect lies, read situations. |
+| Sleight of Hand | DEX | Yes | Yes | Standard | Pick pockets, palm objects. |
+| Spellcraft | INT | Yes | No | Reaction | Identify spells/magic. |
+| Spot | WIS | No | No | Reaction | Notice visual details. |
+| Survival | WIS | No | No | Varies | Track, survive in wild. |
+| Swim | STR | No | Yes | Move | Move through water. |
+| Tumble | DEX | Yes | Yes | Move | Avoid AoOs, reduce falling damage. |
+| Use Magic Device | CHA | Yes | No | Activation | Activate items you can't normally use. |
+| Use Rope | DEX | No | No | Varies | Tie knots, bind prisoners. |
+
+#### Detailed Skill Rules & Social Interaction
+
+Appraise:
+	Normal: 1 minute.
+	Quickly: 1 round (DC +5).
+	Failure: Misjudgment of value by 2d6+3 x 10%.
+	Categories: Common, Good, Rare, Exotic, Unique (higher DC for rarer items).
+
+Disable Device & Open Lock:
+	Disable Device (Int): Disarm trap/jam lock. Hidden check. DC depends on complexity (Simple DC 10 to Wicked DC 35+). Failure by 5+ triggers device.
+	Open Lock (Dex): Full-round action to pick lock. DC 20 (Simple) to 40 (Amazing).
+
+Escape Artist & Use Rope:
+	Escape Artist (Dex): Escape manacles (DC 30), Net/Entangle (DC 20), Grapple (opposed check).
+	Use Rope (Dex): Tie knot (DC 10), Secure grappling hook (DC 10 + 2 per 10 ft).
+
+Social Interaction (Bluff, Diplomacy, Intimidate, Gather Info, Sense Motive):
+	Influencing Attitudes: Use Diplomacy. DC based on starting attitude (Hostile, Unfriendly, Indifferent, Friendly, Helpful).
+		Hostile to Indifferent: DC 25.
+		Indifferent to Helpful: DC 30.
+	Bluff: Opposed by Sense Motive. Hard-to-believe bluffs apply modifiers (+5 to +20) to the defender's Sense Motive.
+	Intimidate: Demoralize opponent in combat (Standard action, range 30 ft). Lasts 1 round.
+	Hirelings: NPCs hired to perform tasks. Costs range from 2 sp/day (valet) to 2+ gp/day (sage). Hazard pay doubles cost.
+
+Forgery (Int):
+	Create fake documents. Opposed by Forgery check of examiner. +8 bonus if you have seen a similar document; -2 penalty if you don't know the handwriting.
+
+
+
+# Part III: Exploration & Movement
+
+### Movement Modes
+Your speed is determined by your race and encumbrance. You can move your speed as a move action.
+	Tactical Movement:
+		5-Foot Step: If you move no other distance in a round, you can move 5 feet without provoking Attacks of Opportunity (AoO).
+		Run: Full-round action. Move x4 speed (x3 in heavy armor). Lose Dex to AC.
+		Withdraw: Full-round action. Move x2 speed. The first square you leave is not threatened.
+
+Encumbrance
+Total weight carried determines load.
+	Light Load: No penalty.
+	Medium/Heavy Load: Max Dex bonus decreases, Armor Check Penalty applies to skills, Speed reduced (30 ft becomes 20 ft; 20 ft becomes 15 ft).
+
+Special Movement Skills
+	Balance (Dex): Move on precarious surfaces. Being attacked while balancing denies Dex bonus to AC unless you have 5 ranks.
+	Climb (Str): Move at 1/4 speed. Vulnerable to attacks (lose Dex to AC).
+	Jump (Str): Long Jump (DC = distance), High Jump (DC = distance x4). Needs 20 ft running start or DC doubles.
+	Swim (Str): Move 1/4 speed. Failure by 5+ results in going underwater (holding breath required).
+	Tumble (Dex):
+		DC 15: Move through threatened area without provoking AoO.
+		DC 25: Move through opponent's square.
+		Move at half speed unless you take -10 penalty.
+
+Flying
+	Maneuverability: Classified from Clumsy to Perfect. Affects turning radius, hovering, and reverse flight.
+	Minimum Speed: If an aerial creature doesn't maintain forward speed (unless it can hover), it falls.
+
+### Overland Movement & Getting Lost
+	Local Scale: Walk, Hustle, or Run.
+	Overland Scale: Measured in miles/hour or miles/day (8 hours travel).
+		Walk: 3 mph (24 miles/day).
+		Hustle: 6 mph. Deals nonlethal damage after 1 hour.
+		Forced March: Walking more than 8 hours requires Constitution checks (DC 10 + 2/extra hour) or take nonlethal damage and fatigue.
+	Terrain: Highways (x1), Roads (x1), Trails (x1), Trackless (x1/2 to x3/4).
+	Getting Lost: In poor visibility or difficult terrain, lead character makes Survival check each hour. Failure means random movement.
+
+### The Environment
+The Battle Grid
+	1 square = 5 feet.
+	Diagonals: First diagonal counts as 1 square (5 ft). Second counts as 2 squares (10 ft). Pattern repeats (5, 10, 5, 10).
+
+Vision and Light
+	Bright Light: Clear vision.
+	Shadowy Illumination: Concealment (20% miss chance).
+	Darkness: Total Concealment (50% miss chance).
+	Line of Sight: Straight unblocked line between your square and target.
+	Line of Effect: Straight unblocked line for effects (spells). Glass blocks Line of Effect but not Sight.
+
+Senses
+	Listen (Wis): Hear noise. Beat DC by 10 to understand content; by 20 to pinpoint location.
+	Spot (Wis): See hidden things. Distance penalty -1 per 10 ft.
+	Search (Int): Active inspection (within 10 ft).
+	Blindsight: Operate perfectly without sight (bats, oozes). Negates invisibility/darkness.
+	Blindsense: Notice things without sight, but less precise (knows square, but still has miss chance).
+	Scent: Detect creatures by smell. Range 30 ft (60 upwind, 15 downwind).
+	Tremorsense: Pinpoint anything moving in contact with the ground.
+
+### Hazards
+Weather
+	Rain: -4 to Spot/Search. Ranges halved.
+	Storms: Impossible ranged attacks. Listen penalties.
+	Fog: Obscures sight beyond 5 ft (thick) or 60 ft (thin).
+
+Temperature
+	Cold: Fort saves or take nonlethal damage/fatigue. Metal armor acts as chill metal.
+	Heat: Fort saves or take nonlethal damage/fatigue. Heavy clothing imposes penalties.
+
+Starvation and Thirst
+	Starvation: 3 days without food, then Con checks or take nonlethal damage + fatigue.
+	Thirst: 1 day without water (less in heat), then Con checks or nonlethal damage + fatigue. Dehydration damage becomes lethal in hot environments.
+
+Suffocation
+	Hold breath for 2 rounds per point of Constitution.
+	After that, Con checks (DC 10 +1/round).
+	Failure: Unconscious (0 hp), Dying (-1 hp), Dead (-10 hp) in 3 rounds.
+
+Natural Hazards
+	Avalanches: Bury zone (8d6 dmg, buried) and Slide zone (3d6 dmg).
+	Lava: 2d6 fire dmg/round (exposure), 20d6 (immersion).
+	Smoke: Obscures vision. Fort saves or choke (spend round doing nothing).
+	Quicksand: Swim checks to move. Failure results in sinking/suffocating.
+
+
+(Interlude: Abstraction or Simulation - D&D leans toward abstraction for playability. Rules like hit points and AC are abstract limits, while rules like suffocation nod toward realism. The goal is believability, not perfect simulation.)
+
+
+
+# Part IV: Combat
+
+### Combat Basics
+The Combat Sequence
+1. Surprise Round: If some but not all combatants are aware of their opponents, a surprise round occurs. Aware combatants take one standard or move action.
+2. Initiative: Everyone rolls `1d20 + Dex Modifier`. High roll goes first.
+3. Combat Rounds: Combatants act in initiative order.
+		On your turn, you can take a Full Round of actions (Standard + Move, or Full-Round).
+		The cycle repeats until combat ends.
+
+Action Types
+	Standard Action: Attack, Cast a Spell, Use Special Ability.
+	Move Action: Move speed, Draw Weapon, Stand Up, Open Door.
+	Full-Round Action: Full Attack (multiple attacks), Charge, Run, Withdraw. (Cannot take a separate Move action).
+	Free Action: Speak, Drop Item. (Limitless, within reason).
+	Swift Action: Like a free action, but limited to one per turn (e.g., Quickened Spell).
+	Immediate Action: Like a swift action, but can be used when it isn't your turn. Consumes your next turn's swift action.
+
+Attacks of Opportunity (AoO)
+A free melee attack against a foe who lets their guard down.
+	Threatened Area: Squares you can reach with a melee weapon (usually 5 ft).
+	Provoking Acts: Moving out of a threatened square (without a 5-ft step or Withdraw), Casting a spell, Ranged attack, Standing up, Drinking a potion.
+	Limit: 1 AoO per round (unless you have Combat Reflexes).
+
+### Attack & Defense
+Attack Rolls
+	Melee: `d20 + BAB + Str Mod + Size Mod`
+	Ranged: `d20 + BAB + Dex Mod + Size Mod + Range Penalty`
+	Natural 1: Automatic Miss.
+	Natural 20: Automatic Hit and Critical Threat.
+
+Critical Hits
+1. Threat: If you roll a natural 20 (or within your weapon's threat range, e.g., 19-20), you threaten a critical.
+2. Confirmation: Roll again with the same bonuses. If the second roll hits the target's AC, it is a Critical Hit.
+3. Damage: Roll damage multiple times (usually x2 or x3). Extra damage dice (like Sneak Attack) are not multiplied.
+
+Armor Class (AC)
+	Formula: `10 + Armor + Shield + Dex Mod + Size Mod + Deflection + Natural Armor`
+	Touch AC: Ignores Armor, Shield, and Natural Armor. (Used for spells/rays).
+	Flat-Footed AC: Ignores Dex bonus and Dodge bonuses. (Used when surprised or balancing).
+
+Hit Points (HP)
+	0 HP (Disabled): Can take one move or standard action. Taking a strenuous action deals 1 damage (sending you to -1).
+	-1 to -9 HP (Dying): Unconscious. Lose 1 HP per round unless stabilized (10% chance/round or DC 15 Heal check).
+	-10 HP (Dead): Character death.
+	Nonlethal Damage: Does not kill. If Nonlethal > Current HP, you fall unconscious.
+
+### Combat Modifiers & Situations
+Bonuses
+	Stacking: Bonuses of different types (e.g., Enhancement and Morale) stack. Bonuses of the same type do not stack (only the highest applies).
+	Exception: Dodge bonuses and Circumstance bonuses usually stack.
+
+Cover & Concealment
+	Cover: Physical blockage (wall, creature).
+		Effect: +4 AC, +2 Reflex saves. No AoOs against you.
+	Concealment: Visual blockage (fog, shadows).
+		Effect: 20% Miss Chance (attacker rolls d%; 1-20 is a miss).
+		Total Concealment: 50% Miss Chance (Blindness, Invisibility).
+
+Flanking
+	When you and an ally are on opposite sides of an opponent, you both get +2 to attack rolls. Rogues can Sneak Attack flanked targets.
+
+Helpless Defenders
+	Helpless: (Paralyzed, Sleeping). Dex is 0 (-5 mod). Melee attacks get +4 to hit.
+	Coup de Grace: Full-round action. Auto-hit, auto-crit. Target must make Fort save (DC 10 + damage dealt) or die instantly.
+
+### Special Combat Maneuvers
+	Aid Another: Standard action. Attack AC 10. Success grants ally +2 to Attack or +2 to AC.
+	Bull Rush: Push opponent back. Provokes AoO. Opposed Strength check (+4 per size category larger).
+	Charge: Full-round action. Move up to x2 speed in a straight line and attack. +2 Attack, -2 AC.
+	Disarm: Knock weapon away. Provokes AoO. Opposed Attack Rolls.
+	Feint: Standard action. Bluff check vs. Sense Motive. Success denies target's Dex bonus to AC for next attack.
+	Grapple:
+    1. Provoke AoO (unless you have Improved Grapple).
+    2. Melee Touch Attack.
+    3. Opposed Grapple Check (`BAB + Str + Size Mod`).
+		While Grappling: No Dex to AC, movement 0, limited actions (cannot cast spells with Somatic components).
+	Overrun: Plow through enemy space. Opposed Str/Dex check. Success knocks enemy prone.
+	Sunder: Attack a weapon/shield. Opposed Attack Rolls. Damage applies to object hardness/HP.
+	Trip: Touch attack to pull legs. Opposed Str/Dex check. Success knocks prone.
+	Two-Weapon Fighting:
+		Fight with weapon in each hand.
+		Penalties: -6 (Primary) / -10 (Off-hand).
+		With Light Off-hand: -4 / -8.
+		With Feat + Light Off-hand: -2 / -2.
+
+Specific Environments
+	Mounted Combat: Use Ride skill. Cover check (DC 20) to negate a hit on mount. Charging with lance deals x2 damage (x3 with Spirited Charge).
+	Underwater: Slashing/Bludgeoning attacks -2 hit/half damage. Fire spells require Spellcraft check.
+
+
+
+# Part V: Magic & Spells
+
+### Magic Basics
+Arcane vs. Divine
+
+| Feature | Arcane (Wizard) | Arcane (Sorcerer/Bard) | Divine (Cleric/Druid) |
+| :--- | :--- | :--- | :--- |
+| Source | Study, Intellect | Innate Talent | Faith, Nature |
+| Key Ability | Intelligence | Charisma | Wisdom |
+| Preparation | Must prepare from spellbook. | Spontaneous (no prep). | Must prepare/pray daily. |
+| Armor | Spell Failure Chance. | Spell Failure Chance (Bard can wear Light). | No Spell Failure. |
+
+Casting Spells
+	Concentration: Required if distracted or damaged while casting.
+		DC: 10 + Damage Taken + Spell Level.
+		Casting Defensively: DC 15 + Spell Level (Avoids AoO).
+	Casting Time:
+		1 Standard Action: Happens immediately.
+		1 Round: Effect happens at the start of your next turn.
+	Components: Verbal (speak), Somatic (gestures), Material (ingredients/focus), XP (cost).
+
+Counterspelling
+	Ready an action to cast a spell when the opponent casts.
+	Must Identify spell (Spellcraft check).
+	Must cast the exact same spell (or dispel magic) to negate it.
+
+### Spell Resolution
+Targeting & Range
+	Line of Effect: You must have a clear path to the target (no walls).
+	Touch Spells: Require a Touch Attack. You can "hold the charge" indefinitely until you touch something.
+	Shapes: Burst (sphere), Cone (spray), Line (beam), Spread (goes around corners).
+
+Resisting Spells
+	Saving Throws: `DC = 10 + Spell Level + Caster's Ability Mod`.
+		Fortitude: Physical toughness.
+		Reflex: Dodging area effects.
+		Will: Mental resistance.
+	Spell Resistance (SR): Like AC for magic. Caster rolls `d20 + Caster Level`. Must beat target's SR.
+
+### Magic Items
+Body Slots: Head, Face, Throat, Shoulders, Body, Torso, Arms, Hands, Ring (x2), Waist, Feet.
+Activation:
+	Spell Completion (Scrolls): Must have spell on class list.
+	Spell Trigger (Wands/Staffs): Must have spell on class list. No AoO.
+	Command Word: Standard action. "Speak to activate."
+	Use Magic Device (UMD): Skill to fake class/race requirements.
+
+
+
+# Part VI: Monsters & Special Abilities
+
+### Ability Types
+1. Extraordinary (Ex): Non-magical. Not subject to SR or Antimagic. (e.g., Rogue Evasion, Troll Regeneration).
+2. Spell-Like (Sp): Magical. Subject to SR and Antimagic. Provokes AoO. (e.g., Paladin's Special Mount).
+3. Supernatural (Su): Magical. Not subject to SR or Counterspells. Functions in Antimagic field? No. (e.g., Dragon Breath, Gaze attacks).
+
+### Common Special Abilities
+	Damage Reduction (DR): Ignores damage unless weapon is specific type.
+		Notation: DR 5/Silver (Ignores 5 damage unless weapon is silver).
+		Types: Magic, Cold Iron, Adamantine, Alignment (Good/Evil), Slashing/Bludgeoning.
+	Energy Resistance: Ignores X amount of damage from Fire, Cold, Acid, etc.
+	Incorporeal: (Ghosts). 50% chance to ignore damage from corporeal sources. Immune to non-magical weapons. Moves silently.
+	Turn Undead (Su): Clerics/Paladins.
+		Roll Charisma Check to determine Max HD affected.
+		Roll 2d6 + Level + Cha Mod for total HD turned.
+		Effect: Undead flee for 10 rounds. If caster level is 2x Undead HD, they are Destroyed.
+	Gaze Attacks: Opponents must save every round they look at the creature. Can "Avert Eyes" (50% chance to avoid save, but creature has concealment).
+
+### Conditions
+	Blinded: -2 AC, lose Dex bonus. Move half speed. 50% miss chance.
+	Confused: Roll d%: 01-10 Attack caster, 11-20 Act normally, 21-50 Babble, 51-70 Flee, 71-100 Attack nearest.
+	Dazed: Can take no actions. No AC penalty.
+	Deafened: -4 Initiative, auto-fail Listen, 20% spell failure (verbal).
+	Entangled: Half speed, -2 Attack, -4 Dex. Concentration check to cast.
+	Exhausted: Half speed, -6 Str/Dex.
+	Fatigued: No run/charge, -2 Str/Dex.
+	Frightened: Flee from source. -2 penalties.
+	Grappled: Cannot move. No Dex to AC.
+	Nauseated: Move action only. Cannot attack/cast.
+	Panicked: Drop items and flee randomly.
+	Paralyzed: Str/Dex 0. Helpless.
+	Prone: -4 Melee Attack. +4 AC vs Ranged. -4 AC vs Melee. Stand up is Move action.
+	Shaken: -2 penalties on attacks/saves/skills.
+	Staggered: Only one action (Move or Standard) per turn. (0 HP).
+	Stunned: Drop items, no actions, -2 AC, lose Dex to AC.
+
+
+
+# Part VII: Objects & Equipment
+
+### Weapons
+Categories:
+	Simple: Basic (Club, Dagger, Crossbow).
+	Martial: Soldiers' weapons (Longsword, Greatsword, Longbow).
+	Exotic: Requires special feat (Bastard Sword, Spiked Chain).
+
+Damage & Size:
+	Damage scales with size. A Medium Longsword deals 1d8; Large deals 2d6; Small deals 1d6.
+
+### Armor
+Stats:
+	Armor Bonus: Adds to AC.
+	Max Dex: The maximum Dexterity modifier you can add to AC while wearing this.
+	Check Penalty: Applied to Balance, Climb, Escape Artist, Hide, Jump, Move Silently, Sleight of Hand, Tumble, Swim (x2).
+	Spell Failure: % chance arcane spell fails.
+
+Donning Armor:
+	Light: 1 minute.
+	Medium: 4 minutes.
+	Heavy: 4 minutes. (Hastily: 1 minute, but penalties increase).
+
+### Breaking Objects
+Objects have Hardness (DR) and Hit Points.
+	Energy Attacks: Fire/Electricity deal half damage to objects. Acid/Sonic deal full.
+	Sunder: Attack a weapon/shield.
+	Break DC: Strength check to burst items. (Rope DC 23, Manacles DC 26, Wooden Door DC 13).
+
+
+
+# Appendices
+
+### Designer Notes & Philosophy
+	The Living Game: D&D rules evolve based on how people play. Rules are not static; they are a framework for a personalized experience.
+	Rule Death: Rules are removed ("killed") when they stop being fun or bog down play (e.g., THAC0, facing).
+	Abstraction vs. Simulation: D&D chooses abstraction (HP, AC) over realism (broken bones, specific organ damage) to keep the game playable and heroic.
+	The "Free" Action: Swift and Immediate actions were created because "Free actions" became too cluttered and powerful, needing a resource limit.

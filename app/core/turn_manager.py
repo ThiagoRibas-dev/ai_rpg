@@ -121,7 +121,15 @@ class TurnManager:
 
             self.logger.debug(f"SETUP MODE TOOLS: {setup_tool_names}")
         else:  # GAMEPLAY mode
-            setup_tool_names = self.tool_registry.get_all_tool_names()  # Use all tools
+            setup_tool_names = [
+                tool_name
+                for tool_name in self.tool_registry.get_all_tool_names()
+                if tool_name
+                not in [
+                    RequestSetupConfirmation.model_fields["name"].default,
+                    EndSetupAndStartGameplay.model_fields["name"].default,
+                ]
+            ]
 
         # ===== BUILD STATIC SYSTEM INSTRUCTION =====
         # manifest_mgr already initialized above
