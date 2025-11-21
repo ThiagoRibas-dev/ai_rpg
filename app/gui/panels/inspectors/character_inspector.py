@@ -1,18 +1,30 @@
 # File: app/gui/panels/inspectors/character_inspector.py
 
-import customtkinter as ctk
 import logging
 from typing import Callable
+
+import customtkinter as ctk
+
 from app.gui.styles import Theme
 from app.tools.schemas import StateQuery
-from .inspector_utils import create_key_value_row, display_message_state, create_vital_display, create_track_display
+
+from .inspector_utils import (
+    create_key_value_row,
+    create_track_display,
+    create_vital_display,
+    display_message_state,
+)
 
 logger = logging.getLogger(__name__)
 
+
 class CharacterPanelBuilder:
     """Builds the static UI for the Character Inspector."""
+
     @staticmethod
-    def build(parent: ctk.CTkFrame, refresh_callback: Callable, selection_callback: Callable) -> dict:
+    def build(
+        parent: ctk.CTkFrame, refresh_callback: Callable, selection_callback: Callable
+    ) -> dict:
         # COMMENT: The builder creates the static layout and returns widget references.
         # It takes callbacks to wire them up during construction.
         selector_frame = ctk.CTkFrame(parent)
@@ -23,16 +35,18 @@ class CharacterPanelBuilder:
         )
         character_selector.pack(side="left", padx=5, fill="x", expand=True)
 
-        scroll_frame = ctk.CTkScrollableFrame(parent, fg_color=Theme.colors.bg_secondary)
+        scroll_frame = ctk.CTkScrollableFrame(
+            parent, fg_color=Theme.colors.bg_secondary
+        )
         scroll_frame.pack(fill="both", expand=True, padx=5, pady=5)
 
-        refresh_btn = ctk.CTkButton(parent, text="Refresh", command=refresh_callback, height=30)
+        refresh_btn = ctk.CTkButton(
+            parent, text="Refresh", command=refresh_callback, height=30
+        )
         refresh_btn.pack(fill="x", padx=5, pady=5)
 
-        return {
-            "selector": character_selector,
-            "scroll_frame": scroll_frame
-        }
+        return {"selector": character_selector, "scroll_frame": scroll_frame}
+
 
 class CharacterInspectorView(ctk.CTkFrame):
     """Display character stats from game state."""
@@ -49,18 +63,21 @@ class CharacterInspectorView(ctk.CTkFrame):
         self.widgets = CharacterPanelBuilder.build(
             self,
             refresh_callback=self.refresh,
-            selection_callback=self._on_character_selected
+            selection_callback=self._on_character_selected,
         )
 
     def refresh(self):
         """Query all characters and update display."""
         if not self.orchestrator or not self.orchestrator.session:
-            display_message_state(self.widgets["scroll_frame"], "No session loaded.", is_error=True)
+            display_message_state(
+                self.widgets["scroll_frame"], "No session loaded.", is_error=True
+            )
             return
 
         session_id = self.orchestrator.session.id
         try:
             from app.tools.registry import ToolRegistry
+
             registry = ToolRegistry()
             context = {"session_id": session_id, "db_manager": self.db_manager}
             query = StateQuery(entity_type="character", key="*", json_path=".")
@@ -68,14 +85,14 @@ class CharacterInspectorView(ctk.CTkFrame):
             self.all_characters = result.get("value", {})
 
             if not self.all_characters:
-                self._render_character() # Will show empty state
+                self._render_character()  # Will show empty state
                 return
 
             char_keys = list(self.all_characters.keys())
             # Pretty print keys
             display_keys = [k.title() for k in char_keys]
             self.widgets["selector"].configure(values=display_keys)
-            
+
             if self.current_character_key not in char_keys:
                 self.current_character_key = char_keys[0]
 
@@ -83,7 +100,9 @@ class CharacterInspectorView(ctk.CTkFrame):
             self._on_character_selected(self.current_character_key.title())
         except Exception as e:
             logger.error(f"Exception in refresh: {e}", exc_info=True)
-            display_message_state(self.widgets["scroll_frame"], f"Error: {e}", is_error=True)
+            display_message_state(
+                self.widgets["scroll_frame"], f"Error: {e}", is_error=True
+            )
 
     def _on_character_selected(self, display_name: str):
         # Simple lowercase conversion for lookup
@@ -92,10 +111,10 @@ class CharacterInspectorView(ctk.CTkFrame):
         self._render_character()
 
     def _render_character(self):
-        """Render character data. This method is now much cleaner."""
-        # COMMENT: The rendering logic no longer creates complex widgets, it just
-        # configures them or calls simple utility functions.
+        """Render character data safely."""
         scroll_frame = self.widgets["scroll_frame"]
+
+        # Batch destroy: Unmapping first can sometimes be slightly faster visually
         for widget in scroll_frame.winfo_children():
             widget.destroy()
 
@@ -104,7 +123,7 @@ class CharacterInspectorView(ctk.CTkFrame):
             return
 
         name = self.character_data.get("name", "Unknown")
-        
+
         header_frame = ctk.CTkFrame(scroll_frame, fg_color="transparent")
         header_frame.pack(fill="x", padx=10, pady=(5, 10))
         ctk.CTkLabel(
@@ -113,17 +132,20 @@ class CharacterInspectorView(ctk.CTkFrame):
             font=Theme.fonts.heading,
             anchor="w",
         ).pack(side="left")
-        
-        # 1. Get Template
+
+        # 1. Get Template (Safe Lookup)
         template_id = self.character_data.get("template_id")
         stat_template = None
         if template_id:
-             stat_template = self.db_manager.stat_templates.get_by_id(template_id)
-        
+            try:
+                # This DB call is usually fast (ms), but essential to keep safe
+                stat_template = self.db_manager.stat_templates.get_by_id(template_id)
+            except Exception as e:
+                logger.error(f"Failed to load template {template_id}: {e}")
+
         if not stat_template:
-             # Fallback for raw data display if no template found
-             self._render_raw_dict(scroll_frame, self.character_data)
-             return
+            self._render_raw_dict(scroll_frame, self.character_data)
+            return
 
         # 2. Render Abilities
         abilities_data = self.character_data.get("abilities", {})
@@ -136,7 +158,7 @@ class CharacterInspectorView(ctk.CTkFrame):
                 font=Theme.fonts.subheading,
                 anchor="w",
             ).pack(fill="x", padx=10, pady=(5, 2))
-            
+
             for ab_def in stat_template.abilities:
                 val = abilities_data.get(ab_def.name, ab_def.default)
                 # Handle Dice Codes or Integers
@@ -151,11 +173,11 @@ class CharacterInspectorView(ctk.CTkFrame):
                 # Handle {current, max} or raw value
                 if isinstance(data, dict):
                     curr = data.get("current", 0)
-                    mx = data.get("max", 10) # Default or need formula parsing
+                    mx = data.get("max", 10)  # Default or need formula parsing
                 else:
                     curr = data
-                    mx = 10 
-                
+                    mx = 10
+
                 create_vital_display(scroll_frame, vit_def.name, curr, mx)
 
         # 4. Render Tracks
@@ -165,10 +187,22 @@ class CharacterInspectorView(ctk.CTkFrame):
                 val = tracks_data.get(track_def.name, 0)
                 if isinstance(val, dict):
                     val = val.get("value", 0)
-                create_track_display(scroll_frame, track_def.name, val, track_def.max_value, track_def.visual_style)
+                create_track_display(
+                    scroll_frame,
+                    track_def.name,
+                    val,
+                    track_def.max_value,
+                    track_def.visual_style,
+                )
 
     def _render_raw_dict(self, parent, data):
         """Fallback renderer."""
         import json
-        txt = ctk.CTkLabel(parent, text=json.dumps(data, indent=2), justify="left", font=Theme.fonts.monospace)
+
+        txt = ctk.CTkLabel(
+            parent,
+            text=json.dumps(data, indent=2),
+            justify="left",
+            font=Theme.fonts.monospace,
+        )
         txt.pack(fill="x", padx=10)

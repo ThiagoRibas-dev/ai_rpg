@@ -98,9 +98,12 @@ class StateContextBuilder:
                         val = val.get("value", 0)
                     mx = track_def.max_value
                     # Visual representation
-                    filled = "[ ]" * val
-                    empty = "[x]" * (mx - val)
-                    lines.append(f"**{track_def.name}**: {filled}{empty} ({val}/{mx})")
+                    if mx < 15: # For things like spell slots
+                        filled = "[ ]" * val
+                        empty = "[x]" * (mx - val)
+                        lines.append(f"**{track_def.name}**: {filled}{empty} ({val}/{mx})")
+                    else: # Tracks like experience
+                        lines.append(f"**{track_def.name}**: ({val}/{mx})")
                 lines.append("")
 
             # 6. Format Slots (Inventory/Spells)

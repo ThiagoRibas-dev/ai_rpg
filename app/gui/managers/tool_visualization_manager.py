@@ -7,9 +7,11 @@ New responsibilities:
 - Auto-scroll tool panel
 """
 
-import customtkinter as ctk
-from app.gui.styles import Theme, get_tool_call_style
 import logging
+
+import customtkinter as ctk
+
+from app.gui.styles import Theme, get_tool_call_style
 
 logger = logging.getLogger(__name__)
 

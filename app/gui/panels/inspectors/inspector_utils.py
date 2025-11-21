@@ -1,8 +1,11 @@
 # File: app/gui/panels/inspectors/inspector_utils.py
 
-import customtkinter as ctk
-from app.gui.styles import Theme
 from datetime import datetime
+
+import customtkinter as ctk
+
+from app.gui.styles import Theme
+
 
 def create_key_value_row(parent: ctk.CTkFrame, key: str, value: str):
     """Adds a standardized key-value pair display to a parent frame."""
@@ -14,61 +17,97 @@ def create_key_value_row(parent: ctk.CTkFrame, key: str, value: str):
         row, text=value, anchor="w", text_color=Theme.colors.text_secondary
     ).pack(side="left", expand=True, fill="x")
 
-def create_vital_display(parent: ctk.CTkFrame, name: str, current: float, maximum: float):
+
+def create_vital_display(
+    parent: ctk.CTkFrame, name: str, current: float, maximum: float
+):
     """Creates a labelled progress bar for Vitals (HP, Mana)."""
     frame = ctk.CTkFrame(parent, fg_color="transparent")
     frame.pack(fill="x", padx=10, pady=5)
-    
+
     # Label row
     header = ctk.CTkFrame(frame, fg_color="transparent")
     header.pack(fill="x")
     ctk.CTkLabel(header, text=name, font=Theme.fonts.body_small).pack(side="left")
-    ctk.CTkLabel(header, text=f"{current}/{maximum}", font=Theme.fonts.body_small).pack(side="right")
-    
+    ctk.CTkLabel(header, text=f"{current}/{maximum}", font=Theme.fonts.body_small).pack(
+        side="right"
+    )
+
     # Bar
     try:
         pct = max(0.0, min(1.0, current / maximum)) if maximum > 0 else 0
     except Exception:
         pct = 0
-        
+
     bar = ctk.CTkProgressBar(frame)
-    bar.pack(fill="x", pady=(2,0))
+    bar.pack(fill="x", pady=(2, 0))
     bar.set(pct)
-    
+
     # Color coding logic could go here (red for low HP)
     if "hp" in name.lower() or "health" in name.lower():
-        bar.configure(progress_color="#c0392b") # Red
+        bar.configure(progress_color="#c0392b")  # Red
     elif "mana" in name.lower() or "magic" in name.lower():
-        bar.configure(progress_color="#2980b9") # Blue
+        bar.configure(progress_color="#2980b9")  # Blue
 
-def create_track_display(parent: ctk.CTkFrame, name: str, current: int, maximum: int, style: str = "clock"):
+
+def create_track_display(
+    parent: ctk.CTkFrame, name: str, current: int, maximum: int, style: str = "clock"
+):
     """Creates a segmented display for Tracks (Clocks/Stress)."""
     frame = ctk.CTkFrame(parent, border_width=1, border_color=Theme.colors.border_light)
     frame.pack(fill="x", padx=10, pady=5)
-    
+
     top = ctk.CTkFrame(frame, fg_color="transparent")
     top.pack(fill="x", padx=5, pady=2)
     ctk.CTkLabel(top, text=name, font=Theme.fonts.subheading).pack(side="left")
     ctk.CTkLabel(top, text=f"{current}/{maximum}", text_color="gray").pack(side="right")
-    
-    # Segments
+
+    # If the track is too large (e.g. XP: 1000), DO NOT render 1000 widgets.
+    # Switch to a Progress Bar or simple text representation.
+    if maximum > 20:
+        # Use a Progress Bar for large tracks
+        try:
+            pct = max(0.0, min(1.0, current / maximum)) if maximum > 0 else 0
+        except ZeroDivisionError:
+            pct = 0
+
+        bar = ctk.CTkProgressBar(frame, height=15)
+        bar.pack(fill="x", padx=5, pady=5)
+        bar.set(pct)
+        # Optional: Change color based on name/type
+        if "xp" in name.lower() or "experience" in name.lower():
+            bar.configure(progress_color=Theme.colors.text_gold)
+        return
+
+    # Segments (Only for small numbers)
     segments_frame = ctk.CTkFrame(frame, fg_color="transparent")
     segments_frame.pack(fill="x", padx=5, pady=5)
-    
+
     # Render segments
     for i in range(maximum):
         is_filled = i < current
         color = Theme.colors.text_gold if is_filled else "gray30"
-        
+
         if style == "clock":
             # Wedge/Block visual
-            seg = ctk.CTkLabel(segments_frame, text="◕" if is_filled else "○", font=("Arial", 20), text_color=color)
+            seg = ctk.CTkLabel(
+                segments_frame,
+                text="◕" if is_filled else "○",
+                font=("Arial", 20),
+                text_color=color,
+            )
         elif style == "checkboxes":
-            seg = ctk.CTkLabel(segments_frame, text="☑" if is_filled else "☐", font=("Arial", 16), text_color=color)
-        else: # bar/dots
+            seg = ctk.CTkLabel(
+                segments_frame,
+                text="☑" if is_filled else "☐",
+                font=("Arial", 16),
+                text_color=color,
+            )
+        else:  # bar/dots
             seg = ctk.CTkFrame(segments_frame, width=20, height=10, fg_color=color)
-            
+
         seg.pack(side="left", padx=2, expand=True)
+
 
 def display_message_state(parent: ctk.CTkFrame, message: str, is_error: bool = False):
     """Clears the parent frame and displays a centered message (for empty or error states)."""
@@ -84,6 +123,7 @@ def display_message_state(parent: ctk.CTkFrame, message: str, is_error: bool = F
         wraplength=400,
     )
     label.pack(expand=True, pady=50)
+
 
 def create_quest_card(parent: ctk.CTkFrame, quest_id: str, quest: dict):
     """Creates a card widget for a single quest."""
@@ -133,6 +173,7 @@ def create_quest_card(parent: ctk.CTkFrame, quest_id: str, quest: dict):
                 anchor="w",
                 font=Theme.fonts.body_small,
             ).pack(fill="x", padx=5, pady=1)
+
 
 def create_memory_card(parent: ctk.CTkFrame, memory, callbacks: dict):
     """Creates a visual card for a single memory."""
@@ -210,20 +251,20 @@ def create_memory_card(parent: ctk.CTkFrame, memory, callbacks: dict):
     actions_frame = ctk.CTkFrame(card)
     actions_frame.pack(fill="x", padx=5, pady=5)
 
-    if 'on_view' in callbacks:
+    if "on_view" in callbacks:
         view_btn = ctk.CTkButton(
             actions_frame,
             text="View/Edit",
-            command=lambda m=memory: callbacks['on_view'](m),
+            command=lambda m=memory: callbacks["on_view"](m),
             width=80,
         )
         view_btn.pack(side="left", padx=2)
 
-    if 'on_delete' in callbacks:
+    if "on_delete" in callbacks:
         delete_btn = ctk.CTkButton(
             actions_frame,
             text="Delete",
-            command=lambda m=memory: callbacks['on_delete'](m),
+            command=lambda m=memory: callbacks["on_delete"](m),
             width=80,
             fg_color=Theme.colors.button_danger,
             hover_color=Theme.colors.button_danger_hover,

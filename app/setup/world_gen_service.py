@@ -201,6 +201,8 @@ class WorldGenService:
 
         try:
             prompt = OPENING_CRAWL_PROMPT.format(
+                genre=world_data.genre,
+                tone=world_data.tone,
                 name=char_data.name,
                 visual_desc=char_data.visual_description,
                 location=world_data.starting_location.name_display,

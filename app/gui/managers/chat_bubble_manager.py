@@ -9,11 +9,14 @@ New responsibilities:
 - Support rich text and location cards
 """
 
-import tkinter
-import customtkinter as ctk
-from typing import List
-from app.gui.styles import Theme, get_chat_bubble_style, get_location_card_style
+import math
 import re
+import tkinter
+from typing import List
+
+import customtkinter as ctk
+
+from app.gui.styles import Theme, get_chat_bubble_style, get_location_card_style
 
 
 class ChatBubbleManager:
@@ -92,8 +95,22 @@ class ChatBubbleManager:
         bubble_width = self._calculate_bubble_width()
 
         # RICH TEXT SUPPORT: Use CTkTextbox instead of Label
-        lines = content.count('\n') + (len(content) // 80) + 1
-        height = min(max(lines * 20, 40), 600)
+
+        # Estimate characters per line based on pixel width (avg char width ~10px for Arial 18)
+        chars_per_line = max(1, bubble_width // 10)
+
+        # Calculate wrapping lines based on content length
+        wrapped_lines = math.ceil(len(content) / chars_per_line)
+
+        # Add explicit newlines from the text
+        newline_count = content.count("\n")
+
+        # Total lines approximation
+        total_lines = wrapped_lines + newline_count
+
+        # Calculate pixel height: ~28px per line for 18pt font + 20px padding
+        # Clamp between 40 (min) and 800 (max) to prevent layout glitches
+        height = min(max((total_lines * 28) + 20, 40), 800)
 
         content_box = ctk.CTkTextbox(
             bubble,
@@ -103,17 +120,17 @@ class ChatBubbleManager:
             text_color=style["text_color"],
             fg_color="transparent",
             wrap="word",
-            activate_scrollbars=False
+            activate_scrollbars=False,
         )
         content_box.pack(
             anchor="w",
             padx=15,
             pady=(Theme.spacing.padding_xs, Theme.spacing.bubble_padding_y_bottom),
         )
-        
+
         # Insert text and parse markdown-style **Entities**
         self._insert_rich_text(content_box, content)
-        content_box.configure(state="disabled") # Read-only
+        content_box.configure(state="disabled")  # Read-only
 
         # Store reference to the label for resize updates
         self.bubble_labels.append(content_box)
@@ -128,7 +145,7 @@ class ChatBubbleManager:
         textbox.delete("1.0", "end")
 
         # Correct regex for **text**
-        parts = re.split(r'(\*\*.*?\*\*)', content)
+        parts = re.split(r"(\*\*.*?\*\*)", content)
 
         for part in parts:
             if part.startswith("**") and part.endswith("**"):
@@ -140,28 +157,30 @@ class ChatBubbleManager:
 
         # Configure tag style (Gold color for entities)
         # Note: CTkTextbox passes tags to underlying tk.Text
-        textbox._textbox.tag_config("entity", foreground=Theme.colors.text_gold, font=Theme.fonts.heading)
+        textbox._textbox.tag_config(
+            "entity", foreground=Theme.colors.text_gold, font=Theme.fonts.heading
+        )
         textbox.configure(state="disabled")
 
     def add_location_card(self, location_data: dict):
         """Renders a visual card for a location change."""
         style = get_location_card_style()
-        
+
         container = ctk.CTkFrame(self.chat_frame, fg_color="transparent")
         container.pack(fill="x", padx=Theme.spacing.padding_lg, pady=15)
-        
+
         card = ctk.CTkFrame(container, **style)
         card.pack(fill="x", expand=True)
-        
+
         # Header
         name = location_data.get("name", "Unknown Location")
         ctk.CTkLabel(
-            card, 
-            text=f"📍 {name}", 
+            card,
+            text=f"📍 {name}",
             font=("Arial", 24, "bold"),
-            text_color=Theme.colors.text_gold
+            text_color=Theme.colors.text_gold,
         ).pack(anchor="w", padx=20, pady=(15, 5))
-        
+
         # Visual Description (Italic)
         desc = location_data.get("description_visual", "No visual description.")
         ctk.CTkLabel(
@@ -170,9 +189,9 @@ class ChatBubbleManager:
             font=("Arial", 14, "italic"),
             text_color=Theme.colors.text_secondary,
             wraplength=500,
-            justify="left"
+            justify="left",
         ).pack(anchor="w", padx=20, pady=(0, 15))
-        
+
         self._scroll_to_bottom()
 
     def clear_history(self):
@@ -207,7 +226,9 @@ class ChatBubbleManager:
             for label in self.bubble_labels:
                 try:
                     if label.winfo_exists():
-                        label.configure(width=new_width) # Textbox uses width, not wraplength
+                        label.configure(
+                            width=new_width
+                        )  # Textbox uses width, not wraplength
                         active_labels.append(label)
                 except (tkinter.TclError, AttributeError, RuntimeError):
                     pass

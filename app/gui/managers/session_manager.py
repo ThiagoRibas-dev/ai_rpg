@@ -11,9 +11,10 @@ import customtkinter as ctk
 from app.gui.styles import get_button_style
 from app.gui.utils.ui_helpers import get_mode_display
 from app.models.game_session import GameSession
-from app.setup.scaffolding import inject_setup_scaffolding
 from app.models.prompt import Prompt
+from app.setup.scaffolding import inject_setup_scaffolding
 from app.setup.schemas import CharacterExtraction, WorldExtraction
+from app.setup.setup_manifest import SetupManifest
 from app.tools.builtin._state_storage import get_entity, set_entity
 
 logger = logging.getLogger(__name__)
@@ -83,23 +84,23 @@ class SessionManager:
 
         # Launch the Setup Wizard instead of creating immediately
         from app.gui.panels.setup_wizard import SetupWizard
-        
+
         # We pass 'self' so the wizard can call create_session_from_wizard upon completion
         wizard = SetupWizard(
-            self.orchestrator.view, 
-            self.db_manager, 
-            self.orchestrator, 
+            self.orchestrator.view,
+            self.db_manager,
+            self.orchestrator,
             selected_prompt,
-            session_manager=self
+            session_manager=self,
         )
         self.orchestrator.view.wait_window(wizard)
 
     def create_session_from_wizard(
-        self, 
-        prompt: Prompt, 
-        char_data: CharacterExtraction, 
-        world_data: WorldExtraction, 
-        opening_crawl: str
+        self,
+        prompt: Prompt,
+        char_data: CharacterExtraction,
+        world_data: WorldExtraction,
+        opening_crawl: str,
     ):
         """
         Finalize setup: Create DB rows, inject extracted data, and start gameplay.
@@ -108,38 +109,40 @@ class SessionManager:
         # 1. Create Basic Session
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
         session_name = f"{timestamp}_{prompt.name}"
-        
-        self.orchestrator.new_session(
-            prompt.content, prompt.template_manifest
-        )
-        
+
+        self.orchestrator.new_session(prompt.content, prompt.template_manifest)
+
         # 2. Inject Opening Crawl as first message
         self.orchestrator.session.add_message("assistant", opening_crawl)
-        
+
         # 3. Persist Session to get ID
         self.orchestrator.save_game(session_name, prompt.id)
         session_id = self.orchestrator.session.id
-        
+
         # 4. Inject Scaffolding (Ruleset, Template, Default Player)
         inject_setup_scaffolding(session_id, prompt.template_manifest, self.db_manager)
-        
+
         # 5. Apply Extracted Character Data
         self._apply_character_extraction(session_id, char_data)
-        
+
         # 6. Apply Extracted World Data
         self._apply_world_extraction(session_id, world_data)
-        
+
         # 7. Set Game Mode to GAMEPLAY
         session = self.db_manager.sessions.get_by_id(session_id)
         session.game_mode = "GAMEPLAY"
         self.db_manager.sessions.update(session)
-        
+
         # 8. Reload and Refresh UI
         self.refresh_session_list(prompt.id)
-        self.on_session_select(session, self.bubble_manager, self.orchestrator.view.inspector_manager.views)
+        self.on_session_select(
+            session, self.bubble_manager, self.orchestrator.view.inspector_manager.views
+        )
         logger.info(f"Session '{session_name}' created via Wizard.")
 
-    def _apply_character_extraction(self, session_id: int, char_data: CharacterExtraction):
+    def _apply_character_extraction(
+        self, session_id: int, char_data: CharacterExtraction
+    ):
         """Updates the scaffolded player entity with extracted details."""
         player = get_entity(session_id, self.db_manager, "character", "player")
         if not player:
@@ -149,7 +152,7 @@ class SessionManager:
         player["name"] = char_data.name
         player["description"] = char_data.visual_description
         # Note: We could store 'bio' in a memory or a notes field on the char
-        
+
         # Update Stats (Best Effort Mapping)
         # We assume 'suggested_stats' keys might match Ability names
         if "abilities" in player:
@@ -163,36 +166,43 @@ class SessionManager:
                         if key.lower() == stat_name.lower():
                             player["abilities"][key] = val
                             break
-        
+
         # Update Inventory (Simple string list to Item objects)
         # We find the first slot that looks like "Inventory"
         target_slot = None
         if "slots" in player and player["slots"]:
             keys = list(player["slots"].keys())
-            
+
             # 1. Priority search for keywords
             for k in keys:
                 k_lower = k.lower()
-                if "inventory" in k_lower or "gear" in k_lower or "backpack" in k_lower or "cargo" in k_lower:
+                if (
+                    "inventory" in k_lower
+                    or "gear" in k_lower
+                    or "backpack" in k_lower
+                    or "cargo" in k_lower
+                ):
                     target_slot = k
                     break
-            
+
             # 2. Fallback: Just use the first available slot (e.g. "Loadout")
             if not target_slot and keys:
                 target_slot = keys[0]
-        
+
         # 3. Final Fallback if slots dict is empty
         if not target_slot:
             target_slot = "Inventory"
-            
+
             # Create item objects
             items = []
             for item_str in char_data.inventory:
-                items.append({
-                    "name": item_str,
-                    "quantity": 1,
-                    "description": "Starting equipment"
-                })
+                items.append(
+                    {
+                        "name": item_str,
+                        "quantity": 1,
+                        "description": "Starting equipment",
+                    }
+                )
             player["slots"][target_slot] = items
 
         set_entity(session_id, self.db_manager, "character", "player", player)
@@ -207,7 +217,14 @@ class SessionManager:
 
     def _apply_world_extraction(self, session_id: int, world_data: WorldExtraction):
         """Creates location, lore, and NPCs."""
-        
+
+        # 0. NEW: Update Session Manifest with Extracted Tone/Genre
+        # This persists the "Vibe" for future AI turns.
+        manifest_mgr = SetupManifest(self.db_manager)
+        manifest_mgr.update_manifest(
+            session_id, {"genre": world_data.genre, "tone": world_data.tone}
+        )
+
         # 1. Create Location
         loc = world_data.starting_location
         loc_data = {
@@ -215,16 +232,16 @@ class SessionManager:
             "description_visual": loc.description_visual,
             "description_sensory": loc.description_sensory,
             "type": loc.type,
-            "connections": {}
+            "connections": {},
         }
         set_entity(session_id, self.db_manager, "location", loc.key, loc_data)
-        
+
         # 2. Update Scene
         scene = get_entity(session_id, self.db_manager, "scene", "active_scene")
         if scene:
             scene["location_key"] = loc.key
             set_entity(session_id, self.db_manager, "scene", "active_scene", scene)
-        
+
         # 2. Create Lore Memories
         for mem in world_data.lore:
             created_mem = self.db_manager.memories.create(
@@ -234,11 +251,16 @@ class SessionManager:
             if self.orchestrator.vector_store:
                 try:
                     self.orchestrator.vector_store.upsert_memory(
-                        session_id, created_mem.id, created_mem.content, created_mem.kind, created_mem.tags_list(), created_mem.priority
+                        session_id,
+                        created_mem.id,
+                        created_mem.content,
+                        created_mem.kind,
+                        created_mem.tags_list(),
+                        created_mem.priority,
                     )
                 except Exception as e:
                     logger.error(f"Failed to embed initial lore: {e}")
-            
+
         # Collect member IDs for the scene
         scene_members = ["character:player"]
 
@@ -246,26 +268,30 @@ class SessionManager:
         for npc in world_data.initial_npcs:
             key = f"npc_{npc.name_display.lower().replace(' ', '_')}"
             npc.location_key = loc.key
-            self._create_npc_entity(session_id, key, npc, disposition=npc.initial_disposition)
+            self._create_npc_entity(
+                session_id, key, npc, disposition=npc.initial_disposition
+            )
             scene_members.append(f"character:{key}")
 
         # 5. Ensure Companions...
-        all_chars = self.db_manager.game_state.get_all_entities_by_type(session_id, "character")
+        all_chars = self.db_manager.game_state.get_all_entities_by_type(
+            session_id, "character"
+        )
         for key, data in all_chars.items():
             if key.startswith("companion_"):
                 data["location_key"] = loc.key
                 set_entity(session_id, self.db_manager, "character", key, data)
-                scene_members.append(f"character:{key}") 
+                scene_members.append(f"character:{key}")
 
         # 6. Initialize Active Scene
         scene_data = {
             "location_key": loc.key,
             "members": scene_members,
-            "state_tags": ["exploration"]
+            "state_tags": ["exploration"],
         }
         set_entity(session_id, self.db_manager, "scene", "active_scene", scene_data)
         # Cleanup temp storage
-        if hasattr(self, "_pending_scene_members"): 
+        if hasattr(self, "_pending_scene_members"):
             del self._pending_scene_members
 
     def _create_npc_entity(self, session_id, key, npc_model, disposition="neutral"):
@@ -274,24 +300,24 @@ class SessionManager:
             "name": npc_model.name_display,
             "description": npc_model.visual_description,
             "disposition": disposition,
-            "location_key": npc_model.location_key, # Might be None initially
-            "template_id": None, # Could try to link to a 'Monster' template if available
-            "abilities": {}, # Raw stats would need inference, leaving empty implies 'Commoner'
+            "location_key": npc_model.location_key,  # Might be None initially
+            "template_id": None,  # Could try to link to a 'Monster' template if available
+            "abilities": {},  # Raw stats would need inference, leaving empty implies 'Commoner'
             "vitals": {"HP": {"current": 10, "max": 10}},
             "inventory": [],
-            "conditions": []
+            "conditions": [],
         }
         set_entity(session_id, self.db_manager, "character", key, npc_data)
-        
+
         # FIX: Create NPC Profile (Brain)
         # Map extraction data to profile
         profile_data = {
-            "personality_traits": [], # Could extract this if we added it to extraction schema
-            "motivations": ["Exist in the world"], 
+            "personality_traits": [],  # Could extract this if we added it to extraction schema
+            "motivations": ["Exist in the world"],
             "directive": "Patrol area" if disposition == "hostile" else "Wander",
             "knowledge_tags": ["world_gen"],
             "relationships": {},
-            "last_updated_time": "Day 1, Dawn"
+            "last_updated_time": "Day 1, Dawn",
         }
         set_entity(session_id, self.db_manager, "npc_profile", key, profile_data)
 
@@ -433,7 +459,7 @@ class SessionManager:
             # FIX: Ensure vector store data is also deleted
             if self.orchestrator.vector_store:
                 self.orchestrator.vector_store.delete_session_data(session_to_delete.id)
- 
+
             if is_current_session:
                 self._clear_active_session_view()
 

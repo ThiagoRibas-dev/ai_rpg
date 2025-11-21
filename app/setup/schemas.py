@@ -1,5 +1,3 @@
-# File: D:\Projects\Game Dev\ai-rpg\app\setup\schemas.py
-
 from typing import Any, Dict, List
 
 from pydantic import BaseModel, Field
@@ -44,6 +42,14 @@ class WorldExtraction(BaseModel):
     """
     Structure for extracting world details from raw text.
     """
+
+    genre: str = Field(
+        ...,
+        description="The specific sub-genre inferred from the text (e.g. 'Cosmic Horror', 'High Fantasy').",
+    )
+    tone: str = Field(
+        ..., description="The atmospheric tone (e.g. 'Gritty', 'Whimsical', 'Tense')."
+    )
 
     starting_location: LocationCreate = Field(
         ..., description="The initial scene location."

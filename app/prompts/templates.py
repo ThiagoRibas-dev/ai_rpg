@@ -302,15 +302,20 @@ You are a World Building Engine. Convert the following setting description into 
 "{description}"
 
 **INSTRUCTIONS:**
-1. **Starting Location**: Create a `location.create` object for where the player begins. Be specific with visuals and sensory details.
-2. **Lore**: Extract 3-5 key facts about the world (factions, history, threats) as `memory.upsert` entries.
-3. **NPCs**: Identify any NPCs present in the scene and create `npc.spawn` entries for them.
+1. **Analyze Vibe**: Identify the specific **Genre** and **Tone** implied by the description.
+2. **Starting Location**: Create a `location.create` object for where the player begins. Be specific with visuals and sensory details.
+3. **Lore**: Extract 3-5 key facts about the world (factions, history, threats) as `memory.upsert` entries.
+4. **NPCs**: Identify any NPCs present in the scene and create `npc.spawn` entries for them.
 
 Return ONLY the JSON object matching the WorldExtraction schema.
 """
 
 OPENING_CRAWL_PROMPT = """
 You are the Narrator of a roleplaying game. Write the opening scene.
+
+**Context**:
+- **Genre**: {genre}
+- **Tone**: {tone}
 
 **Protagonist**: {name} ({visual_desc})
 **Location**: {location}
@@ -319,6 +324,7 @@ You are the Narrator of a roleplaying game. Write the opening scene.
 
 **INSTRUCTIONS:**
 - Write in the **Second Person** ("You stand...", "You see...").
+- Adhere strictly to the **Tone** specified above.
 - Set the scene vividly. Describe the atmosphere, lighting, and immediate situation.
 - Acknowledge the character's background in the narrative hook.
 - End with a call to action or "What do you do?".

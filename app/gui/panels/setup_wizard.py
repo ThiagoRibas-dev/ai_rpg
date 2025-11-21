@@ -271,6 +271,7 @@ class SetupWizard(ctk.CTkToplevel):
 
     def _render_step_review(self):
         """Step 3: Review Data."""
+        self.geometry("500x700")
         ctk.CTkLabel(
             self.main_container, text="Step 3: Review & Edit", font=Theme.fonts.heading
         ).pack(pady=10)
