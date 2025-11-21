@@ -1,10 +1,6 @@
 """
 Builds the control (right) panel of the application.
-
-New responsibilities:
-- Create all control panel widgets
-- Return widget references as dictionary
-- Accept callbacks from parent (to wire to managers later)
+Contains: Prompt Management, Game Sessions, Advanced Context.
 """
 
 import customtkinter as ctk
@@ -16,8 +12,6 @@ from app.gui.styles import Theme
 class ControlPanelBuilder:
     """
     Static factory for building the control (right) panel.
-
-    Returns a dictionary of widget references for the MainView to store.
     """
 
     @staticmethod
@@ -28,37 +22,13 @@ class ControlPanelBuilder:
         save_context_callback: Callable,
     ) -> Dict[str, Any]:
         """
-        Build the control panel and return widget references.
-
-        Args:
-            parent: The main window to attach widgets to
-            prompt_callbacks: Dict with 'new', 'edit', 'delete', 'world_info' callbacks
-            session_callback: Callback for new game button (or None)
-            save_context_callback: Callback for save context button
-
-        Returns:
-            Dictionary containing all control panel widget references:
-            {
-                'control_panel': CTkScrollableFrame,
-                'prompt_collapsible': CollapsibleFrame,
-                'prompt_scrollable_frame': CTkScrollableFrame,
-                'prompt_new_button': CTkButton,  # NEW: Store for rewiring
-                'prompt_edit_button': CTkButton,  # NEW: Store for rewiring
-                'prompt_delete_button': CTkButton,  # NEW: Store for rewiring
-                'session_collapsible': CollapsibleFrame,
-                'session_scrollable_frame': CTkScrollableFrame,
-                'session_new_button': CTkButton,  # NEW: Store for rewiring
-                'memory_textbox': CTkTextbox,
-                'authors_note_textbox': CTkTextbox,
-                'inspector_selector': CTkOptionMenu,  # REPLACED tabs
-                'inspector_container': CTkFrame,      # REPLACED tabs
-            }
+        Build the control panel (Column 2).
         """
         # === Control Panel (Scrollable) ===
         control_panel = ctk.CTkScrollableFrame(parent, fg_color=Theme.colors.bg_primary)
         control_panel.grid(
             row=0,
-            column=1,
+            column=2,  # CHANGED: Now Column 2
             sticky="nsew",
             padx=(0, Theme.spacing.padding_md),
             pady=Theme.spacing.padding_md,
@@ -87,7 +57,6 @@ class ControlPanelBuilder:
         prompt_button_frame = ctk.CTkFrame(prompt_content)
         prompt_button_frame.pack(**pack_config)
 
-        # CHANGED: Store button references for later rewiring
         prompt_new_button = ctk.CTkButton(
             prompt_button_frame,
             text="New",
@@ -123,7 +92,6 @@ class ControlPanelBuilder:
         )
         session_scrollable_frame.pack(**pack_config)
 
-        # CHANGED: Store button reference for later rewiring
         session_new_button = ctk.CTkButton(
             session_content, text="New Game", command=session_callback
         )
@@ -135,7 +103,6 @@ class ControlPanelBuilder:
 
         context_content = context_collapsible.get_content_frame()
 
-        # Author's Note textbox
         ctk.CTkLabel(context_content, text="Author's Note:").pack(
             pady=(Theme.spacing.padding_sm, 0),
             padx=Theme.spacing.padding_sm,
@@ -146,68 +113,27 @@ class ControlPanelBuilder:
         )
         authors_note_textbox.pack(**pack_config)
 
-        # Save Context button
         ctk.CTkButton(
             context_content, text="💾 Save Author's Note", command=save_context_callback
         ).pack(**pack_config)
 
-        # World Info button
-        # This button opens the new LoreEditorView, which edits 'lore' kind memories.
         lore_editor_button = ctk.CTkButton(
             context_content, text="Manage Lorebook",
             command=prompt_callbacks.get("world_info") if prompt_callbacks else None,
         )
         lore_editor_button.pack(**pack_config)
 
-        # === Game State Inspector Section ===
-        inspector_collapsible = CollapsibleFrame(control_panel, "Game State Inspector")
-        inspector_collapsible.pack(
-            pady=Theme.spacing.padding_sm,
-            padx=Theme.spacing.padding_sm,
-            fill="both",
-            expand=True,
-        )
-
-        inspector_content = inspector_collapsible.get_content_frame()
-
-        # --- View Switcher Header ---
-        view_selector_frame = ctk.CTkFrame(inspector_content, fg_color="transparent")
-        view_selector_frame.pack(fill="x", padx=2, pady=(0, 5))
-
-        ctk.CTkLabel(view_selector_frame, text="View:", font=Theme.fonts.body_small).pack(side="left", padx=5)
-        
-        # The dropdown to select views
-        inspector_selector = ctk.CTkOptionMenu(
-            view_selector_frame,
-            values=[], # Will be populated by Manager
-            width=150,
-            height=28
-        )
-        inspector_selector.pack(side="right", fill="x", expand=True, padx=5)
-
-        # --- Content Container ---
-        # Increased height to 600 to allow scrolling within the panel without cramping
-        inspector_container = ctk.CTkFrame(
-            inspector_content, 
-            fg_color="transparent",
-            height=600 
-        )
-        inspector_container.pack(fill="both", expand=True)
-
         # === Return Widget References ===
         return {
             "control_panel": control_panel,
             "prompt_collapsible": prompt_collapsible,
             "prompt_scrollable_frame": prompt_scrollable_frame,
-            "prompt_new_button": prompt_new_button,  # NEW: For rewiring
-            "prompt_edit_button": prompt_edit_button,  # NEW: For rewiring
-            "prompt_delete_button": prompt_delete_button,  # NEW: For rewiring
+            "prompt_new_button": prompt_new_button,
+            "prompt_edit_button": prompt_edit_button,
+            "prompt_delete_button": prompt_delete_button,
             "session_collapsible": session_collapsible,
             "session_scrollable_frame": session_scrollable_frame,
-            "session_new_button": session_new_button,  # NEW: For rewiring
+            "session_new_button": session_new_button,
             "authors_note_textbox": authors_note_textbox,
-            "inspector_selector": inspector_selector,
-            "inspector_container": inspector_container,
-            # COMMENT: We add the new button reference to the dictionary here.
-            "world_info_button": lore_editor_button, # Keep old key for compatibility in MainView
+            "world_info_button": lore_editor_button,
         }

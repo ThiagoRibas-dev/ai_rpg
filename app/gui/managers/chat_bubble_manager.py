@@ -106,7 +106,7 @@ class ChatBubbleManager:
 
         # Add padding: Textboxes have internal margins (approx 10px top/bottom) 
         # that Labels don't have.
-        textbox_height = req_height + 30
+        textbox_height = req_height + 40
         
         # Clamp height (Min 40, Max 800 before scrolling)
         final_height = min(max(textbox_height, 40), 1200)

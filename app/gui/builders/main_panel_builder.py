@@ -35,7 +35,7 @@ class MainPanelBuilder:
         main_panel = ctk.CTkFrame(parent, fg_color=Theme.colors.bg_primary)
         main_panel.grid(
             row=0,
-            column=0,
+            column=1,  # CHANGED: Now Column 1 (Center)
             sticky="nsew",
             padx=Theme.spacing.padding_md,
             pady=Theme.spacing.padding_md,

@@ -1,16 +1,11 @@
 """
 Manages game state inspector views.
-
-New responsibilities:
-- Initialize all inspector views
-- Coordinate inspector refreshes
-- Open state viewer dialog
-- Wire orchestrator to inspectors
+Modified to handle simultaneous stacked views.
 """
 
 import customtkinter as ctk
 import logging
-# COMMENT: Imports are updated to point to the new, modularized inspector files.
+from typing import Dict
 from app.gui.panels.inspectors.character_inspector import CharacterInspectorView
 from app.gui.panels.inspectors.inventory_inspector import InventoryInspectorView
 from app.gui.panels.inspectors.quest_inspector import QuestInspectorView
@@ -22,131 +17,112 @@ logger = logging.getLogger(__name__)
 
 class InspectorManager:
     """
-    Manages all game state inspector views.
+    Manages all game state inspector views in the left panel.
     """
 
-    def __init__(self, db_manager, container: ctk.CTkFrame, selector: ctk.CTkOptionMenu):
+    def __init__(self, db_manager, containers: Dict[str, ctk.CTkFrame]):
         """
-        Initialize all inspector views.
+        Initialize all inspector views into their provided containers.
 
         Args:
             db_manager: Database manager instance
-            container: The frame where views will be packed
-            selector: The dropdown menu to switch views
+            containers: Dictionary of frames from InspectorPanelBuilder
         """
         self.db_manager = db_manager
-        self.container = container
-        self.selector = selector
-        self.views = {} 
-
-        # === Initialize Inspector Views ===
-
-        # === Initialize Inspector Views ===
-
-        # Character inspector
-        self.character_inspector = CharacterInspectorView(
-            self.container, self.db_manager
-        )
-        self.views["Character"] = self.character_inspector
-
-        # Inventory inspector
-        self.inventory_inspector = InventoryInspectorView(
-            self.container, self.db_manager
-        )
-        self.views["Inventory"] = self.inventory_inspector
-
-        # Quest inspector
-        self.quest_inspector = QuestInspectorView(
-            self.container, self.db_manager
-        )
-        self.views["Quests"] = self.quest_inspector
-
-        # Memory inspector
-        self.memory_inspector = MemoryInspectorView(
-            self.container,
-            self.db_manager,
-            None,  # Orchestrator will be set later
-        )
-        self.views["Memories"] = self.memory_inspector
-
-        # Tool calls frame (used by ToolVisualizationManager)
-        self.tool_calls_frame = ctk.CTkScrollableFrame(
-            self.container, fg_color=Theme.colors.bg_secondary
-        )
-        self.views["Tool Calls"] = self.tool_calls_frame
-
-        # State viewer button
-        state_viewer_frame = ctk.CTkFrame(self.container, fg_color="transparent")
-        ctk.CTkButton(
-            state_viewer_frame,
-            text="ðŸ”  Open State Viewer",
-            command=self._open_state_viewer_stub,
-            height=50,
-        ).pack(expand=True, pady=20)
-        self.views["State Viewer"] = state_viewer_frame
-
-        # === Configure Selector ===
-        view_names = list(self.views.keys())
-        self.selector.configure(values=view_names, command=self.switch_view)
+        self.containers = containers
         
-        # Default to Character view
-        self.selector.set("Character")
-        self.switch_view("Character")
+        # Map to hold references to inspector instances
+        self.views = {}
 
-    def switch_view(self, view_name: str):
-        """Hides the current view and shows the selected one."""
-        # Hide all views
-        for view in self.views.values():
-            view.pack_forget()
+        # === Initialize Inspector Views ===
 
-        # Show selected view
-        if view_name in self.views:
-            self.views[view_name].pack(fill="both", expand=True, padx=2, pady=2)
+        # 1. Character Inspector
+        if "character_container" in containers:
+            self.character_inspector = CharacterInspectorView(
+                containers["character_container"], self.db_manager
+            )
+            self.character_inspector.pack(fill="both", expand=True)
+            self.views["character"] = self.character_inspector
+
+        # 2. Inventory Inspector
+        if "inventory_container" in containers:
+            self.inventory_inspector = InventoryInspectorView(
+                containers["inventory_container"], self.db_manager
+            )
+            self.inventory_inspector.pack(fill="both", expand=True)
+            self.views["inventory"] = self.inventory_inspector
+
+        # 3. Quest Inspector
+        if "quest_container" in containers:
+            self.quest_inspector = QuestInspectorView(
+                containers["quest_container"], self.db_manager
+            )
+            self.quest_inspector.pack(fill="both", expand=True)
+            self.views["quest"] = self.quest_inspector
+
+        # 4. Memory Inspector
+        if "memory_container" in containers:
+            self.memory_inspector = MemoryInspectorView(
+                containers["memory_container"],
+                self.db_manager,
+                None,  # Orchestrator set later
+            )
+            self.memory_inspector.pack(fill="both", expand=True)
+            self.views["memory"] = self.memory_inspector
+
+        # 5. Tool Calls (Log)
+        if "tool_container" in containers:
+            self.tool_calls_frame = ctk.CTkScrollableFrame(
+                containers["tool_container"], fg_color=Theme.colors.bg_secondary, height=300
+            )
+            self.tool_calls_frame.pack(fill="both", expand=True)
+            self.views["tool_calls"] = self.tool_calls_frame
+
+        # 6. State Viewer Button (Debug)
+        if "debug_container" in containers:
+            self.state_viewer_button = ctk.CTkButton(
+                containers["debug_container"],
+                text="🐞 Open State Viewer",
+                command=self._open_state_viewer_stub,
+                height=30,
+            )
+            self.state_viewer_button.pack(fill="x", padx=5)
+            self.views["debug"] = self.state_viewer_button
 
     def set_orchestrator(self, orchestrator):
         """
         Wire orchestrator to all inspectors.
-
-        Args:
-            orchestrator: Orchestrator instance
         """
-        self.character_inspector.orchestrator = orchestrator
-        self.inventory_inspector.orchestrator = orchestrator
-        self.quest_inspector.orchestrator = orchestrator
-        self.memory_inspector.orchestrator = orchestrator
+        if hasattr(self, 'character_inspector'):
+            self.character_inspector.orchestrator = orchestrator
+        if hasattr(self, 'inventory_inspector'):
+            self.inventory_inspector.orchestrator = orchestrator
+        if hasattr(self, 'quest_inspector'):
+            self.quest_inspector.orchestrator = orchestrator
+        if hasattr(self, 'memory_inspector'):
+            self.memory_inspector.orchestrator = orchestrator
 
     def refresh_all(self):
         """
         Refresh all inspector views.
-
-        NEW METHOD:
-        - Convenience method to refresh all inspectors at once
-        - Called when: Session is loaded or game state changes
         """
-        self.character_inspector.refresh()
-        self.inventory_inspector.refresh()
-        self.quest_inspector.refresh()
+        if hasattr(self, 'character_inspector'):
+            self.character_inspector.refresh()
+        if hasattr(self, 'inventory_inspector'):
+            self.inventory_inspector.refresh()
+        if hasattr(self, 'quest_inspector'):
+            self.quest_inspector.refresh()
+        if hasattr(self, 'memory_inspector'):
+            self.memory_inspector.refresh_memories()
 
     def open_state_viewer(self, session_id: int, parent):
         """
         Open the state viewer dialog.
-
-        Args:
-            session_id: Current session ID
-            parent: Parent window for the dialog
         """
         from app.gui.state_viewer_dialog import StateViewerDialog
-
         viewer = StateViewerDialog(parent, self.db_manager, session_id)
         viewer.grab_set()
 
     def _open_state_viewer_stub(self):
-        """
-        Stub for state viewer button - needs to be wired externally.
-
-        NEW METHOD:
-        - Called by: State Viewer tab button
-        - Needs session_id which isn't available here
-        - MainView will wire this properly after initialization
-        """
-        logger.warning("State viewer button clicked but session_id not available")
+        """Stub, replaced by MainView."""
+        logger.warning("State viewer button clicked but not wired")
