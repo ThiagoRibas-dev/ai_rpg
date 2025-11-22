@@ -494,6 +494,31 @@ class SceneMoveTo(BaseModel):
     new_location_key: str = Field(..., description="ID of the destination location.")
 
 
+class SceneDefineZones(BaseModel):
+    """
+    Define or update the zones within the current active scene.
+    Use this when a new scene begins or its layout changes significantly.
+    """
+    name: Literal["scene.define_zones"] = "scene.define_zones"
+    zones: List[Dict[str, Any]] = Field(
+        ...,
+        description="List of zone dictionaries. Each dict must have 'id' (unique key), 'name' (display name), and optionally 'x', 'y' (grid coordinates)."
+    )
+    layout_type: Optional[str] = Field(
+        "grid",
+        description="Layout style (e.g., 'grid', 'abstract', 'linear'). Defaults to 'grid'."
+    )
+
+class SceneMoveActor(BaseModel):
+    """
+    Move a character (actor) to a different zone within the current active scene.
+    """
+    name: Literal["scene.move_actor"] = "scene.move_actor"
+    actor_key: str = Field(..., description="Key of the character to move (e.g., 'player', 'npc_goblin').")
+    target_zone_id: str = Field(..., description="ID of the zone to move the actor to.")
+    is_hidden: bool = Field(False, description="If true, the actor is hidden within the zone (e.g., hiding behind cover).")
+
+
 class JournalAddEntry(BaseModel):
     """
     Record a plot-relevant event, clue, or quest step in the player's journal.

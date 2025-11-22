@@ -280,6 +280,7 @@ class MainView(ctk.CTk):
                     "quest": self.inspector_manager.views.get("quest"),
                     "memory": self.inspector_manager.views.get("memory"),
                     "map": self.inspector_containers.get("map_panel"),
+                    "scene_map": self.inspector_containers.get("scene_map_panel"),
                 },
             )
         )
@@ -303,6 +304,7 @@ class MainView(ctk.CTk):
                 "quest": self.inspector_manager.views.get("quest"),
                 "memory": self.inspector_manager.views.get("memory"),
                 "map": self.inspector_containers.get("map_panel"),
+                "scene_map": self.inspector_containers.get("scene_map_panel"),
             },
         )
         self.ui_queue_handler.on_choice_selected = (

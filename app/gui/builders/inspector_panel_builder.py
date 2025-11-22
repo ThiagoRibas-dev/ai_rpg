@@ -65,7 +65,13 @@ class InspectorPanelBuilder:
         map_panel = MapPanel(map_collapsible.get_content_frame(), db_manager=db_manager)
         map_panel.pack(fill="both", expand=True)
 
-        # === 5. Memories ===
+        # === 5. Scene Map ===
+        scene_map_collapsible = CollapsibleFrame(inspector_panel, "Scene Map")
+        scene_map_collapsible.pack(**pack_config)
+        scene_map_panel = SceneMapPanel(scene_map_collapsible.get_content_frame(), db_manager=db_manager)
+        scene_map_panel.pack(fill="both", expand=True)
+
+        # === 6. Memories ===
         mem_collapsible = CollapsibleFrame(inspector_panel, "Recent Memories")
         mem_collapsible.pack(**pack_config)
         mem_collapsible.toggle() # Default closed
@@ -85,6 +91,7 @@ class InspectorPanelBuilder:
             "inventory_container": inv_collapsible.get_content_frame(),
             "quest_container": quest_collapsible.get_content_frame(),
             "map_panel": map_panel,
+            "scene_map_panel": scene_map_panel, # Add this
             "memory_container": mem_collapsible.get_content_frame(),
             "tool_container": tool_collapsible.get_content_frame(),
             "debug_container": debug_frame,

@@ -196,6 +196,8 @@ class UIQueueHandler:
                 self.inspectors["quest"].refresh()
             if "map" in self.inspectors and self.inspectors["map"]:
                 self.inspectors["map"].refresh()
+            if "scene_map" in self.inspectors and self.inspectors["scene_map"]:
+                self.inspectors["scene_map"].refresh()
 
         # === Update Navigation ===
         elif msg_type == "update_nav":

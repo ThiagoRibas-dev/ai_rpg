@@ -205,6 +205,12 @@ class SessionManager:
                 )
             player["slots"][target_slot] = items
 
+        # NEW: Add scene_state to player
+        player["scene_state"] = {
+            "zone_id": None,
+            "is_hidden": False
+        }
+
         set_entity(session_id, self.db_manager, "character", "player", player)
 
         # Spawn Companions (Pets, Familiars)
@@ -288,6 +294,8 @@ class SessionManager:
             "location_key": loc.key,
             "members": scene_members,
             "state_tags": ["exploration"],
+            "layout_type": "default", # New field
+            "zones": [],              # New field
         }
         set_entity(session_id, self.db_manager, "scene", "active_scene", scene_data)
         # Cleanup temp storage
@@ -306,6 +314,10 @@ class SessionManager:
             "vitals": {"HP": {"current": 10, "max": 10}},
             "inventory": [],
             "conditions": [],
+            "scene_state": { # New field
+                "zone_id": None,
+                "is_hidden": False
+            }
         }
         set_entity(session_id, self.db_manager, "character", key, npc_data)
 
