@@ -110,7 +110,7 @@ class MainView(ctk.CTk):
         """Construct UI panels."""
 
         # 1. Build Inspector Panel (Left - Col 0)
-        self.inspector_containers = InspectorPanelBuilder.build(self)
+        self.inspector_containers = InspectorPanelBuilder.build(self, self.db_manager)
 
         # 2. Build Main Panel (Center - Col 1)
         main_widgets = MainPanelBuilder.build(
@@ -279,6 +279,7 @@ class MainView(ctk.CTk):
                     "inventory": self.inspector_manager.views.get("inventory"),
                     "quest": self.inspector_manager.views.get("quest"),
                     "memory": self.inspector_manager.views.get("memory"),
+                    "map": self.inspector_containers.get("map_panel"),
                 },
             )
         )
@@ -301,6 +302,7 @@ class MainView(ctk.CTk):
                 "inventory": self.inspector_manager.views.get("inventory"),
                 "quest": self.inspector_manager.views.get("quest"),
                 "memory": self.inspector_manager.views.get("memory"),
+                "map": self.inspector_containers.get("map_panel"),
             },
         )
         self.ui_queue_handler.on_choice_selected = (

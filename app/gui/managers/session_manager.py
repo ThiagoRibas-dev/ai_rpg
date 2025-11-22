@@ -372,9 +372,14 @@ class SessionManager:
         # Update memory inspector if available
         if "memory" in inspectors and inspectors["memory"]:
             inspectors["memory"].set_session(session.id)
+            inspectors["memory"].refresh_memories()
+        
+        # Update map inspector if available
+        if "map" in inspectors and inspectors["map"]:
+            inspectors["map"].set_session(session.id)
 
         # Refresh all inspectors
-        for inspector_name in ["character", "inventory", "quest"]:
+        for inspector_name in ["character", "inventory", "quest", "map"]:
             if inspector_name in inspectors and inspectors[inspector_name]:
                 inspectors[inspector_name].refresh()
 

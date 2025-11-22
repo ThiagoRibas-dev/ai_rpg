@@ -5,7 +5,9 @@ Contains stacked collapsible frames for Character, Inventory, Quests, etc.
 
 import customtkinter as ctk
 from typing import Dict, Any
+from app.database.db_manager import DBManager
 from app.gui.collapsible_frame import CollapsibleFrame
+from app.gui.panels.map_panel import MapPanel
 from app.gui.styles import Theme
 
 
@@ -15,12 +17,13 @@ class InspectorPanelBuilder:
     """
 
     @staticmethod
-    def build(parent: ctk.CTk) -> Dict[str, Any]:
+    def build(parent: ctk.CTk, db_manager: DBManager) -> Dict[str, Any]:
         """
         Build the inspector panel and return container references.
 
         Args:
             parent: The main window
+            db_manager: The database manager instance
 
         Returns:
             Dictionary containing references to the content frames of each section.
@@ -56,17 +59,23 @@ class InspectorPanelBuilder:
         quest_collapsible = CollapsibleFrame(inspector_panel, "Quests")
         quest_collapsible.pack(**pack_config)
 
-        # === 4. Memories ===
+        # === 4. Map ===
+        map_collapsible = CollapsibleFrame(inspector_panel, "World Map")
+        map_collapsible.pack(**pack_config)
+        map_panel = MapPanel(map_collapsible.get_content_frame(), db_manager=db_manager)
+        map_panel.pack(fill="both", expand=True)
+
+        # === 5. Memories ===
         mem_collapsible = CollapsibleFrame(inspector_panel, "Recent Memories")
         mem_collapsible.pack(**pack_config)
         mem_collapsible.toggle() # Default closed
 
-        # === 5. Tool Log / Debug ===
+        # === 6. Tool Log / Debug ===
         tool_collapsible = CollapsibleFrame(inspector_panel, "Tool Log")
         tool_collapsible.pack(**pack_config)
         tool_collapsible.toggle() # Default closed
 
-        # === 6. State Viewer Button Area ===
+        # === 7. State Viewer Button Area ===
         debug_frame = ctk.CTkFrame(inspector_panel, fg_color="transparent")
         debug_frame.pack(pady=10, fill="x")
 
@@ -75,6 +84,7 @@ class InspectorPanelBuilder:
             "character_container": char_collapsible.get_content_frame(),
             "inventory_container": inv_collapsible.get_content_frame(),
             "quest_container": quest_collapsible.get_content_frame(),
+            "map_panel": map_panel,
             "memory_container": mem_collapsible.get_content_frame(),
             "tool_container": tool_collapsible.get_content_frame(),
             "debug_container": debug_frame,

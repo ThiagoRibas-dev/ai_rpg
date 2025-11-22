@@ -194,6 +194,8 @@ class UIQueueHandler:
                 self.inspectors["inventory"].refresh()
             if "quest" in self.inspectors and self.inspectors["quest"]:
                 self.inspectors["quest"].refresh()
+            if "map" in self.inspectors and self.inspectors["map"]:
+                self.inspectors["map"].refresh()
 
         # === Update Navigation ===
         elif msg_type == "update_nav":
