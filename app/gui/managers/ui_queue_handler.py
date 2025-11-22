@@ -35,6 +35,7 @@ class UIQueueHandler:
         game_mode_label: ctk.CTkLabel,
         navigation_frame: ctk.CTkFrame,
         inspectors: Dict[str, Any],
+        map_panel: Any, # Assuming MapPanel is passed
     ):
         """
         Initialize the UI queue handler.
@@ -63,6 +64,7 @@ class UIQueueHandler:
         self.game_mode_label = game_mode_label
         self.navigation_frame = navigation_frame
         self.inspectors = inspectors
+        self.map_panel = map_panel # Store reference to MapPanel
 
         # Callback for choice selection (set externally by MainView)
         self.on_choice_selected = None
@@ -162,6 +164,20 @@ class UIQueueHandler:
                 # Clear navigation until next turn refresh
                 for widget in self.navigation_frame.winfo_children():
                     widget.destroy()
+        
+        # === Tactical Map Update ===
+        elif msg_type == "map_update":
+            if self.map_panel:
+                raw_data = msg["data"]
+                # The tool sends {key: coord}, UI expects {coord: key}
+                ui_entities = {v: k for k, v in raw_data["entities"].items()}
+                ui_data = {
+                    "width": raw_data["width"],
+                    "height": raw_data["height"],
+                    "terrain": raw_data["terrain"],
+                    "entities": ui_entities
+                }
+                self.map_panel.update_tactical(ui_data)
 
         # === NEW: Dice Roll ===
         elif msg_type == "dice_roll":

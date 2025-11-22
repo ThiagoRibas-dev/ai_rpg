@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-from typing import Optional, Dict, Any, Set
+from typing import Optional, Dict, Any
 from app.database.db_manager import DBManager
 from app.tools.builtin._state_storage import get_all_of_type, get_entity
 

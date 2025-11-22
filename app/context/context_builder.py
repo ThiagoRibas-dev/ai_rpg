@@ -139,7 +139,76 @@ class ContextBuilder:
         if npc_context_text:
             sections.append(npc_context_text)
 
+        # Tactical Map
+        ascii_map = self._build_tactical_map_ascii(game_session.id)
+        if ascii_map:
+            sections.append(ascii_map)
+            
         return "\n\n".join(sections)
+
+    def _build_tactical_map_ascii(self, session_id: int) -> str:
+        """
+        Generates an ASCII representation of the tactical map for the LLM.
+        Format:
+        3 . . .
+        2 . @ .
+        1 . . .
+          A B C
+        """
+        try:
+            scene = self.db.game_state.get_entity(session_id, "scene", "active_scene")
+            if not scene or "tactical_map" not in scene:
+                return ""
+            
+            tmap = scene["tactical_map"]
+            w = tmap.get("width", 5)
+            h = tmap.get("height", 5)
+            positions = tmap.get("positions", {}) # {key: coord}
+            terrain = tmap.get("terrain", {}) # {coord: type}
+            
+            # Invert positions for drawing: {coord: char}
+            grid_content = {}
+            for k, coord in positions.items():
+                # Use first letter of key as symbol
+                symbol = "@" if "player" in k else k.split(":")[-1][0].upper()
+                grid_content[coord] = symbol
+            
+            for coord in terrain:
+                grid_content[coord] = "#"
+
+            lines = ["# TACTICAL MAP"]
+            
+            for r in range(h, 0, -1): # Top to bottom
+                row_str = f"{r:2} "
+                for c in range(w):
+                    col_char = chr(65 + c)
+                    coord = f"{col_char}{r}"
+                    val = grid_content.get(coord, ".")
+                    row_str += f"{val} "
+                lines.append(row_str)
+            
+            # X-Axis labels
+            x_axis = "   " + " ".join([chr(65+c) for c in range(w)])
+            lines.append(x_axis)
+            
+            legend_items = []
+            for coord, symbol in grid_content.items():
+                if symbol != "." and symbol != "#":
+                    # Find the original key from positions
+                    original_key = next((k for k, v in positions.items() if v == coord), None)
+                    if original_key:
+                        legend_items.append(f"{symbol}={original_key.split(':')[-1]}")
+            
+            if "#" in grid_content.values():
+                legend_items.append("#=Obstacle")
+
+            if legend_items:
+                lines.append(f"Legend: {', '.join(sorted(list(set(legend_items))))}")
+                
+            return "\n".join(lines)
+        except Exception as e:
+            self.logger.error(f"Error building tactical map ASCII: {e}", exc_info=True)
+            return ""
 
     def _get_active_scene_members(self, session_id: int) -> List[str]:
         """Helper to get a list of character keys from the active scene."""

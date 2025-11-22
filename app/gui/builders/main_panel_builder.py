@@ -10,6 +10,8 @@ New responsibilities:
 import customtkinter as ctk
 from typing import Dict, Any, Callable
 from app.gui.styles import Theme
+from app.gui.panels.map_panel import MapPanel # Import new class
+from app.gui.collapsible_frame import CollapsibleFrame
 
 
 class MainPanelBuilder:
@@ -20,7 +22,7 @@ class MainPanelBuilder:
     """
 
     @staticmethod
-    def build(parent: ctk.CTk, send_callback: Callable, zen_mode_callback: Callable = None) -> Dict[str, Any]:
+    def build(parent: ctk.CTk, db_manager, send_callback: Callable, zen_mode_callback: Callable = None) -> Dict[str, Any]:
         """
         Build the main panel and return widget references.
 
@@ -41,7 +43,8 @@ class MainPanelBuilder:
             padx=Theme.spacing.padding_md,
             pady=Theme.spacing.padding_md,
         )
-        main_panel.grid_rowconfigure(1, weight=1)  # chat takes the space
+        main_panel.grid_rowconfigure(1, weight=0) # Map panel doesn't expand vertically
+        main_panel.grid_rowconfigure(2, weight=1)  # Chat now takes the space
         main_panel.grid_columnconfigure(0, weight=1)
 
         # === Game Time Header Bar ===
@@ -107,13 +110,25 @@ class MainPanelBuilder:
         session_name_label.pack(
             side="right", padx=Theme.spacing.padding_md, pady=Theme.spacing.padding_sm
         )
+        
+        # === Visuals Frame (Map / Image) ===
+        # Insert this BEFORE the chat_history_frame
+        visuals_collapsible = CollapsibleFrame(main_panel, "Tactical Map")
+        visuals_collapsible.grid(
+            row=1, column=0, columnspan=2, sticky="ew", padx=Theme.spacing.padding_sm, pady=(0, 5)
+        )
+        # Default closed to save space, open when needed
+        visuals_collapsible.toggle() 
+        
+        map_panel = MapPanel(visuals_collapsible.get_content_frame(), db_manager=db_manager, height=300)
+        map_panel.pack(fill="both", expand=True)
 
         # === Chat History Frame ===
         chat_history_frame = ctk.CTkScrollableFrame(
             main_panel, fg_color=Theme.colors.bg_secondary
         )
         chat_history_frame.grid(
-            row=1,
+            row=2, # Adjusted grid row to 2
             column=0,
             columnspan=2,
             sticky="nsew",
@@ -124,7 +139,7 @@ class MainPanelBuilder:
         # === Choice Button Frame ===
         choice_button_frame = ctk.CTkFrame(main_panel)
         choice_button_frame.grid(
-            row=2,
+            row=3, # Adjusted grid row
             column=0,
             columnspan=2,
             sticky="ew",
@@ -147,7 +162,7 @@ class MainPanelBuilder:
         # === History Control Toolbar ===
         history_toolbar = ctk.CTkFrame(main_panel)
         history_toolbar.grid(
-            row=3,
+            row=4, # Adjusted grid row
             column=0,
             columnspan=2,
             sticky="ew",
@@ -195,7 +210,7 @@ class MainPanelBuilder:
         # === Navigation Frame (NEW) ===
         navigation_frame = ctk.CTkFrame(main_panel, fg_color="transparent", height=40)
         navigation_frame.grid(
-            row=4, # Shift input down
+            row=5, # Shift input down
             column=0,
             columnspan=2,
             sticky="ew",
@@ -205,7 +220,7 @@ class MainPanelBuilder:
         # === User Input ===
         user_input = ctk.CTkTextbox(main_panel, height=Theme.spacing.input_height)
         user_input.grid(
-            row=5, # Shifted down
+            row=6, # Shifted down
             column=0,
             sticky="ew",
             padx=Theme.spacing.padding_sm,
@@ -215,7 +230,7 @@ class MainPanelBuilder:
         # === Button Frame ===
         button_frame = ctk.CTkFrame(main_panel)
         button_frame.grid(
-            row=5, # Shifted down
+            row=6, # Shifted down
             column=1,
             sticky="ns",
             padx=Theme.spacing.padding_sm,
@@ -261,5 +276,5 @@ class MainPanelBuilder:
             "send_button": send_button,
             "stop_button": stop_button,
             "zen_button": zen_button,
+            "map_panel": map_panel, # Return reference
         }
-

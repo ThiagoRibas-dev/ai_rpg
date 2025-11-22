@@ -68,6 +68,7 @@ class MainView(ctk.CTk):
         self.user_input = None
         self.send_button = None
         self.stop_button = None
+        self.map_panel = None # Add map_panel reference
 
         # Control panel (Right)
         self.control_panel = None
@@ -92,7 +93,7 @@ class MainView(ctk.CTk):
 
     def _setup_window(self):
         """Configure main window grid."""
-        self.title("AI-RPG")
+        self.title("Generative Text RPG")
         self.geometry(
             f"{Theme.dimensions.window_width}x{Theme.dimensions.window_height}"
         )
@@ -115,6 +116,7 @@ class MainView(ctk.CTk):
         # 2. Build Main Panel (Center - Col 1)
         main_widgets = MainPanelBuilder.build(
             parent=self, 
+            db_manager=self.db_manager, 
             send_callback=self.handle_send_button,
             zen_mode_callback=self.toggle_zen_mode # <--- PASS CALLBACK
         )
@@ -188,6 +190,7 @@ class MainView(ctk.CTk):
         self.send_button = main_widgets["send_button"]
         self.stop_button = main_widgets["stop_button"]
         self.navigation_frame = main_widgets.get("navigation_frame")
+        self.map_panel = main_widgets.get("map_panel") # Store map_panel reference
 
         # Control panel
         self.control_panel = control_widgets["control_panel"]
@@ -279,7 +282,7 @@ class MainView(ctk.CTk):
                     "inventory": self.inspector_manager.views.get("inventory"),
                     "quest": self.inspector_manager.views.get("quest"),
                     "memory": self.inspector_manager.views.get("memory"),
-                    "map": self.inspector_containers.get("map_panel"),
+                    "map": self.map_panel,
                     "scene_map": self.inspector_containers.get("scene_map_panel"),
                 },
             )
@@ -297,15 +300,16 @@ class MainView(ctk.CTk):
             self.game_time_label,
             self.game_mode_label,
             self.navigation_frame,
-            # Pass same views map
-            {
+            # Pass same views map to UI Handler so it can refresh them
+            inspectors={
                 "character": self.inspector_manager.views.get("character"),
                 "inventory": self.inspector_manager.views.get("inventory"),
                 "quest": self.inspector_manager.views.get("quest"),
                 "memory": self.inspector_manager.views.get("memory"),
-                "map": self.inspector_containers.get("map_panel"),
+                "map": self.map_panel, # Explicitly pass the main map panel
                 "scene_map": self.inspector_containers.get("scene_map_panel"),
             },
+            map_panel=self.map_panel, # Also passed specifically for map_update events
         )
         self.ui_queue_handler.on_choice_selected = (
             self.input_manager.handle_choice_selected

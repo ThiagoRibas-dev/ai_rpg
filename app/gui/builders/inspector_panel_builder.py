@@ -3,11 +3,13 @@ Builds the inspector (left) panel of the application.
 Contains stacked collapsible frames for Character, Inventory, Quests, etc.
 """
 
+from typing import Any, Dict
+
 import customtkinter as ctk
-from typing import Dict, Any
+
 from app.database.db_manager import DBManager
 from app.gui.collapsible_frame import CollapsibleFrame
-from app.gui.panels.map_panel import MapPanel
+from app.gui.panels.scene_map_panel import SceneMapPanel
 from app.gui.styles import Theme
 
 
@@ -29,7 +31,9 @@ class InspectorPanelBuilder:
             Dictionary containing references to the content frames of each section.
         """
         # === Inspector Panel (Scrollable to handle many open panels) ===
-        inspector_panel = ctk.CTkScrollableFrame(parent, fg_color=Theme.colors.bg_primary)
+        inspector_panel = ctk.CTkScrollableFrame(
+            parent, fg_color=Theme.colors.bg_primary
+        )
         inspector_panel.grid(
             row=0,
             column=0,
@@ -50,7 +54,7 @@ class InspectorPanelBuilder:
         char_collapsible = CollapsibleFrame(inspector_panel, "Character")
         char_collapsible.pack(**pack_config)
         # Default open
-        
+
         # === 2. Inventory ===
         inv_collapsible = CollapsibleFrame(inspector_panel, "Inventory")
         inv_collapsible.pack(**pack_config)
@@ -59,27 +63,24 @@ class InspectorPanelBuilder:
         quest_collapsible = CollapsibleFrame(inspector_panel, "Quests")
         quest_collapsible.pack(**pack_config)
 
-        # === 4. Map ===
-        map_collapsible = CollapsibleFrame(inspector_panel, "World Map")
-        map_collapsible.pack(**pack_config)
-        map_panel = MapPanel(map_collapsible.get_content_frame(), db_manager=db_manager)
-        map_panel.pack(fill="both", expand=True)
-
-        # === 5. Scene Map ===
-        scene_map_collapsible = CollapsibleFrame(inspector_panel, "Scene Map")
+        # === 4. Scene Map (Zone Debugger) ===
+        scene_map_collapsible = CollapsibleFrame(inspector_panel, "Scene Map (Debug)")
         scene_map_collapsible.pack(**pack_config)
-        scene_map_panel = SceneMapPanel(scene_map_collapsible.get_content_frame(), db_manager=db_manager)
+        scene_map_panel = SceneMapPanel(
+            scene_map_collapsible.get_content_frame(), db_manager=db_manager
+        )
         scene_map_panel.pack(fill="both", expand=True)
+        scene_map_collapsible.toggle() # Default closed
 
         # === 6. Memories ===
         mem_collapsible = CollapsibleFrame(inspector_panel, "Recent Memories")
         mem_collapsible.pack(**pack_config)
-        mem_collapsible.toggle() # Default closed
+        mem_collapsible.toggle()  # Default closed
 
         # === 6. Tool Log / Debug ===
         tool_collapsible = CollapsibleFrame(inspector_panel, "Tool Log")
         tool_collapsible.pack(**pack_config)
-        tool_collapsible.toggle() # Default closed
+        tool_collapsible.toggle()  # Default closed
 
         # === 7. State Viewer Button Area ===
         debug_frame = ctk.CTkFrame(inspector_panel, fg_color="transparent")
@@ -90,8 +91,7 @@ class InspectorPanelBuilder:
             "character_container": char_collapsible.get_content_frame(),
             "inventory_container": inv_collapsible.get_content_frame(),
             "quest_container": quest_collapsible.get_content_frame(),
-            "map_panel": map_panel,
-            "scene_map_panel": scene_map_panel, # Add this
+            "scene_map_panel": scene_map_panel,
             "memory_container": mem_collapsible.get_content_frame(),
             "tool_container": tool_collapsible.get_content_frame(),
             "debug_container": debug_frame,

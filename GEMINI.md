@@ -4,7 +4,8 @@ This document provides a technical overview of the AI-RPG engine, intended for d
 
 ## Development Notes
 
-**Planning:** Before making any changes, we will perform an iterative planning step, laying out a detailed step-by-step implementation plan (what, where, how, why). Only once the plan has been accepted, we will execute the plan and edit the files in question.
+**Planning:** Before making any changes, we will perform an iterative planning step, laying out a detailed step-by-step implementation plan (what, where, how, why) with git patch diffs.
+Only once the plan has been accepted, we will execute the plan and edit the files in question.
 
 **Editing Files:** Avoid trying to edit whole files at once if possible. Edit specific, directed, targeted snippets at a time, always planning the whole chain of edits beforehand. Be aware of replacing snippets that exist in multiple parts of a given file. Files should be kept as relatively small. If a file is becoming too large (500+ lines) then split the file into two or more.
 

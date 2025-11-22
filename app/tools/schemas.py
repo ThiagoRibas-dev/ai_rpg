@@ -529,3 +529,20 @@ class JournalAddEntry(BaseModel):
     content: str = Field(..., description="Details of the entry.")
     tags: List[str] = Field(default_factory=list, description="Keywords.")
     is_secret: bool = Field(False, description="If true, player doesn't see this immediately (GM note).")
+
+class MapUpdate(BaseModel):
+    """
+    Manage the tactical battlemap.
+    Use algebraic notation (A1, B2) for coordinates.
+    
+    Operations:
+    - 'init': Start a new combat/scene map. Define dimensions.
+    - 'move': Move characters to specific squares.
+    - 'terrain': Place obstacles.
+    """
+    name: Literal["map.update"] = "map.update"
+    operation: Literal["init", "move", "terrain"] = Field(..., description="Action to perform.")
+    width: int = Field(5, description="Grid width (columns A-Z). Used with 'init'.")
+    height: int = Field(5, description="Grid height (rows 1-99). Used with 'init'.")
+    entities: Optional[Dict[str, str]] = Field(None, description="Map of Entity Key -> Coordinate (e.g. {'player': 'A1'}).")
+    terrain: Optional[List[str]] = Field(None, description="List of coordinates that are blocked/walls (e.g. ['C3', 'C4']).")
