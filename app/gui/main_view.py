@@ -101,9 +101,9 @@ class MainView(ctk.CTk):
         # Col 0: Inspectors (width 1)
         # Col 1: Chat (width 2 - wider)
         # Col 2: Controls (width 1)
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_columnconfigure(1, weight=2)
-        self.grid_columnconfigure(2, weight=1)
+        self.grid_columnconfigure(0, weight=25)
+        self.grid_columnconfigure(1, weight=50)
+        self.grid_columnconfigure(2, weight=25)
         self.grid_rowconfigure(0, weight=1)
 
     def _build_panels(self):
@@ -114,7 +114,9 @@ class MainView(ctk.CTk):
 
         # 2. Build Main Panel (Center - Col 1)
         main_widgets = MainPanelBuilder.build(
-            parent=self, send_callback=self.handle_send_button
+            parent=self, 
+            send_callback=self.handle_send_button,
+            zen_mode_callback=self.toggle_zen_mode # <--- PASS CALLBACK
         )
 
         # 3. Build Control Panel (Right - Col 2)
@@ -131,6 +133,40 @@ class MainView(ctk.CTk):
 
         # Store widget references
         self._store_widget_refs(main_widgets, control_widgets)
+        # NEW: Store reference to the zen button if needed
+        self.zen_button = main_widgets.get("zen_button")
+
+    # --- NEW FEATURE: ZEN MODE ---
+    def toggle_zen_mode(self):
+        """
+        Toggles the visibility of the left and right panels.
+        """
+        is_zen = getattr(self, "_is_zen_mode", False)
+        
+        if not is_zen:
+            # Hide side panels
+            self.inspector_containers["inspector_panel"].grid_remove()
+            self.control_panel.grid_remove()
+            
+            # Expand center panel
+            self.main_panel.grid(column=0, columnspan=3)
+            
+            # Update state
+            self._is_zen_mode = True
+            if self.zen_button:
+                self.zen_button.configure(text="↩ Exit Zen", fg_color="gray30")
+        else:
+            # Restore side panels
+            self.inspector_containers["inspector_panel"].grid()
+            self.control_panel.grid()
+            
+            # Reset center panel
+            self.main_panel.grid(column=1, columnspan=1)
+            
+            # Update state
+            self._is_zen_mode = False
+            if self.zen_button:
+                self.zen_button.configure(text="🧘 Zen Mode", fg_color="transparent")
 
     def _store_widget_refs(self, main_widgets: dict, control_widgets: dict):
         """Store widget references from builders."""

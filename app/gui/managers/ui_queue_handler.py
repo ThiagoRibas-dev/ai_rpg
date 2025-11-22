@@ -163,6 +163,11 @@ class UIQueueHandler:
                 for widget in self.navigation_frame.winfo_children():
                     widget.destroy()
 
+        # === NEW: Dice Roll ===
+        elif msg_type == "dice_roll":
+            # Route to the new visual card instead of a text bubble
+            self.bubble_manager.add_dice_card(msg)
+
         # === Choices ===
         elif msg_type == "choices":
             if self.on_choice_selected:

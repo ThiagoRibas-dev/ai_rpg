@@ -78,7 +78,8 @@ class Fonts:
     """Font configuration for the application."""
 
     # Font families
-    family_default: str = "Arial"
+    family_default: str = "Arial"  # UI Elements
+    family_serif: str = "Georgia"  # Narrative Text (NEW)
     family_monospace: str = "Courier"
 
     # Font sizes
@@ -88,9 +89,13 @@ class Fonts:
     size_large: int = 18
     size_title: int = 22
 
-    # Font styles (family, size, weight)
+    # Font styles
     heading: tuple = ("Arial", size_title, "bold")
     subheading: tuple = ("Arial", size_large, "bold")
+    
+    # NEW: Narrative specific font
+    narrative: tuple = ("Georgia", size_large, "normal")
+    
     body: tuple = ("Arial", size_large, "normal")
     button: tuple = ("Arial", size_medium, "normal")
     body_italic: tuple = ("Arial", size_medium, "italic")
@@ -133,8 +138,10 @@ class Spacing:
 
     # Input/textbox heights
     input_height: int = 100
-    textbox_small: int = 80
-    textbox_medium: int = 100
+    textbox_small: int = 100
+    textbox_medium: int = 140
+    textbox_large: int = 200
+    textbox_huge: int = 400
     scrollable_frame_height: int = 100
 
 
@@ -217,6 +224,21 @@ def get_location_card_style() -> Dict[str, Any]:
         "border_color": ACTIVE_THEME.colors.location_card_border,
         "border_width": 2,
         "corner_radius": 0, # Square corners for "Card" feel
+    }
+
+
+def get_dice_card_style(is_success: bool = True) -> Dict[str, Any]:
+    """Get style for visual dice rolls."""
+    base_color = "#2c3e50" # Dark Blue-Grey
+    accent_color = "#27ae60" if is_success else "#c0392b" # Green or Red
+    
+    return {
+        "fg_color": base_color,
+        "border_color": accent_color,
+        "border_width": 2,
+        "corner_radius": 8,
+        "text_color": "#ffffff",
+        "accent_color": accent_color
     }
 
 

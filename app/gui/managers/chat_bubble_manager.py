@@ -5,7 +5,7 @@ Manages chat bubble rendering and display.
 import tkinter
 import customtkinter as ctk
 from typing import List
-from app.gui.styles import Theme, get_chat_bubble_style, get_location_card_style
+from app.gui.styles import Theme, get_chat_bubble_style, get_location_card_style, get_dice_card_style
 import re
 
 
@@ -84,8 +84,11 @@ class ChatBubbleManager:
         # Calculate dynamic width
         bubble_width = self._calculate_bubble_width()
         
-        # Determine font based on role
-        font_to_use = Theme.fonts.body if role != "thought" else Theme.fonts.body_italic
+        # --- MODIFIED: Use Serif font for Assistant (Narrative) ---
+        # This creates a subconscious separation between "Game" and "Story"
+        font_to_use = Theme.fonts.narrative if role == "assistant" else Theme.fonts.body
+        if role == "thought":
+            font_to_use = Theme.fonts.body_italic
 
         # --- FIX: Virtual Label Measurement ---
         # We create a dummy label to calculate exactly how tall the text will be when wrapped.
@@ -188,6 +191,61 @@ class ChatBubbleManager:
             wraplength=500,
             justify="left"
         ).pack(anchor="w", padx=20, pady=(0, 15))
+        
+        self._scroll_to_bottom()
+
+    # --- NEW METHOD: Visual Dice Card ---
+    def add_dice_card(self, roll_data: dict):
+        """
+        Renders a visual card for a dice roll event.
+        Expected roll_data: {'total': 18, 'rolls': [15], 'modifier': 3, 'spec': '1d20+3'}
+        """
+        # Determine if it's a "good" roll (simple heuristic for visuals)
+        # In a real system, we'd pass 'success': True/False from the backend
+        total = roll_data.get("total", 0)
+        is_crit = total >= 20
+        is_fail = total == 1
+        
+        style = get_dice_card_style(is_success=not is_fail)
+        
+        container = ctk.CTkFrame(self.chat_frame, fg_color="transparent")
+        container.pack(fill="x", padx=Theme.spacing.padding_lg, pady=10)
+        
+        # The Card
+        card = ctk.CTkFrame(
+            container, 
+            fg_color=style["fg_color"], 
+            border_color=style["border_color"] if (is_crit or is_fail) else "gray40", 
+            border_width=2 if (is_crit or is_fail) else 1,
+            corner_radius=8
+        )
+        card.pack(anchor="center") # Center the dice roll like a notification
+
+        # Top Row: The Total
+        total_label = ctk.CTkLabel(
+            card, 
+            text=str(total),
+            font=("Arial", 24, "bold"),
+            text_color=style["accent_color"] if is_crit else "#ffffff"
+        )
+        total_label.pack(pady=(10, 0), padx=20)
+
+        # Middle Row: The Formula (e.g. "1d20 (15) + 3")
+        rolls = roll_data.get("rolls", [])
+        mod = roll_data.get("modifier", 0)
+        
+        rolls_str = str(rolls[0]) if len(rolls) == 1 else str(rolls)
+        mod_str = f"+ {mod}" if mod > 0 else (f"- {abs(mod)}" if mod < 0 else "")
+        
+        formula_text = f"Rolled {rolls_str} {mod_str}"
+        
+        detail_label = ctk.CTkLabel(
+            card,
+            text=formula_text,
+            font=("Arial", 12),
+            text_color="gray80"
+        )
+        detail_label.pack(pady=(0, 10), padx=20)
         
         self._scroll_to_bottom()
 

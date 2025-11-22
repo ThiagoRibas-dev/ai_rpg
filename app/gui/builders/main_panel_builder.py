@@ -20,13 +20,14 @@ class MainPanelBuilder:
     """
 
     @staticmethod
-    def build(parent: ctk.CTk, send_callback: Callable) -> Dict[str, Any]:
+    def build(parent: ctk.CTk, send_callback: Callable, zen_mode_callback: Callable = None) -> Dict[str, Any]:
         """
         Build the main panel and return widget references.
 
         Args:
             parent: The main window to attach widgets to
             send_callback: Callback for the send button
+            zen_mode_callback: Callback for the new Zen Mode button
 
         Returns:
             Dictionary containing all main panel widget references.
@@ -56,6 +57,20 @@ class MainPanelBuilder:
             pady=(Theme.spacing.padding_sm, 0),
         )
         game_time_frame.grid_propagate(False)
+
+        # --- NEW: Zen Mode Button (Top Left of Header) ---
+        zen_button = ctk.CTkButton(
+            game_time_frame,
+            text="🧘 Zen Mode",
+            width=80,
+            height=24,
+            font=Theme.fonts.body_small,
+            fg_color="transparent",
+            border_width=1,
+            border_color="gray50",
+            command=zen_mode_callback
+        )
+        zen_button.pack(side="left", padx=(Theme.spacing.padding_sm, 0), pady=Theme.spacing.padding_sm)
 
         # Left: Game time label
         game_time_label = ctk.CTkLabel(
@@ -245,4 +260,6 @@ class MainPanelBuilder:
             "user_input": user_input,
             "send_button": send_button,
             "stop_button": stop_button,
+            "zen_button": zen_button,
         }
+

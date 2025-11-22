@@ -109,7 +109,7 @@ class ControlPanelBuilder:
             anchor="w",
         )
         authors_note_textbox = ctk.CTkTextbox(
-            context_content, height=Theme.spacing.textbox_small
+            context_content, height=Theme.spacing.textbox_huge
         )
         authors_note_textbox.pack(**pack_config)
 
