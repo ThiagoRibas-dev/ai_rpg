@@ -1,7 +1,8 @@
 """
-Manages game session CRUD operations and UI.
-"""
-
+ Manages game session CRUD operations and UI.
+ """
+ 
+import json
 import logging
 from datetime import datetime
 from typing import Callable, Optional
@@ -16,7 +17,9 @@ from app.setup.scaffolding import inject_setup_scaffolding
 from app.setup.schemas import CharacterExtraction, WorldExtraction
 from app.setup.setup_manifest import SetupManifest
 from app.tools.builtin._state_storage import get_entity, set_entity
-
+from app.models.session import Session # Added for cloning logic
+from app.tools.builtin.location_create import handler as location_create_handler
+ 
 logger = logging.getLogger(__name__)
 
 
@@ -100,7 +103,8 @@ class SessionManager:
         prompt: Prompt,
         char_data: CharacterExtraction,
         world_data: WorldExtraction,
-        opening_crawl: str,
+        opening_crawl: str | None,
+        generate_crawl: bool = True
     ):
         """
         Finalize setup: Create DB rows, inject extracted data, and start gameplay.
@@ -113,7 +117,11 @@ class SessionManager:
         self.orchestrator.new_session(prompt.content, prompt.template_manifest)
 
         # 2. Inject Opening Crawl as first message
-        self.orchestrator.session.add_message("assistant", opening_crawl)
+        if generate_crawl and opening_crawl:
+            self.orchestrator.session.add_message("assistant", opening_crawl)
+        else:
+            # Void start: User takes the first turn, or we add a system marker
+            self.orchestrator.session.add_message("system", f"Session initialized at {world_data.starting_location.name_display}. Waiting for player input.")
 
         # 3. Persist Session to get ID
         self.orchestrator.save_game(session_name, prompt.id)
@@ -129,8 +137,19 @@ class SessionManager:
         self._apply_world_extraction(session_id, world_data)
 
         # 7. Set Game Mode to GAMEPLAY
+        # Also persist the INITIAL STATE for cloning purposes
         session = self.db_manager.sessions.get_by_id(session_id)
         session.game_mode = "GAMEPLAY"
+        
+        # Parse existing setup data (manifest) and append initial_state
+        setup_data = json.loads(session.setup_phase_data) if session.setup_phase_data else {}
+        setup_data["initial_state"] = {
+            "character_data": char_data.model_dump(),
+            "world_data": world_data.model_dump(),
+            "opening_crawl": opening_crawl
+        }
+        session.setup_phase_data = json.dumps(setup_data)
+        
         self.db_manager.sessions.update(session)
 
         # 8. Reload and Refresh UI
@@ -231,8 +250,11 @@ class SessionManager:
             session_id, {"genre": world_data.genre, "tone": world_data.tone}
         )
 
-        # 1. Create Location
+        # 1. Create Starting Location
         loc = world_data.starting_location
+        # Use the tool handler directly to ensure consistent logic (optional, but cleaner)
+        # We manually inject it via set_entity for speed, but we need to handle neighbors for adjacent locs
+        # actually, let's use set_entity for the start to ensure the ID is locked in
         loc_data = {
             "name": loc.name_display,
             "description_visual": loc.description_visual,
@@ -241,6 +263,18 @@ class SessionManager:
             "connections": {},
         }
         set_entity(session_id, self.db_manager, "location", loc.key, loc_data)
+
+        # 1b. Create Adjacent Locations (Neighbors)
+        # These usually point BACK to the starting location
+        context = {"session_id": session_id, "db_manager": self.db_manager}
+        for neighbor in world_data.adjacent_locations:
+            # neighbor is a LocationCreate object
+            # We convert Pydantic model to dict args for the handler
+            args = neighbor.model_dump(exclude={"name"}) # exclude 'name' literal
+            try:
+                location_create_handler(**args, **context)
+            except Exception as e:
+                logger.error(f"Failed to create adjacent location {neighbor.key}: {e}")
 
         # 2. Update Scene
         scene = get_entity(session_id, self.db_manager, "scene", "active_scene")
@@ -447,6 +481,26 @@ class SessionManager:
                 )
                 load_btn.pack(side="left", expand=True, fill="x")
 
+                # Edit Button (Rename)
+                edit_btn = ctk.CTkButton(
+                    row_frame,
+                    text="✏️",
+                    width=30,
+                    fg_color="gray",
+                    command=lambda s=session: self.edit_session_name(s)
+                )
+                edit_btn.pack(side="left", padx=(5, 0))
+
+                # Clone Button
+                clone_btn = ctk.CTkButton(
+                    row_frame,
+                    text="📋",
+                    width=30,
+                    fg_color="gray",
+                    command=lambda s=session: self.clone_session(s)
+                )
+                clone_btn.pack(side="left", padx=(5, 0))
+
                 delete_btn = ctk.CTkButton(
                     row_frame,
                     text="🗑️",
@@ -457,6 +511,82 @@ class SessionManager:
                 )
                 delete_btn.pack(side="left", padx=(5, 0))
 
+    def edit_session_name(self, session: GameSession):
+        """Rename a session."""
+        dialog = ctk.CTkInputDialog(
+            text="Enter new session name:", title="Rename Session"
+        )
+        new_name = dialog.get_input()
+        
+        if new_name and len(new_name.strip()) > 0:
+            session.name = new_name.strip()
+            self.db_manager.sessions.update(session)
+            
+            # Update UI if currently selected
+            if self._selected_session and self._selected_session.id == session.id:
+                self.session_name_label.configure(text=session.name)
+            
+            self.refresh_session_list(session.prompt_id)
+
+    def clone_session(self, source_session: GameSession):
+        """
+        Clones a session using its saved initial state.
+        Reuses the same Ruleset and Template IDs to save space.
+        """
+        # 1. Parse Setup Data
+        try:
+            setup_data = json.loads(source_session.setup_phase_data) if source_session.setup_phase_data else {}
+            initial_state = setup_data.get("initial_state")
+            
+            if not initial_state:
+                logger.warning(f"Cannot clone session {source_session.id}: No initial state found.")
+                self.bubble_manager.add_message("system", "⚠️ Cannot clone this session (Created before update or setup incomplete).")
+                return
+
+            # 2. Reconstruct Models
+            char_data = CharacterExtraction(**initial_state["character_data"])
+            world_data = WorldExtraction(**initial_state["world_data"])
+            opening_crawl = initial_state.get("opening_crawl")
+
+            # 3. Create New Session Record
+            new_name = f"{source_session.name} - branch"
+            
+            # Create base session
+            # We use the source's setup_phase_data to preserve the initial_state for the clone too
+            new_session = self.db_manager.sessions.create(
+                new_name, 
+                source_session.session_data, # Cloning raw LLM history might be weird, usually we want fresh history?
+                source_session.prompt_id, 
+                source_session.setup_phase_data
+            )
+            
+            # Reset History for the clone (Start Fresh)
+            # We manually reset the session_data to a clean state
+            clean_session_obj = Session(f"session_{new_session.id}")
+            
+            # Add Opening Crawl if it existed
+            if opening_crawl:
+                clean_session_obj.add_message("assistant", opening_crawl)
+            else:
+                clean_session_obj.add_message("system", "Session cloned. Ready.")
+                
+            new_session.session_data = clean_session_obj.to_json()
+            new_session.game_mode = "GAMEPLAY"
+            self.db_manager.sessions.update(new_session)
+
+            # 4. Re-Apply Extraction Data (Populate Game State)
+            # Note: We skip inject_setup_scaffolding because we inherit the IDs from the setup_phase_data manifest
+            # which was copied in step 3.
+            self._apply_character_extraction(new_session.id, char_data)
+            self._apply_world_extraction(new_session.id, world_data)
+
+            self.refresh_session_list(source_session.prompt_id)
+            self.bubble_manager.add_message("system", f"✅ Cloned '{source_session.name}' successfully.")
+
+        except Exception as e:
+            logger.error(f"Clone failed: {e}", exc_info=True)
+            self.bubble_manager.add_message("system", f"❌ Clone failed: {e}")
+ 
     def delete_session(self, session_to_delete: GameSession):
         """Delete a session after confirmation."""
         dialog = ctk.CTkInputDialog(

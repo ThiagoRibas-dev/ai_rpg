@@ -63,6 +63,10 @@ class GeminiConnector(LLMConnector):
         self, system_prompt: str, chat_history: List[Message]
     ) -> Generator[str, None, None]:
         contents = self._convert_chat_history_to_contents(chat_history)
+ 
+        # SDK requires non-empty contents
+        if not contents:
+            contents.append(types.Content(role="user", parts=[types.Part.from_text(text="Please proceed.")]))
 
         config = {
             "system_instruction": [types.Part.from_text(text=system_prompt)],
@@ -97,6 +101,10 @@ class GeminiConnector(LLMConnector):
         # We intentionally do NOT pass tools here, because Gemini FunctionDeclarations
         # are picky and don't allow $ref/anyOf/etc. We stick to Structured Output.
         contents = self._convert_chat_history_to_contents(chat_history)
+ 
+        # SDK requires non-empty contents
+        if not contents:
+            contents.append(types.Content(role="user", parts=[types.Part.from_text(text="Please proceed.")]))
 
         generation_config = types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -139,6 +147,10 @@ class GeminiConnector(LLMConnector):
     ) -> List[Dict[str, Any]]:
         """Makes a Gemini API call and returns a list of tool calls requested by the model."""
         contents = self._convert_chat_history_to_contents(chat_history)
+ 
+        # SDK requires non-empty contents
+        if not contents:
+            contents.append(types.Content(role="user", parts=[types.Part.from_text(text="Please proceed.")]))
 
         # Gemini expects a list of `Tool` objects.
         function_declarations = [

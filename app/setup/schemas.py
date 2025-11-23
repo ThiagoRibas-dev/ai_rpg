@@ -54,6 +54,10 @@ class WorldExtraction(BaseModel):
     starting_location: LocationCreate = Field(
         ..., description="The initial scene location."
     )
+    adjacent_locations: List[LocationCreate] = Field(
+        default_factory=list,
+        description="2-3 locations directly connected to the starting location (e.g. 'Street Outside', 'Kitchen')."
+    )
     lore: List[MemoryUpsert] = Field(
         ...,
         description="Key facts about the world mentioned in the text (e.g. factions, history).",

@@ -402,10 +402,18 @@ class SceneRemoveMember(BaseModel):
     character_key: str = Field(..., description="Character ID to remove.")
 
 
+class LocationNeighbor(BaseModel):
+    """A connection to an adjacent location."""
+    target_key: str = Field(..., description="ID of the existing location to connect to.")
+    direction: str = Field(..., description="Direction/Method TO the neighbor (e.g., 'North', 'Up', 'Gate').")
+
+
 class LocationCreate(BaseModel):
     """
     Create a new location in the world database.
     Use this to define distinct areas (rooms, clearings, streets).
+    
+    **MAP GRANULARITY:** Create distinct nodes for Rooms, Buildings, or Landmarks. Do not create nodes for furniture.
     """
     name: Literal["location.create"] = "location.create"
     key: str = Field(..., description="Unique ID (e.g., 'crypt_entrance').")
@@ -413,6 +421,10 @@ class LocationCreate(BaseModel):
     description_visual: str = Field(..., description="Visuals: lighting, architecture, layout.")
     description_sensory: str = Field(..., description="Smell, sound, temperature.")
     type: Literal["indoor", "outdoor", "dungeon", "city"] = Field(..., description="General environment type.")
+    neighbors: List[LocationNeighbor] = Field(
+        default_factory=list, 
+        description="List of connections to EXISTING locations. The system will automatically create bidirectional links."
+    )
 
 
 class LocationConnect(BaseModel):

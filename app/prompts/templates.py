@@ -303,10 +303,12 @@ You are a World Building Engine. Convert the following setting description into 
 
 **INSTRUCTIONS:**
 1. **Analyze Vibe**: Identify the specific **Genre** and **Tone** implied by the description.
-2. **Starting Location**: Create a `location.create` object for where the player begins. Be specific with visuals and sensory details.
-3. **Lore**: Extract 3-5 key facts about the world (factions, history, threats) as `memory.upsert` entries.
-4. **NPCs**: Identify any NPCs present in the scene and create `npc.spawn` entries for them.
+2. **Starting Location**: Create a `location.create` object for where the player begins.
+3. **Neighbors**: Create 2-3 `adjacent_locations` that connect to the start (e.g., if in a Bedroom, create 'Hallway' and 'Balcony'). Define their `neighbors` list to link back to the starting location's key.
+4. **Lore**: Extract 3-5 key facts about the world (factions, history, threats) as `memory.upsert` entries.
+5. **NPCs**: Identify any NPCs present in the scene and create `npc.spawn` entries for them.
 
+**GRANULARITY RULE**: Create Locations for **distinct areas** (Rooms, Buildings, Streets). Do NOT create locations for furniture or small objects.
 Return ONLY the JSON object matching the WorldExtraction schema.
 """
 
@@ -318,12 +320,13 @@ You are the Narrator of a roleplaying game. Write the opening scene.
 - **Tone**: {tone}
 
 **Protagonist**: {name} ({visual_desc})
-**Location**: {location}
-**Setting Details**: {loc_desc}
-**Background**: {bio}
-
-**INSTRUCTIONS:**
-- Write in the **Second Person** ("You stand...", "You see...").
+ **Location**: {location}
+ **Setting Details**: {loc_desc}
+ **Background**: {bio}
++**Scenario Guidance**: {guidance}
+ 
+ **INSTRUCTIONS:**
+ - Write in the **Second Person** ("You stand...", "You see...").
 - Adhere strictly to the **Tone** specified above.
 - Set the scene vividly. Describe the atmosphere, lighting, and immediate situation.
 - Acknowledge the character's background in the narrative hook.

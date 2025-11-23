@@ -13,6 +13,8 @@ Use second-person perspective (\"You see...\", \"You approach...\", \"The goblin
 
 
 
+
+
 Welcome to Session Zero! Let's set up your game together.
 
 To get started, tell me about the kind of game you'd like to play:
@@ -29,13 +31,134 @@ After you confirm that you are satisfied with the system/framework, I'll finaliz
 
 
 
-I'd like a homebrew setting. High Fantasy with late medieval aesthetics. A world like the forgotten realms, sprawling and with many kinds of nations, biomes, places, etc in it, where magic is ever present but not pervasive. A commoner doesn't have access to magic usually, for example.
-I'd like a generally serious tone, but on the lighter side. Humor, horror, lewd, philosophycal, sexually explicit, subversive, neutral, etc should be weaved naturally into the game.
-I don't have any specific themes in mind, so we can let the game flow and see where it takes us. To start, we can go with standard themes of adventure and exploration.
-I'd also like the game to have a somewhat slow pace.
-We could add something to keep track of mine and other characters notoriety and reputation. A simple system where we have a numeric reputation with each place, group, and person of importance.
-We could start with him travelling to a village away from his usual home town. Let's say that he's still a day or two away and enjoying an uneventful journey.
-A calm and safe prologue to let us settle into the world.
+
+
+
+A sandbox, living world with humour and dark and gritty elements, with themes that arise naturally would be ideal. A high fantasy world with late medieval aesthetics. A world like the forgotten realms, sprawling and with many kinds of nations, biomes, places, etc in it, where magic is ever present but not pervasive. A commoner doesn't have access to magic usually, for example.
+
+I'm fine with adult themes like extreme violence and sex as long as it's diegetic.
+For example, in a world where there are evil Gnoll raiding parties that raze villages and rape the survivors, or a situation where two morally ambiguous NPCs are incestuous sibligns, or a druid who is in a romantic and sexual relationship with his direwolf animal companion, a psychopatic villain who flays his victms alive, etc.
+
+As long as it's a natural part of the world we are playing in, I'm game, and I'm willing to engage into some things like that.
+In a more sandbox, simulationist game, I might even play a character that has a wife or a lover or the like.
+
+Sex, while not a central theme or a focus, is part of life, both for plesure and pain, and even humor. So let's embrace that to some extent.
+
+Campaign Setting - Chronicles from the Seventh Moon
+This setting takes place on Isaldar, the seventh moon orbiting the Primeval Orb of Elaria, under the light of Twin Suns.
+1. The Premise: Cataclysm and Salvation
+	Elaria's Fate: The original world, Elaria, and potentially all of creation, was threatened by an entity of immense power known as the Annihilation.
+	Divine Sacrifice: Unable to defeat it directly, the gods of Elaria performed a ritual, creating the Seal of the Six Moons to trap the Annihilation within Elaria itself. This act cost the gods their lives.
+	Flight to Isaldar: Before their demise, the gods used the Aether to transport their followers to Isaldar, the seventh and last moon. Isaldar was previously inhabited only by orcs and a long-forgotten civilization.
+	The Wound: The remains of the dead gods fell to the heart of Isaldar's main continent, Aldar, creating a vast, supernatural desert known as The Wound (or The Scar). This cataclysmic event, the Falling of the Gods, echoes with threats and is the source of Divine Metal.
+	Impending Doom: The Seal of the Six Moons weakens each time Isaldar's six sister moons align with the dead world of Elaria. It is believed the Annihilation will eventually 
+ free, potentially during the next alignment, necessitating the rise of new gods to protect Isaldar.
+
+2. Key Locations & Concepts:
+	Isaldar (The Seventh Moon): The current world, orbiting the dead Primeval Orb of Elaria. Originally home to Orcs and a lost civilization.
+	Aldar: The main continent on Isaldar, site of the Wound and home to most major civilizations. Divided into Western and Eastern regions.
+	The Wound (The Scar): A vast, unearthly desert created by the gods' falling remains. Source of Divine Metal and home to hostile creatures and resilient Orc tribes.
+	Divine Metal: A unique metal derived from the bones of the dead gods found in the Wound. It is light, strong as steel, and possesses anti-magic properties. It enables The Craft. Also referred to as Primordium.
+	The Craft / Technomagic: A blend of technology, alchemy, and Divine Metal, allowing for the fusion of magic and technology (e.g., airships). Technomancers are practitioners who channel arcane power through artifacts they create, but cannot cast spells inherently.
+	Luminaries: Individuals born with a spark of the dead gods' power, capable of extraordinary feats. It is speculated they are needed to ascend to godhood and replace the fallen pantheon to face the Annihilation.
+	The Darkness: A terrifying period coinciding with planetary alignments when Elaria's shadow covers Isaldar. It incites fear, allows underworld creatures to emerge, and empowers evil forces like the Children of the Shadow.
+	Children of the Shadow (The Last Circle): Sinister, shadowy figures believed responsible for heinous acts during the Darkness. Rumored to be Elves from a parallel Isaldar consumed by the Annihilation, who escaped to the Plane of Shadows and became distorted spectral beings feeding on fear. They seek to plunge Isaldar into eternal darkness.
+	The Six Moons: Calazia, Radras, Manis, Urasia, Zaman, and Samerash. These moons influence Isaldar, particularly Half-Elves (\"Children of the Moon\"), whose nature is said to be determined by the moon ascending at their birth. Each moon has unique characteristics (magic, distortion, fey connections, alien influence, shattered remnants, dragon-guarded secrets).
+	Aether: The medium used by the gods for the mass transportation of their followers from Elaria to Isaldar.
+
+3. Peoples and Factions of Isaldar:
+	Races:
+		Humans: Most common race on Aldar.
+		Dwarves: Mercenary, bellicose, Spartan-like spirit. Often found in Karn.
+		Elves: Skilled in magic, possess a tradition called Daishin (exploring beyond their lands). Many reside in the forest of Onires. (See also: Children of the Shadow).
+		Gnomes: Adapted for Bard synergy. Prominent in Concordia (within the Shining Principalities).
+		Halflings: Nomadic clans after losing their original lands.
+		Half-Elves (Children of the Moon): Rare, often ostracized. Influenced by the six moons.
+		Half-Orcs: Descendants of Isaldar's original inhabitants (Orcs) and newcomers. Hunt threats emerging from the Wound/shadows.
+		Orcs: The original masters of Isaldar. Many now inhabit the hostile Wound, viewed as beast-men by others but proud and resilient (Ukar philosophy). Hate Technomagic. Subgroups include the more civilized Orcs of Lamaraj and the bestial albino Urorcs.
+		Yakshas: Tall, human-like with metallic skin (gold), metallic eyes (copper/silver), and red/white hair. Strong connection to religion (Monks, Clerics). Prominent in the Celestial Lion Empire.
+		Other Races: Half-dragons, Drakizias (Draconids), Tieflings, Aasimar, Changelings exist.
+	Major Powers & Regions:
+		Melkhar Empire (West Aldar): Most powerful kingdom in the west. Holds a monopoly on Primordium/Divine Metal. Focused on The Craft/Technomagic. Constantly warring for resources and expansion, facing Orcs and others near the Wound. Worships Melkhar.
+		Shining Principalities (West Aldar): Union of neutral/good/lawful kingdoms and free cities south of the Melkhar Empire, including notable centers like Mithraelis, Sanctuary, Duranthor, and the Fort of the Sacred Dawn. Diverse, encourages adventuring. Legalizes adventurer/mercenary work.
+		Lamaraj (South Island): Matriarchal Orc island nation worshipping Ashkar-Mithrael as two sun gods. Value strength, unity, sexual freedom (including with family/animals as bonding/communion; sex work considered holy; submission in duels may involve sex). Short lifespans (adult at 14, elder at 40). Two large ziggurats.
+		Holy Order of the Moons: Mystics who blame humans for the gods' deaths. First clerics, hearing echoes of the dead gods.
+		Celestial Lion Empire (East Aldar): Ruled by Yaksha nobility. Land of intricate politics. Resists invasion from Huan-Ti. Worships Gotheintor.
+		Ur-Akthar Protectorate (East Aldar): Realm of darkness, tyranny, ruled by diabolists/infernalists. Worships Ur-Akthar. Constantly seeks expansion.
+		Other Western Aldar Regions: Cimeris (Amazons), Deydhor (Knight-Sorcerers), Onires (Elf forest), Karn (Dwarf realm), Talassia (Giant sea raiders), Vanidrad (Barbarian Vanyr tribes).
+		Other Eastern Aldar Regions: Haradath (Undead swamps), Wastes of Volkeslag (Warzone), Islands of the Sea Kings (Dru sailors), Zhao Khan (Merchant island), Shinmarash (Intrigue), Lands of the Dead, Eternal Ice Wastes (Northern Vanyr tribes).
+	Dragons in Isaldar: (Refer to Part 4, Section 7a for general True Dragon information).
+		Breeding: Male dragons can impregnate mortal females in both their true draconic form and any alternate forms they assume. Female dragons, however, can only conceive with mortal males while in their true draconic form.
+
+4. Religion and Magic in Isaldar:
+	Divine Casters (Clerics, Druids, etc): Exist despite the gods' deaths. Grapple with questions: Are they worshipping remnants? Are Luminaries potential new gods or a threat?
+	Sorcerers: Often misunderstood by traditional mages and Technomancers. Can ignore material components and use Overload (risk spell failure for increased power).
+	Monks: Trained in one of eight Combat Styles (Way of the Wind, Aegis of the Mountain, Forge of Bones, Harmony of the Waves, Titan's Fist, Scorpion Technique, Tempest of Cutting Winds, Virtue of the Blade).
+	Technomancers: Use artifacts/contraptions to channel arcane power; cannot cast spells innately but create technomagic items.
+	Pantheon (The Dead Gods - remnants still grant power/influence):
+		Evil Deities:
+			Nikthar: Murder, assassins (Black Blood Scrolls). Feared cults.
+			Shaektis: Tragedies, destruction, wild forces. Worshiped by Orc shamans (Codex of Tears).
+			Ur-Akthar: War, conquest, tyranny. Ruler of the Protectorate. Most powerful evil deity.
+			Vantheris: Tragedies, bad luck, misfortune, urban chaos.
+			Yurgattach: Underworld, darkness, earthquakes, subterranean creatures, blood rituals.
+			Athar-Abannon: Slaughter, invasions, brutality by monstrosities. Goblinoid survivor.
+			Adharmoloch: Four elemental forces. Death led to warring Elemental Heresies.
+			Nephartoth: Decay, change, end, entropy (Infinite Cycle).
+		Neutral Deities:
+			Ninshardur: Wealth, merchants, banks. Popular with Gnomes.
+			Mezakinn: Madness, dreams, prophecies. Feared oracles.
+		Good Deities:
+			Ashantar: Beasts, nature, life (Emerald Empress). Temperamental. Allies/conflicts with druids.
+			Gotheintor: Justice, law, honor, knights (Diamond Knight). Protects innocent. Orders resist evil empires.
+			Melkhar: Knowledge, machines, constructs (Emperor of Constructs). Structured Iron Church in Melkhar Empire. Faith also in Aryavarta.
+			Devanthar: Protection of the dead, martial arts (Bringer of Endless Brightness). Guards Lands of the Dead. Clerics are sages/warriors.
+			Alaunthar: Peace, diplomacy, harmony (Guardian of the Illuminated Halls). Wisest good god. Clerics broker peace.
+			Dethne: Healing, fae protector (Lady of Still Waters). Clerics in forest circles. Pact with Gotheintor followers.
+			Cerhywn: Stories, music, illusions (Queen of Smiles). Followers in Golden Circles. No structured church.
+			Ashkar-Mithrael: Sun(s), fire, morning, good, love. Twin god of Twin Suns. Celestial Church, Great Temple in Mithraelis. Cults in Celestial Lion Empire. Husband of Enthariel.
+			Enthariel: War, weapons, night (Mistress of the Bright Hosts). Popular in west Aldar, ruling goddess of Alliance of Seven Flames. No organized church, priests in military orders (e.g., Fort of the Sacred Dawn). Wife of Ashkar-Mithrael.
+
+5. Setting Specific Alternate Rules\Homebrew (CftSM):
+	Full-Attack Action: Making a Full-Attack is a Standard Action, instead of a Full-Round Action.
+	Standard Action Attacks during Full-Attack: A creature making a Full-Attack may replace any number of their individual attacks with Standard Action Attacks, such as Standard Action Martial Maneuvers (from ToB) or other Standard Action Attacks granted by Feats or Class Features.
+	Homebrew Spells: 
+		(The following is based on the Official Spell Battletide)
+		Blade Tempest Invocation
+		School: Transmutation [Good, Light]
+		Level: Cleric 5 (spell research)
+		Components: V, S, DF
+		Casting Time: 1 standard action
+		Range: 30 ft.
+		Area: 30-ft.-radius emanation centered on you
+		Duration: 1 round/level
+		Saving Throw: Will negates (harmless, applies to allies); Will negates (applies to evil creatures' debuff)
+		Spell Resistance: Yes (harmless, applies to allies); Yes (applies to evil creatures' debuff)
+		Calling upon the Queen of the Night Skies, a sudden moonlit night seems to fall, casting the battlefield into twilight. This vigilant glow hinders evil foes and bolsters allies, a whirlwind of spectral blades rising to guide and guard your allies, moving with the rhythm of righteous warfare.
+		Effect:
+		This spell creates several effects within the 30-foot radius emanation centered on you:
+		Night's Battlefield: The illumination level within the area becomes shadowy/dim illumination, similar to a moonlit night. This overrides brighter light sources within the area (magical or mundane) but does not negate magical darkness or daylight effects.
+		Hindered Malice: All Evil creatures within the area must succeed on a Will save or take a -1 penalty on attack rolls, weapon damage rolls, saves, and skill checks for as long as they remain in the area. This functions similarly to the negative effect of a Prayer spell.
+		Coordinated Host: You and all allies within the area of the spell are surrounded by slow swirling spectral blades and gain the following benefits:
+		+1 sacred bonus to AC.
+		+1 sacred bonus on attack rolls.
+		+1 sacred bonus on Reflex saves.
+		+10 ft. enhancement bonus to base land speed.
+		Darkvision out to 60 feet.
+		+2 increase to the flanking bonus (in addition to the normal +2 and other bonuses).
+		Lesser Divine Retaliation: Each affected ally (excluding the caster) is protected by retaliating spectral blades. Once per round for each ally, when that ally is struck by a melee attack or spell originating from an adjacent foe, one of the spectral blades automatically strikes back at that foe dealing 1d8 points of force damage. This retaliation does not require an action from the ally and does not count as their attack of opportunity.
+		Battle Cadence: Each round on your turn, as long as the spell persists, you (the caster) chooses to gain one of the following benefits once:
+		(A) Spectral Assault: As a free action, you direct a spectral blade to strike a target within the spell's area. The blade uses your Base Attack Bonus + your Wisdom modifier for its attack roll(s) and deals 1d8 points of force damage + 1 point per three caster levels (maximum +5) per hit. The blade makes iterative attacks if your BAB allows. It strikes as a force effect spell (hitting incorporeal creatures and ignoring DR), not as a physical weapon, and uses the threat range/critical multiplier of your deity's favored weapon (or a default if none). Your combat feats or actions do not modify the blade's attacks. If the target has Spell Resistance, make a caster level check when the blade first strikes.
+		(B) Flurry of Steel: When making a full attack action, you may make one extra attack with any weapon you are holding at your highest base attack bonus. This effect is not cumulative with similar effects, such as that provided by the haste spell or a weapon of speed.
+		(B) Divine Celerity: You may cast any prepared Cleric spell of 0-level or 1st-level as a free action, as though affected by the Quicken Spell feat. For every three caster levels beyond 9th, the maximum level of spell you can quicken increases by one (2nd at CL 12 , 3rd at CL 15 , 4th at CL 18 ). This benefit cannot be applied to spells higher than 4th level.
+
+We can start the in a sort of prologue where my character is on the road, just him his pack mare, and the trees on either side of the road, still two days away from his destination.
+This trip should be safe, calm, and without any sort of pressures so that we can roleplay him just existing in the world before the adventure properly begins.
+
+
+
+
+
 
 My character is Thiago, Neutral Good, lvl 5 Cleric/Ordained Champion of a god much like Torm from the Forgotten Realms or Herironeous from Greyhawk. His chosen Domains would be War and Healing, later getting access to the Law Domain.
 Hhe is something between a Knights Hospitaller, a Hedge Knight, and a Mercenary. He goes around looking for adventure, people to help, and evil to slay because he both longs for adventure and and to respect his Deity's (something between Heironeous and Torm) dogma of worship and spreading their name by actions and deeds.

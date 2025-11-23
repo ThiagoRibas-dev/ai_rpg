@@ -192,7 +192,7 @@ class WorldGenService:
             raise
 
     def generate_opening_crawl(
-        self, char_data: CharacterExtraction, world_data: WorldExtraction
+        self, char_data: CharacterExtraction, world_data: WorldExtraction, scenario_guidance: str = ""
     ) -> str:
         """
         Generates the creative opening scene text.
@@ -208,6 +208,7 @@ class WorldGenService:
                 location=world_data.starting_location.name_display,
                 loc_desc=world_data.starting_location.description_visual,
                 bio=char_data.bio,
+                guidance=scenario_guidance if scenario_guidance else "Start the adventure immediately.",
             )
 
             generator = self.llm.get_streaming_response(
