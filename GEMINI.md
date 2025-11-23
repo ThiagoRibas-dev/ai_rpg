@@ -118,23 +118,5 @@ This project is documented across several files to keep the information organize
 - **[Database Schema](docs/04_database_schema.md)**
 - **[GUI](docs/05_gui.md)**
 - **[Roadmap](docs/roadmap.md)**
+- **[Project TODOs](docs/todos/)**
 
-## Project TODOs
-
-- **[V0 TODO](docs/todos/v0_TODO.md)**
-- **[V1 TODO](docs/todos/v1_TODO.md)**
-- **[V1.5 TODO](docs/todos/v1.5_TODO.md)**
-- **[V1.6 TODO](docs/todos/v1.6_TODO.md)**
-- **[V1.7 TODO](docs/todos/v1.7_TODO.md)**
-- **[V2 TODO](docs/todos/v2_TODO.md)**
-- **[V3 TODO](docs/todos/v3_TODO.md)**
-- **[V4 TODO](docs/todos/v4_TODO.md)**
-- **[V5 TODO](docs/todos/v5_TODO.md)**
-- **[V6 TODO](docs/todos/v6_TODO.md)**
-- **[V7 TODO](docs/todos/v7_TODO.md)**
-- **[V8 TODO](docs/todos/v8_TODO.md)**
-- **[V9 TODO](docs/todos/v9_TODO.md)**
-- **[V10 TODO](docs/todos/v10_TODO.md)**
-- **[V11 TODO](docs/todos/v11_TODO.md)**
-- **[V12 TODO](docs/todos/v12_TODO.md)**
-- **[V13 TODO](docs/todos/v13_TODO.md)**

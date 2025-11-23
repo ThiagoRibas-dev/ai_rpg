@@ -42,13 +42,13 @@ Your race determines your starting ability adjustments, size, speed, and special
 
 | Race | Ability Adjustments | Size | Speed | Favored Class | Racial Traits |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Human** | None | Medium | 30 ft. | Any | Bonus Feat at 1st level, +4 extra skill points at 1st level (+1/level thereafter). |
-| **Dwarf** | +2 Con, -2 Cha | Medium | 20 ft. | Fighter | Darkvision 60ft, Stonecunning, Stability (+4 vs bull rush/trip), +2 save vs poison/spells, +1 attack vs orcs/goblinoids, +4 AC vs giants. |
-| **Elf** | +2 Dex, -2 Con | Medium | 30 ft. | Wizard | Low-light vision, Immunity to sleep, +2 save vs enchantments, +2 Listen/Search/Spot. Proficient with longsword/rapier/bows. |
-| **Gnome** | +2 Con, -2 Str | Small | 20 ft. | Bard | Low-light vision, +2 save vs illusions, +1 DC to illusion spells cast, +1 attack vs kobolds/goblinoids, +4 AC vs giants, +2 Listen/Craft (Alchemy). |
-| **Half-Elf** | None | Medium | 30 ft. | Any | Low-light vision, Immunity to sleep, +2 save vs enchantments, +1 Listen/Search/Spot, +2 Diplomacy/Gather Info. |
-| **Half-Orc** | +2 Str, -2 Int, -2 Cha | Medium | 30 ft. | Barbarian | Darkvision 60ft. Orc blood (counts as Orc for items/effects). |
-| **Halfling** | +2 Dex, -2 Str | Small | 20 ft. | Rogue | +1 all saves, +2 save vs fear, +1 attack with thrown weapons, +2 Climb/Jump/Listen/Move Silently. |
+| Human | None | Medium | 30 ft. | Any | Bonus Feat at 1st level, +4 extra skill points at 1st level (+1/level thereafter). |
+| Dwarf | +2 Con, -2 Cha | Medium | 20 ft. | Fighter | Darkvision 60ft, Stonecunning, Stability (+4 vs bull rush/trip), +2 save vs poison/spells, +1 attack vs orcs/goblinoids, +4 AC vs giants. |
+| Elf | +2 Dex, -2 Con | Medium | 30 ft. | Wizard | Low-light vision, Immunity to sleep, +2 save vs enchantments, +2 Listen/Search/Spot. Proficient with longsword/rapier/bows. |
+| Gnome | +2 Con, -2 Str | Small | 20 ft. | Bard | Low-light vision, +2 save vs illusions, +1 DC to illusion spells cast, +1 attack vs kobolds/goblinoids, +4 AC vs giants, +2 Listen/Craft (Alchemy). |
+| Half-Elf | None | Medium | 30 ft. | Any | Low-light vision, Immunity to sleep, +2 save vs enchantments, +1 Listen/Search/Spot, +2 Diplomacy/Gather Info. |
+| Half-Orc | +2 Str, -2 Int, -2 Cha | Medium | 30 ft. | Barbarian | Darkvision 60ft. Orc blood (counts as Orc for items/effects). |
+| Halfling | +2 Dex, -2 Str | Small | 20 ft. | Rogue | +1 all saves, +2 save vs fear, +1 attack with thrown weapons, +2 Climb/Jump/Listen/Move Silently. |
 
 ### Ability Scores
 An ability score's modifier is calculated as: `(Score - 10) / 2`, rounded down.
@@ -115,18 +115,18 @@ Some creatures lack an ability score entirely (marked as "—"). The modifier is
 #### Level Advancement & Experience
 As characters defeat monsters and overcome challenges, they gain Experience Points (XP). When a specific total is reached, they advance a level.
 
-**The Leveling Process**
-1.  **Choose Class:** Pick a class to advance in (existing or new).
-2.  **Adjust Base Stats:** Apply new BAB and Base Save bonuses from the class table.
-3.  **Ability Score:** At levels 4, 8, 12, 16, and 20, add +1 to any one Ability Score.
-4.  **Hit Points:** Roll the class Hit Die + Con Mod and add to total Max HP.
-5.  **Skill Points:** Buy ranks. `Class Skill = 1 point`, `Cross-Class = 1 point for 1/2 rank`.
-    *   *Max Class Rank:* Level + 3
-    *   *Max Cross-Class Rank:* (Level + 3) / 2
-6.  **Feats:** Gain a new feat at levels 1, 3, 6, 9, 12, 15, 18.
-7.  **Spells/Features:** Gain new class features or spell slots defined by the class level.
+The Leveling Process
+1.  Choose Class: Pick a class to advance in (existing or new).
+2.  Adjust Base Stats: Apply new BAB and Base Save bonuses from the class table.
+3.  Ability Score: At levels 4, 8, 12, 16, and 20, add +1 to any one Ability Score.
+4.  Hit Points: Roll the class Hit Die + Con Mod and add to total Max HP.
+5.  Skill Points: Buy ranks. `Class Skill = 1 point`, `Cross-Class = 1 point for 1/2 rank`.
+		*Max Class Rank:* Level + 3
+		*Max Cross-Class Rank:* (Level + 3) / 2
+6.  Feats: Gain a new feat at levels 1, 3, 6, 9, 12, 15, 18.
+7.  Spells/Features: Gain new class features or spell slots defined by the class level.
 
-**Experience and Benefits Table**
+Experience and Benefits Table
 
 | Character Level | XP Needed | Class Skill Max Ranks | Cross-Class Max Ranks | Feats? | Ability Score Up? |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -144,8 +144,8 @@ As characters defeat monsters and overcome challenges, they gain Experience Poin
 *(Note: Feats are gained every 3 levels; Ability Scores every 4 levels.)*
 
 #### Prestige Classes
-Prestige classes offer specialized power but cannot be taken at 1st level. You must meet specific **Prerequisites** (e.g., "Base Attack Bonus +5", "Cast 3rd-level arcane spells") before taking the first level of a prestige class.
-*   **Common Examples:** Arcane Archer (Elf Bowman), Assassin (Evil Killer), Blackguard (Fallen Paladin), Dragon Disciple (Draconic heritage), Duelist (Finesse fighter), Loremaster (Secret keeper), Mystic Theurge (Arcane/Divine caster mix), Shadowdancer (Stealth expert).
+Prestige classes offer specialized power but cannot be taken at 1st level. You must meet specific Prerequisites (e.g., "Base Attack Bonus +5", "Cast 3rd-level arcane spells") before taking the first level of a prestige class.
+	Common Examples: Arcane Archer (Elf Bowman), Assassin (Evil Killer), Blackguard (Fallen Paladin), Dragon Disciple (Draconic heritage), Duelist (Finesse fighter), Loremaster (Secret keeper), Mystic Theurge (Arcane/Divine caster mix), Shadowdancer (Stealth expert).
 
 ### Size
 Creatures come in nine size categories: Fine, Diminutive, Tiny, Small, Medium, Large, Huge, Gargantuan, and Colossal. Size modifiers affect AC, Attack Bonus, Hide checks, and Grapple checks.
@@ -161,33 +161,33 @@ General Skill Rules
 
 #### Advanced Skill Rules
 
-**Skill Synergy**
-Certain skills complement each other. If you have **5 or more ranks** in one skill, you gain a **+2 Synergy Bonus** on checks involving a related skill.
+Skill Synergy
+Certain skills complement each other. If you have 5 or more ranks in one skill, you gain a +2 Synergy Bonus on checks involving a related skill.
 
 | 5 Ranks in... | Gives +2 Bonus to... |
 | :--- | :--- |
-| **Bluff** | Diplomacy, Disguise (acting), Intimidate, Sleight of Hand |
-| **Handle Animal** | Ride, Wild Empathy |
-| **Jump** | Tumble |
-| **Knowledge (Arcana)** | Spellcraft |
-| **Knowledge (Local)** | Gather Information |
-| **Knowledge (Nobility)** | Diplomacy |
-| **Search** | Survival (following tracks) |
-| **Sense Motive** | Diplomacy |
-| **Spellcraft** | Use Magic Device (scrolls) |
-| **Tumble** | Balance, Jump |
-| **Use Magic Device** | Spellcraft (deciphering scrolls) |
+| Bluff | Diplomacy, Disguise (acting), Intimidate, Sleight of Hand |
+| Handle Animal | Ride, Wild Empathy |
+| Jump | Tumble |
+| Knowledge (Arcana) | Spellcraft |
+| Knowledge (Local) | Gather Information |
+| Knowledge (Nobility) | Diplomacy |
+| Search | Survival (following tracks) |
+| Sense Motive | Diplomacy |
+| Spellcraft | Use Magic Device (scrolls) |
+| Tumble | Balance, Jump |
+| Use Magic Device | Spellcraft (deciphering scrolls) |
 
-**Opposed Checks**
+Opposed Checks
 When your skill use interacts with another character (e.g., you hide, they look), both roll. The higher result wins. Ties go to the character with the higher modifier.
-*   *Examples:* Hide vs. Spot; Bluff vs. Sense Motive; Move Silently vs. Listen.
+	*Examples:* Hide vs. Spot; Bluff vs. Sense Motive; Move Silently vs. Listen.
 
-**Combining Skill Attempts**
-*   **Individual Events:** Climbing a wall. Each character rolls independently.
-*   **Aid Another:** You can help an ally if you have at least 1 rank in the skill (or are trained). You make a DC 10 check.
-    *   *Success:* Ally gains a **+2 circumstance bonus**.
-    *   *Expertise:* If the helper has 5+ ranks, the bonus may increase (DM discretion).
-    *   *Combat:* You can also Aid Another in combat (Standard Action, AC 10 vs opponent) to give an ally +2 to hit or +2 AC against that opponent.
+Combining Skill Attempts
+	Individual Events: Climbing a wall. Each character rolls independently.
+	Aid Another: You can help an ally if you have at least 1 rank in the skill (or are trained). You make a DC 10 check.
+		*Success:* Ally gains a +2 circumstance bonus.
+		*Expertise:* If the helper has 5+ ranks, the bonus may increase (DM discretion).
+		*Combat:* You can also Aid Another in combat (Standard Action, AC 10 vs opponent) to give an ally +2 to hit or +2 AC against that opponent.
 
 Checks and Success
 	Take 10: When not threatened or distracted, you can opt for a result of 10 on the d20 roll.
@@ -264,101 +264,101 @@ Social Interaction (Bluff, Diplomacy, Intimidate, Gather Info, Sense Motive):
 Forgery (Int):
 	Create fake documents. Opposed by Forgery check of examiner. +8 bonus if you have seen a similar document; -2 penalty if you don't know the handwriting.
 
-***
+*
 
 ### Feats
 Feats represent special tricks, talents, or training that a character has acquired. Unlike skills, which are graded ranks, feats are binary: you either have the feat or you don’t.
 
-**Acquiring Feats**
+Acquiring Feats
 Every character gains at least one feat at 1st level.
-*   **Standard Progression:** 1st level, 3rd, 6th, 9th, 12th, 15th, 18th (every 3 levels).
-*   **Class Bonus Feats:** Fighters, Wizards, and Monks gain specific bonus feats at set levels.
-*   **Human Bonus:** Humans gain 1 extra feat at 1st level.
+	Standard Progression: 1st level, 3rd, 6th, 9th, 12th, 15th, 18th (every 3 levels).
+	Class Bonus Feats: Fighters, Wizards, and Monks gain specific bonus feats at set levels.
+	Human Bonus: Humans gain 1 extra feat at 1st level.
 
-**Prerequisites**
+Prerequisites
 Some feats have requirements (e.g., *Str 13*, *Base Attack Bonus +1*, or another feat like *Dodge*).
-*   You must meet all prerequisites to select the feat.
-*   If you lose a prerequisite (e.g., your Dexterity drops below 13 due to a curse), you lose access to the feat and any other feats that rely on it until the prerequisite is restored.
+	You must meet all prerequisites to select the feat.
+	If you lose a prerequisite (e.g., your Dexterity drops below 13 due to a curse), you lose access to the feat and any other feats that rely on it until the prerequisite is restored.
 
 #### Feat Categories
 While most feats are "General" (usable by anyone), some fall into special categories with specific rules:
 
-*   **Combat Feats:** Often grant special attacks or maneuvers. Fighters may select these as bonus feats.
-*   **Item Creation:** Allow spellcasters to craft magic items (Scrolls, Potions, Arms & Armor). These require an expenditure of XP and Gold.
-*   **Metamagic:** Allow casters to modify spells (e.g., cast silently or with max damage).
-    *   *Cost:* Modifying a spell usually uses a higher-level spell slot.
-    *   *Preparation:* Wizards prepare the modified spell in the higher slot. Sorcerers/Bards take a full-round action to cast a metamagic spell.
-*   **Metapsionic:** The psionic equivalent of Metamagic. Costs psionic focus and extra power points.
-*   **Wild:** Requires the *Wild Shape* ability. Usually costs one daily use of Wild Shape to activate a special effect.
-*   **Divine:** Requires the ability to *Turn/Rebuke Undead*. Costs daily turn attempts to power divine effects.
-*   **Psionic:** Requires a Power Point reserve or Psi-Like abilities. These are supernatural abilities.
+	Combat Feats: Often grant special attacks or maneuvers. Fighters may select these as bonus feats.
+	Item Creation: Allow spellcasters to craft magic items (Scrolls, Potions, Arms & Armor). These require an expenditure of XP and Gold.
+	Metamagic: Allow casters to modify spells (e.g., cast silently or with max damage).
+		*Cost:* Modifying a spell usually uses a higher-level spell slot.
+		*Preparation:* Wizards prepare the modified spell in the higher slot. Sorcerers/Bards take a full-round action to cast a metamagic spell.
+	Metapsionic: The psionic equivalent of Metamagic. Costs psionic focus and extra power points.
+	Wild: Requires the *Wild Shape* ability. Usually costs one daily use of Wild Shape to activate a special effect.
+	Divine: Requires the ability to *Turn/Rebuke Undead*. Costs daily turn attempts to power divine effects.
+	Psionic: Requires a Power Point reserve or Psi-Like abilities. These are supernatural abilities.
 
 #### Common Core Feats Reference
 The following is a list of the most vital feats from the core rules, categorized by function.
 
-**Combat: Melee & Strength**
+Combat: Melee & Strength
 | Feat | Prereqs | Benefit |
 | :--- | :--- | :--- |
-| **Power Attack** | Str 13 | Subtract number from Attack Roll to add to Damage. (2x damage for two-handed weapons). |
-| **Cleave** | Str 13, Power Attack | If you drop a foe, make one immediate extra melee attack against an adjacent foe. |
-| **Improved Bull Rush** | Str 13, Power Attack | +4 bonus on Bull Rush checks; provoke no AoO. |
-| **Improved Sunder** | Str 13, Power Attack | +4 bonus on Sunder checks; provoke no AoO. |
-| **Weapon Focus** | BAB +1, Prof. | **+1 bonus** on Attack Rolls with selected weapon. |
-| **Weapon Specialization** | Fighter Lvl 4 | **+2 bonus** on Damage Rolls with selected weapon. |
-| **Improved Critical** | BAB +8 | Doubles the threat range of a weapon (e.g., 19-20 becomes 17-20). |
+| Power Attack | Str 13 | Subtract number from Attack Roll to add to Damage. (2x damage for two-handed weapons). |
+| Cleave | Str 13, Power Attack | If you drop a foe, make one immediate extra melee attack against an adjacent foe. |
+| Improved Bull Rush | Str 13, Power Attack | +4 bonus on Bull Rush checks; provoke no AoO. |
+| Improved Sunder | Str 13, Power Attack | +4 bonus on Sunder checks; provoke no AoO. |
+| Weapon Focus | BAB +1, Prof. | +1 bonus on Attack Rolls with selected weapon. |
+| Weapon Specialization | Fighter Lvl 4 | +2 bonus on Damage Rolls with selected weapon. |
+| Improved Critical | BAB +8 | Doubles the threat range of a weapon (e.g., 19-20 becomes 17-20). |
 
-**Combat: Agility, Defense, & Ranged**
+Combat: Agility, Defense, & Ranged
 | Feat | Prereqs | Benefit |
 | :--- | :--- | :--- |
-| **Improved Initiative** | — | **+4 bonus** on Initiative checks. |
-| **Dodge** | Dex 13 | +1 Dodge bonus to AC against one designated opponent per round. |
-| **Mobility** | Dex 13, Dodge | +4 Dodge bonus to AC vs. Attacks of Opportunity caused by moving. |
-| **Combat Reflexes** | — | Make additional AoOs equal to Dex mod. Can make AoOs while flat-footed. |
-| **Point Blank Shot** | — | +1 Attack and Damage with ranged weapons within 30 ft. |
-| **Precise Shot** | Point Blank Shot | Shoot into melee without the standard -4 penalty. |
-| **Rapid Shot** | Dex 13, Point Blank | Get one extra ranged attack per round at your highest bonus; all attacks take -2. |
-| **Two-Weapon Fighting** | Dex 15 | Reduces penalties for fighting with two weapons (Primary -2, Offhand -2). |
-| **Weapon Finesse** | BAB +1 | Use Dex modifier instead of Str for attack rolls with light weapons. |
+| Improved Initiative | — | +4 bonus on Initiative checks. |
+| Dodge | Dex 13 | +1 Dodge bonus to AC against one designated opponent per round. |
+| Mobility | Dex 13, Dodge | +4 Dodge bonus to AC vs. Attacks of Opportunity caused by moving. |
+| Combat Reflexes | — | Make additional AoOs equal to Dex mod. Can make AoOs while flat-footed. |
+| Point Blank Shot | — | +1 Attack and Damage with ranged weapons within 30 ft. |
+| Precise Shot | Point Blank Shot | Shoot into melee without the standard -4 penalty. |
+| Rapid Shot | Dex 13, Point Blank | Get one extra ranged attack per round at your highest bonus; all attacks take -2. |
+| Two-Weapon Fighting | Dex 15 | Reduces penalties for fighting with two weapons (Primary -2, Offhand -2). |
+| Weapon Finesse | BAB +1 | Use Dex modifier instead of Str for attack rolls with light weapons. |
 
-**Combat: Unarmed & Maneuvers**
+Combat: Unarmed & Maneuvers
 | Feat | Prereqs | Benefit |
 | :--- | :--- | :--- |
-| **Imp. Unarmed Strike** | — | You are considered armed. Unarmed attacks deal lethal damage and provoke no AoO. |
-| **Improved Grapple** | Dex 13, I.U.S. | +4 bonus on Grapple checks; provoke no AoO. |
-| **Improved Trip** | Int 13, Expertise | +4 bonus on Trip checks; provoke no AoO. If you trip a foe, get a free melee attack. |
-| **Combat Expertise** | Int 13 | Subtract number from Attack Roll to add to AC (max +5). |
+| Imp. Unarmed Strike | — | You are considered armed. Unarmed attacks deal lethal damage and provoke no AoO. |
+| Improved Grapple | Dex 13, I.U.S. | +4 bonus on Grapple checks; provoke no AoO. |
+| Improved Trip | Int 13, Expertise | +4 bonus on Trip checks; provoke no AoO. If you trip a foe, get a free melee attack. |
+| Combat Expertise | Int 13 | Subtract number from Attack Roll to add to AC (max +5). |
 
-**Magic & Spellcasting**
+Magic & Spellcasting
 | Feat | Prereqs | Benefit |
 | :--- | :--- | :--- |
-| **Combat Casting** | — | **+4 bonus** on Concentration checks to cast defensively or while grappled. |
-| **Spell Focus** | — | **+1 to DC** of saving throws for spells of one chosen school (e.g., Evocation). |
-| **Spell Penetration** | — | **+2 bonus** on Caster Level checks to beat Spell Resistance. |
-| **Eschew Materials** | — | Cast spells without cheap material components (<1 gp). |
-| **Silent Spell** | — | Cast spell without verbal components. (+1 Spell Level). |
-| **Still Spell** | — | Cast spell without somatic (gesture) components. (+1 Spell Level). |
-| **Quicken Spell** | — | Cast spell as a Free Action. (+4 Spell Level). |
+| Combat Casting | — | +4 bonus on Concentration checks to cast defensively or while grappled. |
+| Spell Focus | — | +1 to DC of saving throws for spells of one chosen school (e.g., Evocation). |
+| Spell Penetration | — | +2 bonus on Caster Level checks to beat Spell Resistance. |
+| Eschew Materials | — | Cast spells without cheap material components (<1 gp). |
+| Silent Spell | — | Cast spell without verbal components. (+1 Spell Level). |
+| Still Spell | — | Cast spell without somatic (gesture) components. (+1 Spell Level). |
+| Quicken Spell | — | Cast spell as a Free Action. (+4 Spell Level). |
 
-**General & Saving Throws**
+General & Saving Throws
 | Feat | Prereqs | Benefit |
 | :--- | :--- | :--- |
-| **Great Fortitude** | — | **+2 bonus** on Fortitude saves. |
-| **Iron Will** | — | **+2 bonus** on Will saves. |
-| **Lightning Reflexes** | — | **+2 bonus** on Reflex saves. |
-| **Toughness** | — | Gain +3 Hit Points. (Can be taken multiple times). |
-| **Alertness** | — | **+2 bonus** on Listen and Spot checks. |
-| **Skill Focus** | — | **+3 bonus** on checks with one chosen skill. |
-| **Track** | — | Use Survival skill to follow tracks (DC varies by surface/conditions). |
+| Great Fortitude | — | +2 bonus on Fortitude saves. |
+| Iron Will | — | +2 bonus on Will saves. |
+| Lightning Reflexes | — | +2 bonus on Reflex saves. |
+| Toughness | — | Gain +3 Hit Points. (Can be taken multiple times). |
+| Alertness | — | +2 bonus on Listen and Spot checks. |
+| Skill Focus | — | +3 bonus on checks with one chosen skill. |
+| Track | — | Use Survival skill to follow tracks (DC varies by surface/conditions). |
 
-**Item Creation**
+Item Creation
 *Requires caster level of specific item type.*
 | Feat | Item Type |
 | :--- | :--- |
-| **Scribe Scroll** | Create scrolls (Single use spells). Base cost: `Lvl x Caster Lvl x 12.5 gp`. |
-| **Brew Potion** | Create potions (Single use drinkable spells). Max 3rd level. |
-| **Craft Wondrous Item** | Create misc magic items (Boots, Cloaks, Bags). |
-| **Craft Magic Arms & Armor** | Create magic weapons, armor, and shields. |
-| **Craft Wand** | Create wands (50 charges). Max 4th level spells. |
+| Scribe Scroll | Create scrolls (Single use spells). Base cost: `Lvl x Caster Lvl x 12.5 gp`. |
+| Brew Potion | Create potions (Single use drinkable spells). Max 3rd level. |
+| Craft Wondrous Item | Create misc magic items (Boots, Cloaks, Bags). |
+| Craft Magic Arms & Armor | Create magic weapons, armor, and shields. |
+| Craft Wand | Create wands (50 charges). Max 4th level spells. |
 
 # Part III: Exploration & Movement
 
@@ -553,140 +553,140 @@ Arcane vs. Divine
 | Armor | Spell Failure Chance. | Spell Failure Chance (Bard can wear Light). | No Spell Failure. |
 
 Casting Spells
-*   **Concentration:** Required if distracted or damaged while casting.
-    *   *DC:* 10 + Damage Taken + Spell Level.
-    *   *Casting Defensively:* DC 15 + Spell Level (Avoids AoO).
-*   **Casting Time:**
-    *   *1 Standard Action:* Happens immediately.
-    *   *1 Round:* Effect happens at the start of your next turn.
-*   **Components:** Verbal (speak), Somatic (gestures), Material (ingredients/focus), XP (cost).
+	Concentration: Required if distracted or damaged while casting.
+		*DC:* 10 + Damage Taken + Spell Level.
+		*Casting Defensively:* DC 15 + Spell Level (Avoids AoO).
+	Casting Time:
+		*1 Standard Action:* Happens immediately.
+		*1 Round:* Effect happens at the start of your next turn.
+	Components: Verbal (speak), Somatic (gestures), Material (ingredients/focus), XP (cost).
 
 ### Schools of Magic
 Spells are categorized into eight schools, each governing a different type of energy or reality manipulation.
 
-**1. Abjuration (Protection)**
+1. Abjuration (Protection)
 Protective spells. They create physical or magical barriers, negate magical or physical abilities, or banish extraplanar creatures.
-*   *Key Spells:* Shield, Dispel Magic, Protection from Evil, Stoneskin, Antimagic Field.
+	*Key Spells:* Shield, Dispel Magic, Protection from Evil, Stoneskin, Antimagic Field.
 
-**2. Conjuration (Transportation & Creation)**
+2. Conjuration (Transportation & Creation)
 Brings manifestations, creatures, or materials to the caster.
-*   *Calling:* Transports creatures from another plane.
-*   *Creation:* Manipulates matter to create an object or creature.
-*   *Healing:* (Divine only) Channels positive energy to cure.
-*   *Summoning:* Brings a creature to fight for you, then sends it back.
-*   *Teleportation:* Instant travel.
-*   *Key Spells:* Mage Armor, Cure Light Wounds, Summon Monster, Teleport, Wall of Iron.
+	*Calling:* Transports creatures from another plane.
+	*Creation:* Manipulates matter to create an object or creature.
+	*Healing:* (Divine only) Channels positive energy to cure.
+	*Summoning:* Brings a creature to fight for you, then sends it back.
+	*Teleportation:* Instant travel.
+	*Key Spells:* Mage Armor, Cure Light Wounds, Summon Monster, Teleport, Wall of Iron.
 
-**3. Divination (Knowledge)**
+3. Divination (Knowledge)
 Enables the caster to learn secrets long forgotten, predict the future, find hidden things, and foil deceptive spells.
-*   *Key Spells:* Detect Magic, Identify, Scrying, True Seeing, Foresight.
+	*Key Spells:* Detect Magic, Identify, Scrying, True Seeing, Foresight.
 
-**4. Enchantment (Mind-Affecting)**
+4. Enchantment (Mind-Affecting)
 Affects the minds of others, influencing or controlling their behavior.
-*   *Charm:* Changes how the subject views you (e.g., treats you as a friend).
-*   *Compulsion:* Forces the subject to act in some manner.
-*   *Key Spells:* Charm Person, Sleep, Suggestion, Hold Person, Dominate Monster.
+	*Charm:* Changes how the subject views you (e.g., treats you as a friend).
+	*Compulsion:* Forces the subject to act in some manner.
+	*Key Spells:* Charm Person, Sleep, Suggestion, Hold Person, Dominate Monster.
 
-**5. Evocation (Energy)**
+5. Evocation (Energy)
 Manipulates energy or taps an unseen source of power to produce a desired end. Usually destructive.
-*   *Key Spells:* Magic Missile, Fireball, Lightning Bolt, Wall of Force, Bigby’s Hand spells.
+	*Key Spells:* Magic Missile, Fireball, Lightning Bolt, Wall of Force, Bigby’s Hand spells.
 
-**6. Illusion (Deception)**
+6. Illusion (Deception)
 Deceives the senses or minds of others.
-*   *Figment:* Creates a false sensation (auditory/visual).
-*   *Glamer:* Changes a subject’s sensory qualities (invisibility/disguise).
-*   *Shadow:* Uses material from the Plane of Shadow to make semi-real objects.
-*   *Key Spells:* Silent Image, Invisibility, Mirror Image, Major Image, Shadow Evocation.
+	*Figment:* Creates a false sensation (auditory/visual).
+	*Glamer:* Changes a subject’s sensory qualities (invisibility/disguise).
+	*Shadow:* Uses material from the Plane of Shadow to make semi-real objects.
+	*Key Spells:* Silent Image, Invisibility, Mirror Image, Major Image, Shadow Evocation.
 
-**7. Necromancy (Death & Life)**
+7. Necromancy (Death & Life)
 Manipulates the power of death, unlife, and the life force.
-*   *Key Spells:* Cause Fear, Ray of Enfeeblement, Animate Dead, Enervation, Finger of Death.
+	*Key Spells:* Cause Fear, Ray of Enfeeblement, Animate Dead, Enervation, Finger of Death.
 
-**8. Transmutation (Change)**
+8. Transmutation (Change)
 Changes the properties of some creature, thing, or condition.
-*   *Key Spells:* Enlarge Person, Bull's Strength, Fly, Polymorph, Disintegrate, Time Stop.
+	*Key Spells:* Enlarge Person, Bull's Strength, Fly, Polymorph, Disintegrate, Time Stop.
 
-**Universal**
+Universal
 Spells not bound to a specific school.
-*   *Key Spells:* Wish, Limited Wish, Prestidigitation.
+	*Key Spells:* Wish, Limited Wish, Prestidigitation.
 
 ### Cleric Domains
-Clerics choose two domains from their deity’s portfolio. Each domain grants a **Granted Power** and one extra **Domain Spell** slot for each spell level.
+Clerics choose two domains from their deity’s portfolio. Each domain grants a Granted Power and one extra Domain Spell slot for each spell level.
 
-**Common Domains & Powers**
+Common Domains & Powers
 | Domain | Granted Power | Sample Spells |
 | :--- | :--- | :--- |
-| **Air** | Turn Earth/Rebuke Air creatures. | Obscuring Mist, Wind Wall, Control Weather |
-| **Chaos** | Cast Chaos spells at +1 Caster Level. | Protection from Law, Chaos Hammer, Word of Chaos |
-| **Death** | Touch attack: Roll d6 per level. If total > target HP, target dies. | Cause Fear, Animate Dead, Wail of the Banshee |
-| **Destruction** | Smite (+4 hit, +Lvl dmg) 1/day. | Inflict Light Wounds, Shatter, Earthquake |
-| **Earth** | Turn Air/Rebuke Earth creatures. | Magic Stone, Stone Shape, Iron Body |
-| **Evil** | Cast Evil spells at +1 Caster Level. | Protection from Good, Desecrate, Unholy Aura |
-| **Fire** | Turn Water/Rebuke Fire creatures. | Burning Hands, Fireball, Fire Storm |
-| **Good** | Cast Good spells at +1 Caster Level. | Protection from Evil, Holy Smite, Holy Aura |
-| **Healing** | Cast Healing spells at +1 Caster Level. | Cure Light Wounds, Heal, Mass Heal |
-| **Knowledge** | All Knowledge skills are class skills. | Detect Secret Doors, Divination, Foresight |
-| **Law** | Cast Law spells at +1 Caster Level. | Protection from Chaos, Order's Wrath, Dictum |
-| **Luck** | Reroll one d20 roll 1/day. | Aid, Freedom of Movement, Miracle |
-| **Magic** | Use scrolls as Wizard of 1/2 level. | Identify, Dispel Magic, Antimagic Field |
-| **Plant** | Rebuke Plant creatures. | Entangle, Barkskin, Shambler |
-| **Protection** | +1 Resistance bonus to saves per 5 levels (Action: Touch). | Sanctuary, Spell Resistance, Prismatic Sphere |
-| **Strength** | Add Level to Str 1/round per day. | Enlarge Person, Bull's Strength, Stoneskin |
-| **Sun** | Greater Turning (Destroy undead instead of turn) 1/day. | Endure Elements, Searing Light, Sunburst |
-| **Travel** | Freedom of Movement (rounds/level) per day. | Longstrider, Fly, Teleport |
-| **Trickery** | Bluff, Disguise, Hide are class skills. | Disguise Self, Invisibility, Time Stop |
-| **War** | Free Weapon Focus feat in deity's weapon. | Magic Weapon, Divine Power, Power Word Kill |
-| **Water** | Turn Fire/Rebuke Water creatures. | Obscuring Mist, Ice Storm, Horrid Wilting |
+| Air | Turn Earth/Rebuke Air creatures. | Obscuring Mist, Wind Wall, Control Weather |
+| Chaos | Cast Chaos spells at +1 Caster Level. | Protection from Law, Chaos Hammer, Word of Chaos |
+| Death | Touch attack: Roll d6 per level. If total > target HP, target dies. | Cause Fear, Animate Dead, Wail of the Banshee |
+| Destruction | Smite (+4 hit, +Lvl dmg) 1/day. | Inflict Light Wounds, Shatter, Earthquake |
+| Earth | Turn Air/Rebuke Earth creatures. | Magic Stone, Stone Shape, Iron Body |
+| Evil | Cast Evil spells at +1 Caster Level. | Protection from Good, Desecrate, Unholy Aura |
+| Fire | Turn Water/Rebuke Fire creatures. | Burning Hands, Fireball, Fire Storm |
+| Good | Cast Good spells at +1 Caster Level. | Protection from Evil, Holy Smite, Holy Aura |
+| Healing | Cast Healing spells at +1 Caster Level. | Cure Light Wounds, Heal, Mass Heal |
+| Knowledge | All Knowledge skills are class skills. | Detect Secret Doors, Divination, Foresight |
+| Law | Cast Law spells at +1 Caster Level. | Protection from Chaos, Order's Wrath, Dictum |
+| Luck | Reroll one d20 roll 1/day. | Aid, Freedom of Movement, Miracle |
+| Magic | Use scrolls as Wizard of 1/2 level. | Identify, Dispel Magic, Antimagic Field |
+| Plant | Rebuke Plant creatures. | Entangle, Barkskin, Shambler |
+| Protection | +1 Resistance bonus to saves per 5 levels (Action: Touch). | Sanctuary, Spell Resistance, Prismatic Sphere |
+| Strength | Add Level to Str 1/round per day. | Enlarge Person, Bull's Strength, Stoneskin |
+| Sun | Greater Turning (Destroy undead instead of turn) 1/day. | Endure Elements, Searing Light, Sunburst |
+| Travel | Freedom of Movement (rounds/level) per day. | Longstrider, Fly, Teleport |
+| Trickery | Bluff, Disguise, Hide are class skills. | Disguise Self, Invisibility, Time Stop |
+| War | Free Weapon Focus feat in deity's weapon. | Magic Weapon, Divine Power, Power Word Kill |
+| Water | Turn Fire/Rebuke Water creatures. | Obscuring Mist, Ice Storm, Horrid Wilting |
 
 ### Core Spell Lists (Reference)
 A quick-reference list of the most commonly used spells for the primary casting classes.
 
-**Bard Spells**
-*   **0 (Cantrips):** Detect Magic, Light, Lullaby, Mage Hand, Read Magic.
-*   **1st:** Cure Light Wounds, Grease, Hideous Laughter, Silent Image, Sleep.
-*   **2nd:** Blindness/Deafness, Glitterdust, Invisibility, Sound Burst, Suggestion.
-*   **3rd:** Charm Monster, Confusion, Dispel Magic, Haste, Slow.
-*   **4th:** Dimension Door, Dominate Person, Greater Invisibility, Hold Monster.
+Bard Spells
+	0 (Cantrips): Detect Magic, Light, Lullaby, Mage Hand, Read Magic.
+	1st: Cure Light Wounds, Grease, Hideous Laughter, Silent Image, Sleep.
+	2nd: Blindness/Deafness, Glitterdust, Invisibility, Sound Burst, Suggestion.
+	3rd: Charm Monster, Confusion, Dispel Magic, Haste, Slow.
+	4th: Dimension Door, Dominate Person, Greater Invisibility, Hold Monster.
 
-**Cleric Spells**
-*   **0 (Orisons):** Create Water, Detect Magic, Light, Purify Food and Drink.
-*   **1st:** Bane, Bless, Command, Cure Light Wounds, Divine Favor, Sanctuary, Shield of Faith.
-*   **2nd:** Aid, Bull's Strength, Hold Person, Lesser Restoration, Silence, Spiritual Weapon.
-*   **3rd:** Bestow Curse, Dispel Magic, Magic Vestment, Prayer, Speak with Dead.
-*   **4th:** Dismissal, Divine Power, Freedom of Movement, Restoration.
-*   **5th:** Flame Strike, Raise Dead, Righteous Might, True Seeing.
+Cleric Spells
+	0 (Orisons): Create Water, Detect Magic, Light, Purify Food and Drink.
+	1st: Bane, Bless, Command, Cure Light Wounds, Divine Favor, Sanctuary, Shield of Faith.
+	2nd: Aid, Bull's Strength, Hold Person, Lesser Restoration, Silence, Spiritual Weapon.
+	3rd: Bestow Curse, Dispel Magic, Magic Vestment, Prayer, Speak with Dead.
+	4th: Dismissal, Divine Power, Freedom of Movement, Restoration.
+	5th: Flame Strike, Raise Dead, Righteous Might, True Seeing.
 
-**Druid Spells**
-*   **0 (Orisons):** Create Water, Detect Poison, Flare, Know Direction.
-*   **1st:** Cure Light Wounds, Entangle, Faerie Fire, Goodberry, Shillelagh.
-*   **2nd:** Barkskin, Flame Blade, Flaming Sphere, Heat Metal, Resist Energy.
-*   **3rd:** Call Lightning, Meld into Stone, Poison, Protection from Energy.
-*   **4th:** Flame Strike, Ice Storm, Scrying, Spike Stones.
-*   **5th:** Animal Growth, Baleful Polymorph, Call Lightning Storm, Wall of Thorns.
+Druid Spells
+	0 (Orisons): Create Water, Detect Poison, Flare, Know Direction.
+	1st: Cure Light Wounds, Entangle, Faerie Fire, Goodberry, Shillelagh.
+	2nd: Barkskin, Flame Blade, Flaming Sphere, Heat Metal, Resist Energy.
+	3rd: Call Lightning, Meld into Stone, Poison, Protection from Energy.
+	4th: Flame Strike, Ice Storm, Scrying, Spike Stones.
+	5th: Animal Growth, Baleful Polymorph, Call Lightning Storm, Wall of Thorns.
 
-**Paladin Spells**
-*   **1st:** Bless, Bless Weapon, Cure Light Wounds, Divine Favor.
-*   **2nd:** Bull's Strength, Delay Poison, Eagle's Splendor, Remove Paralysis.
-*   **3rd:** Cure Moderate Wounds, Discern Lies, Heal Mount, Magic Circle against Evil.
-*   **4th:** Break Enchantment, Death Ward, Holy Sword, Neutralize Poison.
+Paladin Spells
+	1st: Bless, Bless Weapon, Cure Light Wounds, Divine Favor.
+	2nd: Bull's Strength, Delay Poison, Eagle's Splendor, Remove Paralysis.
+	3rd: Cure Moderate Wounds, Discern Lies, Heal Mount, Magic Circle against Evil.
+	4th: Break Enchantment, Death Ward, Holy Sword, Neutralize Poison.
 
-**Ranger Spells**
-*   **1st:** Alarm, Animal Messenger, Entangle, Longstrider, Pass without Trace.
-*   **2nd:** Barkskin, Cat's Grace, Protection from Energy, Snare.
-*   **3rd:** Darkvision, Neutralize Poison, Remove Disease, Water Walk.
-*   **4th:** Commune with Nature, Freedom of Movement, Nondetection.
+Ranger Spells
+	1st: Alarm, Animal Messenger, Entangle, Longstrider, Pass without Trace.
+	2nd: Barkskin, Cat's Grace, Protection from Energy, Snare.
+	3rd: Darkvision, Neutralize Poison, Remove Disease, Water Walk.
+	4th: Commune with Nature, Freedom of Movement, Nondetection.
 
-**Sorcerer / Wizard Spells**
-*   **0 (Cantrips)::** Acid Splash, Daze, Detect Magic, Light, Mage Hand, Ray of Frost.
-*   **1st:** Charm Person, Color Spray, Identify, Magic Missile, Shield, Sleep, True Strike.
-*   **2nd:** Invisibility, Mirror Image, Scorching Ray, See Invisibility, Web.
-*   **3rd:** Dispel Magic, Fireball, Fly, Haste, Lightning Bolt, Suggestion.
-*   **4th:** Black Tentacles, Dimension Door, Greater Invisibility, Polymorph, Stoneskin.
-*   **5th:** Cloudkill, Cone of Cold, Hold Monster, Teleport, Wall of Force.
-*   **6th:** Chain Lightning, Disintegrate, Greater Dispel Magic, True Seeing.
-*   **7th:** Finger of Death, Limited Wish, Prismatic Spray, Teleport Object.
-*   **8th:** Horrid Wilting, Maze, Mind Blank, Power Word Stun.
-*   **9th:** Gate, Meteor Swarm, Power Word Kill, Time Stop, Wish.
+Sorcerer / Wizard Spells
+	0 (Cantrips):: Acid Splash, Daze, Detect Magic, Light, Mage Hand, Ray of Frost.
+	1st: Charm Person, Color Spray, Identify, Magic Missile, Shield, Sleep, True Strike.
+	2nd: Invisibility, Mirror Image, Scorching Ray, See Invisibility, Web.
+	3rd: Dispel Magic, Fireball, Fly, Haste, Lightning Bolt, Suggestion.
+	4th: Black Tentacles, Dimension Door, Greater Invisibility, Polymorph, Stoneskin.
+	5th: Cloudkill, Cone of Cold, Hold Monster, Teleport, Wall of Force.
+	6th: Chain Lightning, Disintegrate, Greater Dispel Magic, True Seeing.
+	7th: Finger of Death, Limited Wish, Prismatic Spray, Teleport Object.
+	8th: Horrid Wilting, Maze, Mind Blank, Power Word Stun.
+	9th: Gate, Meteor Swarm, Power Word Kill, Time Stop, Wish.
 
 
 
@@ -697,53 +697,53 @@ While Vancian magic (Slots and Preparation) is the standard, the D&D universe su
 ### 1. Psionics (Mind Magic)
 Psionics is the art of tapping into internal mental reserves rather than external planes or deities.
 
-**The Core Mechanic: Power Points**
-Instead of spell slots, Psions and Psychic Warriors use a pool of **Power Points (PP)**.
-*   **Cost:** A 1st-level power costs 1 PP. A 2nd-level power costs 3 PP. Formula roughly: `(Power Level x 2) - 1`.
-*   **Manifester Level Cap:** You cannot spend more PP on a single manifestation than your Manifester Level. (e.g., A 3rd-level Psion can spend max 3 PP).
-*   **Augmentation:** Many powers scale. *Energy Ray* deals 1d6 damage for 1 PP. For every extra 1 PP spent, it deals +1d6 damage.
+The Core Mechanic: Power Points
+Instead of spell slots, Psions and Psychic Warriors use a pool of Power Points (PP).
+	Cost: A 1st-level power costs 1 PP. A 2nd-level power costs 3 PP. Formula roughly: `(Power Level x 2) - 1`.
+	Manifester Level Cap: You cannot spend more PP on a single manifestation than your Manifester Level. (e.g., A 3rd-level Psion can spend max 3 PP).
+	Augmentation: Many powers scale. *Energy Ray* deals 1d6 damage for 1 PP. For every extra 1 PP spent, it deals +1d6 damage.
 
-**Psionic Focus**
+Psionic Focus
 A state of mental readiness.
-*   **Gain Focus:** Full-round action (Concentration DC 20).
-*   **Maintain Focus:** You stay focused until you expend it or fall unconscious.
-*   **Expend Focus:** You can "blow" your focus to "Take 15" on a Concentration check or activate a Psionic Feat.
+	Gain Focus: Full-round action (Concentration DC 20).
+	Maintain Focus: You stay focused until you expend it or fall unconscious.
+	Expend Focus: You can "blow" your focus to "Take 15" on a Concentration check or activate a Psionic Feat.
 
-**Disciplines**
-*   *Clairsentience* (Seer): Knowledge/Scrying.
-*   *Metacreativity* (Shaper): Ectoplasm constructs.
-*   *Psychokinesis* (Kineticist): Energy manipulation.
-*   *Psychometabolism* (Egoist): Body modification/Healing.
-*   *Psychoportation* (Nomad): Teleportation/Speed.
-*   *Telepathy* (Telepath): Mind control/Communication.
+Disciplines
+	*Clairsentience* (Seer): Knowledge/Scrying.
+	*Metacreativity* (Shaper): Ectoplasm constructs.
+	*Psychokinesis* (Kineticist): Energy manipulation.
+	*Psychometabolism* (Egoist): Body modification/Healing.
+	*Psychoportation* (Nomad): Teleportation/Speed.
+	*Telepathy* (Telepath): Mind control/Communication.
 
 ---
 
 ### 2. Invocations (Warlocks & Dragonfire Adepts)
-Warlocks do not cast spells; they use **Invocations**, representing a permanent alteration of their being.
+Warlocks do not cast spells; they use Invocations, representing a permanent alteration of their being.
 
-*   **Unlimited Use:** Invocations can be used at-will. There is no daily limit.
-*   **Spell-Like Abilities:** They provoke AoOs and are subject to Spell Resistance.
-*   **Eldritch Blast:** The Warlock's primary attack. A ranged touch attack dealing raw magical damage (1d6 at 1st level, increasing every few levels).
-*   **Shapes & Essences:**
-    *   *Blast Shape:* Modifies the range/area (e.g., *Eldritch Spear* increases range to 250 ft; *Eldritch Doom* becomes an area blast).
-    *   *Eldritch Essence:* Modifies the effect (e.g., *Brimstone Blast* deals fire damage; *Utterdark Blast* deals negative levels).
+	Unlimited Use: Invocations can be used at-will. There is no daily limit.
+	Spell-Like Abilities: They provoke AoOs and are subject to Spell Resistance.
+	Eldritch Blast: The Warlock's primary attack. A ranged touch attack dealing raw magical damage (1d6 at 1st level, increasing every few levels).
+	Shapes & Essences:
+		*Blast Shape:* Modifies the range/area (e.g., *Eldritch Spear* increases range to 250 ft; *Eldritch Doom* becomes an area blast).
+		*Eldritch Essence:* Modifies the effect (e.g., *Brimstone Blast* deals fire damage; *Utterdark Blast* deals negative levels).
 
 ---
 
 ### 3. Blade Magic (The Sublime Way)
 Found in the *Tome of Battle*, this system replaces standard "I attack" combat with martial maneuvers (Warblade, Swordsage, Crusader).
 
-**Maneuver Mechanics**
-*   **Maneuvers:** Special moves (Strikes, Boosts, Counters).
-*   **Stances:** Passive benefits active as long as you remain in the stance.
-*   **Readied Maneuvers:** You know many maneuvers but can only have a few "Readied" (loaded in your mind) at once.
-*   **Recovery:** Once used, a maneuver is expended (like a spell).
-    *   *Warblade:* Attack an enemy and spend a swift action to recover all.
-    *   *Swordsage:* Spend a full-round action to recover one.
-    *   *Crusader:* Maneuvers are granted randomly each round from a deck-building mechanic.
+Maneuver Mechanics
+	Maneuvers: Special moves (Strikes, Boosts, Counters).
+	Stances: Passive benefits active as long as you remain in the stance.
+	Readied Maneuvers: You know many maneuvers but can only have a few "Readied" (loaded in your mind) at once.
+	Recovery: Once used, a maneuver is expended (like a spell).
+		*Warblade:* Attack an enemy and spend a swift action to recover all.
+		*Swordsage:* Spend a full-round action to recover one.
+		*Crusader:* Maneuvers are granted randomly each round from a deck-building mechanic.
 
-**The Nine Disciplines**
+The Nine Disciplines
 1.  *Desert Wind:* Fire and speed (Scimitar/Spear).
 2.  *Devoted Spirit:* Healing and alignment (Hammer/Falchion).
 3.  *Diamond Mind:* Concentration and time (Rapier/Katana).
@@ -757,49 +757,49 @@ Found in the *Tome of Battle*, this system replaces standard "I attack" combat w
 ---
 
 ### 4. Pact Magic (Binders)
-Binders do not worship gods; they make deals with **Vestiges**—remnants of entities that no longer exist in reality.
+Binders do not worship gods; they make deals with Vestiges—remnants of entities that no longer exist in reality.
 
-**Binding Mechanics**
-*   **Sealing the Pact:** A 1-minute ritual to draw a seal and summon the Vestige. Requires a Binding Check (1d20 + Level + Cha).
-*   **The Pact:**
-    *   *Good Pact:* You beat the DC. You get the powers and suppress the Vestige's influence.
-    *   *Poor Pact:* You fail the DC. You get the powers but suffer a physical "Sign" and a behavioral "Influence" (e.g., you cannot lie).
-*   **Cooldowns:** Most Vestige powers are at-will but have a cooldown (usually 5 rounds) between uses.
+Binding Mechanics
+	Sealing the Pact: A 1-minute ritual to draw a seal and summon the Vestige. Requires a Binding Check (1d20 + Level + Cha).
+	The Pact:
+		*Good Pact:* You beat the DC. You get the powers and suppress the Vestige's influence.
+		*Poor Pact:* You fail the DC. You get the powers but suffer a physical "Sign" and a behavioral "Influence" (e.g., you cannot lie).
+	Cooldowns: Most Vestige powers are at-will but have a cooldown (usually 5 rounds) between uses.
 
-**Sample Vestiges**
-*   *Amon:* Grants darkvision, a ram attack, and fire breath.
-*   *Leraje:* Grants expertise with bows and ricochet shots.
-*   *Naberius:* Grants fast ability healing and the ability to use skills untrained.
+Sample Vestiges
+	*Amon:* Grants darkvision, a ram attack, and fire breath.
+	*Leraje:* Grants expertise with bows and ricochet shots.
+	*Naberius:* Grants fast ability healing and the ability to use skills untrained.
 
 ---
 
 ### 5. Shadow Magic (Shadowcasters)
 Users manipulate the plane of shadow. It is a degradation of traditional magic—harder to learn, but eventually becoming effortless.
 
-**Paths and Mysteries**
-Spells are called **Mysteries**. They are grouped into "Paths" (sets of 3).
-1.  **Apprentice Mysteries:** Work like spells (components, provoke AoO).
-2.  **Initiate Mysteries:** At 7th level, Apprentice mysteries become *Spell-Like Abilities* (no components, 2 uses/day).
-3.  **Master Mysteries:** At 13th level, Apprentice become *Supernatural Abilities* (no AoO, ignore SR, 3 uses/day).
+Paths and Mysteries
+Spells are called Mysteries. They are grouped into "Paths" (sets of 3).
+1.  Apprentice Mysteries: Work like spells (components, provoke AoO).
+2.  Initiate Mysteries: At 7th level, Apprentice mysteries become *Spell-Like Abilities* (no components, 2 uses/day).
+3.  Master Mysteries: At 13th level, Apprentice become *Supernatural Abilities* (no AoO, ignore SR, 3 uses/day).
 
-**The Umbral Sight:** Shadowcasters gain superior Darkvision that can eventually see through magical darkness.
+The Umbral Sight: Shadowcasters gain superior Darkvision that can eventually see through magical darkness.
 
 ---
 
 ### 6. Truename Magic (Truenamers)
-The universe is spoken into existence. By speaking the **Truename** of a creature or object, you can alter it.
+The universe is spoken into existence. By speaking the Truename of a creature or object, you can alter it.
 
-**The Truespeak Check**
-Magic requires a skill check: **Truespeak (Int)**.
-*   **The DC:** `15 + (2 x Target's CR)` or `15 + (2 x Target's Hit Dice)`.
-*   **The Law of Resistance:** Every time you successfully speak a Truename, the DC to speak that *same* Truename increases by +2 for the rest of the day.
-*   **Universal Truenames:** You can target objects or locations with general names, but personal Truenames (requires research) are more powerful.
+The Truespeak Check
+Magic requires a skill check: Truespeak (Int).
+	The DC: `15 + (2 x Target's CR)` or `15 + (2 x Target's Hit Dice)`.
+	The Law of Resistance: Every time you successfully speak a Truename, the DC to speak that *same* Truename increases by +2 for the rest of the day.
+	Universal Truenames: You can target objects or locations with general names, but personal Truenames (requires research) are more powerful.
 
-**Utterances**
+Utterances
 These are the "spells" of Truenaming.
-*   *Lexicon of the Evolving Mind:* Buffs/Debuffs creatures. (e.g., *Word of Nurturing* heals; *Inertia Surge* stops movement).
-*   *Lexicon of the Crafted Tool:* Alters objects. (e.g., *Weapon of Energy* adds fire/cold to a sword).
-*   *Lexicon of the Perfected Map:* Alters the environment. (e.g., *Fog of Fear*).
+	*Lexicon of the Evolving Mind:* Buffs/Debuffs creatures. (e.g., *Word of Nurturing* heals; *Inertia Surge* stops movement).
+	*Lexicon of the Crafted Tool:* Alters objects. (e.g., *Weapon of Energy* adds fire/cold to a sword).
+	*Lexicon of the Perfected Map:* Alters the environment. (e.g., *Fog of Fear*).
 
 # Part V-B: Alternative Magic Systems
 
@@ -808,53 +808,53 @@ While Vancian magic (Slots and Preparation) is the standard, the D&D universe su
 ### 1. Psionics (Mind Magic)
 Psionics is the art of tapping into internal mental reserves rather than external planes or deities.
 
-**The Core Mechanic: Power Points**
-Instead of spell slots, Psions and Psychic Warriors use a pool of **Power Points (PP)**.
-*   **Cost:** A 1st-level power costs 1 PP. A 2nd-level power costs 3 PP. Formula roughly: `(Power Level x 2) - 1`.
-*   **Manifester Level Cap:** You cannot spend more PP on a single manifestation than your Manifester Level. (e.g., A 3rd-level Psion can spend max 3 PP).
-*   **Augmentation:** Many powers scale. *Energy Ray* deals 1d6 damage for 1 PP. For every extra 1 PP spent, it deals +1d6 damage.
+The Core Mechanic: Power Points
+Instead of spell slots, Psions and Psychic Warriors use a pool of Power Points (PP).
+	Cost: A 1st-level power costs 1 PP. A 2nd-level power costs 3 PP. Formula roughly: `(Power Level x 2) - 1`.
+	Manifester Level Cap: You cannot spend more PP on a single manifestation than your Manifester Level. (e.g., A 3rd-level Psion can spend max 3 PP).
+	Augmentation: Many powers scale. *Energy Ray* deals 1d6 damage for 1 PP. For every extra 1 PP spent, it deals +1d6 damage.
 
-**Psionic Focus**
+Psionic Focus
 A state of mental readiness.
-*   **Gain Focus:** Full-round action (Concentration DC 20).
-*   **Maintain Focus:** You stay focused until you expend it or fall unconscious.
-*   **Expend Focus:** You can "blow" your focus to "Take 15" on a Concentration check or activate a Psionic Feat.
+	Gain Focus: Full-round action (Concentration DC 20).
+	Maintain Focus: You stay focused until you expend it or fall unconscious.
+	Expend Focus: You can "blow" your focus to "Take 15" on a Concentration check or activate a Psionic Feat.
 
-**Disciplines**
-*   *Clairsentience* (Seer): Knowledge/Scrying.
-*   *Metacreativity* (Shaper): Ectoplasm constructs.
-*   *Psychokinesis* (Kineticist): Energy manipulation.
-*   *Psychometabolism* (Egoist): Body modification/Healing.
-*   *Psychoportation* (Nomad): Teleportation/Speed.
-*   *Telepathy* (Telepath): Mind control/Communication.
+Disciplines
+	*Clairsentience* (Seer): Knowledge/Scrying.
+	*Metacreativity* (Shaper): Ectoplasm constructs.
+	*Psychokinesis* (Kineticist): Energy manipulation.
+	*Psychometabolism* (Egoist): Body modification/Healing.
+	*Psychoportation* (Nomad): Teleportation/Speed.
+	*Telepathy* (Telepath): Mind control/Communication.
 
 ---
 
 ### 2. Invocations (Warlocks & Dragonfire Adepts)
-Warlocks do not cast spells; they use **Invocations**, representing a permanent alteration of their being.
+Warlocks do not cast spells; they use Invocations, representing a permanent alteration of their being.
 
-*   **Unlimited Use:** Invocations can be used at-will. There is no daily limit.
-*   **Spell-Like Abilities:** They provoke AoOs and are subject to Spell Resistance.
-*   **Eldritch Blast:** The Warlock's primary attack. A ranged touch attack dealing raw magical damage (1d6 at 1st level, increasing every few levels).
-*   **Shapes & Essences:**
-    *   *Blast Shape:* Modifies the range/area (e.g., *Eldritch Spear* increases range to 250 ft; *Eldritch Doom* becomes an area blast).
-    *   *Eldritch Essence:* Modifies the effect (e.g., *Brimstone Blast* deals fire damage; *Utterdark Blast* deals negative levels).
+	Unlimited Use: Invocations can be used at-will. There is no daily limit.
+	Spell-Like Abilities: They provoke AoOs and are subject to Spell Resistance.
+	Eldritch Blast: The Warlock's primary attack. A ranged touch attack dealing raw magical damage (1d6 at 1st level, increasing every few levels).
+	Shapes & Essences:
+		*Blast Shape:* Modifies the range/area (e.g., *Eldritch Spear* increases range to 250 ft; *Eldritch Doom* becomes an area blast).
+		*Eldritch Essence:* Modifies the effect (e.g., *Brimstone Blast* deals fire damage; *Utterdark Blast* deals negative levels).
 
 ---
 
 ### 3. Blade Magic (The Sublime Way)
 Found in the *Tome of Battle*, this system replaces standard "I attack" combat with martial maneuvers (Warblade, Swordsage, Crusader).
 
-**Maneuver Mechanics**
-*   **Maneuvers:** Special moves (Strikes, Boosts, Counters).
-*   **Stances:** Passive benefits active as long as you remain in the stance.
-*   **Readied Maneuvers:** You know many maneuvers but can only have a few "Readied" (loaded in your mind) at once.
-*   **Recovery:** Once used, a maneuver is expended (like a spell).
-    *   *Warblade:* Attack an enemy and spend a swift action to recover all.
-    *   *Swordsage:* Spend a full-round action to recover one.
-    *   *Crusader:* Maneuvers are granted randomly each round from a deck-building mechanic.
+Maneuver Mechanics
+	Maneuvers: Special moves (Strikes, Boosts, Counters).
+	Stances: Passive benefits active as long as you remain in the stance.
+	Readied Maneuvers: You know many maneuvers but can only have a few "Readied" (loaded in your mind) at once.
+	Recovery: Once used, a maneuver is expended (like a spell).
+		*Warblade:* Attack an enemy and spend a swift action to recover all.
+		*Swordsage:* Spend a full-round action to recover one.
+		*Crusader:* Maneuvers are granted randomly each round from a deck-building mechanic.
 
-**The Nine Disciplines**
+The Nine Disciplines
 1.  *Desert Wind:* Fire and speed (Scimitar/Spear).
 2.  *Devoted Spirit:* Healing and alignment (Hammer/Falchion).
 3.  *Diamond Mind:* Concentration and time (Rapier/Katana).
@@ -868,147 +868,147 @@ Found in the *Tome of Battle*, this system replaces standard "I attack" combat w
 ---
 
 ### 4. Pact Magic (Binders)
-Binders do not worship gods; they make deals with **Vestiges**—remnants of entities that no longer exist in reality.
+Binders do not worship gods; they make deals with Vestiges—remnants of entities that no longer exist in reality.
 
-**Binding Mechanics**
-*   **Sealing the Pact:** A 1-minute ritual to draw a seal and summon the Vestige. Requires a Binding Check (1d20 + Level + Cha).
-*   **The Pact:**
-    *   *Good Pact:* You beat the DC. You get the powers and suppress the Vestige's influence.
-    *   *Poor Pact:* You fail the DC. You get the powers but suffer a physical "Sign" and a behavioral "Influence" (e.g., you cannot lie).
-*   **Cooldowns:** Most Vestige powers are at-will but have a cooldown (usually 5 rounds) between uses.
+Binding Mechanics
+	Sealing the Pact: A 1-minute ritual to draw a seal and summon the Vestige. Requires a Binding Check (1d20 + Level + Cha).
+	The Pact:
+		*Good Pact:* You beat the DC. You get the powers and suppress the Vestige's influence.
+		*Poor Pact:* You fail the DC. You get the powers but suffer a physical "Sign" and a behavioral "Influence" (e.g., you cannot lie).
+	Cooldowns: Most Vestige powers are at-will but have a cooldown (usually 5 rounds) between uses.
 
-**Sample Vestiges**
-*   *Amon:* Grants darkvision, a ram attack, and fire breath.
-*   *Leraje:* Grants expertise with bows and ricochet shots.
-*   *Naberius:* Grants fast ability healing and the ability to use skills untrained.
+Sample Vestiges
+	*Amon:* Grants darkvision, a ram attack, and fire breath.
+	*Leraje:* Grants expertise with bows and ricochet shots.
+	*Naberius:* Grants fast ability healing and the ability to use skills untrained.
 
 ---
 
 ### 5. Shadow Magic (Shadowcasters)
 Users manipulate the plane of shadow. It is a degradation of traditional magic—harder to learn, but eventually becoming effortless.
 
-**Paths and Mysteries**
-Spells are called **Mysteries**. They are grouped into "Paths" (sets of 3).
-1.  **Apprentice Mysteries:** Work like spells (components, provoke AoO).
-2.  **Initiate Mysteries:** At 7th level, Apprentice mysteries become *Spell-Like Abilities* (no components, 2 uses/day).
-3.  **Master Mysteries:** At 13th level, Apprentice become *Supernatural Abilities* (no AoO, ignore SR, 3 uses/day).
+Paths and Mysteries
+Spells are called Mysteries. They are grouped into "Paths" (sets of 3).
+1.  Apprentice Mysteries: Work like spells (components, provoke AoO).
+2.  Initiate Mysteries: At 7th level, Apprentice mysteries become *Spell-Like Abilities* (no components, 2 uses/day).
+3.  Master Mysteries: At 13th level, Apprentice become *Supernatural Abilities* (no AoO, ignore SR, 3 uses/day).
 
-**The Umbral Sight:** Shadowcasters gain superior Darkvision that can eventually see through magical darkness.
+The Umbral Sight: Shadowcasters gain superior Darkvision that can eventually see through magical darkness.
 
 ---
 
 ### 6. Truename Magic (Truenamers)
-The universe is spoken into existence. By speaking the **Truename** of a creature or object, you can alter it.
+The universe is spoken into existence. By speaking the Truename of a creature or object, you can alter it.
 
-**The Truespeak Check**
-Magic requires a skill check: **Truespeak (Int)**.
-*   **The DC:** `15 + (2 x Target's CR)` or `15 + (2 x Target's Hit Dice)`.
-*   **The Law of Resistance:** Every time you successfully speak a Truename, the DC to speak that *same* Truename increases by +2 for the rest of the day.
-*   **Universal Truenames:** You can target objects or locations with general names, but personal Truenames (requires research) are more powerful.
+The Truespeak Check
+Magic requires a skill check: Truespeak (Int).
+	The DC: `15 + (2 x Target's CR)` or `15 + (2 x Target's Hit Dice)`.
+	The Law of Resistance: Every time you successfully speak a Truename, the DC to speak that *same* Truename increases by +2 for the rest of the day.
+	Universal Truenames: You can target objects or locations with general names, but personal Truenames (requires research) are more powerful.
 
-**Utterances**
+Utterances
 These are the "spells" of Truenaming.
-*   *Lexicon of the Evolving Mind:* Buffs/Debuffs creatures. (e.g., *Word of Nurturing* heals; *Inertia Surge* stops movement).
-*   *Lexicon of the Crafted Tool:* Alters objects. (e.g., *Weapon of Energy* adds fire/cold to a sword).
-*   *Lexicon of the Perfected Map:* Alters the environment. (e.g., *Fog of Fear*).
+	*Lexicon of the Evolving Mind:* Buffs/Debuffs creatures. (e.g., *Word of Nurturing* heals; *Inertia Surge* stops movement).
+	*Lexicon of the Crafted Tool:* Alters objects. (e.g., *Weapon of Energy* adds fire/cold to a sword).
+	*Lexicon of the Perfected Map:* Alters the environment. (e.g., *Fog of Fear*).
 
 
 # Part VI: Monsters & Bestiary
 
 ### Reading the Monster Entry
-*   **Challenge Rating (CR):** A monster’s CR tells you the level of the party for which it is a good challenge. A CR 5 monster is an appropriate challenge for a party of four 5th-level characters.
-*   **Hit Dice (HD):** Monsters don't just have HP; they have Hit Dice based on their type (e.g., Dragons use d12, Fey use d6). This determines their Base Attack Bonus and Saves.
-*   **Alignment:** The statistical norm for the creature. "Always Chaotic Evil" means it is innate (Demons). "Usually Neutral" means exceptions are common.
-*   **Treasure:** What loot the monster carries.
-    *   *Standard:* Average loot for its CR.
-    *   *Double/Triple:* Rich monsters (Dragons).
-    *   *None:* Animals, Constructs.
+	Challenge Rating (CR): A monster’s CR tells you the level of the party for which it is a good challenge. A CR 5 monster is an appropriate challenge for a party of four 5th-level characters.
+	Hit Dice (HD): Monsters don't just have HP; they have Hit Dice based on their type (e.g., Dragons use d12, Fey use d6). This determines their Base Attack Bonus and Saves.
+	Alignment: The statistical norm for the creature. "Always Chaotic Evil" means it is innate (Demons). "Usually Neutral" means exceptions are common.
+	Treasure: What loot the monster carries.
+		*Standard:* Average loot for its CR.
+		*Double/Triple:* Rich monsters (Dragons).
+		*None:* Animals, Constructs.
 
 ### Monster Types
 A monster's "Type" dictates its physiology, Hit Die, Attack Bonus, and Saving Throws.
 
 | Type | Hit Die | BAB | Good Saves | Traits & Immunities |
 | :--- | :--- | :--- | :--- | :--- |
-| **Aberration** | d8 | 3/4 | Will | Darkvision 60ft. Weird anatomy. |
-| **Animal** | d8 | 3/4 | Fort, Ref | Int 1 or 2. Low-light vision. Neutral alignment. |
-| **Construct** | d10 | 3/4 | — | No Con score. Immunity to mind-affecting, poison, crit hits, nonlethal dmg. |
-| **Dragon** | d12 | Full | All | Darkvision 60ft, Low-light. Immunity to sleep/paralysis. |
-| **Fey** | d6 | 1/2 | Ref, Will | Low-light vision. Proficient with simple weapons. |
-| **Giant** | d8 | 3/4 | Fort | Low-light vision. Rock throwing/catching. |
-| **Humanoid** | d8 | 3/4 | Varies | Standard races (Orcs, Elves). Proficient with class weapons. |
-| **Magical Beast** | d10 | Full | Fort, Ref | Darkvision 60ft, Low-light. Animals with supernatural powers. |
-| **Monstrous Humanoid** | d8 | Full | Ref, Will | Darkvision 60ft. (e.g., Minotaur, Medusa). |
-| **Ooze** | d10 | 3/4 | — | Mindless. Blind (Blindsight). Immune to crits, poison, sleep, polymorph. |
-| **Outsider** | d8 | Full | All | Darkvision 60ft. Cannot be raised/resurrected (soul is the body). |
-| **Plant** | d8 | 3/4 | Fort | Immunity to mind-affecting, poison, sleep, paralysis, crits. |
-| **Undead** | d12 | 1/2 | Will | No Con score. Immune to mind-affecting, poison, crits, nonlethal, fatigue. |
-| **Vermin** | d8 | 3/4 | Fort | Mindless. Darkvision 60ft. |
+| Aberration | d8 | 3/4 | Will | Darkvision 60ft. Weird anatomy. |
+| Animal | d8 | 3/4 | Fort, Ref | Int 1 or 2. Low-light vision. Neutral alignment. |
+| Construct | d10 | 3/4 | — | No Con score. Immunity to mind-affecting, poison, crit hits, nonlethal dmg. |
+| Dragon | d12 | Full | All | Darkvision 60ft, Low-light. Immunity to sleep/paralysis. |
+| Fey | d6 | 1/2 | Ref, Will | Low-light vision. Proficient with simple weapons. |
+| Giant | d8 | 3/4 | Fort | Low-light vision. Rock throwing/catching. |
+| Humanoid | d8 | 3/4 | Varies | Standard races (Orcs, Elves). Proficient with class weapons. |
+| Magical Beast | d10 | Full | Fort, Ref | Darkvision 60ft, Low-light. Animals with supernatural powers. |
+| Monstrous Humanoid | d8 | Full | Ref, Will | Darkvision 60ft. (e.g., Minotaur, Medusa). |
+| Ooze | d10 | 3/4 | — | Mindless. Blind (Blindsight). Immune to crits, poison, sleep, polymorph. |
+| Outsider | d8 | Full | All | Darkvision 60ft. Cannot be raised/resurrected (soul is the body). |
+| Plant | d8 | 3/4 | Fort | Immunity to mind-affecting, poison, sleep, paralysis, crits. |
+| Undead | d12 | 1/2 | Will | No Con score. Immune to mind-affecting, poison, crits, nonlethal, fatigue. |
+| Vermin | d8 | 3/4 | Fort | Mindless. Darkvision 60ft. |
 
 ### Improving Monsters
 DMs can modify monsters to make them tougher without switching to a different creature.
 
-**1. Advancement (Adding Hit Dice)**
+1. Advancement (Adding Hit Dice)
 You can simply add more Hit Dice to a monster.
-*   **Effect:** Increases HP, BAB, Saves, Skill Points, and Feats.
-*   **Size Increase:** Adding enough HD often increases a creature's size (e.g., Large to Huge).
-    *   *Size Change Stats:* Gaining size usually grants **Str +8, Con +4, Natural Armor +2**, but applies **Dex -2, AC -1, Attack -1**.
+	Effect: Increases HP, BAB, Saves, Skill Points, and Feats.
+	Size Increase: Adding enough HD often increases a creature's size (e.g., Large to Huge).
+		*Size Change Stats:* Gaining size usually grants Str +8, Con +4, Natural Armor +2, but applies Dex -2, AC -1, Attack -1.
 
-**2. Adding Class Levels**
+2. Adding Class Levels
 Monsters with Int 3 or higher can take class levels (like Fighter or Sorcerer).
-*   **Associated Class:** A class that fits the monster's strengths (e.g., Ogre Barbarian). Adds +1 CR per level.
-*   **Non-Associated Class:** A class that doesn't play to strengths (e.g., Ogre Wizard). Adds +1/2 CR per level until the class level equals the monster's original HD.
+	Associated Class: A class that fits the monster's strengths (e.g., Ogre Barbarian). Adds +1 CR per level.
+	Non-Associated Class: A class that doesn't play to strengths (e.g., Ogre Wizard). Adds +1/2 CR per level until the class level equals the monster's original HD.
 
-**3. Templates**
+3. Templates
 Templates are overlays that change a creature's type and stats.
-*   **Acquired Template:** Added to an existing creature (e.g., *Vampire, Lich, Lycanthrope*).
-*   **Inherited Template:** Born with the trait (e.g., *Half-Dragon, Celestial, Fiendish*).
-*   *Example:* Applying the **Skeleton** template to an Ogre makes it Undead, removes its Con score/Int score, and gives it immunity to cold.
+	Acquired Template: Added to an existing creature (e.g., *Vampire, Lich, Lycanthrope*).
+	Inherited Template: Born with the trait (e.g., *Half-Dragon, Celestial, Fiendish*).
+	*Example:* Applying the Skeleton template to an Ogre makes it Undead, removes its Con score/Int score, and gives it immunity to cold.
 
 ### Common Special Abilities
-*   **Damage Reduction (DR):** Ignores damage unless weapon is specific type.
-    *   *Notation:* DR 5/Silver (Ignores 5 damage unless weapon is silver).
-    *   *Types:* Magic, Cold Iron, Adamantine, Alignment (Good/Evil), Slashing/Bludgeoning.
-*   **Spell Resistance (SR):** The AC against magic. Caster rolls `d20 + Caster Level` to beat SR.
-*   **Blindsense/Blindsight:** Noticing things without visual sight.
-*   **Scent:** Detect opponents by smell within 30ft.
-*   **Breath Weapon (Su):** Reflex save for half damage. usually usable once every 1d4 rounds.
-*   **Frightful Presence (Ex):** Opponents within range must succeed on a Will save or become Shaken/Panicked.
-*   **Regeneration (Ex):** Damage is treated as nonlethal. Creature heals automatically each round. Only specific damage types (Fire/Acid) deal lethal damage that stops regeneration.
+	Damage Reduction (DR): Ignores damage unless weapon is specific type.
+		*Notation:* DR 5/Silver (Ignores 5 damage unless weapon is silver).
+		*Types:* Magic, Cold Iron, Adamantine, Alignment (Good/Evil), Slashing/Bludgeoning.
+	Spell Resistance (SR): The AC against magic. Caster rolls `d20 + Caster Level` to beat SR.
+	Blindsense/Blindsight: Noticing things without visual sight.
+	Scent: Detect opponents by smell within 30ft.
+	Breath Weapon (Su): Reflex save for half damage. usually usable once every 1d4 rounds.
+	Frightful Presence (Ex): Opponents within range must succeed on a Will save or become Shaken/Panicked.
+	Regeneration (Ex): Damage is treated as nonlethal. Creature heals automatically each round. Only specific damage types (Fire/Acid) deal lethal damage that stops regeneration.
 
 ### Common Monster Index (By Role)
-**The Low-Level Threats (CR 1/2 - 2)**
-*   **Humanoids:** Goblin, Kobold, Orc, Gnoll, Hobgoblin.
-*   **Animals:** Wolf, Dire Rat, Badger, Viper.
-*   **Undead:** Skeleton, Zombie, Ghoul.
+The Low-Level Threats (CR 1/2 - 2)
+	Humanoids: Goblin, Kobold, Orc, Gnoll, Hobgoblin.
+	Animals: Wolf, Dire Rat, Badger, Viper.
+	Undead: Skeleton, Zombie, Ghoul.
 
-**The Brutes (CR 3 - 7)**
-*   **Giants:** Ogre, Troll, Hill Giant.
-*   **Beasts:** Owlbear, Griffon, Manticore, Hydra, Basilisk.
-*   **Shapechangers:** Werewolf, Wererat, Doppelganger.
+The Brutes (CR 3 - 7)
+	Giants: Ogre, Troll, Hill Giant.
+	Beasts: Owlbear, Griffon, Manticore, Hydra, Basilisk.
+	Shapechangers: Werewolf, Wererat, Doppelganger.
 
-**The Magic & Minds (CR 5 - 10)**
-*   **Aberrations:** Mind Flayer, Beholder, Aboleth.
-*   **Fey:** Dryad, Satyr, Nymph.
-*   **Outsiders:** Succubus, Hell Hound, Nightmare, Rakshasa.
+The Magic & Minds (CR 5 - 10)
+	Aberrations: Mind Flayer, Beholder, Aboleth.
+	Fey: Dryad, Satyr, Nymph.
+	Outsiders: Succubus, Hell Hound, Nightmare, Rakshasa.
 
-**The Apex Predators (CR 10+)**
-*   **Dragons:** Red (Fire/Mountain), Blue (Electricity/Desert), Green (Acid/Forest), Black (Acid/Swamp), White (Cold/Tundra).
-*   **Fiends:** Balor (Demon), Pit Fiend (Devil).
-*   **Bosses:** Lich, Vampire Lord, Kraken, Tarrasque.
+The Apex Predators (CR 10+)
+	Dragons: Red (Fire/Mountain), Blue (Electricity/Desert), Green (Acid/Forest), Black (Acid/Swamp), White (Cold/Tundra).
+	Fiends: Balor (Demon), Pit Fiend (Devil).
+	Bosses: Lich, Vampire Lord, Kraken, Tarrasque.
 
 ### Conditions (Summary)
-*   **Blinded:** -2 AC, lose Dex bonus. Move half speed. 50% miss chance.
-*   **Confused:** Roll d%: 01-10 Attack caster, 11-20 Act normally, 21-50 Babble, 51-70 Flee, 71-100 Attack nearest.
-*   **Dazed:** Can take no actions. No AC penalty.
-*   **Entangled:** Half speed, -2 Attack, -4 Dex. Concentration check to cast.
-*   **Fatigued:** No run/charge, -2 Str/Dex.
-*   **Flat-Footed:** Have not acted yet. Lose Dex bonus to AC.
-*   **Grappled:** Cannot move. No Dex to AC.
-*   **Nauseated:** Move action only. Cannot attack/cast.
-*   **Paralyzed:** Str/Dex 0. Helpless.
-*   **Prone:** -4 Melee Attack. +4 AC vs Ranged. -4 AC vs Melee. Stand up is Move action.
-*   **Shaken:** -2 penalties on attacks/saves/skills.
-*   **Stunned:** Drop items, no actions, -2 AC, lose Dex to AC.
+	Blinded: -2 AC, lose Dex bonus. Move half speed. 50% miss chance.
+	Confused: Roll d%: 01-10 Attack caster, 11-20 Act normally, 21-50 Babble, 51-70 Flee, 71-100 Attack nearest.
+	Dazed: Can take no actions. No AC penalty.
+	Entangled: Half speed, -2 Attack, -4 Dex. Concentration check to cast.
+	Fatigued: No run/charge, -2 Str/Dex.
+	Flat-Footed: Have not acted yet. Lose Dex bonus to AC.
+	Grappled: Cannot move. No Dex to AC.
+	Nauseated: Move action only. Cannot attack/cast.
+	Paralyzed: Str/Dex 0. Helpless.
+	Prone: -4 Melee Attack. +4 AC vs Ranged. -4 AC vs Melee. Stand up is Move action.
+	Shaken: -2 penalties on attacks/saves/skills.
+	Stunned: Drop items, no actions, -2 AC, lose Dex to AC.
 
 
 
@@ -1016,23 +1016,23 @@ Templates are overlays that change a creature's type and stats.
 
 ### Money & Wealth
 The standard unit of measure for wealth is the Gold Piece (gp).
-*   **Exchange Rate:** 10 copper (cp) = 1 silver (sp); 10 silver = 1 gold (gp); 10 gold = 1 platinum (pp).
-*   **Starting Gold:** Barbarian (4d4x10), Bard (4d4x10), Cleric (5d4x10), Druid (2d4x10), Fighter (6d4x10), Monk (5d4), Paladin (6d4x10), Ranger (6d4x10), Rogue (5d4x10), Sorcerer (3d4x10), Wizard (3d4x10).
+	Exchange Rate: 10 copper (cp) = 1 silver (sp); 10 silver = 1 gold (gp); 10 gold = 1 platinum (pp).
+	Starting Gold: Barbarian (4d4x10), Bard (4d4x10), Cleric (5d4x10), Druid (2d4x10), Fighter (6d4x10), Monk (5d4), Paladin (6d4x10), Ranger (6d4x10), Rogue (5d4x10), Sorcerer (3d4x10), Wizard (3d4x10).
 
 ### Weapons
 Weapons are grouped into three categories of proficiency (Simple, Martial, Exotic) and three categories of usefulness (Light, One-Handed, Two-Handed).
 
-**Weapon Categories**
-*   **Light:** Can be used in one hand. easy to use in off-hand (-2 penalty only with Two-Weapon Fighting feat). *Examples: Dagger, Short Sword.*
-*   **One-Handed:** Used in one hand. If used in two hands, apply 1.5x Str bonus to damage. *Examples: Longsword, Battleaxe.*
-*   **Two-Handed:** Requires two hands. Applies 1.5x Str bonus to damage. *Examples: Greatsword, Greataxe.*
-*   **Reach:** Doubles your reach (usually to 10 ft). Most reach weapons cannot hit adjacent foes.
+Weapon Categories
+	Light: Can be used in one hand. easy to use in off-hand (-2 penalty only with Two-Weapon Fighting feat). *Examples: Dagger, Short Sword.*
+	One-Handed: Used in one hand. If used in two hands, apply 1.5x Str bonus to damage. *Examples: Longsword, Battleaxe.*
+	Two-Handed: Requires two hands. Applies 1.5x Str bonus to damage. *Examples: Greatsword, Greataxe.*
+	Reach: Doubles your reach (usually to 10 ft). Most reach weapons cannot hit adjacent foes.
 
-**Standard Weapons Table (Medium)**
+Standard Weapons Table (Medium)
 
 | Weapon | Dmg (M) | Critical | Range | Type | Notes |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Simple** | | | | | |
+| Simple | | | | | |
 | Unarmed Strike | 1d3 | x2 | — | Bludgeoning | Nonlethal by default. |
 | Gauntlet | 1d3 | x2 | — | Bludgeoning | Lethal damage. |
 | Dagger | 1d4 | 19-20/x2 | 10 ft. | Piercing/Slash | +2 to Sleight of Hand to conceal. |
@@ -1040,7 +1040,7 @@ Weapons are grouped into three categories of proficiency (Simple, Martial, Exoti
 | Spear | 1d8 | x3 | 20 ft. | Piercing | Two-handed. Set vs Charge (x2 dmg). |
 | Morningstar | 1d8 | x2 | — | Bludge/Pierce | One-handed. |
 | Crossbow, Light | 1d8 | 19-20/x2 | 80 ft. | Piercing | Move action to reload. |
-| **Martial** | | | | | |
+| Martial | | | | | |
 | Sword, Short | 1d6 | 19-20/x2 | — | Piercing | Light weapon. |
 | Battleaxe | 1d8 | x3 | — | Slashing | One-handed. |
 | Longsword | 1d8 | 19-20/x2 | — | Slashing | One-handed. |
@@ -1051,37 +1051,37 @@ Weapons are grouped into three categories of proficiency (Simple, Martial, Exoti
 | Halberd | 1d10 | x3 | — | Piercing/Slash | Two-handed. Trip/Set vs Charge. |
 | Longbow | 1d8 | x3 | 100 ft. | Piercing | Two-handed. |
 | Longbow, Comp. | 1d8 | x3 | 110 ft. | Piercing | Add Str to dmg (must buy specific rating). |
-| **Exotic** | | | | | |
+| Exotic | | | | | |
 | Bastard Sword | 1d10 | 19-20/x2 | — | Slashing | 1-Handed (Exotic) or 2-Handed (Martial). |
 | Spiked Chain | 2d4 | x2 | — | Piercing | Reach 10ft, but can hit adjacent. Finesse. |
 | Dwarven Waraxe | 1d10 | x3 | — | Slashing | 1-Handed (Exotic) or 2-Handed (Martial). |
 
 ### Armor & Shields
 Armor protects you but weighs you down.
-*   **Max Dex:** The maximum Dexterity bonus you can apply to AC. (Example: If you have Dex 18 (+4) but wear Full Plate (Max Dex +1), your AC bonus from Dex is only +1).
-*   **Armor Check Penalty (ACP):** Subtract this number from physical skills (Balance, Climb, Jump, Swim, Hide, Move Silently, Tumble). *Double* this penalty for Swim.
-*   **Arcane Spell Failure:** The % chance a spell with somatic components fails when cast.
+	Max Dex: The maximum Dexterity bonus you can apply to AC. (Example: If you have Dex 18 (+4) but wear Full Plate (Max Dex +1), your AC bonus from Dex is only +1).
+	Armor Check Penalty (ACP): Subtract this number from physical skills (Balance, Climb, Jump, Swim, Hide, Move Silently, Tumble). *Double* this penalty for Swim.
+	Arcane Spell Failure: The % chance a spell with somatic components fails when cast.
 
-**Armor Table**
+Armor Table
 
 | Armor | Cost | AC Bonus | Max Dex | ACP | Spell Fail | Speed (30ft) |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Light** | | | | | | |
-*   **6th:** Chain Lightning, Disintegrate, Greater Dispel Magic, True Seeing.
-*   **7th:** Finger of Death, Limited Wish, Prismatic Spray, Teleport Object.
+| Light | | | | | | |
+	6th: Chain Lightning, Disintegrate, Greater Dispel Magic, True Seeing.
+	7th: Finger of Death, Limited Wish, Prismatic Spray, Teleport Object.
 | Studded Leather | 25 gp | +3 | +5 | -1 | 15% | 30 ft |
 | Chain Shirt | 100 gp | +4 | +4 | -2 | 20% | 30 ft |
-| **Medium** | | | | | | |
+| Medium | | | | | | |
 | Hide | 15 gp | +3 | +4 | -3 | 20% | 20 ft |
 | Scale Mail | 50 gp | +4 | +3 | -4 | 25% | 20 ft |
 | Chainmail | 150 gp | +5 | +2 | -5 | 30% | 20 ft |
 | Breastplate | 200 gp | +5 | +3 | -4 | 25% | 20 ft |
-| **Heavy** | | | | | | |
+| Heavy | | | | | | |
 | Splint Mail | 200 gp | +6 | +0 | -7 | 40% | 20 ft |
 | Banded Mail | 250 gp | +6 | +1 | -6 | 35% | 20 ft |
 | Half-Plate | 600 gp | +7 | +0 | -7 | 40% | 20 ft |
 | Full Plate | 1,500 gp | +8 | +1 | -6 | 35% | 20 ft |
-| **Shields** | | | | | | |
+| Shields | | | | | | |
 | Buckler | 15 gp | +1 | — | -1 | 5% | — |
 | Shield, Light (W) | 3 gp | +1 | — | -1 | 5% | — |
 | Shield, Heavy (S) | 20 gp | +2 | — | -2 | 15% | — |
@@ -1090,48 +1090,48 @@ Armor protects you but weighs you down.
 ### Special Materials
 Standard gear is made of steel, wood, or leather. Higher-level gear uses special materials to bypass Damage Reduction (DR) or grant bonuses.
 
-*   **Adamantine:** An ultra-hard metal found in meteorites.
-    *   *Weapon:* Bypasses hardness of less than 20. Bypasses DR X/Adamantine.
-    *   *Armor:* Grants Damage Reduction to the wearer (Light: 1/—, Medium: 2/—, Heavy: 3/—).
-*   **Mithral:** A light, silvery metal.
-    *   *Effect:* Item weighs 50% less.
-    *   *Armor:* Wears one category lighter (Heavy becomes Medium, Medium becomes Light). Increases Max Dex by +2, reduces ACP by 3, reduces Spell Failure by 10%.
-*   **Cold Iron:** Mined deep underground, effective against fey and demons.
-    *   *Weapon:* Bypasses DR X/Cold Iron. Costs 2x normal price. Harder to enchant (+2,000 gp penalty).
-*   **Alchemical Silver:** Steel bonded with silver.
-    *   *Weapon:* Bypasses DR X/Silver (Lycanthropes, Devils).
-    *   *Penalty:* -1 to Damage rolls.
-*   **Darkwood:** Rare, lightweight wood.
-    *   *Shields:* Reduces ACP by 2. Weighs half as much.
+	Adamantine: An ultra-hard metal found in meteorites.
+		*Weapon:* Bypasses hardness of less than 20. Bypasses DR X/Adamantine.
+		*Armor:* Grants Damage Reduction to the wearer (Light: 1/—, Medium: 2/—, Heavy: 3/—).
+	Mithral: A light, silvery metal.
+		*Effect:* Item weighs 50% less.
+		*Armor:* Wears one category lighter (Heavy becomes Medium, Medium becomes Light). Increases Max Dex by +2, reduces ACP by 3, reduces Spell Failure by 10%.
+	Cold Iron: Mined deep underground, effective against fey and demons.
+		*Weapon:* Bypasses DR X/Cold Iron. Costs 2x normal price. Harder to enchant (+2,000 gp penalty).
+	Alchemical Silver: Steel bonded with silver.
+		*Weapon:* Bypasses DR X/Silver (Lycanthropes, Devils).
+		*Penalty:* -1 to Damage rolls.
+	Darkwood: Rare, lightweight wood.
+		*Shields:* Reduces ACP by 2. Weighs half as much.
 
 ### Goods and Services
 Standard adventuring gear is essential for survival.
 
-**Adventuring Gear (Selected)**
+Adventuring Gear (Selected)
 | Item | Cost | Notes |
 | :--- | :--- | :--- |
-| **Backpack** | 2 gp | Holds 1 cubic ft. |
-| **Bedroll** | 1 sp | For sleeping outdoors. |
-| **Crowbar** | 2 gp | +2 Str check to pry open. |
-| **Flint & Steel** | 1 gp | Light fires (Full round action). |
-| **Grappling Hook** | 1 gp | Use with rope for climbing. |
-| **Lantern, Hooded** | 7 gp | 30ft bright light + 30ft shadowy. 6 hrs/pint. |
-| **Rope, Silk (50')** | 10 gp | +2 Use Rope checks. 4 hp. |
-| **Rope, Hemp (50')** | 1 gp | Standard rope. 2 hp. |
-| **Rations (1 day)** | 5 sp | Jerky, dried fruit, hardtack. |
-| **Sunrod** | 2 gp | Glows for 6 hours (30ft radius). |
-| **Thieves' Tools** | 30 gp | Required for Disable Device/Open Lock. |
-| **Torch** | 1 cp | 20ft bright light. Burns 1 hour. |
-| **Holy Symbol** | 1-25 gp | Required for Cleric/Paladin focus. |
-| **Spellbook** | 15 gp | Wizard's blank book (100 pages). |
+| Backpack | 2 gp | Holds 1 cubic ft. |
+| Bedroll | 1 sp | For sleeping outdoors. |
+| Crowbar | 2 gp | +2 Str check to pry open. |
+| Flint & Steel | 1 gp | Light fires (Full round action). |
+| Grappling Hook | 1 gp | Use with rope for climbing. |
+| Lantern, Hooded | 7 gp | 30ft bright light + 30ft shadowy. 6 hrs/pint. |
+| Rope, Silk (50') | 10 gp | +2 Use Rope checks. 4 hp. |
+| Rope, Hemp (50') | 1 gp | Standard rope. 2 hp. |
+| Rations (1 day) | 5 sp | Jerky, dried fruit, hardtack. |
+| Sunrod | 2 gp | Glows for 6 hours (30ft radius). |
+| Thieves' Tools | 30 gp | Required for Disable Device/Open Lock. |
+| Torch | 1 cp | 20ft bright light. Burns 1 hour. |
+| Holy Symbol | 1-25 gp | Required for Cleric/Paladin focus. |
+| Spellbook | 15 gp | Wizard's blank book (100 pages). |
 
-**Services & Lodging**
-*   **Inn Stay:** Good (2 gp), Common (5 sp), Poor (2 sp).
-*   **Meals:** Good (5 sp), Common (3 sp), Poor (1 sp).
-*   **Coach Cab:** 3 cp per mile.
-*   **Spellcasting Services:** `Caster Level x Spell Level x 10 gp` (+ component costs).
-    *   *Example:* Identify (Lvl 1 Spell, Caster Lvl 1) = 10 gp + 100 gp pearl = 110 gp.
-    *   *Example:* Restoration, Lesser (Lvl 2 Spell, Caster Lvl 3) = 60 gp.
+Services & Lodging
+	Inn Stay: Good (2 gp), Common (5 sp), Poor (2 sp).
+	Meals: Good (5 sp), Common (3 sp), Poor (1 sp).
+	Coach Cab: 3 cp per mile.
+	Spellcasting Services: `Caster Level x Spell Level x 10 gp` (+ component costs).
+		*Example:* Identify (Lvl 1 Spell, Caster Lvl 1) = 10 gp + 100 gp pearl = 110 gp.
+		*Example:* Restoration, Lesser (Lvl 2 Spell, Caster Lvl 3) = 60 gp.
 
 
 
@@ -1141,72 +1141,72 @@ Standard adventuring gear is essential for survival.
 
 #### Using Magic Items
 To use a magic item, it must be activated.
-*   **Body Slots:** A character has limited slots. Wearing two items in the same slot (e.g., two amulets) causes the second to function solely as non-magical jewelry.
-    *   *Slots:* Head (Circlet/Helm), Face (Goggles/Lenses), Throat (Amulet), Shoulders (Cloak), Body (Vest/Robe), Torso (Shirt/Vestment), Arms (Bracers), Hands (Gloves), Ring (x2), Waist (Belt), Feet (Boots).
-*   **Size:** Magic armor and weapons must be sized for the wearer. Wondrous items (cloaks, rings) shrink or grow to fit the wearer.
+	Body Slots: A character has limited slots. Wearing two items in the same slot (e.g., two amulets) causes the second to function solely as non-magical jewelry.
+		*Slots:* Head (Circlet/Helm), Face (Goggles/Lenses), Throat (Amulet), Shoulders (Cloak), Body (Vest/Robe), Torso (Shirt/Vestment), Arms (Bracers), Hands (Gloves), Ring (x2), Waist (Belt), Feet (Boots).
+	Size: Magic armor and weapons must be sized for the wearer. Wondrous items (cloaks, rings) shrink or grow to fit the wearer.
 
-**Activation Methods**
+Activation Methods
 | Method | Action | Provokes AoO? | Description |
 | :--- | :--- | :--- | :--- |
-| **Spell Completion** | Standard | Yes | Reading a **Scroll**. Must have the spell on your class list and have the requisite ability score. |
-| **Spell Trigger** | Standard | No | Using a **Wand** or **Staff**. Must have the spell on your class list (even if you can't cast it yet). |
-| **Command Word** | Standard | No | Speaking a key phrase. Knowledge (Arcana/History) or *Identify* reveals the word. |
-| **Use-Activated** | Varies | No | Drinking a **Potion**, swinging a sword, wearing a ring. |
+| Spell Completion | Standard | Yes | Reading a Scroll. Must have the spell on your class list and have the requisite ability score. |
+| Spell Trigger | Standard | No | Using a Wand or Staff. Must have the spell on your class list (even if you can't cast it yet). |
+| Command Word | Standard | No | Speaking a key phrase. Knowledge (Arcana/History) or *Identify* reveals the word. |
+| Use-Activated | Varies | No | Drinking a Potion, swinging a sword, wearing a ring. |
 
 #### Magic Item Creation
 Feat holders can craft items.
-*   **Base Cost:** The market price in gold (gp).
-*   **Creation Cost:** To make an item, you spend **50% of the Base Price** in raw materials and **1/25th of the Base Price** in XP.
-*   **Time:** 1 day per 1,000 gp of the Base Price.
-*   **Prerequisites:** You must meet CL requirements, have the specific spell prepared (or access to it), and have the relevant Item Creation Feat.
+	Base Cost: The market price in gold (gp).
+	Creation Cost: To make an item, you spend 50% of the Base Price in raw materials and 1/25th of the Base Price in XP.
+	Time: 1 day per 1,000 gp of the Base Price.
+	Prerequisites: You must meet CL requirements, have the specific spell prepared (or access to it), and have the relevant Item Creation Feat.
 
-**Pricing Estimates (Guidelines)**
+Pricing Estimates (Guidelines)
 Use these formulas to estimate the value of custom items.
 
 | Effect | Base Price Formula | Example |
 | :--- | :--- | :--- |
-| **Ability Bonus** | `Bonus squared x 1,000 gp` | *Belt of Giant Str +4* (4x4=16; 16,000 gp) |
-| **Armor Bonus** | `Bonus squared x 1,000 gp` | *Bracers of Armor +2* (2x2=4; 4,000 gp) |
-| **Weapon Bonus** | `Bonus squared x 2,000 gp` | *+1 Longsword* (2,000 gp + 315 gp item cost) |
-| **Save Bonus** | `Bonus squared x 1,000 gp` | *Cloak of Resistance +1* (1,000 gp) |
-| **Skill Bonus** | `Bonus squared x 100 gp` | *Cloak of Elvenkind* (+5 Hide; 2,500 gp) |
-| **Spell Effect (Single Use)** | `Spell Lvl x Caster Lvl x 50 gp` | *Potion of Cure Light* (1 x 1 x 50 = 50 gp) |
-| **Spell Effect (Wand)** | `Spell Lvl x Caster Lvl x 750 gp` | *Wand of Fireball* (5th level caster: 3 x 5 x 750 = 11,250 gp) |
-| **Spell Effect (Command)** | `Spell Lvl x Caster Lvl x 1,800 gp` | *Cape of the Mountebank* (Dim. Door) |
-| **Spell Effect (Continuous)** | `Spell Lvl x Caster Lvl x 2,000 gp` | *Lantern of Revealing* (Invis. Purge) |
+| Ability Bonus | `Bonus squared x 1,000 gp` | *Belt of Giant Str +4* (4x4=16; 16,000 gp) |
+| Armor Bonus | `Bonus squared x 1,000 gp` | *Bracers of Armor +2* (2x2=4; 4,000 gp) |
+| Weapon Bonus | `Bonus squared x 2,000 gp` | *+1 Longsword* (2,000 gp + 315 gp item cost) |
+| Save Bonus | `Bonus squared x 1,000 gp` | *Cloak of Resistance +1* (1,000 gp) |
+| Skill Bonus | `Bonus squared x 100 gp` | *Cloak of Elvenkind* (+5 Hide; 2,500 gp) |
+| Spell Effect (Single Use) | `Spell Lvl x Caster Lvl x 50 gp` | *Potion of Cure Light* (1 x 1 x 50 = 50 gp) |
+| Spell Effect (Wand) | `Spell Lvl x Caster Lvl x 750 gp` | *Wand of Fireball* (5th level caster: 3 x 5 x 750 = 11,250 gp) |
+| Spell Effect (Command) | `Spell Lvl x Caster Lvl x 1,800 gp` | *Cape of the Mountebank* (Dim. Door) |
+| Spell Effect (Continuous) | `Spell Lvl x Caster Lvl x 2,000 gp` | *Lantern of Revealing* (Invis. Purge) |
 
 *Note: A spell with a duration of "1 round/level" costs 4x as much for a continuous item. "1 minute/level" costs 2x as much.*
 
 #### Common Magic Items
-*   **Potions:** Single-use liquid spells. Target must be the drinker. Max Spell Level 3.
-*   **Scrolls:** Single-use written spells.
-*   **Wands:** hold 50 charges. Max Spell Level 4. To use, you must have the spell on your class list.
-*   **Staffs:** hold 50 charges. Can hold high-level spells. Uses the wielder's Caster Level and Ability Score for DCs if they are higher than the staff's.
-*   **Rods:** Metal scepters with unique combat or metamagic utility (e.g., *Rod of Metamagic, Extend*).
+	Potions: Single-use liquid spells. Target must be the drinker. Max Spell Level 3.
+	Scrolls: Single-use written spells.
+	Wands: hold 50 charges. Max Spell Level 4. To use, you must have the spell on your class list.
+	Staffs: hold 50 charges. Can hold high-level spells. Uses the wielder's Caster Level and Ability Score for DCs if they are higher than the staff's.
+	Rods: Metal scepters with unique combat or metamagic utility (e.g., *Rod of Metamagic, Extend*).
 
 #### Psionic Items
 Psionics function similarly to magic.
-*   **Magic-Psionic Transparency:** Unless the DM rules otherwise, spells affect psionic items and powers affect magic items equally. *Dispel Magic* works on Psionics; *Dispel Psionics* works on Magic.
-*   **Psionic Body Slots:** Same as magic items.
+	Magic-Psionic Transparency: Unless the DM rules otherwise, spells affect psionic items and powers affect magic items equally. *Dispel Magic* works on Psionics; *Dispel Psionics* works on Magic.
+	Psionic Body Slots: Same as magic items.
 
-**Psionic Equivalents**
+Psionic Equivalents
 | Magic Item | Psionic Equivalent | Description |
 | :--- | :--- | :--- |
-| **Scroll** | **Power Stone** | A crystal encoded with a power. Destroyed after use. Requires *Use Psionic Device* or power on class list. |
-| **Potion** | **Psionic Tattoo** | A geometric design scribed on skin. Mental command (Standard Action) activates it. Fades after use. |
-| **Wand** | **Dorje** | A crystal wand. 50 charges. Spell trigger activation. |
-| **Staff** | **Psi-Crown** | A headband with 50 charges. Often boosts specific disciplines. |
-| **Wondrous Item** | **Universal Item** | *Skin of the Hero*, *Third Eye*, etc. |
+| Scroll | Power Stone | A crystal encoded with a power. Destroyed after use. Requires *Use Psionic Device* or power on class list. |
+| Potion | Psionic Tattoo | A geometric design scribed on skin. Mental command (Standard Action) activates it. Fades after use. |
+| Wand | Dorje | A crystal wand. 50 charges. Spell trigger activation. |
+| Staff | Psi-Crown | A headband with 50 charges. Often boosts specific disciplines. |
+| Wondrous Item | Universal Item | *Skin of the Hero*, *Third Eye*, etc. |
 
-**Cognizance Crystals**
+Cognizance Crystals
 These store Power Points (PP). A psionic character can use the points in the crystal to pay for a manifestation instead of their own reserve. The crystal must be held. Max PP ranges from 1 to 17.
 
 #### Special & Cursed Properties
-*   **Intelligent Items:** Some items have Sentience (Int/Wis/Cha), alignments, and the ability to communicate (Empathy or Speech). They have an **Ego** score. If the wielder acts against the item's purpose, they must make a Will save vs. Ego or fall under the item's control.
-*   **Cursed Items:** Items that function incorrectly.
-    *   *Delusion:* User thinks it works, but it doesn't.
-    *   *Opposite Effect:* Gives penalties instead of bonuses.
-    *   *Drawback:* Works, but causes a negative side effect (e.g., character's hair grows 1 inch per hour).
+	Intelligent Items: Some items have Sentience (Int/Wis/Cha), alignments, and the ability to communicate (Empathy or Speech). They have an Ego score. If the wielder acts against the item's purpose, they must make a Will save vs. Ego or fall under the item's control.
+	Cursed Items: Items that function incorrectly.
+		*Delusion:* User thinks it works, but it doesn't.
+		*Opposite Effect:* Gives penalties instead of bonuses.
+		*Drawback:* Works, but causes a negative side effect (e.g., character's hair grows 1 inch per hour).
 
 # Appendices
 
