@@ -121,7 +121,7 @@ class UIQueueHandler:
         if msg_type == "planning_started":
             self.loading_label.configure(text=msg.get("content", "AI is thinking..."))
             self.loading_frame.grid(
-                row=2, column=0, columnspan=2, sticky="ew", padx=5, pady=5
+                row=3, column=0, columnspan=2, sticky="ew", padx=5, pady=5
             )
         # === Thought Bubble ===
         elif msg_type == "thought_bubble":
