@@ -4,7 +4,7 @@ import queue
 import threading
 from typing import Callable
 
-from app.core.turn_manager import TurnManager
+from app.core.react_turn_manager import ReActTurnManager
 from app.core.vector_store import VectorStore
 from app.database.db_manager import DBManager
 from app.gui.main_view import MainView
@@ -32,7 +32,8 @@ class Orchestrator:
         self.session: Session | None = None
         
         # Turn Manager - handles the main game loop
-        self.turn_manager = TurnManager(self)
+        # Turn Manager - handles the main game loop (ReAct Version)
+        self.turn_manager = ReActTurnManager(self)
         
         # Wire GUI
         self.view.orchestrator = self

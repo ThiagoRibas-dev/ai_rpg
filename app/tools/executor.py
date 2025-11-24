@@ -5,15 +5,13 @@ from typing import Any, Dict, List, Tuple
 from pydantic import BaseModel
 
 from app.tools.schemas import (
+    EntityUpdate,
+    GameLog,
+    GameRoll,
+    TimeAdvance,
     CharacterUpdate,
     InventoryAddItem,
-    InventoryRemoveItem,
-    MemoryDelete,
-    MemoryQuery,
-    MemoryUpdate,
     MemoryUpsert,
-    RngRoll,
-    TimeAdvance,
 )
 
 
@@ -44,19 +42,10 @@ class ToolExecutor:
         manifest: Dict[str, Any],
         tool_budget: int,
         current_game_time: str | None = None,
+        extra_context: Dict[str, Any] | None = None,
     ) -> Tuple[List[Dict[str, Any]], bool]:
         """
         Execute a list of tool calls from the LLM.
-
-        Args:
-            tool_calls: List of validated Pydantic tool instances
-            session: The current game session
-            manifest: Setup manifest dictionary
-            tool_budget: Maximum number of tools to execute
-            current_game_time: Optional fictional game time string
-
-        Returns:
-            Tuple of (results list, memory_tool_used flag)
         """
         results: List[Dict[str, Any]] = []
         memory_tool_used = False
@@ -72,14 +61,16 @@ class ToolExecutor:
             "vector_store": self.vs,
             "manifest": manifest,
             "current_game_time": current_game_time,
+            "ui_queue": self.ui_queue,
         }
+        
+        if extra_context:
+            ctx.update(extra_context)
 
         for i, call in enumerate(tool_calls[:tool_budget]):
-            # Debug logging
             call_type = type(call)
             self.logger.debug(f"Tool call {i}: type={call_type.__name__}")
 
-            # Basic Validation
             if call_type is BaseModel or not hasattr(call, "name"):
                 self.logger.error(f"Invalid tool call at index {i}: {call}")
                 results.append({"name": "unknown", "error": "Invalid tool call type"})
@@ -109,14 +100,14 @@ class ToolExecutor:
                 # --- EXECUTE TOOL ---
                 result = self.tools.execute(call, context=ctx)
 
-                # Visualization: Dice Roll
-                if isinstance(call, RngRoll) and self.ui_queue:
+                # Visualization: Dice Roll (GameRoll)
+                if isinstance(call, GameRoll) and self.ui_queue:
                     self.ui_queue.put(
                         {
                             "type": "dice_roll",
-                            "spec": tool_args.get("dice") or tool_args.get("dice_spec"),
+                            "spec": tool_args.get("formula"),
                             "rolls": result.get("rolls", []),
-                            "modifier": result.get("modifier", 0),
+                            "modifier": 0, 
                             "total": result.get("total", 0),
                         }
                     )
@@ -135,9 +126,7 @@ class ToolExecutor:
                 self._post_hook(tool_name, result, session)
 
                 # Track memory usage for return flag
-                if isinstance(
-                    call, (MemoryUpsert, MemoryQuery, MemoryUpdate, MemoryDelete)
-                ):
+                if isinstance(call, (GameLog, MemoryUpsert)):
                     memory_tool_used = True
 
             except Exception as e:
@@ -160,11 +149,7 @@ class ToolExecutor:
         Execute post-execution hooks for specific tools to update UI/Session state.
         """
         # 1. Time Advance: Update Session & UI Label
-        if (
-            tool_name == TimeAdvance.model_fields["name"].default
-            and isinstance(result, dict)
-            and "new_time" in result
-        ):
+        if tool_name == TimeAdvance.model_fields["name"].default and isinstance(result, dict) and "new_time" in result:
             if session:
                 try:
                     self.db.sessions.update_game_time(session.id, result["new_time"])
@@ -177,28 +162,19 @@ class ToolExecutor:
                     self.logger.error(f"Failed to update game time: {e}")
 
         # 2. State Changes: Trigger Inspector Refreshes
-        state_tools = [
-            CharacterUpdate.model_fields["name"].default,
-            InventoryAddItem.model_fields["name"].default,
-            InventoryRemoveItem.model_fields["name"].default,
-        ]
+        # We check for the Super Tool 'entity.update'
+        if tool_name == EntityUpdate.model_fields["name"].default:
+            if self.ui_queue:
+                # Refresh everything to be safe
+                self.ui_queue.put({"type": "state_changed", "entity_type": "character"})
+                self.ui_queue.put({"type": "state_changed", "entity_type": "inventory"})
 
-        if tool_name in state_tools and self.ui_queue:
-            entity_type = "unknown"
-            if tool_name == CharacterUpdate.model_fields["name"].default:
-                entity_type = "character"
-            elif "inventory" in tool_name:
-                entity_type = "inventory"
+        # Legacy/Wizard Tools
+        if tool_name in [CharacterUpdate.model_fields["name"].default, InventoryAddItem.model_fields["name"].default]:
+            if self.ui_queue:
+                self.ui_queue.put({"type": "state_changed", "entity_type": "unknown"})
 
-            # RESTORED: Actually send the message to the queue
-            self.ui_queue.put({"type": "state_changed", "entity_type": entity_type})
-
-        # 3. Memory Updates: Refresh Memory Inspector
-        memory_tools = [
-            MemoryUpsert.model_fields["name"].default,
-            MemoryUpdate.model_fields["name"].default,
-            MemoryDelete.model_fields["name"].default,
-        ]
-
-        if tool_name in memory_tools and self.ui_queue:
-            self.ui_queue.put({"type": "refresh_memory_inspector"})
+        # 3. Memory/Log Updates
+        if tool_name in [GameLog.model_fields["name"].default, MemoryUpsert.model_fields["name"].default]:
+            if self.ui_queue:
+                self.ui_queue.put({"type": "refresh_memory_inspector"})

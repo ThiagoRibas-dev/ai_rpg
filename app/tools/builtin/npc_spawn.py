@@ -1,6 +1,5 @@
 from typing import Any, Optional
 from app.tools.builtin._state_storage import get_entity, set_entity
-from app.tools.builtin.scene_add_member import handler as scene_add_member
 
 def handler(
     key: str,
@@ -28,11 +27,9 @@ def handler(
         location_key = scene.get("location_key") if scene else None
     
     if not location_key:
-        return {"success": False, "error": "Cannot spawn NPC: No location specified and no active scene location found."}
+        return {"success": False, "error": "Cannot spawn NPC: No location specified and no active scene."}
 
     # 3. Resolve Template
-    # We need to find the template ID based on the name provided (e.g., "Goblin")
-    # This requires scanning templates linked to the session's ruleset.
     from app.setup.setup_manifest import SetupManifest
     manifest = SetupManifest(db).get_manifest(session_id)
     ruleset_id = manifest.get("ruleset_id")
@@ -45,7 +42,6 @@ def handler(
             template_id = found["id"]
     
     # 4. Initialize Entity Structure
-    # (Minimal scaffolding, real stats would be populated by a subsequent update or defaults)
     npc_data = {
         "name": name_display,
         "description": visual_description,
@@ -53,36 +49,40 @@ def handler(
         "location_key": location_key,
         "disposition": initial_disposition,
         "abilities": {},
-        "vitals": {}, # Template defaults will be assumed by UI if missing
+        "vitals": {},
         "inventory": []
     }
 
-    # 5. Save Entity
     set_entity(session_id, db, "character", key, npc_data)
 
-    # 6. Add to Active Scene
-    # We call the existing tool handler to ensure consistency
-    scene_result = scene_add_member(key, **context)
+    # 5. Add to Active Scene (Logic Inlined from scene_add_member)
+    scene = get_entity(session_id, db, "scene", "active_scene")
+    if not scene:
+        scene = {
+            "location_key": location_key,
+            "members": ["character:player"],
+            "state_tags": []
+        }
+
+    member_id = f"character:{key}"
+    if member_id not in scene.get("members", []):
+        scene.setdefault("members", []).append(member_id)
+        set_entity(session_id, db, "scene", "active_scene", scene)
     
-    # 7. Initialize NPC Profile (The Brain)
-    # Required for JIT Simulation
+    # 6. Initialize NPC Profile
     npc_profile = {
-        "personality_traits": context.get("personality_traits", []), # Not passed by schema yet, default empty
+        "personality_traits": context.get("personality_traits", []),
         "motivations": ["Survive"],
         "directive": "idle",
         "knowledge_tags": [],
         "relationships": {},
         "last_updated_time": context.get("current_game_time", "Day 1, Dawn")
     }
-    # Attempt to parse description for traits? (Optional polish)
-    
     set_entity(session_id, db, "npc_profile", key, npc_profile)
 
     return {
         "success": True,
         "key": key,
         "name": name_display,
-        "location": location_key,
-        "template_found": template_id is not None,
-        "scene_updated": scene_result.get("success", False)
+        "location": location_key
     }

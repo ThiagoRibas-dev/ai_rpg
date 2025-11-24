@@ -1,7 +1,14 @@
 from abc import ABC, abstractmethod
-from typing import Generator, Type, List, Dict, Any
+from typing import Generator, Type, List, Dict, Any, Optional
 from pydantic import BaseModel
 from app.models.message import Message
+from dataclasses import dataclass
+
+@dataclass
+class LLMResponse:
+    content: Optional[str]
+    tool_calls: Optional[List[Dict[str, Any]]]
+
 
 
 class LLMConnector(ABC):
@@ -30,4 +37,13 @@ class LLMConnector(ABC):
         tools: List[Dict[str, Any]],
     ) -> List[Dict[str, Any]]:
         """Makes an API call and returns a list of tool calls requested by the model."""
+        pass
+
+    @abstractmethod
+    def chat_with_tools(
+        self,
+        system_prompt: str,
+        chat_history: List[Message],
+        tools: List[Dict[str, Any]],
+    ) -> LLMResponse:
         pass
