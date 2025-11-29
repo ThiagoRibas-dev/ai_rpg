@@ -64,6 +64,19 @@ class GameStateRepository(BaseRepository):
         self._commit()
         return row["version"] if row else 1
 
+    def get_versions(self, session_id: int, entity_type: str) -> Dict[str, int]:
+        """
+        Fast query to get just the version numbers for all entities of a type.
+        Used for UI Cache Invalidation.
+        Returns: { 'player': 5, 'goblin': 2 }
+        """
+        rows = self._fetchall(
+            """SELECT entity_key, version FROM game_state 
+               WHERE session_id = ? AND entity_type = ?""",
+            (session_id, entity_type),
+        )
+        return {row["entity_key"]: row["version"] for row in rows}
+
     def get_all_entities_by_type(self, session_id: int, entity_type: str) -> dict:
         """Get all entities of a specific type for a session. Returns {key: data} dict."""
         rows = self._fetchall(

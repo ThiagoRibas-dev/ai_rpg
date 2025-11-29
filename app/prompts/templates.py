@@ -1,6 +1,6 @@
 """
 Templates for LLM prompts.
-Refined for REFINED SCHEMA (Granular & Opinionated).
+Simplified to be directive commands, relying on Schema Descriptions for context.
 """
 
 # [Gameplay Prompts]
@@ -20,121 +20,99 @@ Your goal is to provide a vivid, immersive experience while adhering to the extr
 """
 
 TEMPLATE_GENERATION_SYSTEM_PROMPT = """
-You are a System Architect converting rulebooks into a Game Engine Database.
-You are currently analyzing the game: **{game_name}**.
-Your job is to identify the **Functional Shape** of mechanics.
-Do not invent rules. If it's not in the text, leave it blank.
+You are a Game System Architect and Analyst converting rulebooks into a Game JSON Template.
+Your task is to extract the rules from the provided rules text reference, to identify the **Functional Shape** of mechanics, and write organize them into JSON.
+The rules, procedures, and structures you are extracting must reflect the text exactly. Do not invent rules.
 """
 
 # --- PHASE 1: IDENTITY & PHYSICS ---
 
 GENERATE_META_INSTRUCTION = """
-Extract Metadata.
-1. **Name**: Official name.
-2. **Genre**: Specific genre.
-3. **Description**: Summary.
+Extract the Game Metadata (Name, Genre, Description) into the specified JSON structure.
 """
 
 GENERATE_PHYSICS_INSTRUCTION = """
-Define the **Physics Engine**.
-1. **Dice Notation**: Base formula (e.g. "1d20").
-2. **Mechanic**: How do modifiers apply? (e.g. "Add to total").
-3. **Success**: What is the threshold? (e.g. "DC 10").
-4. **Crit/Fail**: Specific rules for Nat 20 / Nat 1.
+Extract the Core Physics Engine configuration. 
+Populate the schema with the dice notation, resolution mechanic, and success conditions found in the text.
 """
 
 # --- PHASE 2: STATBLOCK (REFINED) ---
 
 ANALYZE_STATBLOCK_INSTRUCTION = """
-Analyze the Character Sheet structure.
-Categorize numbers by their **Lifecycle**:
-- **Identity**: Race, Class, Background.
-- **Fundamental**: Static stats (Str, Dex).
-- **Derived**: Calculated (AC).
-- **Vitals**: Life/Sanity (Death triggers).
-- **Consumables**: Fuel (Mana, Ammo).
-- **Equipment**: Inventory structure.
+Analyze the Character Sheet structure described in the rules.
+Break down the numbers by their lifecycle:
+- What are the base stats? (Fundamental)
+- What is calculated from them? (Derived)
+- What kills you if it runs out? (Vitals)
+- What do you spend? (Consumables)
+- What defines who you are? (Identity)
 """
 
 GENERATE_IDENTITY_INSTRUCTION = """
-Identify **Identity Categories**.
-Categorical tags that define a character.
-Examples: Species (Race), Profession (Class), Background, Archetype.
+Extract the Identity Categories (Race, Class, Background, etc.) into the schema.
 """
 
 GENERATE_FUNDAMENTAL_INSTRUCTION = """
-Identify **Fundamental Stats**.
-The raw inputs for the system's math.
-**Constraint:** Do NOT include Skills or Derived Stats.
+Extract the Fundamental Stats (Attributes) into the schema. 
+Do NOT include skills or derived stats here. Only the raw inputs.
 """
 
 GENERATE_DERIVED_INSTRUCTION = """
-Identify **Derived Stats**.
-Read-only numbers calculated from Fundamental Stats.
-**Available Variables:** {variable_list}
-**Math Rules:** Valid Python math. Table lookups = "0".
+Extract the Derived Stats and their formulas. 
+Use the provided variable names for the formulas. Python syntax only.
 """
 
 GENERATE_VITALS_INSTRUCTION = """
-Identify **Vital Resources** (Survival Meters).
-If this runs out, the character changes state (Death, Madness).
-**Available Variables:** {variable_list}
+Extract the Vital Resources (Life/Sanity meters) into the schema.
 """
 
 GENERATE_CONSUMABLES_INSTRUCTION = """
-Identify **Consumable Resources** (Fuel/Expandables).
-Spent to use abilities. Reloaded via rest.
-Examples: Spell Slots, Ki, Ammo, Power Points.
+Extract the Consumable Resources (Fuel/Ammo/Slots) into the schema.
 """
 
 GENERATE_SKILLS_INSTRUCTION = """
-Identify **Skills**.
-Learned proficiencies.
-**Fields:** Name, Linked Fundamental Stat.
+Extract the full list of Skills and their linked attributes into the schema.
 """
 
 GENERATE_FEATURES_INSTRUCTION = """
-Identify **Feature Containers**.
-Buckets for special abilities.
-Examples: Feats, Perks, Edges, Class Features, Spells Known.
+Extract the categories of Features (e.g. Feats, Traits, Spells) into the schema.
 """
 
 GENERATE_EQUIPMENT_INSTRUCTION = """
-Identify **Equipment Structure**.
-1. **Body Slots**: Specific locations (Head, Main Hand, Off Hand, Ring 1, Ring 2).
-   - *Tip:* If the game implies two rings, create "Ring 1" and "Ring 2".
-   - *Tip:* If hands are used, create "Main Hand" and "Off Hand".
-2. **Capacity**: Formula for carry limit (e.g. "Strength * 15").
+Extract the Inventory Slots and Carrying Capacity rules into the schema.
 """
 
 # --- PHASE 3: PROCEDURES ---
 
 IDENTIFY_MODES_INSTRUCTION = """
-Identify the **Game Modes** (Combat, Exploration, Social).
-Return a list.
+Identify the distinct Game Modes (Combat, Exploration, Social, etc.) described in the text.
+Return a list of mode names.
 """
 
 EXTRACT_PROCEDURE_INSTRUCTION = """
-Extract the **Procedure** for **{mode_name}**.
-Create a structured list of steps the AI must follow.
+Extract the step-by-step Procedure for **{mode_name}** into the schema.
+Ensure the steps are sequential and cover the entire loop.
 """
 
 GENERATE_MECHANICS_INSTRUCTION = """
-Extract specific mechanics (Grapple, Conditions, Environmental Rules) for the Vector Database.
+Extract specific Game Mechanics (Conditions, Environmental Rules, Combat Maneuvers) into the 'mechanics' dictionary.
 """
 
 # [World Gen Prompts]
 CHARACTER_EXTRACTION_PROMPT = """
-You are a Character Sheet Parser. Convert description to JSON.
+You are a Character Sheet Parser. 
+Extract the character data from the description below into the JSON schema.
+Use the provided template to ensure stats are mapped correctly.
+
 **INPUT:** "{description}"
-**TEMPLATE:** {template}
-Return JSON matching CharacterExtraction schema.
+**TEMPLATE CONTEXT:** {template}
 """
 
 WORLD_EXTRACTION_PROMPT = """
-You are a World Building Engine. Convert description to JSON.
+You are a World Building Engine. 
+Extract the world details, location, and lore from the description below into the JSON schema.
+
 **INPUT:** "{description}"
-Return JSON matching WorldExtraction schema.
 """
 
 OPENING_CRAWL_PROMPT = """

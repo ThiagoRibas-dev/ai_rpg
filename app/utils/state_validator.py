@@ -4,38 +4,27 @@ from app.models.stat_block import StatBlockTemplate
 
 logger = logging.getLogger(__name__)
 
-
 class ValidationError(ValueError):
     pass
 
-
 class StateValidator:
-    """Validates against Refined Schema."""
+    """Validates against Refined Schema (Dict-based)."""
 
     def __init__(self, template: StatBlockTemplate):
         self.template = template
 
     def validate_update(self, key: str, value: Any) -> str:
-        # Fundamental Stats
-        fund = next((a for a in self.template.fundamental_stats if a.name == key), None)
-        if fund:
+        # Check Keys in Dicts
+        if key in self.template.fundamental_stats:
             return "fundamental_stat"
 
-        # Vitals
-        vit = next((s for s in self.template.vital_resources if s.name == key), None)
-        if vit:
+        if key in self.template.vital_resources:
             return "vital"
 
-        # Consumables
-        con = next(
-            (a for a in self.template.consumable_resources if a.name == key), None
-        )
-        if con:
+        if key in self.template.consumable_resources:
             return "consumable"
 
-        # Skills
-        skill = next((s for s in self.template.skills if s.name == key), None)
-        if skill:
+        if key in self.template.skills:
             return "skill"
 
         raise ValidationError(f"Property '{key}' not found in template.")

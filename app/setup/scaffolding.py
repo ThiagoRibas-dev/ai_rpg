@@ -2,113 +2,121 @@ import json
 import logging
 from app.models.ruleset import Ruleset, PhysicsConfig, GameLoopConfig, ProcedureDef
 from app.models.stat_block import (
-    StatBlockTemplate, IdentityDef, FundamentalStatDef, VitalResourceDef, 
-    EquipmentConfig, BodySlotDef
+    StatBlockTemplate,
+    IdentityDef,
+    FundamentalStatDef,
+    VitalResourceDef,
+    EquipmentConfig,
 )
 from app.setup.setup_manifest import SetupManifest
 
 logger = logging.getLogger(__name__)
 
+
 def _get_default_scaffolding():
-    """Returns default Refined scaffolding."""
     ruleset = Ruleset(
-        meta={"name": "Default System", "genre": "Generic"},
+        meta={"name": "Default", "genre": "Generic"},
         physics=PhysicsConfig(
             dice_notation="1d20",
-            roll_mechanic="Roll + Mod vs DC",
-            success_condition="Meet or Beat",
-            crit_rules="Nat 20 = Crit"
+            roll_mechanic="Roll+Mod",
+            success_condition=">=DC",
+            crit_rules="Nat20",
         ),
         gameplay_loops=GameLoopConfig(
-            combat=ProcedureDef(name="Combat", description="Turn Based", steps=["Action", "Move"]),
-            exploration=ProcedureDef(name="Exploration", description="Freeform", steps=["Describe", "Act"])
-        )
+            combat=ProcedureDef(
+                name="Combat", description="Turn Based", steps=["Action"]
+            ),
+            exploration=ProcedureDef(
+                name="Exploration", description="Freeform", steps=["Act"]
+            ),
+        ),
     )
-    
+
     template = StatBlockTemplate(
         template_name="Adventurer",
-        identity_categories=[IdentityDef(category_name="Class")],
-        fundamental_stats=[
-            FundamentalStatDef(name="Strength", default=10),
-            FundamentalStatDef(name="Agility", default=10),
-        ],
-        vital_resources=[
-            VitalResourceDef(name="HP", max_formula="10", on_zero="Unconscious")
-        ],
-        equipment=EquipmentConfig(slots=[
-            BodySlotDef(name="Main Hand", accepted_item_types=["Weapon"]),
-            BodySlotDef(name="Body", accepted_item_types=["Armor"])
-        ])
+        identity_categories={"Class": IdentityDef(value_type="selection")},
+        fundamental_stats={
+            "Strength": FundamentalStatDef(default=10),
+            "Agility": FundamentalStatDef(default=10),
+        },
+        vital_resources={
+            "HP": VitalResourceDef(max_formula="10", on_zero="Unconscious")
+        },
+        equipment=EquipmentConfig(slots={"Main Hand": ["Weapon"], "Body": ["Armor"]}),
     )
     return ruleset, template
 
+
 def inject_setup_scaffolding(session_id: int, prompt_manifest_json: str, db_manager):
-    """Injects scaffolding using Refined Models."""
     ruleset_model = None
     st_model = None
 
     if prompt_manifest_json and prompt_manifest_json != "{}":
         try:
             data = json.loads(prompt_manifest_json)
-            if data.get("ruleset") and data.get("stat_template"):
+            if data.get("ruleset"):
                 ruleset_model = Ruleset(**data["ruleset"])
+            if data.get("stat_template"):
                 st_model = StatBlockTemplate(**data["stat_template"])
         except Exception as e:
-            logger.error(f"Manifest parse error: {e}. Using defaults.")
+            logger.error(f"Manifest error: {e}")
 
     if not ruleset_model or not st_model:
         ruleset_model, st_model = _get_default_scaffolding()
 
-    ruleset_model.meta["name"] = f"{ruleset_model.meta.get('name', 'Untitled')} (Session {session_id})"
-    
+    ruleset_model.meta["name"] = (
+        f"{ruleset_model.meta.get('name', 'Untitled')} (Session {session_id})"
+    )
+
     try:
         rs_id = db_manager.rulesets.create(ruleset_model)
         st_id = db_manager.stat_templates.create(rs_id, st_model)
-        
+
+        # Add rules to Vector Store (Convert dict to list for embedding)
         try:
             from app.core.vector_store import VectorStore
+
             vs = VectorStore()
-            rule_dicts = [m.model_dump() for m in ruleset_model.mechanics]
+            # Convert Map to List of Objects for embedding logic
+            rule_dicts = []
+            for name, rule in ruleset_model.mechanics.items():
+                d = rule.model_dump()
+                d["name"] = name  # Inject name back for vector store indexing
+                rule_dicts.append(d)
             vs.add_rules(rs_id, rule_dicts)
         except Exception as e:
-            logger.error(f"Failed to index initial rules: {e}")
+            logger.error(f"Vector store error: {e}")
 
-        manifest_mgr = SetupManifest(db_manager)
-        manifest_mgr.update_manifest(session_id, {
-            "ruleset_id": rs_id, 
-            "stat_template_id": st_id,
-            "genre": ruleset_model.meta.get("genre", "Generic"),
-            "tone": ruleset_model.meta.get("tone", "Neutral")
-        })
+        SetupManifest(db_manager).update_manifest(
+            session_id,
+            {
+                "ruleset_id": rs_id,
+                "stat_template_id": st_id,
+                "genre": ruleset_model.meta.get("genre"),
+                "tone": ruleset_model.meta.get("tone"),
+            },
+        )
 
-        # Initialize Player Data
-        fund_stats = {a.name: a.default for a in st_model.fundamental_stats}
-        
-        vitals = {}
-        for m in st_model.vital_resources:
-            vitals[m.name] = {"current": 10, "max": 10}
-            
-        consumables = {}
-        for m in st_model.consumable_resources:
-            consumables[m.name] = {"current": 0, "max": 0}
-
-        skills = {s.name: 0 for s in st_model.skills}
-        features = {f.name: [] for f in st_model.features}
-
+        # Init Player
         player_data = {
             "name": "Player",
             "template_id": st_id,
             "identity": {},
-            "fundamental_stats": fund_stats,
-            "vital_resources": vitals,
-            "consumable_resources": consumables,
-            "skills": skills,
-            "features": features,
+            "fundamental_stats": {
+                k: v.default for k, v in st_model.fundamental_stats.items()
+            },
+            "vital_resources": {
+                k: {"current": 10, "max": 10} for k in st_model.vital_resources
+            },
+            "consumable_resources": {
+                k: {"current": 0, "max": 0} for k in st_model.consumable_resources
+            },
+            "skills": {k: 0 for k in st_model.skills},
+            "features": {k: [] for k in st_model.features},
             "equipment": {"inventory": [], "equipped": {}},
-            "derived_stats": {} 
+            "derived_stats": {},
         }
-
         db_manager.game_state.set_entity(session_id, "character", "player", player_data)
-        
+
     except Exception as e:
-        logger.error(f"Error during scaffolding injection: {e}", exc_info=True)
+        logger.error(f"Injection error: {e}", exc_info=True)

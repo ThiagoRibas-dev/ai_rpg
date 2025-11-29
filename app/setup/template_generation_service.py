@@ -1,6 +1,6 @@
 import logging
 from typing import List, Callable, Optional, Tuple
-from pydantic import BaseModel, create_model, Field
+from pydantic import BaseModel
 
 from app.llm.llm_connector import LLMConnector
 from app.models.message import Message
@@ -15,12 +15,11 @@ from app.models.stat_block import (
     StatBlockTemplate,
     IdentityDef,
     FundamentalStatDef,
-    DerivedStatDef,
     VitalResourceDef,
     ConsumableResourceDef,
-    SkillDef,
     FeatureContainerDef,
     EquipmentConfig,
+    SkillValue,
 )
 from app.prompts.templates import (
     TEMPLATE_GENERATION_SYSTEM_PROMPT,
@@ -44,9 +43,7 @@ logger = logging.getLogger(__name__)
 
 
 class TemplateGenerationService:
-    """
-    Generates game templates using the Refined Ontology.
-    """
+    """Generates optimized dict-based templates with prompt caching efficiency."""
 
     def __init__(
         self,
@@ -57,250 +54,233 @@ class TemplateGenerationService:
         self.llm = llm_connector
         self.rules_text = rules_text
         self.status_callback = status_callback
-        self.base_system_prompt = TEMPLATE_GENERATION_SYSTEM_PROMPT
+
+        self.static_system_prompt = f"{TEMPLATE_GENERATION_SYSTEM_PROMPT}\n\n# RULES TEXT\n{self.rules_text}"
 
     def _update_status(self, message: str):
         if self.status_callback:
             self.status_callback(message)
-        logger.info(f"[TemplateGeneration] {message}")
-
-    def _get_sys_prompt(self, game_name: str = "Unknown RPG"):
-        return f"{self.base_system_prompt.format(game_name=game_name)}\n\n# GAME RULES TEXT\n{self.rules_text}"
+        logger.info(f"[TemplateGen] {message}")
 
     def generate_template(self) -> Tuple[Ruleset, StatBlockTemplate]:
-        # --- PHASE 1: RULES KERNEL ---
-        self._update_status("Identifying Game Identity...")
-
-        temp_sys_prompt = f"{self.base_system_prompt.format(game_name='Unknown')}\n\n# RULES START\n{self.rules_text[:15000]}"
+        # --- 1. META & PHYSICS ---
+        self._update_status("Identifying Identity...")
 
         class RulesetMeta(BaseModel):
             name: str
             genre: str
             description: str
 
+        # CACHE HIT 1: We use the full static prompt immediately.
+        # Ideally, this processes the rules once, and all subsequent calls reuse the KV cache.
         meta_res = self.llm.get_structured_response(
-            system_prompt=temp_sys_prompt,
-            chat_history=[Message(role="user", content=GENERATE_META_INSTRUCTION)],
-            output_schema=RulesetMeta,
+            self.static_system_prompt,
+            [Message(role="user", content=GENERATE_META_INSTRUCTION)],
+            RulesetMeta,
         )
 
         meta_data = {
-            "name": meta_res.name if meta_res else "Untitled System",
-            "genre": meta_res.genre if meta_res else "Generic",
-            "description": meta_res.description if meta_res else "",
+            "name": meta_res.name,
+            "genre": meta_res.genre,
+            "description": meta_res.description,
         }
-        game_name = meta_data["name"]
-        self._update_status(f"Analyzed: {game_name}")
-        sys_prompt = self._get_sys_prompt(game_name)
 
-        # Physics
+        # Inject Game Name into Context for future steps (User Side)
+        game_context = f"Target Game: {meta_res.name}\n"
+        self._update_status(f"Analyzed: {meta_res.name}")
+
         self._update_status("Defining Physics...")
+        # CACHE HIT 2: Same system prompt
         phys_res = self.llm.get_structured_response(
-            system_prompt=sys_prompt,
-            chat_history=[Message(role="user", content=GENERATE_PHYSICS_INSTRUCTION)],
-            output_schema=PhysicsConfig,
+            self.static_system_prompt,
+            [Message(role="user", content=game_context + GENERATE_PHYSICS_INSTRUCTION)],
+            PhysicsConfig,
         )
 
-        # --- PHASE 2: STATBLOCK ---
+        # --- 2. STATBLOCK (DICTS) ---
         self._update_status("Analyzing Stats...")
-        stat_analysis_gen = self.llm.get_streaming_response(
-            sys_prompt, [Message(role="user", content=ANALYZE_STATBLOCK_INSTRUCTION)]
-        )
-        stat_analysis = "".join(stat_analysis_gen)
-        context = f"*** STAT ANALYSIS ***\n{stat_analysis}\n\n"
-
-        # Identity
-        self._update_status("Defining Identity...")
-        IdList = create_model(
-            "IdList",
-            items=(List[IdentityDef], Field(default_factory=list)),
-            __base__=BaseModel,
-        )
-        id_res = self.llm.get_structured_response(
-            sys_prompt,
-            [Message(role="user", content=f"{context}{GENERATE_IDENTITY_INSTRUCTION}")],
-            IdList,
-        )
-
-        # Fundamental Stats
-        self._update_status("Defining Fundamental Stats...")
-        FundList = create_model(
-            "FundList",
-            items=(List[FundamentalStatDef], Field(default_factory=list)),
-            __base__=BaseModel,
-        )
-        fund_res = self.llm.get_structured_response(
-            sys_prompt,
+        # CACHE HIT 3
+        stat_gen = self.llm.get_streaming_response(
+            self.static_system_prompt,
             [
                 Message(
-                    role="user", content=f"{context}{GENERATE_FUNDAMENTAL_INSTRUCTION}"
+                    role="user", content=game_context + ANALYZE_STATBLOCK_INSTRUCTION
                 )
             ],
-            FundList,
+        )
+        analysis_text = "".join(stat_gen)
+
+        # Accumulate context.
+        # Note: Adding 'analysis_text' to the User Prompt will slightly degrade cache performance
+        # for subsequent steps compared to keeping the User Prompt static,
+        # but it is necessary for logic. The SYSTEM prompt (the heavy part) remains cached.
+        context = f"{game_context}*** ANALYSIS ***\n{analysis_text}\n\n"
+
+        # Wrappers for Dict responses
+        class IdDict(BaseModel):
+            items: dict[str, IdentityDef]
+
+        class FundDict(BaseModel):
+            items: dict[str, FundamentalStatDef]
+
+        class DerDict(BaseModel):
+            items: dict[str, str]
+
+        class VitDict(BaseModel):
+            items: dict[str, VitalResourceDef]
+
+        class ConDict(BaseModel):
+            items: dict[str, ConsumableResourceDef]
+
+        class SkillDict(BaseModel):
+            items: dict[str, SkillValue]
+
+        class FeatDict(BaseModel):
+            items: dict[str, FeatureContainerDef]
+
+        self._update_status("Defining Identity...")
+        id_res = self.llm.get_structured_response(
+            self.static_system_prompt,
+            [Message(role="user", content=context + GENERATE_IDENTITY_INSTRUCTION)],
+            IdDict,
         )
 
-        # Variable Injection
-        fund_names = [c.name for c in (fund_res.items if fund_res else [])]
+        self._update_status("Defining Fundamentals...")
+        fund_res = self.llm.get_structured_response(
+            self.static_system_prompt,
+            [Message(role="user", content=context + GENERATE_FUNDAMENTAL_INSTRUCTION)],
+            FundDict,
+        )
+
         var_list = (
-            ", ".join(fund_names) + ", " + ", ".join([f"{n}_Mod" for n in fund_names])
+            ", ".join(fund_res.items.keys())
+            + ", "
+            + ", ".join([f"{k}_Mod" for k in fund_res.items.keys()])
         )
-        self._update_status(f"Variables: {var_list[:50]}...")
 
-        # Derived
-        self._update_status("Defining Derived Stats...")
-        DerList = create_model(
-            "DerList",
-            items=(List[DerivedStatDef], Field(default_factory=list)),
-            __base__=BaseModel,
-        )
+        self._update_status("Defining Derived...")
         prompt_der = GENERATE_DERIVED_INSTRUCTION.format(variable_list=var_list)
         der_res = self.llm.get_structured_response(
-            sys_prompt,
-            [Message(role="user", content=f"{context}{prompt_der}")],
-            DerList,
+            self.static_system_prompt,
+            [Message(role="user", content=context + prompt_der)],
+            DerDict,
         )
 
-        if der_res and der_res.items:
-            var_list += ", " + ", ".join([d.name for d in der_res.items])
+        if der_res.items:
+            var_list += ", " + ", ".join(der_res.items.keys())
 
-        # Vitals
         self._update_status("Defining Vitals...")
-        VitList = create_model(
-            "VitList",
-            items=(List[VitalResourceDef], Field(default_factory=list)),
-            __base__=BaseModel,
-        )
         prompt_vit = GENERATE_VITALS_INSTRUCTION.format(variable_list=var_list)
         vit_res = self.llm.get_structured_response(
-            sys_prompt,
-            [Message(role="user", content=f"{context}{prompt_vit}")],
-            VitList,
+            self.static_system_prompt,
+            [Message(role="user", content=context + prompt_vit)],
+            VitDict,
         )
 
-        # Consumables
         self._update_status("Defining Consumables...")
-        ConList = create_model(
-            "ConList",
-            items=(List[ConsumableResourceDef], Field(default_factory=list)),
-            __base__=BaseModel,
-        )
         con_res = self.llm.get_structured_response(
-            sys_prompt,
-            [
-                Message(
-                    role="user", content=f"{context}{GENERATE_CONSUMABLES_INSTRUCTION}"
-                )
-            ],
-            ConList,
+            self.static_system_prompt,
+            [Message(role="user", content=context + GENERATE_CONSUMABLES_INSTRUCTION)],
+            ConDict,
         )
 
-        # Skills
         self._update_status("Defining Skills...")
-        SkillList = create_model(
-            "SkillList",
-            items=(List[SkillDef], Field(default_factory=list)),
-            __base__=BaseModel,
-        )
         skill_res = self.llm.get_structured_response(
-            sys_prompt,
-            [Message(role="user", content=f"{context}{GENERATE_SKILLS_INSTRUCTION}")],
-            SkillList,
+            self.static_system_prompt,
+            [Message(role="user", content=context + GENERATE_SKILLS_INSTRUCTION)],
+            SkillDict,
         )
 
-        # Features
-        self._update_status("Defining Feature Buckets...")
-        FeatList = create_model(
-            "FeatList",
-            items=(List[FeatureContainerDef], Field(default_factory=list)),
-            __base__=BaseModel,
-        )
+        self._update_status("Defining Features...")
         feat_res = self.llm.get_structured_response(
-            sys_prompt,
-            [Message(role="user", content=f"{context}{GENERATE_FEATURES_INSTRUCTION}")],
-            FeatList,
+            self.static_system_prompt,
+            [Message(role="user", content=context + GENERATE_FEATURES_INSTRUCTION)],
+            FeatDict,
         )
 
-        # Equipment
         self._update_status("Defining Equipment...")
         eq_res = self.llm.get_structured_response(
-            sys_prompt,
-            [
-                Message(
-                    role="user", content=f"{context}{GENERATE_EQUIPMENT_INSTRUCTION}"
-                )
-            ],
+            self.static_system_prompt,
+            [Message(role="user", content=context + GENERATE_EQUIPMENT_INSTRUCTION)],
             EquipmentConfig,
         )
 
         stat_template = StatBlockTemplate(
-            template_name=game_name + " Character",
-            identity_categories=id_res.items if id_res else [],
-            fundamental_stats=fund_res.items if fund_res else [],
-            derived_stats=der_res.items if der_res else [],
-            vital_resources=vit_res.items if vit_res else [],
-            consumable_resources=con_res.items if con_res else [],
-            skills=skill_res.items if skill_res else [],
-            features=feat_res.items if feat_res else [],
-            equipment=eq_res if eq_res else EquipmentConfig(),
+            template_name=meta_res.name + " Character",
+            identity_categories=id_res.items,
+            fundamental_stats=fund_res.items,
+            derived_stats=der_res.items,
+            vital_resources=vit_res.items,
+            consumable_resources=con_res.items,
+            skills=skill_res.items,
+            features=feat_res.items,
+            equipment=eq_res,
         )
 
-        # --- PHASE 3: MODES ---
-        self._update_status("Identifying Game Modes...")
+        # --- 3. PROCEDURES ---
+        self._update_status("Identifying Modes...")
 
         class GameModes(BaseModel):
             names: List[str]
 
-        modes_res = self.llm.get_structured_response(
-            sys_prompt,
-            [Message(role="user", content=IDENTIFY_MODES_INSTRUCTION)],
+        # CACHE HIT: Still using self.static_system_prompt
+        modes = self.llm.get_structured_response(
+            self.static_system_prompt,
+            [Message(role="user", content=game_context + IDENTIFY_MODES_INSTRUCTION)],
             GameModes,
         )
 
         loops = GameLoopConfig()
-        detected_modes = modes_res.names[:5] if modes_res else []
-
-        for mode in detected_modes:
-            self._update_status(f"Extracting Procedure: {mode}...")
+        for mode in modes.names[:5] if modes else []:
+            self._update_status(f"Extracting {mode}...")
             try:
-                prompt = EXTRACT_PROCEDURE_INSTRUCTION.format(mode_name=mode)
-                proc_def = self.llm.get_structured_response(
-                    sys_prompt, [Message(role="user", content=prompt)], ProcedureDef
+                proc = self.llm.get_structured_response(
+                    self.static_system_prompt,
+                    [
+                        Message(
+                            role="user",
+                            content=game_context
+                            + EXTRACT_PROCEDURE_INSTRUCTION.format(mode_name=mode),
+                        )
+                    ],
+                    ProcedureDef,
                 )
-
-                # Map to schema fields if match
-                m_lower = mode.lower()
-                if "combat" in m_lower:
-                    loops.combat = proc_def
-                elif "exploration" in m_lower:
-                    loops.exploration = proc_def
-                elif "social" in m_lower:
-                    loops.social = proc_def
-                elif "downtime" in m_lower:
-                    loops.downtime = proc_def
-                # TWEAK: Use renamed field
+                m = mode.lower()
+                if "combat" in m:
+                    loops.combat = proc
+                elif "exploration" in m:
+                    loops.exploration = proc
+                elif "social" in m:
+                    loops.social = proc
+                elif "downtime" in m:
+                    loops.downtime = proc
                 else:
-                    loops.general_procedures.append(proc_def)
-
-            except Exception:
+                    loops.general_procedures[mode] = proc
+            except Exception as e:
+                logger.warning(f"Error extracting {mode}: {e}")
                 pass
 
-        # Mechanics (RAG)
+        # --- 4. MECHANICS (RAG) ---
         self._update_status("Extracting Mechanics...")
 
-        class MechanicsOutput(BaseModel):
-            rules: List[RuleEntry]
+        class MechDict(BaseModel):
+            items: dict[str, RuleEntry]
 
         mech_res = self.llm.get_structured_response(
-            system_prompt=sys_prompt,
-            chat_history=[Message(role="user", content=GENERATE_MECHANICS_INSTRUCTION)],
-            output_schema=MechanicsOutput,
+            self.static_system_prompt,
+            [
+                Message(
+                    role="user", content=game_context + GENERATE_MECHANICS_INSTRUCTION
+                )
+            ],
+            MechDict,
         )
 
         ruleset = Ruleset(
             meta=meta_data,
             physics=phys_res,
             gameplay_loops=loops,
-            mechanics=mech_res.rules if mech_res else [],
+            mechanics=mech_res.items,
         )
 
         return ruleset, stat_template

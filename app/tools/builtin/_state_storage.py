@@ -12,97 +12,60 @@ logger = logging.getLogger(__name__)
 def get_entity(
     session_id: int, db_manager, entity_type: str, key: str
 ) -> Dict[str, Any]:
-    """
-    Get a single entity from the game_state table.
-
-    Args:
-        session_id: Current session ID
-        db_manager: Database manager instance
-        entity_type: Type of entity (e.g., "character", "inventory", "quest")
-        key: Entity key (e.g., "player", "quest_001")
-
-    Returns:
-        Dictionary containing entity data, or empty dict if not found
-    """
+    """Get a single entity."""
     if not session_id or not db_manager:
         raise ValueError("Missing session_id or db_manager")
-
     try:
         return db_manager.game_state.get_entity(session_id, entity_type, key)
     except Exception as e:
-        logger.error(
-            f"Error loading entity {entity_type}:{key} for session {session_id}: {e}"
-        )
+        logger.error(f"Error loading entity {entity_type}:{key}: {e}")
         return {}
 
 
 def set_entity(
     session_id: int, db_manager, entity_type: str, key: str, value: Dict[str, Any]
 ) -> int:
-    """
-    Set/update a single entity in the game_state table.
-
-    Args:
-        session_id: Current session ID
-        db_manager: Database manager instance
-        entity_type: Type of entity
-        key: Entity key
-        value: Entity data as dictionary
-
-    Returns:
-        Version number after update
-    """
+    """Set/update a single entity. Returns version."""
     if not session_id or not db_manager:
         raise ValueError("Missing session_id or db_manager")
-
     try:
         version = db_manager.game_state.set_entity(session_id, entity_type, key, value)
         logger.debug(f"Updated {entity_type}:{key} to version {version}")
         return version
     except Exception as e:
-        logger.error(
-            f"Error saving entity {entity_type}:{key} for session {session_id}: {e}"
-        )
+        logger.error(f"Error saving entity {entity_type}:{key}: {e}")
         raise
 
 
 def get_all_of_type(session_id: int, db_manager, entity_type: str) -> Dict[str, Any]:
-    """
-    Get all entities of a specific type for a session.
-
-    Args:
-        session_id: Current session ID
-        db_manager: Database manager instance
-        entity_type: Type of entity to retrieve
-
-    Returns:
-        Dictionary mapping entity keys to their data
-    """
+    """Get all entities of a specific type."""
     if not session_id or not db_manager:
         raise ValueError("Missing session_id or db_manager")
-
     try:
         return db_manager.game_state.get_all_entities_by_type(session_id, entity_type)
     except Exception as e:
-        logger.error(
-            f"Error loading entities of type {entity_type} for session {session_id}: {e}"
-        )
+        logger.error(f"Error loading entities of type {entity_type}: {e}")
+        return {}
+
+
+def get_versions(session_id: int, db_manager, entity_type: str) -> Dict[str, int]:
+    """
+    Get version map for cache invalidation. 
+    Returns: {'key': version_int}
+    """
+    if not session_id or not db_manager:
+        return {}
+    try:
+        return db_manager.game_state.get_versions(session_id, entity_type)
+    except Exception as e:
+        logger.error(f"Error fetching versions for {entity_type}: {e}")
         return {}
 
 
 def delete_entity(session_id: int, db_manager, entity_type: str, key: str):
-    """
-    Delete a specific entity.
-
-    Args:
-        session_id: Current session ID
-        db_manager: Database manager instance
-        entity_type: Type of entity
-        key: Entity key
-    """
+    """Delete a specific entity."""
     if not session_id or not db_manager:
         raise ValueError("Missing session_id or db_manager")
-
     try:
         db_manager.game_state.delete_entity(session_id, entity_type, key)
         logger.debug(f"Deleted {entity_type}:{key}")

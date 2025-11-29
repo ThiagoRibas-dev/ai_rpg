@@ -1,13 +1,8 @@
-# File: app/gui/panels/inspectors/character_inspector.py
-
 import logging
-from typing import Callable
-
+from typing import Callable, Dict
 import customtkinter as ctk
-
 from app.gui.styles import Theme
-from app.tools.schemas import StateQuery
-
+from app.tools.builtin._state_storage import get_versions, get_entity
 from .inspector_utils import (
     create_key_value_row,
     create_track_display,
@@ -19,14 +14,10 @@ logger = logging.getLogger(__name__)
 
 
 class CharacterPanelBuilder:
-    """Builds the static UI for the Character Inspector."""
-
     @staticmethod
     def build(
         parent: ctk.CTkFrame, refresh_callback: Callable, selection_callback: Callable
     ) -> dict:
-        # COMMENT: The builder creates the static layout and returns widget references.
-        # It takes callbacks to wire them up during construction.
         selector_frame = ctk.CTkFrame(parent)
         selector_frame.pack(fill="x", padx=5, pady=5)
         ctk.CTkLabel(selector_frame, text="Character:").pack(side="left", padx=5)
@@ -49,17 +40,18 @@ class CharacterPanelBuilder:
 
 
 class CharacterInspectorView(ctk.CTkFrame):
-    """Display character stats from game state."""
-
     def __init__(self, parent, db_manager):
         super().__init__(parent)
         self.db_manager = db_manager
         self.orchestrator = None
-        self.all_characters = {}
         self.current_character_key = "player"
         self.character_data = {}
 
-        # COMMENT: UI construction is now delegated to the builder.
+        # Cache Tracking: { "player": 5, "goblin": 1 }
+        self.cached_versions: Dict[str, int] = {}
+        # Track available keys to know when to update selector
+        self.available_keys = []
+
         self.widgets = CharacterPanelBuilder.build(
             self,
             refresh_callback=self.refresh,
@@ -67,7 +59,6 @@ class CharacterInspectorView(ctk.CTkFrame):
         )
 
     def refresh(self):
-        """Query all characters and update display."""
         if not self.orchestrator or not self.orchestrator.session:
             display_message_state(
                 self.widgets["scroll_frame"], "No session loaded.", is_error=True
@@ -75,134 +66,131 @@ class CharacterInspectorView(ctk.CTkFrame):
             return
 
         session_id = self.orchestrator.session.id
+
+        # 1. Lightweight Query: Get Versions
         try:
-            from app.tools.registry import ToolRegistry
-
-            registry = ToolRegistry()
-            context = {"session_id": session_id, "db_manager": self.db_manager}
-            query = StateQuery(entity_type="character", key="*", json_path=".")
-            result = registry.execute(query, context=context)
-            self.all_characters = result.get("value", {})
-
-            if not self.all_characters:
-                self._render_character()  # Will show empty state
-                return
-
-            char_keys = list(self.all_characters.keys())
-            # Pretty print keys
-            display_keys = [k.title() for k in char_keys]
-            self.widgets["selector"].configure(values=display_keys)
-
-            if self.current_character_key not in char_keys:
-                self.current_character_key = char_keys[0]
-
-            self.widgets["selector"].set(self.current_character_key.title())
-            self._on_character_selected(self.current_character_key.title())
+            current_versions = get_versions(session_id, self.db_manager, "character")
         except Exception as e:
-            logger.error(f"Exception in refresh: {e}", exc_info=True)
-            display_message_state(
-                self.widgets["scroll_frame"], f"Error: {e}", is_error=True
+            logger.error(f"Failed to fetch versions: {e}")
+            return
+
+        if not current_versions:
+            self._render_empty()
+            return
+
+        # 2. Update Selector (if keys changed)
+        new_keys = sorted(list(current_versions.keys()))
+        if new_keys != self.available_keys:
+            display_keys = [k.title() for k in new_keys]
+            self.widgets["selector"].configure(values=display_keys)
+            self.available_keys = new_keys
+
+            # Ensure selection is valid
+            if self.current_character_key not in new_keys:
+                self.current_character_key = new_keys[0] if new_keys else "player"
+                self.widgets["selector"].set(self.current_character_key.title())
+
+        # 3. Check specific cache for CURRENTLY selected character
+        # We only re-render if the selected character's version has changed
+        selected_ver = current_versions.get(self.current_character_key, 0)
+        cached_ver = self.cached_versions.get(self.current_character_key, -1)
+
+        if selected_ver > cached_ver:
+            logger.debug(
+                f"Cache miss for {self.current_character_key} (DB:{selected_ver} > Cache:{cached_ver}). Rendering."
+            )
+            self._fetch_and_render(session_id)
+            self.cached_versions[self.current_character_key] = selected_ver
+        else:
+            logger.debug(
+                f"Cache hit for {self.current_character_key}. Skipping render."
             )
 
     def _on_character_selected(self, display_name: str):
-        # Simple lowercase conversion for lookup
-        self.current_character_key = display_name.lower()
-        self.character_data = self.all_characters.get(self.current_character_key, {})
+        key = display_name.lower()
+        if key != self.current_character_key:
+            self.current_character_key = key
+            # Force render on switch (or check cache)
+            self.refresh()
+
+    def _fetch_and_render(self, session_id):
+        self.character_data = get_entity(
+            session_id, self.db_manager, "character", self.current_character_key
+        )
         self._render_character()
 
-    def _render_character(self):
-        """Render character data safely."""
-        scroll_frame = self.widgets["scroll_frame"]
+    def _render_empty(self):
+        for widget in self.widgets["scroll_frame"].winfo_children():
+            widget.destroy()
+        display_message_state(self.widgets["scroll_frame"], "No characters found.")
 
-        # Batch destroy: Unmapping first can sometimes be slightly faster visually
+    def _render_character(self):
+        scroll_frame = self.widgets["scroll_frame"]
         for widget in scroll_frame.winfo_children():
             widget.destroy()
 
         if not self.character_data:
-            display_message_state(scroll_frame, "No character data available.")
+            display_message_state(scroll_frame, "No data.")
             return
 
         name = self.character_data.get("name", "Unknown")
-
-        header_frame = ctk.CTkFrame(scroll_frame, fg_color="transparent")
-        header_frame.pack(fill="x", padx=10, pady=(5, 10))
         ctk.CTkLabel(
-            header_frame,
-            text=name,
-            font=Theme.fonts.heading,
-            anchor="w",
-        ).pack(side="left")
+            scroll_frame, text=name, font=Theme.fonts.heading, anchor="w"
+        ).pack(fill="x", padx=10, pady=(5, 10))
 
-        # 1. Get Template (Safe Lookup)
+        # Template
         template_id = self.character_data.get("template_id")
-        stat_template = None
-        if template_id:
-            try:
-                # This DB call is usually fast (ms), but essential to keep safe
-                stat_template = self.db_manager.stat_templates.get_by_id(template_id)
-            except Exception as e:
-                logger.error(f"Failed to load template {template_id}: {e}")
+        stat_template = (
+            self.db_manager.stat_templates.get_by_id(template_id)
+            if template_id
+            else None
+        )
 
         if not stat_template:
             self._render_raw_dict(scroll_frame, self.character_data)
             return
 
-        # 2. Render Abilities
-        abilities_data = self.character_data.get("abilities", {})
-        if stat_template.abilities:
+        # Abilities
+        abilities_data = self.character_data.get(
+            "fundamental_stats", {}
+        )  # New Schema Key
+        if not abilities_data:
+            abilities_data = self.character_data.get("abilities", {})  # Fallback
+
+        if stat_template.fundamental_stats:
             attr_frame = ctk.CTkFrame(scroll_frame)
             attr_frame.pack(fill="x", padx=10, pady=5)
             ctk.CTkLabel(
-                attr_frame,
-                text="Abilities",
-                font=Theme.fonts.subheading,
-                anchor="w",
-            ).pack(fill="x", padx=10, pady=(5, 2))
+                attr_frame, text="Attributes", font=Theme.fonts.subheading
+            ).pack(fill="x", padx=5)
+            for name, def_ in stat_template.fundamental_stats.items():
+                val = abilities_data.get(name, def_.default)
+                create_key_value_row(attr_frame, name, str(val))
 
-            for ab_def in stat_template.abilities:
-                val = abilities_data.get(ab_def.name, ab_def.default)
-                # Handle Dice Codes or Integers
-                val_display = str(val)
-                create_key_value_row(attr_frame, ab_def.name, val_display)
+        # Vitals
+        vitals_data = self.character_data.get("vital_resources", {})
+        if stat_template.vital_resources:
+            for name, def_ in stat_template.vital_resources.items():
+                data = vitals_data.get(name, {})
+                curr = data.get("current", 0) if isinstance(data, dict) else data
+                mx = data.get("max", 10) if isinstance(data, dict) else 10
+                create_vital_display(scroll_frame, name, curr, mx)
 
-        # 3. Render Vitals
-        vitals_data = self.character_data.get("vitals", {})
-        if stat_template.vitals:
-            for vit_def in stat_template.vitals:
-                data = vitals_data.get(vit_def.name, {})
-                # Handle {current, max} or raw value
-                if isinstance(data, dict):
-                    curr = data.get("current", 0)
-                    mx = data.get("max", 10)  # Default or need formula parsing
-                else:
-                    curr = data
-                    mx = 10
-
-                create_vital_display(scroll_frame, vit_def.name, curr, mx)
-
-        # 4. Render Tracks
-        tracks_data = self.character_data.get("tracks", {})
-        if stat_template.tracks:
-            for track_def in stat_template.tracks:
-                val = tracks_data.get(track_def.name, 0)
-                if isinstance(val, dict):
-                    val = val.get("value", 0)
-                create_track_display(
-                    scroll_frame,
-                    track_def.name,
-                    val,
-                    track_def.max_value,
-                    track_def.visual_style,
-                )
+        # Tracks / Consumables
+        cons_data = self.character_data.get("consumable_resources", {})
+        if stat_template.consumable_resources:
+            for name, def_ in stat_template.consumable_resources.items():
+                data = cons_data.get(name, {})
+                val = data.get("current", 0) if isinstance(data, dict) else data
+                mx = data.get("max", 0) if isinstance(data, dict) else 0
+                create_track_display(scroll_frame, name, val, mx)
 
     def _render_raw_dict(self, parent, data):
-        """Fallback renderer."""
         import json
 
-        txt = ctk.CTkLabel(
+        ctk.CTkLabel(
             parent,
             text=json.dumps(data, indent=2),
             justify="left",
             font=Theme.fonts.monospace,
-        )
-        txt.pack(fill="x", padx=10)
+        ).pack(fill="x")

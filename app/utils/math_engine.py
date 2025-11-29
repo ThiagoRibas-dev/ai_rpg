@@ -6,7 +6,6 @@ from app.models.stat_block import StatBlockTemplate
 logger = logging.getLogger(__name__)
 
 def safe_evaluate(expression: str, context: Dict[str, Any]) -> int | float:
-    """Safely evaluate math expression."""
     if not expression or expression == "0" or expression == "null":
         return 0
     try:
@@ -22,14 +21,13 @@ def safe_evaluate(expression: str, context: Dict[str, Any]) -> int | float:
         return 0
 
 def recalculate_derived_stats(entity_data: Dict[str, Any], stat_template: StatBlockTemplate) -> Dict[str, Any]:
-    """Recalculates DerivedStats and Meter Maxima."""
     if not entity_data or not stat_template:
         return entity_data
 
-    # 1. Build Context from Fundamental Stats
     math_context = {}
     fund = entity_data.get("fundamental_stats", {})
     
+    # 1. Fundamental
     for name, value in fund.items():
         math_context[name] = value
         if isinstance(value, int) and value >= 1:
@@ -38,43 +36,43 @@ def recalculate_derived_stats(entity_data: Dict[str, Any], stat_template: StatBl
 
     math_context["Level"] = entity_data.get("level", 1)
 
-    # 2. Calculate Derived
+    # 2. Derived (Iterate Dict items)
     if stat_template.derived_stats:
         entity_data.setdefault("derived_stats", {})
-        for calc_def in stat_template.derived_stats:
-            if calc_def.formula:
-                val = safe_evaluate(calc_def.formula, math_context)
-                entity_data["derived_stats"][calc_def.name] = int(val)
-                math_context[calc_def.name] = int(val)
+        for name, formula in stat_template.derived_stats.items():
+            if formula:
+                val = safe_evaluate(formula, math_context)
+                entity_data["derived_stats"][name] = int(val)
+                math_context[name] = int(val)
 
-    # 3. Calculate Vitals Max
+    # 3. Vitals (Iterate Dict items)
     if stat_template.vital_resources:
         entity_data.setdefault("vital_resources", {})
-        for v_def in stat_template.vital_resources:
+        for name, v_def in stat_template.vital_resources.items():
             if v_def.max_formula:
                 max_val = safe_evaluate(v_def.max_formula, math_context)
                 max_val = max(v_def.min_value, int(max_val))
                 
-                curr_data = entity_data["vital_resources"].get(v_def.name, {})
+                curr_data = entity_data["vital_resources"].get(name, {})
                 if not curr_data:
                     curr_data = {"current": max_val, "max": max_val}
                 else:
                     curr_data["max"] = max_val
-                entity_data["vital_resources"][v_def.name] = curr_data
+                entity_data["vital_resources"][name] = curr_data
 
-    # 4. Calculate Consumables Max
+    # 4. Consumables
     if stat_template.consumable_resources:
         entity_data.setdefault("consumable_resources", {})
-        for c_def in stat_template.consumable_resources:
+        for name, c_def in stat_template.consumable_resources.items():
             if c_def.max_formula:
                 max_val = safe_evaluate(c_def.max_formula, math_context)
-                max_val = max(c_def.min_value, int(max_val))
+                max_val = max(0, int(max_val))
                 
-                curr_data = entity_data["consumable_resources"].get(c_def.name, {})
+                curr_data = entity_data["consumable_resources"].get(name, {})
                 if not curr_data:
                     curr_data = {"current": max_val, "max": max_val}
                 else:
                     curr_data["max"] = max_val
-                entity_data["consumable_resources"][c_def.name] = curr_data
+                entity_data["consumable_resources"][name] = curr_data
 
     return entity_data
