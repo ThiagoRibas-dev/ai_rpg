@@ -2,12 +2,6 @@
 
 # Part I: The Basics
 
-### Introduction
-The book you hold in your hands is the definitive guide for how to play the 3.5 revision of the DUNGEONS & DRAGONS Roleplaying Game. It gathers resources from a wide variety of supplements, rules errata, and rules clarifications. When a preexisting core book or supplement differs with the rules herein, this document is meant to take precedence.
-
-Adjudication
-Essential to the D&D game is the Dungeon Master (DM). The DM is the referee and storyteller for the game, as well as the judge when the rules don't cover a particular topic. No set of rules can cover every possible circumstance in a game meant to mimic life in a fantasy world. DMs are expected to use knowledge of existing rules, common sense, real-world knowledge, and a sense of fun when dealing with special cases.
-
 ### The Core Mechanic
 Whenever your character attempts an act that has some chance of failure, the process is:
 1. Roll a d20.

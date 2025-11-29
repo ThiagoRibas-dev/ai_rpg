@@ -1,6 +1,6 @@
 """
-Models for the Static Ruleset (Game System).
-These define the 'physics' and 'library' of the game world.
+Models for the Game System Rules.
+Organized by Domain (Physics, Economy, Scripts).
 """
 
 from typing import List, Dict, Optional
@@ -8,59 +8,43 @@ from pydantic import BaseModel, Field
 
 
 class RuleEntry(BaseModel):
-    """A specific rule definition (e.g., 'Grappling', 'Illumination')."""
+    """Atomic rule for RAG."""
     name: str
     text: str
     tags: List[str] = Field(default_factory=list)
 
 
-class SkillDef(BaseModel):
-    """Definition of a skill available in the system."""
+class PhysicsConfig(BaseModel):
+    """The Resolution Engine."""
+    dice_notation: str = Field(..., description="e.g. '1d20', '3d6'")
+    roll_mechanic: str = Field(..., description="e.g. 'Roll + Mod vs DC', 'Roll under Skill'")
+    success_condition: str = Field(..., description="e.g. 'Total >= Target'")
+    crit_rules: str = Field("Nat 20 / Nat 1", description="Critical success/failure rules.")
+
+
+class ProcedureDef(BaseModel):
+    """A specific game loop."""
     name: str
     description: str
-    linked_ability: Optional[str] = None  # e.g., "Dexterity"
+    steps: List[str] = Field(default_factory=list)
 
 
-class ConditionDef(BaseModel):
-    """Definition of a status effect."""
-    name: str
-    description: str
-    effects: List[str] = Field(default_factory=list)
-
-
-class FeatureDef(BaseModel):
-    """
-    Generic definition for selectable features.
-    Used for Feats, Spells, Cyberware, Edges, etc.
-    """
-    name: str
-    description: str
-    cost: Optional[str] = None  # e.g., "2 MP", "1 Slot"
-    prerequisites: Optional[str] = None
-
-
-class Compendium(BaseModel):
-    """The Global Library of the game."""
-    skills: List[SkillDef] = Field(default_factory=list)
-    conditions: List[ConditionDef] = Field(default_factory=list)
-    damage_types: List[str] = Field(default_factory=list)
-    
-    # Flexible dictionaries for things like "Spells", "Feats", "Cyberware"
-    # Key = Category Name (e.g., "Level 1 Spells"), Value = List of Features
-    features: Dict[str, List[FeatureDef]] = Field(default_factory=dict)
-    
-    # Simple items list for now, can be expanded
-    items: List[FeatureDef] = Field(default_factory=list)
+class GameLoopConfig(BaseModel):
+    """Procedures grouped by mode."""
+    combat: Optional[ProcedureDef] = None
+    exploration: Optional[ProcedureDef] = None
+    social: Optional[ProcedureDef] = None
+    downtime: Optional[ProcedureDef] = None
+    # TWEAK: Renamed for clarity
+    general_procedures: List[ProcedureDef] = Field(default_factory=list)
 
 
 class Ruleset(BaseModel):
-    """The Root Object for a Game System."""
-    meta: Dict[str, str] = Field(default_factory=lambda: {"name": "Untitled System"})
+    """Root Configuration."""
+    meta: Dict[str, str] = Field(default_factory=lambda: {"name": "Untitled", "genre": "Generic"})
     
-    resolution_mechanic: str = Field(..., description="The core dice mechanic string.")
+    physics: PhysicsConfig
+    gameplay_loops: GameLoopConfig = Field(default_factory=GameLoopConfig)
     
-    # Static Rules
-    tactical_rules: List[RuleEntry] = Field(default_factory=list)
-    exploration_rules: List[RuleEntry] = Field(default_factory=list)
-    
-    compendium: Compendium = Field(default_factory=Compendium)
+    # Static Library (The Compendium)
+    mechanics: List[RuleEntry] = Field(default_factory=list)

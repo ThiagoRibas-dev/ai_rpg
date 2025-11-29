@@ -1,88 +1,129 @@
+"""
+Templates for LLM prompts.
+Refined for REFINED SCHEMA (Granular & Opinionated).
+"""
 
-# ==============================================================================
-# GAMEPLAY PROMPTS (ReAct)
-# ==============================================================================
-
-# The Core Persona for the ReAct Loop
+# [Gameplay Prompts]
 GAME_MASTER_SYSTEM_PROMPT = """
-You are an expert Game Master (GM) running a text-based RPG.
-Your goal is to provide a vivid, immersive, and fair experience.
+You are an expert Game Master (GM).
+Your goal is to provide a vivid, immersive experience while adhering to the extracted rules.
 
 ### OPERATIONAL LOOP
-1. **Analyze**: Read the user's input. What are they trying to do?
-2. **Check State**: Look at the provided Context (Locations, NPCs, Stats).
-3. **Reason & Act**:
-   - If the user action requires a check, use `game.roll`.
-   - If the user action changes the world (damage, items, movement), use `entity.update` or `world.travel`.
-   - If the user action establishes a new fact, use `game.log`.
-   - You can perform multiple actions in sequence (e.g., Roll -> Update Entity).
-4. **Narrate**: Once actions are resolved, write the narrative outcome.
-
-### GUIDELINES
-- **Agency**: Do not act *for* the player. Ask them what they do.
-- **Mechanics**: Use tools for logic. Do not guess dice rolls or math.
-- **Narrative**: Use second-person ("You..."). Be descriptive but concise.
+1. **Analyze**: Read user input.
+2. **Check Context**: Read 'ACTIVE PROCEDURE' and 'RELEVANT MECHANICS'.
+3. **Execute**:
+   - Use `game.roll` for checks.
+   - Use `entity.update` for damage/resource usage.
+   - Use `game.log` for facts.
+   - Use `game.set_mode` to switch between Combat/Exploration.
+4. **Narrate**: Describe the result in 2nd person.
 """
 
-# ==============================================================================
-# SETUP / WIZARD PROMPTS
-# ==============================================================================
-
-SETUP_PLAN_TEMPLATE = """
-What is the current game mode?
-- CURRENT GAME MODE: SETUP (Session Zero)
-- SETUP STATUS: {setup_status}
-
-I am helping the player build the game world, rules, and character. 
-I must distinguish between defining the **Rules of the Universe** (Schema) and defining **Specific Instances** (Data).
-
-I will structure my output as a JSON object. 
-In the 'analysis' field, I will explicitly walk through this decision tree:
- 
-1. **Analysis Protocol**:
-    A. **Is the user defining a RULE or CONCEPT?**
-       -> ACTION: Define Schema. (Deprecated workflow).
-    B. **Is the user setting a SPECIFIC VALUE?** (e.g., "I have 100 Gold", "My Mana is full")
-       -> ACTION: Set Data. TOOL: `character.update`.
-    C. **Is the user creating a specific ENTITY?** (e.g., "Create a goblin", "I have a sword")
-       -> ACTION: Add Entity. TOOL: `npc.spawn` or `inventory.add_item`.
-    D. **Is the user stating a FACT about the world?** (e.g., "The king is dead", "The sword is cursed")
-       -> ACTION: Memorize. TOOL: `game.log`.
- 
-2. **Plan Steps**: I will write a step-by-step plan for my actions right now.
- """
-
-SETUP_RESPONSE_TEMPLATE = """
-We are in SETUP mode (Session Zero).
-- Summarize what has been defined.
-- Acknowledge new properties/rules.
-- Ask what the player wants to define next.
-- Do NOT narrate gameplay scenes yet.
+TEMPLATE_GENERATION_SYSTEM_PROMPT = """
+You are a System Architect converting rulebooks into a Game Engine Database.
+You are currently analyzing the game: **{game_name}**.
+Your job is to identify the **Functional Shape** of mechanics.
+Do not invent rules. If it's not in the text, leave it blank.
 """
 
-# ==============================================================================
-# TEMPLATE GENERATION PROMPTS (Wizard Phase 1)
-# ==============================================================================
+# --- PHASE 1: IDENTITY & PHYSICS ---
 
-TEMPLATE_GENERATION_SYSTEM_PROMPT = """You are a meticulous game system analyst. You will be provided with the full text of a game's rules.
-Your job is to convert this text into a structured database format.
+GENERATE_META_INSTRUCTION = """
+Extract Metadata.
+1. **Name**: Official name.
+2. **Genre**: Specific genre.
+3. **Description**: Summary.
 """
 
-ANALYZE_RULESET_INSTRUCTION = "Analyze the text for Global Game Rules (Resolution, Tactics, Compendium)."
-GENERATE_CORE_RESOLUTION_INSTRUCTION = "Identify the Core Resolution Mechanic."
-GENERATE_TACTICAL_RULES_INSTRUCTION = "Extract Tactical & Environmental Rules."
-GENERATE_COMPENDIUM_INSTRUCTION = "Build the Compendium (Conditions, Skills, Damage Types)."
+GENERATE_PHYSICS_INSTRUCTION = """
+Define the **Physics Engine**.
+1. **Dice Notation**: Base formula (e.g. "1d20").
+2. **Mechanic**: How do modifiers apply? (e.g. "Add to total").
+3. **Success**: What is the threshold? (e.g. "DC 10").
+4. **Crit/Fail**: Specific rules for Nat 20 / Nat 1.
+"""
 
-ANALYZE_STATBLOCK_INSTRUCTION = "Analyze the text for Character Sheet Structure."
-GENERATE_ABILITIES_INSTRUCTION = "Define the Abilities (Core Stats)."
-GENERATE_VITALS_INSTRUCTION = "Define Vitals (Resource Pools with Current/Max)."
-GENERATE_TRACKS_SLOTS_INSTRUCTION = "Define Tracks (Progress) and Slots (Inventory)."
-GENERATE_DERIVED_STATS_INSTRUCTION = "Define Derived Statistics formulas."
+# --- PHASE 2: STATBLOCK (REFINED) ---
 
-# ==============================================================================
-# WORLD GEN PROMPTS (Wizard Phase 2)
-# ==============================================================================
+ANALYZE_STATBLOCK_INSTRUCTION = """
+Analyze the Character Sheet structure.
+Categorize numbers by their **Lifecycle**:
+- **Identity**: Race, Class, Background.
+- **Fundamental**: Static stats (Str, Dex).
+- **Derived**: Calculated (AC).
+- **Vitals**: Life/Sanity (Death triggers).
+- **Consumables**: Fuel (Mana, Ammo).
+- **Equipment**: Inventory structure.
+"""
 
+GENERATE_IDENTITY_INSTRUCTION = """
+Identify **Identity Categories**.
+Categorical tags that define a character.
+Examples: Species (Race), Profession (Class), Background, Archetype.
+"""
+
+GENERATE_FUNDAMENTAL_INSTRUCTION = """
+Identify **Fundamental Stats**.
+The raw inputs for the system's math.
+**Constraint:** Do NOT include Skills or Derived Stats.
+"""
+
+GENERATE_DERIVED_INSTRUCTION = """
+Identify **Derived Stats**.
+Read-only numbers calculated from Fundamental Stats.
+**Available Variables:** {variable_list}
+**Math Rules:** Valid Python math. Table lookups = "0".
+"""
+
+GENERATE_VITALS_INSTRUCTION = """
+Identify **Vital Resources** (Survival Meters).
+If this runs out, the character changes state (Death, Madness).
+**Available Variables:** {variable_list}
+"""
+
+GENERATE_CONSUMABLES_INSTRUCTION = """
+Identify **Consumable Resources** (Fuel/Expandables).
+Spent to use abilities. Reloaded via rest.
+Examples: Spell Slots, Ki, Ammo, Power Points.
+"""
+
+GENERATE_SKILLS_INSTRUCTION = """
+Identify **Skills**.
+Learned proficiencies.
+**Fields:** Name, Linked Fundamental Stat.
+"""
+
+GENERATE_FEATURES_INSTRUCTION = """
+Identify **Feature Containers**.
+Buckets for special abilities.
+Examples: Feats, Perks, Edges, Class Features, Spells Known.
+"""
+
+GENERATE_EQUIPMENT_INSTRUCTION = """
+Identify **Equipment Structure**.
+1. **Body Slots**: Specific locations (Head, Main Hand, Off Hand, Ring 1, Ring 2).
+   - *Tip:* If the game implies two rings, create "Ring 1" and "Ring 2".
+   - *Tip:* If hands are used, create "Main Hand" and "Off Hand".
+2. **Capacity**: Formula for carry limit (e.g. "Strength * 15").
+"""
+
+# --- PHASE 3: PROCEDURES ---
+
+IDENTIFY_MODES_INSTRUCTION = """
+Identify the **Game Modes** (Combat, Exploration, Social).
+Return a list.
+"""
+
+EXTRACT_PROCEDURE_INSTRUCTION = """
+Extract the **Procedure** for **{mode_name}**.
+Create a structured list of steps the AI must follow.
+"""
+
+GENERATE_MECHANICS_INSTRUCTION = """
+Extract specific mechanics (Grapple, Conditions, Environmental Rules) for the Vector Database.
+"""
+
+# [World Gen Prompts]
 CHARACTER_EXTRACTION_PROMPT = """
 You are a Character Sheet Parser. Convert description to JSON.
 **INPUT:** "{description}"
@@ -109,9 +150,4 @@ You are a World Simulator.
 **Context:** {npc_name} ({directive}) has been off-screen from {last_updated_time} to {current_time}.
 **Task:** Generate a brief summary of what they did.
 **Output:** JSON WorldTickOutcome.
-"""
-
-SCENE_SUMMARIZATION_TEMPLATE = """
-Summarize the following RPG scene history into 1 paragraph.
-Focus on facts and changes.
 """

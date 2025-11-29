@@ -92,13 +92,15 @@ class StateQuery(BaseModel):
     json_path: str = Field(...)
 
 class InventoryAddItem(BaseModel):
-    """Kept for Wizard compatibility if needed."""
+    """Directly add items to specific slots."""
     name: Literal["inventory.add_item"] = "inventory.add_item"
     owner_key: str = Field(...)
     item_name: str = Field(...)
     quantity: int = 1
     description: Optional[str] = None
     properties: Optional[Dict[str, Any]] = None
+    # TWEAK: Optional slot override
+    target_slot: Optional[str] = Field(None, description="Force item into this slot (e.g. 'Load 1'). Overrides rules.")
 
 class CharacterUpdate(BaseModel):
     """Kept for Wizard compatibility."""

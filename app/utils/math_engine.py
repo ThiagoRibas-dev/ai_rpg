@@ -1,95 +1,80 @@
 import logging
 from typing import Dict, Any
-from simpleeval import simple_eval, NameNotDefined
+from simpleeval import simple_eval
 from app.models.stat_block import StatBlockTemplate
 
 logger = logging.getLogger(__name__)
 
 def safe_evaluate(expression: str, context: Dict[str, Any]) -> int | float:
-    """
-    Safely evaluate a mathematical expression using simpleeval.
-    Returns 0 if evaluation fails.
-    """
+    """Safely evaluate math expression."""
+    if not expression or expression == "0" or expression == "null":
+        return 0
     try:
-        # Ensure all context values are numbers (handle None or strings)
         safe_context = {}
         for k, v in context.items():
             try:
                 safe_context[k] = float(v)
             except (ValueError, TypeError):
                 safe_context[k] = 0
-
         return simple_eval(expression, names=safe_context)
-    except (NameNotDefined, SyntaxError, Exception) as e:
-        logger.warning(f"Math evaluation failed for '{expression}': {e}")
+    except Exception as e:
+        logger.warning(f"Math error '{expression}': {e}")
         return 0
 
 def recalculate_derived_stats(entity_data: Dict[str, Any], stat_template: StatBlockTemplate) -> Dict[str, Any]:
-    """
-    Recalculates Derived Stats and Vital Max values based on Abilities.
-    Updates the entity_data dictionary in place and returns it.
-    """
+    """Recalculates DerivedStats and Meter Maxima."""
     if not entity_data or not stat_template:
         return entity_data
 
-    # 1. Build Context from Abilities
-    # Flatten {abilities: {STR: 10}} -> {STR: 10} for easy formula access
+    # 1. Build Context from Fundamental Stats
     math_context = {}
-    abilities = entity_data.get("abilities", {})
+    fund = entity_data.get("fundamental_stats", {})
     
-    # Add raw abilities
-    for name, value in abilities.items():
+    for name, value in fund.items():
         math_context[name] = value
-        # Also add common shorthand if not present (e.g. Strength -> STR)
-        # This logic relies on the template defs if we wanted to be robust, 
-        # but for now we trust the keys match the template names.
-        
-        # Auto-calculate Modifiers for d20 systems if values are integers
-        # e.g. If STR is 18, define STR_mod = 4
-        if isinstance(value, int):
+        if isinstance(value, int) and value >= 1:
             mod = (value - 10) // 2
-            math_context[f"{name}_mod"] = mod
-            math_context[f"{name}Mod"] = mod
+            math_context[f"{name}_Mod"] = mod
 
-    # Add current level if available
     math_context["Level"] = entity_data.get("level", 1)
-    math_context["PB"] = 2 + ((math_context["Level"] - 1) // 4) # D&D Proficiency Bonus approximation
 
-    # 2. Calculate Derived Stats
+    # 2. Calculate Derived
     if stat_template.derived_stats:
-        entity_data.setdefault("derived", {})
-        for derived_def in stat_template.derived_stats:
-            if derived_def.formula:
-                val = safe_evaluate(derived_def.formula, math_context)
-                # Round to nearest int usually desirable for stats
-                entity_data["derived"][derived_def.name] = int(val)
-                
-                # Add derived stats to context so subsequent formulas can use them
-                math_context[derived_def.name] = int(val)
+        entity_data.setdefault("derived_stats", {})
+        for calc_def in stat_template.derived_stats:
+            if calc_def.formula:
+                val = safe_evaluate(calc_def.formula, math_context)
+                entity_data["derived_stats"][calc_def.name] = int(val)
+                math_context[calc_def.name] = int(val)
 
-    # 3. Calculate Vital Maxima
-    if stat_template.vitals:
-        entity_data.setdefault("vitals", {})
-        for vital_def in stat_template.vitals:
-            if vital_def.max_formula:
-                max_val = safe_evaluate(vital_def.max_formula, math_context)
-                max_val = max(vital_def.min_value, int(max_val))
+    # 3. Calculate Vitals Max
+    if stat_template.vital_resources:
+        entity_data.setdefault("vital_resources", {})
+        for v_def in stat_template.vital_resources:
+            if v_def.max_formula:
+                max_val = safe_evaluate(v_def.max_formula, math_context)
+                max_val = max(v_def.min_value, int(max_val))
                 
-                # Update max in the complex vital object
-                current_vital_data = entity_data["vitals"].get(vital_def.name, {})
-                
-                # Handle format variants (scalar vs dict)
-                if isinstance(current_vital_data, dict):
-                    current_vital_data["max"] = max_val
-                    # Clamp current if it exceeds new max? Optional, but good practice.
-                    if "current" in current_vital_data:
-                        current_vital_data["current"] = min(current_vital_data["current"], max_val)
-                    else:
-                        current_vital_data["current"] = max_val
+                curr_data = entity_data["vital_resources"].get(v_def.name, {})
+                if not curr_data:
+                    curr_data = {"current": max_val, "max": max_val}
                 else:
-                    # Upgrade scalar to dict
-                    current_vital_data = {"current": current_vital_data if isinstance(current_vital_data, int) else max_val, "max": max_val}
+                    curr_data["max"] = max_val
+                entity_data["vital_resources"][v_def.name] = curr_data
+
+    # 4. Calculate Consumables Max
+    if stat_template.consumable_resources:
+        entity_data.setdefault("consumable_resources", {})
+        for c_def in stat_template.consumable_resources:
+            if c_def.max_formula:
+                max_val = safe_evaluate(c_def.max_formula, math_context)
+                max_val = max(c_def.min_value, int(max_val))
                 
-                entity_data["vitals"][vital_def.name] = current_vital_data
+                curr_data = entity_data["consumable_resources"].get(c_def.name, {})
+                if not curr_data:
+                    curr_data = {"current": max_val, "max": max_val}
+                else:
+                    curr_data["max"] = max_val
+                entity_data["consumable_resources"][c_def.name] = curr_data
 
     return entity_data

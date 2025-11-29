@@ -4,15 +4,12 @@ from typing import List
 from app.models.session import Session
 from app.models.game_session import GameSession
 from app.models.message import Message
+from app.setup.setup_manifest import SetupManifest
 
 
 class ContextBuilder:
     """
-    Builds static and dynamic prompt components.
-    Phase 3 Optimized:
-    - Semantic Spatial Awareness (Python calculates distance)
-    - Removed "Every Turn" JIT Simulation (Moved to Tools)
-    - Lighter Context
+    Builds context using the Refined Schema.
     """
 
     def __init__(
@@ -28,9 +25,7 @@ class ContextBuilder:
         self.vs = vector_store
         self.state_builder = state_builder
         self.mem_retriever = mem_retriever
-        self.simulation_service = (
-            simulation_service  # Kept for dependency, but not used in loop
-        )
+        self.simulation_service = simulation_service
         self.logger = logger or logging.getLogger(__name__)
 
     def build_static_system_instruction(
@@ -38,22 +33,22 @@ class ContextBuilder:
         game_session: GameSession,
         ruleset_text: str = "",
     ) -> str:
-        """Build the cacheable system instruction."""
         sections = []
-
-        # 1. User's game prompt
         session_data = Session.from_json(game_session.session_data)
         user_game_prompt = session_data.get_system_prompt()
         sections.append(user_game_prompt)
 
-        # 2. Ruleset Reference
-        if ruleset_text:
-            sections.append("# GAME RULES & MECHANICS")
-            sections.append(ruleset_text)
+        # Kernel (Physics)
+        manifest = SetupManifest(self.db).get_manifest(game_session.id)
+        ruleset_id = manifest.get("ruleset_id")
 
-        # 3. Author's note
+        if ruleset_id:
+            ruleset = self.db.rulesets.get_by_id(ruleset_id)
+            if ruleset:
+                sections.append(self._render_physics(ruleset))
+
         if game_session.authors_note:
-            sections.append("# NOTE")
+            sections.append("# AUTHOR'S NOTE")
             sections.append(game_session.authors_note)
 
         return "\n\n".join(sections)
@@ -63,30 +58,48 @@ class ContextBuilder:
         game_session: GameSession,
         chat_history: List[Message],
     ) -> str:
-        """
-        Build dynamic context for the ReAct loop.
-        """
         sections = []
+        last_user_msg = ""
+        for msg in reversed(chat_history):
+            if msg.role == "user":
+                last_user_msg = msg.content
+                break
 
-        # 1. Current State (Vitals/Stats)
+        # 1. State
         state_text = self.state_builder.build(game_session.id)
         if state_text:
             sections.append(f"# CURRENT STATE #\n{state_text}")
 
-        # 2. Navigation & Spatial Awareness (Calculated in Python)
-        # Replaces raw coordinate dumps
+        # 2. Active Procedure
+        manifest = SetupManifest(self.db).get_manifest(game_session.id)
+        ruleset_id = manifest.get("ruleset_id")
+        current_mode = game_session.game_mode.lower()
+
+        if ruleset_id:
+            ruleset = self.db.rulesets.get_by_id(ruleset_id)
+            if ruleset:
+                proc_text = self._render_procedure(ruleset, current_mode)
+                if proc_text:
+                    sections.append(
+                        f"# ACTIVE PROCEDURE: {current_mode.upper()}\n{proc_text}"
+                    )
+
+        # 3. RAG Rules
+        if ruleset_id and last_user_msg:
+            relevant_rules = self.vs.search_rules(ruleset_id, last_user_msg, k=3)
+            if relevant_rules:
+                rule_block = "\n".join([f"- {r['content']}" for r in relevant_rules])
+                sections.append(f"# RELEVANT MECHANICS\n{rule_block}")
+
+        # 4. Spatial
         spatial_context = self._build_spatial_context(game_session.id)
         if spatial_context:
             sections.append(spatial_context)
 
-        # 3. Active NPCs (Contextual)
+        # 5. Narrative Memory
         active_npc_keys = self._get_active_npc_keys(game_session.id)
-
-        # 4. Relevant Memories
-        # We pass active NPCs to boost memory relevance
         session = Session.from_json(game_session.session_data)
         session.id = game_session.id
-
         memories = self.mem_retriever.get_relevant(
             session, chat_history, active_npc_keys=active_npc_keys
         )
@@ -96,19 +109,42 @@ class ContextBuilder:
 
         return "\n\n".join(sections)
 
+    def _render_physics(self, ruleset) -> str:
+        p = ruleset.physics
+        lines = ["# CORE PHYSICS"]
+        lines.append(f"- **Dice**: {p.dice_notation}")
+        lines.append(f"- **Mechanic**: {p.roll_mechanic}")
+        lines.append(f"- **Success**: {p.success_condition}")
+        lines.append(f"- **Crit/Fail**: {p.crit_rules}")
+        return "\n".join(lines)
+
+    def _render_procedure(self, ruleset, mode: str) -> str:
+        loops = ruleset.gameplay_loops
+        proc = None
+
+        if mode == "combat":
+            proc = loops.combat
+        elif mode == "exploration":
+            proc = loops.exploration
+        elif mode == "social":
+            proc = loops.social
+        elif mode == "downtime":
+            proc = loops.downtime
+
+        if not proc:
+            return ""
+
+        lines = [f"**{proc.description}**"]
+        for step in proc.steps:
+            lines.append(f"  {step}")
+        return "\n".join(lines)
+
     def _build_spatial_context(self, session_id: int) -> str:
-        """
-        Generates a semantic description of the scene layout.
-        Calculates distances relative to the player.
-        """
         try:
             scene = self.db.game_state.get_entity(session_id, "scene", "active_scene")
             if not scene:
                 return ""
-
             lines = []
-
-            # A. Location Info
             loc_key = scene.get("location_key")
             if loc_key:
                 location = self.db.game_state.get_entity(
@@ -117,98 +153,64 @@ class ContextBuilder:
                 if location:
                     lines.append(f"# LOCATION: {location.get('name', 'Unknown')} #")
                     lines.append(location.get("description_visual", ""))
-
-                    # Exits
                     conns = location.get("connections", {})
                     if conns:
-                        exits = []
-                        for direction, data in conns.items():
-                            exits.append(
-                                f"{direction.upper()} -> {data.get('display_name')}"
-                            )
+                        exits = [
+                            f"{d.upper()} -> {data.get('display_name')}"
+                            for d, data in conns.items()
+                        ]
                         lines.append("Exits: " + ", ".join(exits))
 
-            # B. Tactical Positions (The "Visuals over Text" logic)
             tmap = scene.get("tactical_map", {})
-            positions = tmap.get("positions", {})  # {key: "A1"}
-
+            positions = tmap.get("positions", {})
             if positions:
                 lines.append("\n# TACTICAL OVERVIEW #")
-
-                # Get Player Pos
                 player_pos = self._parse_coord(positions.get("player", "A1"))
-
-                # Calculate relative distances
                 for key, coord_str in positions.items():
                     if key == "player":
                         continue
-
-                    # Get Name
                     name = key.split(":")[-1].title()
-                    entity = self.db.game_state.get_entity(session_id, "character", key)
-                    if entity:
-                        name = entity.get("name", name)
-
-                    # Math
                     npc_pos = self._parse_coord(coord_str)
-                    dist = math.dist(player_pos, npc_pos) * 5  # Assuming 5ft squares
+                    dist = math.dist(player_pos, npc_pos) * 5
 
-                    # Semantic Tag
                     if dist <= 5:
-                        tag = "Melee Range (Adjacent)"
+                        tag = "Melee Range"
                     elif dist <= 15:
-                        tag = "Near (1 move)"
+                        tag = "Near"
                     elif dist <= 30:
                         tag = "Short Range"
-                    elif dist <= 60:
-                        tag = "Long Range"
                     else:
-                        tag = "Very Far"
-
+                        tag = "Far"
                     lines.append(f"- {name}: {int(dist)}ft away [{tag}]")
-
             return "\n".join(lines)
-        except Exception as e:
-            self.logger.error(f"Error building spatial context: {e}", exc_info=True)
+        except Exception:
             return ""
 
     def _parse_coord(self, coord: str) -> tuple[int, int]:
-        """Converts 'A1' to (0, 0), 'B2' to (1, 1)."""
         if not coord or len(coord) < 2:
             return (0, 0)
         try:
-            col_str = coord[0].upper()
-            row_str = coord[1:]
-            col = ord(col_str) - 65  # A=0, B=1
-            row = int(row_str) - 1  # 1=0, 2=1
+            col = ord(coord[0].upper()) - 65
+            row = int(coord[1:]) - 1
             return (col, row)
-        except Exception as e:
-            self.logger.error(
-                f"Error parsing coordinate: {e}. Returnin 0,0", exc_info=True
-            )
+        except Exception:
             return (0, 0)
 
     def _get_active_npc_keys(self, session_id: int) -> List[str]:
-        """Finds the entity keys of NPCs in the active scene."""
         try:
             scene = self.db.game_state.get_entity(session_id, "scene", "active_scene")
-            if not scene or "members" not in scene:
+            if not scene:
                 return []
             return [
                 m.split(":", 1)[1]
-                for m in scene["members"]
+                for m in scene.get("members", [])
                 if m.startswith("character:") and "player" not in m
             ]
         except Exception:
-            self.logger.error(
-                "Error getting active NPC keys. Returning empty", exc_info=True
-            )
             return []
 
     def get_truncated_history(
         self, session: Session, max_messages: int
     ) -> List[Message]:
         history = session.get_history()
-        if len(history) <= max_messages:
-            return history
-        return history[-max_messages:]
+        return history[-max_messages:] if len(history) > max_messages else history

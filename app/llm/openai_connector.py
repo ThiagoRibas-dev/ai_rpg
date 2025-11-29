@@ -100,7 +100,7 @@ class OpenAIConnector(LLMConnector):
         system_prompt: str,
         chat_history: List[Message],
         output_schema: Type[BaseModel],
-        temperature: float = 0.7,
+        temperature: float = 0.5,
         top_p: float = 0.9,
     ) -> BaseModel:
         messages = [{"role": "system", "content": system_prompt}]

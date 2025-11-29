@@ -1,94 +1,120 @@
 """
-Models for the StatBlock Template (Entity Structure).
-These define the 'shape' of a character sheet.
+Models for the Refined StatBlock Template.
+Implements granular categorization for Identity, Equipment, and Resources.
 """
 
 from typing import List, Optional, Literal, Union
 from pydantic import BaseModel, Field
 
 
-class AbilityDef(BaseModel):
+class IdentityDef(BaseModel):
     """
-    Core attributes (STR, DEX, etc).
-    Supports Integers (D&D), Die Codes (Savage Worlds), or Dots (WoD).
+    Defines a category of identity.
+    e.g. "Species" (Race), "Profession" (Class), "Background".
+    """
+    category_name: str = Field(..., description="e.g. 'Race', 'Playbook', 'Background'")
+    description: Optional[str] = None
+    allow_multiple: bool = Field(False, description="Can you have two of these? (e.g. Multiclassing)")
+    # TWEAK: Distinguish between selecting from a list (Class) vs writing free text (Beliefs/Instincts)
+    value_type: Literal["selection", "text"] = Field("selection", description="Is this a specific option or free text?")
+
+
+class FundamentalStatDef(BaseModel):
+    """
+    BASE ATTRIBUTES. The raw inputs for the system's math.
+    e.g. Strength, Agility, Logic.
     """
     name: str
     abbr: Optional[str] = None
     description: Optional[str] = None
-    data_type: Literal["integer", "die_code", "dots", "float", "string"] = "integer"
+    data_type: Literal["integer", "die_code", "dots", "float"] = "integer"
     default: Union[int, str, float] = 10
-    
-    # Validations
-    range_min: Optional[float] = None
-    range_max: Optional[float] = None
-    allowed_values: Optional[List[str]] = None  # e.g. ["d4", "d6", "d8"]
-
-
-class VitalDef(BaseModel):
-    """
-    Resource pools that fluctuate (HP, Mana, Sanity).
-    """
-    name: str
-    description: Optional[str] = None
-    min_value: float = 0
-    has_max: bool = True
-    
-    # Formula to calculate max (e.g. "10 + CON_mod")
-    # Evaluated by app/utils/math_engine.py
-    max_formula: Optional[str] = Field(None, description="Math formula for dynamic max value (e.g. '10 + CON').")
-    
-    recover: Optional[str] = None  # Text description of recovery
-
-
-class TrackDef(BaseModel):
-    """
-    Abstract progress trackers (Clocks, Experience, Stress).
-    """
-    name: str
-    description: Optional[str] = None
-    max_value: int = 4
-    visual_style: Literal["clock", "bar", "dots", "checkboxes"] = "clock"
-    
-    # Logic hooks
-    trigger_on_full: Optional[str] = None  # e.g., "Take Trauma"
-    trigger_on_empty: Optional[str] = None
-    reset_condition: Optional[str] = None
-
-
-class SlotDef(BaseModel):
-    """
-    Containers for items or features (Inventory, Spell Slots, Loadout).
-    """
-    name: str
-    description: Optional[str] = None
-    
-    # Capacity Logic
-    capacity_formula: Optional[str] = None  # e.g. "STR * 5"
-    fixed_capacity: Optional[int] = None
-    
-    # What can go in here?
-    accepts_tags: List[str] = Field(default_factory=list)  # e.g. ["spell", "item"]
-    
-    # Behavior
-    overflow_behavior: Literal["prevent", "penalty", "warn"] = "prevent"
 
 
 class DerivedStatDef(BaseModel):
     """
-    Stats calculated entirely from other values (AC, Save DC).
+    CALCULATED VALUES. Read-only outputs.
+    e.g. AC, Initiative, Save DC.
     """
     name: str
-    formula: str = Field(..., description="Math formula using Ability names (e.g. '10 + DEX').")
+    formula: str = Field(..., description="Python math string.")
+
+
+class VitalResourceDef(BaseModel):
+    """
+    LIFE METERS.
+    If this runs out (or fills up), the character dies, goes mad, or is taken out.
+    e.g. HP, Sanity, Stress.
+    """
+    name: str
+    type: Literal["depleting", "accumulating"] = "depleting"
+    min_value: int = 0
+    max_formula: Optional[str] = Field(None, description="Formula for max value.")
+    on_zero: Optional[str] = Field(None, description="Effect at 0 (e.g. 'Death').")
+    on_max: Optional[str] = Field(None, description="Effect at max (e.g. 'Panic').")
+
+
+class ConsumableResourceDef(BaseModel):
+    """
+    FUEL / EXPANDABLES.
+    Spent to use abilities. Reloaded via rest/actions.
+    e.g. Spell Slots, Ki, Ammo, Power Points.
+    """
+    name: str
+    reset_trigger: str = Field("Rest", description="When does this refill?")
+    max_formula: Optional[str] = Field(None, description="Formula for max capacity.")
+
+
+class SkillDef(BaseModel):
+    """
+    LEARNED PROFICIENCIES.
+    """
+    name: str
+    linked_stat: Optional[str] = Field(None, description="Associated Fundamental Stat.")
+    can_be_untrained: bool = True
+
+
+class FeatureContainerDef(BaseModel):
+    """
+    Buckets for special abilities.
+    e.g. "Feats", "Class Features", "Spells Known".
+    """
+    name: str
+    description: Optional[str] = None
+
+
+class BodySlotDef(BaseModel):
+    """
+    A specific location on the body to equip items.
+    e.g. 'Main Hand', 'Off Hand', 'Ring 1', 'Ring 2'.
+    """
+    name: str
+    description: Optional[str] = None
+    accepted_item_types: List[str] = Field(default_factory=list, description="e.g. ['Ring'], ['Weapon', 'Shield']")
+
+
+class EquipmentConfig(BaseModel):
+    """
+    Inventory definition.
+    """
+    capacity_stat: Optional[str] = Field(None, description="CalculatedStat defining carry limit.")
+    slots: List[BodySlotDef] = Field(default_factory=list)
 
 
 class StatBlockTemplate(BaseModel):
     """
-    The blueprint for a specific type of entity (e.g. 'Heroic PC', 'Goblin').
+    The blueprint for an Entity.
     """
     template_name: str
     
-    abilities: List[AbilityDef] = Field(default_factory=list)
-    vitals: List[VitalDef] = Field(default_factory=list)
-    tracks: List[TrackDef] = Field(default_factory=list)
-    slots: List[SlotDef] = Field(default_factory=list)
+    identity_categories: List[IdentityDef] = Field(default_factory=list)
+    fundamental_stats: List[FundamentalStatDef] = Field(default_factory=list)
     derived_stats: List[DerivedStatDef] = Field(default_factory=list)
+    
+    vital_resources: List[VitalResourceDef] = Field(default_factory=list)
+    consumable_resources: List[ConsumableResourceDef] = Field(default_factory=list)
+    
+    skills: List[SkillDef] = Field(default_factory=list)
+    features: List[FeatureContainerDef] = Field(default_factory=list)
+    
+    equipment: EquipmentConfig = Field(default_factory=EquipmentConfig)

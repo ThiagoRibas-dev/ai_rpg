@@ -1,227 +1,306 @@
 import logging
-from typing import Any, List, Callable, Optional, Type, TypeVar, Tuple
+from typing import List, Callable, Optional, Tuple
 from pydantic import BaseModel, create_model, Field
 
 from app.llm.llm_connector import LLMConnector
 from app.models.message import Message
-# Import new models
 from app.models.ruleset import (
-    Ruleset, Compendium, RuleEntry
+    Ruleset,
+    PhysicsConfig,
+    GameLoopConfig,
+    ProcedureDef,
+    RuleEntry,
 )
 from app.models.stat_block import (
-    StatBlockTemplate, AbilityDef, VitalDef, TrackDef, SlotDef, DerivedStatDef
+    StatBlockTemplate,
+    IdentityDef,
+    FundamentalStatDef,
+    DerivedStatDef,
+    VitalResourceDef,
+    ConsumableResourceDef,
+    SkillDef,
+    FeatureContainerDef,
+    EquipmentConfig,
 )
-# Import new prompts
 from app.prompts.templates import (
     TEMPLATE_GENERATION_SYSTEM_PROMPT,
-    ANALYZE_RULESET_INSTRUCTION,
+    GENERATE_META_INSTRUCTION,
+    GENERATE_PHYSICS_INSTRUCTION,
     ANALYZE_STATBLOCK_INSTRUCTION,
-    GENERATE_CORE_RESOLUTION_INSTRUCTION,
-    GENERATE_TACTICAL_RULES_INSTRUCTION,
-    GENERATE_COMPENDIUM_INSTRUCTION,
-    GENERATE_ABILITIES_INSTRUCTION,
+    GENERATE_IDENTITY_INSTRUCTION,
+    GENERATE_FUNDAMENTAL_INSTRUCTION,
+    GENERATE_DERIVED_INSTRUCTION,
     GENERATE_VITALS_INSTRUCTION,
-    GENERATE_TRACKS_SLOTS_INSTRUCTION,
-    GENERATE_DERIVED_STATS_INSTRUCTION
+    GENERATE_CONSUMABLES_INSTRUCTION,
+    GENERATE_SKILLS_INSTRUCTION,
+    GENERATE_FEATURES_INSTRUCTION,
+    GENERATE_EQUIPMENT_INSTRUCTION,
+    IDENTIFY_MODES_INSTRUCTION,
+    EXTRACT_PROCEDURE_INSTRUCTION,
+    GENERATE_MECHANICS_INSTRUCTION,
 )
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar("T", bound=BaseModel)
 
 class TemplateGenerationService:
     """
-    Service for generating game templates from raw text using an LLM.
-    Now supports the v13 Ruleset + StatBlock architecture.
+    Generates game templates using the Refined Ontology.
     """
 
-    def __init__(self, llm_connector: LLMConnector, rules_text: str, status_callback: Optional[Callable[[str], None]] = None):
+    def __init__(
+        self,
+        llm_connector: LLMConnector,
+        rules_text: str,
+        status_callback: Optional[Callable[[str], None]] = None,
+    ):
         self.llm = llm_connector
         self.rules_text = rules_text
         self.status_callback = status_callback
-        
-        # Pre-compute the static system prompt with the rules text
-        self.static_system_prompt = f"{TEMPLATE_GENERATION_SYSTEM_PROMPT}\n\n# GAME RULES TEXT\n{self.rules_text}"
+        self.base_system_prompt = TEMPLATE_GENERATION_SYSTEM_PROMPT
 
     def _update_status(self, message: str):
-        """Helper to send status updates to the UI."""
         if self.status_callback:
             self.status_callback(message)
         logger.info(f"[TemplateGeneration] {message}")
 
-    def _iterative_generation_loop(
-        self, 
-        current_instruction: str, 
-        output_schema: Type[T], 
-        list_accessor: str,
-        context_key: str,
-        context_data: str
-    ) -> List[Any]:
-        """
-        Generic helper for the "generate until done" pattern.
-        (Kept for potential future use, though v13 uses single-pass lists more often)
-        """
-        all_items = []
-        # Implementation omitted for brevity as v13 uses single-pass for now
-        return all_items
-
-    def _analyze_text(self, instruction: str) -> str:
-        """
-        Performs a raw text analysis step (Thinking Phase).
-        Returns the AI's analysis string to be used as context.
-        """
-        # We use a simple non-structured call here to let the LLM explain itself freely
-        response_generator = self.llm.get_streaming_response(
-            system_prompt=self.static_system_prompt,
-            chat_history=[Message(role="user", content=instruction)]
-        )
-        
-        # Consume generator to get full text
-        full_text = "".join([chunk for chunk in response_generator])
-        return full_text
-
+    def _get_sys_prompt(self, game_name: str = "Unknown RPG"):
+        return f"{self.base_system_prompt.format(game_name=game_name)}\n\n# GAME RULES TEXT\n{self.rules_text}"
 
     def generate_template(self) -> Tuple[Ruleset, StatBlockTemplate]:
-        """
-        Run the full generation pipeline and assemble the Ruleset and StatBlockTemplate.
-        Returns Pydantic models.
-        """
-        
-        # ==========================================
-        # PHASE 1: RULESET (The Physics)
-        # ==========================================
-        
-        # 0. Analyze Phase 1
-        self._update_status("Analyzing Global Rules...")
-        ruleset_analysis = self._analyze_text(ANALYZE_RULESET_INSTRUCTION)
-        logger.debug(f"Ruleset Analysis:\n{ruleset_analysis}")
-        
-        # Create a context block for the extraction steps
-        ruleset_analysis_context = f"*** ANALYSIS OF RULES ***\n{ruleset_analysis}\n\nUse the analysis above to ensure accuracy."
+        # --- PHASE 1: RULES KERNEL ---
+        self._update_status("Identifying Game Identity...")
 
-        # 1. Core Mechanics
-        self._update_status("Defining Core Resolution Mechanics...")
-        ruleset_base = self._generate_resolution(ruleset_analysis_context)
-        
-        # 2. Tactical Rules
-        self._update_status("Extracting Tactical Rules...")
-        # Define wrapper for list extraction
-        RuleList = create_model("RuleList", rules=(List[RuleEntry], Field(default_factory=list)), __base__=BaseModel)
-        tactical_result = self.llm.get_structured_response(
-            system_prompt=self.static_system_prompt,
-            chat_history=[Message(role="user", content=f"{ruleset_analysis_context}\n\n{GENERATE_TACTICAL_RULES_INSTRUCTION}")],
-            output_schema=RuleList
+        temp_sys_prompt = f"{self.base_system_prompt.format(game_name='Unknown')}\n\n# RULES START\n{self.rules_text[:15000]}"
+
+        class RulesetMeta(BaseModel):
+            name: str
+            genre: str
+            description: str
+
+        meta_res = self.llm.get_structured_response(
+            system_prompt=temp_sys_prompt,
+            chat_history=[Message(role="user", content=GENERATE_META_INSTRUCTION)],
+            output_schema=RulesetMeta,
         )
-        tactical_rules = getattr(tactical_result, "rules", [])
 
-        # 3. Compendium (Skills, Conditions)
-        self._update_status("Building Compendium (Skills & Conditions)...")
-        compendium_result = self.llm.get_structured_response(
-            system_prompt=self.static_system_prompt,
-            chat_history=[Message(role="user", content=f"{ruleset_analysis_context}\n\n{GENERATE_COMPENDIUM_INSTRUCTION}")],
-            output_schema=Compendium
+        meta_data = {
+            "name": meta_res.name if meta_res else "Untitled System",
+            "genre": meta_res.genre if meta_res else "Generic",
+            "description": meta_res.description if meta_res else "",
+        }
+        game_name = meta_data["name"]
+        self._update_status(f"Analyzed: {game_name}")
+        sys_prompt = self._get_sys_prompt(game_name)
+
+        # Physics
+        self._update_status("Defining Physics...")
+        phys_res = self.llm.get_structured_response(
+            system_prompt=sys_prompt,
+            chat_history=[Message(role="user", content=GENERATE_PHYSICS_INSTRUCTION)],
+            output_schema=PhysicsConfig,
         )
-        compendium = compendium_result if compendium_result else Compendium()
-        
-        # Assemble Ruleset
-        ruleset = Ruleset(
-            resolution_mechanic=ruleset_base.resolution_mechanic,
-            tactical_rules=tactical_rules,
-            compendium=compendium
+
+        # --- PHASE 2: STATBLOCK ---
+        self._update_status("Analyzing Stats...")
+        stat_analysis_gen = self.llm.get_streaming_response(
+            sys_prompt, [Message(role="user", content=ANALYZE_STATBLOCK_INSTRUCTION)]
         )
-        
-        ruleset_context = ruleset.model_dump_json(indent=2)
+        stat_analysis = "".join(stat_analysis_gen)
+        context = f"*** STAT ANALYSIS ***\n{stat_analysis}\n\n"
 
-        # ==========================================
-        # PHASE 2: STATBLOCK (The Character Sheet)
-        # ==========================================
-        
-        # 0. Analyze Phase 2
-        self._update_status("Analyzing Character Structure...")
-        statblock_analysis = self._analyze_text(ANALYZE_STATBLOCK_INSTRUCTION)
-        logger.debug(f"StatBlock Analysis:\n{statblock_analysis}")
-
-        # Create context block
-        statblock_analysis_context = f"*** ANALYSIS OF CHARACTER SHEET ***\n{statblock_analysis}\n\nUse the analysis above. Do not include mechanics noted as 'absent'."
-
-        # 4. Abilities
-        self._update_status("Structuring Character Abilities...")
-        # Context: Ruleset implies what stats are needed
-        AbilityList = create_model("AbilityList", abilities=(List[AbilityDef], Field(default_factory=list)), __base__=BaseModel)
-        
-        abilities_result = self.llm.get_structured_response(
-            system_prompt=self.static_system_prompt,
-            chat_history=[Message(role="user", content=f"{statblock_analysis_context}\n\n{GENERATE_ABILITIES_INSTRUCTION}\n\n# CONTEXT: RULESET\n{ruleset_context}")],
-            output_schema=AbilityList
+        # Identity
+        self._update_status("Defining Identity...")
+        IdList = create_model(
+            "IdList",
+            items=(List[IdentityDef], Field(default_factory=list)),
+            __base__=BaseModel,
         )
-        abilities = getattr(abilities_result, "abilities", [])
-        
-        # 5. Vitals
-        self._update_status("Structuring Vitals (HP/Mana)...")
-        VitalList = create_model("VitalList", vitals=(List[VitalDef], Field(default_factory=list)), __base__=BaseModel)
-        vitals_result = self.llm.get_structured_response(
-            system_prompt=self.static_system_prompt,
-            chat_history=[Message(role="user", content=f"{statblock_analysis_context}\n\n{GENERATE_VITALS_INSTRUCTION}\n\n# CONTEXT: RULESET\n{ruleset_context}")],
-            output_schema=VitalList
+        id_res = self.llm.get_structured_response(
+            sys_prompt,
+            [Message(role="user", content=f"{context}{GENERATE_IDENTITY_INSTRUCTION}")],
+            IdList,
         )
-        vitals = getattr(vitals_result, "vitals", [])
 
-        # 6. Tracks & Slots
-        self._update_status("Defining Tracks and Slots...")
-        class TrackSlotWrapper(BaseModel):
-            tracks: List[TrackDef]
-            slots: List[SlotDef]
-            
-        tracks_slots_result = self.llm.get_structured_response(
-            system_prompt=self.static_system_prompt,
-            chat_history=[Message(role="user", content=f"{statblock_analysis_context}\n\n{GENERATE_TRACKS_SLOTS_INSTRUCTION}")],
-            output_schema=TrackSlotWrapper
+        # Fundamental Stats
+        self._update_status("Defining Fundamental Stats...")
+        FundList = create_model(
+            "FundList",
+            items=(List[FundamentalStatDef], Field(default_factory=list)),
+            __base__=BaseModel,
         )
-        tracks = getattr(tracks_slots_result, "tracks", [])
-        slots = getattr(tracks_slots_result, "slots", [])
-
-        # 7. Derived Stats
-        self._update_status("Calculating Derived Statistics formulas...")
-        DerivedList = create_model("DerivedList", derived=(List[DerivedStatDef], Field(default_factory=list)), __base__=BaseModel)
-        
-        # Inject generated abilities as context so LLM knows variable names (e.g. "STR" vs "Strength")
-        abilities_summary = ", ".join([a.name for a in abilities])
-        
-        derived_result = self.llm.get_structured_response(
-            system_prompt=self.static_system_prompt,
-            chat_history=[Message(role="user", content=f"{statblock_analysis_context}\n\n# DEFINED ABILITIES: {abilities_summary}\n\n{GENERATE_DERIVED_STATS_INSTRUCTION}")],
-            output_schema=DerivedList
+        fund_res = self.llm.get_structured_response(
+            sys_prompt,
+            [
+                Message(
+                    role="user", content=f"{context}{GENERATE_FUNDAMENTAL_INSTRUCTION}"
+                )
+            ],
+            FundList,
         )
-        derived = getattr(derived_result, "derived", [])
 
-        # --- Final Assembly ---
-        self._update_status("Assembling final template...")
-        
+        # Variable Injection
+        fund_names = [c.name for c in (fund_res.items if fund_res else [])]
+        var_list = (
+            ", ".join(fund_names) + ", " + ", ".join([f"{n}_Mod" for n in fund_names])
+        )
+        self._update_status(f"Variables: {var_list[:50]}...")
+
+        # Derived
+        self._update_status("Defining Derived Stats...")
+        DerList = create_model(
+            "DerList",
+            items=(List[DerivedStatDef], Field(default_factory=list)),
+            __base__=BaseModel,
+        )
+        prompt_der = GENERATE_DERIVED_INSTRUCTION.format(variable_list=var_list)
+        der_res = self.llm.get_structured_response(
+            sys_prompt,
+            [Message(role="user", content=f"{context}{prompt_der}")],
+            DerList,
+        )
+
+        if der_res and der_res.items:
+            var_list += ", " + ", ".join([d.name for d in der_res.items])
+
+        # Vitals
+        self._update_status("Defining Vitals...")
+        VitList = create_model(
+            "VitList",
+            items=(List[VitalResourceDef], Field(default_factory=list)),
+            __base__=BaseModel,
+        )
+        prompt_vit = GENERATE_VITALS_INSTRUCTION.format(variable_list=var_list)
+        vit_res = self.llm.get_structured_response(
+            sys_prompt,
+            [Message(role="user", content=f"{context}{prompt_vit}")],
+            VitList,
+        )
+
+        # Consumables
+        self._update_status("Defining Consumables...")
+        ConList = create_model(
+            "ConList",
+            items=(List[ConsumableResourceDef], Field(default_factory=list)),
+            __base__=BaseModel,
+        )
+        con_res = self.llm.get_structured_response(
+            sys_prompt,
+            [
+                Message(
+                    role="user", content=f"{context}{GENERATE_CONSUMABLES_INSTRUCTION}"
+                )
+            ],
+            ConList,
+        )
+
+        # Skills
+        self._update_status("Defining Skills...")
+        SkillList = create_model(
+            "SkillList",
+            items=(List[SkillDef], Field(default_factory=list)),
+            __base__=BaseModel,
+        )
+        skill_res = self.llm.get_structured_response(
+            sys_prompt,
+            [Message(role="user", content=f"{context}{GENERATE_SKILLS_INSTRUCTION}")],
+            SkillList,
+        )
+
+        # Features
+        self._update_status("Defining Feature Buckets...")
+        FeatList = create_model(
+            "FeatList",
+            items=(List[FeatureContainerDef], Field(default_factory=list)),
+            __base__=BaseModel,
+        )
+        feat_res = self.llm.get_structured_response(
+            sys_prompt,
+            [Message(role="user", content=f"{context}{GENERATE_FEATURES_INSTRUCTION}")],
+            FeatList,
+        )
+
+        # Equipment
+        self._update_status("Defining Equipment...")
+        eq_res = self.llm.get_structured_response(
+            sys_prompt,
+            [
+                Message(
+                    role="user", content=f"{context}{GENERATE_EQUIPMENT_INSTRUCTION}"
+                )
+            ],
+            EquipmentConfig,
+        )
+
         stat_template = StatBlockTemplate(
-            template_name="Player Character",
-            abilities=abilities,
-            vitals=vitals,
-            tracks=tracks,
-            slots=slots,
-            derived_stats=derived
+            template_name=game_name + " Character",
+            identity_categories=id_res.items if id_res else [],
+            fundamental_stats=fund_res.items if fund_res else [],
+            derived_stats=der_res.items if der_res else [],
+            vital_resources=vit_res.items if vit_res else [],
+            consumable_resources=con_res.items if con_res else [],
+            skills=skill_res.items if skill_res else [],
+            features=feat_res.items if feat_res else [],
+            equipment=eq_res if eq_res else EquipmentConfig(),
+        )
+
+        # --- PHASE 3: MODES ---
+        self._update_status("Identifying Game Modes...")
+
+        class GameModes(BaseModel):
+            names: List[str]
+
+        modes_res = self.llm.get_structured_response(
+            sys_prompt,
+            [Message(role="user", content=IDENTIFY_MODES_INSTRUCTION)],
+            GameModes,
+        )
+
+        loops = GameLoopConfig()
+        detected_modes = modes_res.names[:5] if modes_res else []
+
+        for mode in detected_modes:
+            self._update_status(f"Extracting Procedure: {mode}...")
+            try:
+                prompt = EXTRACT_PROCEDURE_INSTRUCTION.format(mode_name=mode)
+                proc_def = self.llm.get_structured_response(
+                    sys_prompt, [Message(role="user", content=prompt)], ProcedureDef
+                )
+
+                # Map to schema fields if match
+                m_lower = mode.lower()
+                if "combat" in m_lower:
+                    loops.combat = proc_def
+                elif "exploration" in m_lower:
+                    loops.exploration = proc_def
+                elif "social" in m_lower:
+                    loops.social = proc_def
+                elif "downtime" in m_lower:
+                    loops.downtime = proc_def
+                # TWEAK: Use renamed field
+                else:
+                    loops.general_procedures.append(proc_def)
+
+            except Exception:
+                pass
+
+        # Mechanics (RAG)
+        self._update_status("Extracting Mechanics...")
+
+        class MechanicsOutput(BaseModel):
+            rules: List[RuleEntry]
+
+        mech_res = self.llm.get_structured_response(
+            system_prompt=sys_prompt,
+            chat_history=[Message(role="user", content=GENERATE_MECHANICS_INSTRUCTION)],
+            output_schema=MechanicsOutput,
+        )
+
+        ruleset = Ruleset(
+            meta=meta_data,
+            physics=phys_res,
+            gameplay_loops=loops,
+            mechanics=mech_res.rules if mech_res else [],
         )
 
         return ruleset, stat_template
-
-    def _generate_resolution(self, analysis_context: str) -> Ruleset:
-        """
-        Generates the shell of the ruleset with just resolution mechanics.
-        We use the Ruleset model but only require partial fields, 
-        so we create a temporary subset model to help the LLM.
-        """
-        class ResolutionShell(BaseModel):
-            resolution_mechanic: str
-            
-        result = self.llm.get_structured_response(
-            system_prompt=self.static_system_prompt,
-            chat_history=[Message(role="user", content=f"{analysis_context}\n\n{GENERATE_CORE_RESOLUTION_INSTRUCTION}")],
-            output_schema=ResolutionShell
-        )
-        
-        # Return a partial Ruleset
-        return Ruleset(resolution_mechanic=result.resolution_mechanic) if result else Ruleset(resolution_mechanic="Unknown")
