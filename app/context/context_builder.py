@@ -78,7 +78,7 @@ class ContextBuilder:
         if ruleset_id:
             ruleset = self.db.rulesets.get_by_id(ruleset_id)
             if ruleset:
-                proc_text = self._render_procedure(ruleset, current_mode)
+                proc_text = self._render_procedures(ruleset, current_mode)
                 if proc_text:
                     sections.append(
                         f"# ACTIVE PROCEDURE: {current_mode.upper()}\n{proc_text}"
@@ -118,25 +118,32 @@ class ContextBuilder:
         lines.append(f"- **Crit/Fail**: {p.crit_rules}")
         return "\n".join(lines)
 
-    def _render_procedure(self, ruleset, mode: str) -> str:
-        loops = ruleset.gameplay_loops
-        proc = None
+    def _render_procedures(self, ruleset, mode: str) -> str:
+        loops = ruleset.gameplay_procedures
+        target_dict = {}
 
-        if mode == "combat":
-            proc = loops.combat
+        if mode == "combat" or mode == "encounter":
+            target_dict = loops.encounter
         elif mode == "exploration":
-            proc = loops.exploration
+            target_dict = loops.exploration
         elif mode == "social":
-            proc = loops.social
+            target_dict = loops.social
         elif mode == "downtime":
-            proc = loops.downtime
-
-        if not proc:
+            target_dict = loops.downtime
+        else:
+            # Fallback to misc if mode is weird, or just return empty
             return ""
 
-        lines = [f"**{proc.description}**"]
-        for step in proc.steps:
-            lines.append(f"  {step}")
+        if not target_dict:
+            return ""
+
+        lines = []
+        for name, proc in target_dict.items():
+            lines.append(f"**{name} ({proc.description})**")
+            for step in proc.steps:
+                lines.append(f"  {step}")
+            lines.append("")  # Spacer between procedures
+
         return "\n".join(lines)
 
     def _build_spatial_context(self, session_id: int) -> str:
@@ -184,6 +191,7 @@ class ContextBuilder:
                     lines.append(f"- {name}: {int(dist)}ft away [{tag}]")
             return "\n".join(lines)
         except Exception:
+            self.logger.warning("Error building spatial context", exc_info=True)
             return ""
 
     def _parse_coord(self, coord: str) -> tuple[int, int]:
@@ -193,7 +201,8 @@ class ContextBuilder:
             col = ord(coord[0].upper()) - 65
             row = int(coord[1:]) - 1
             return (col, row)
-        except Exception:
+        except Exception as e:
+            self.logger.warning(f"Error parsing coord: {e}")
             return (0, 0)
 
     def _get_active_npc_keys(self, session_id: int) -> List[str]:
@@ -206,7 +215,8 @@ class ContextBuilder:
                 for m in scene.get("members", [])
                 if m.startswith("character:") and "player" not in m
             ]
-        except Exception:
+        except Exception as e:
+            self.logger.warning(f"Error getting active NPC keys: {e}")
             return []
 
     def get_truncated_history(

@@ -100,10 +100,18 @@ class PromptDialog(ctk.CTkToplevel):
         self.template_textbox.delete("1.0", "end")
         self.template_textbox.insert("1.0", json.dumps(data, indent=2))
 
-        # Count Props (Dict based)
+        # Count Props (Dict based + New Structure)
         count = 0
         rs = data.get("ruleset", {})
-        count += len(rs.get("mechanics", {}))
+        count += len(rs.get("rules", {}))  # Renamed from mechanics
+
+        # Procedures
+        loops = rs.get("gameplay_procedures", {})
+        count += len(loops.get("encounter", {}))
+        count += len(loops.get("exploration", {}))
+        count += len(loops.get("social", {}))
+        count += len(loops.get("downtime", {}))
+        count += len(loops.get("misc", {}))
 
         st = data.get("stat_template", {})
         count += len(st.get("fundamental_stats", {}))

@@ -54,7 +54,7 @@ Extract the Identity Categories (Race, Class, Background, etc.) into the schema.
 
 GENERATE_FUNDAMENTAL_INSTRUCTION = """
 Extract the Fundamental Stats (Attributes) into the schema. 
-Do NOT include skills or derived stats here. Only the raw inputs.
+Do NOT include skills, abilities, perks, feats, or derived stats here. Only the Fundamental Stats used used directly in the resolution mechanics or to calculate the Secondary Stats.
 """
 
 GENERATE_DERIVED_INSTRUCTION = """

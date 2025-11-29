@@ -55,7 +55,11 @@ class TemplateGenerationService:
         self.rules_text = rules_text
         self.status_callback = status_callback
 
-        self.static_system_prompt = f"{TEMPLATE_GENERATION_SYSTEM_PROMPT}\n\n# RULES TEXT\n{self.rules_text}"
+        base_clean = (
+            TEMPLATE_GENERATION_SYSTEM_PROMPT.split("**{game_name}**")[0]
+            + "the provided rules text."
+        )
+        self.static_system_prompt = f"{base_clean}\n\n# RULES TEXT\n{self.rules_text}"
 
     def _update_status(self, message: str):
         if self.status_callback:
@@ -71,8 +75,6 @@ class TemplateGenerationService:
             genre: str
             description: str
 
-        # CACHE HIT 1: We use the full static prompt immediately.
-        # Ideally, this processes the rules once, and all subsequent calls reuse the KV cache.
         meta_res = self.llm.get_structured_response(
             self.static_system_prompt,
             [Message(role="user", content=GENERATE_META_INSTRUCTION)],
@@ -84,13 +86,10 @@ class TemplateGenerationService:
             "genre": meta_res.genre,
             "description": meta_res.description,
         }
-
-        # Inject Game Name into Context for future steps (User Side)
         game_context = f"Target Game: {meta_res.name}\n"
         self._update_status(f"Analyzed: {meta_res.name}")
 
         self._update_status("Defining Physics...")
-        # CACHE HIT 2: Same system prompt
         phys_res = self.llm.get_structured_response(
             self.static_system_prompt,
             [Message(role="user", content=game_context + GENERATE_PHYSICS_INSTRUCTION)],
@@ -99,7 +98,6 @@ class TemplateGenerationService:
 
         # --- 2. STATBLOCK (DICTS) ---
         self._update_status("Analyzing Stats...")
-        # CACHE HIT 3
         stat_gen = self.llm.get_streaming_response(
             self.static_system_prompt,
             [
@@ -109,14 +107,8 @@ class TemplateGenerationService:
             ],
         )
         analysis_text = "".join(stat_gen)
-
-        # Accumulate context.
-        # Note: Adding 'analysis_text' to the User Prompt will slightly degrade cache performance
-        # for subsequent steps compared to keeping the User Prompt static,
-        # but it is necessary for logic. The SYSTEM prompt (the heavy part) remains cached.
         context = f"{game_context}*** ANALYSIS ***\n{analysis_text}\n\n"
 
-        # Wrappers for Dict responses
         class IdDict(BaseModel):
             items: dict[str, IdentityDef]
 
@@ -223,7 +215,6 @@ class TemplateGenerationService:
         class GameModes(BaseModel):
             names: List[str]
 
-        # CACHE HIT: Still using self.static_system_prompt
         modes = self.llm.get_structured_response(
             self.static_system_prompt,
             [Message(role="user", content=game_context + IDENTIFY_MODES_INSTRUCTION)],
@@ -231,7 +222,8 @@ class TemplateGenerationService:
         )
 
         loops = GameLoopConfig()
-        for mode in modes.names[:5] if modes else []:
+
+        for mode in modes.names[:6] if modes else []:
             self._update_status(f"Extracting {mode}...")
             try:
                 proc = self.llm.get_structured_response(
@@ -246,16 +238,18 @@ class TemplateGenerationService:
                     ProcedureDef,
                 )
                 m = mode.lower()
-                if "combat" in m:
-                    loops.combat = proc
-                elif "exploration" in m:
-                    loops.exploration = proc
-                elif "social" in m:
-                    loops.social = proc
-                elif "downtime" in m:
-                    loops.downtime = proc
+
+                # Logic to assign to correct dictionary
+                if "combat" in m or "encounter" in m or "battle" in m:
+                    loops.encounter[mode] = proc
+                elif "exploration" in m or "travel" in m:
+                    loops.exploration[mode] = proc
+                elif "social" in m or "interact" in m:
+                    loops.social[mode] = proc
+                elif "downtime" in m or "rest" in m or "camp" in m:
+                    loops.downtime[mode] = proc
                 else:
-                    loops.general_procedures[mode] = proc
+                    loops.misc[mode] = proc
             except Exception as e:
                 logger.warning(f"Error extracting {mode}: {e}")
                 pass
@@ -279,8 +273,8 @@ class TemplateGenerationService:
         ruleset = Ruleset(
             meta=meta_data,
             physics=phys_res,
-            gameplay_loops=loops,
-            mechanics=mech_res.items,
+            gameplay_procedures=loops,  # Updated field name
+            rules=mech_res.items,  # Updated field name
         )
 
         return ruleset, stat_template

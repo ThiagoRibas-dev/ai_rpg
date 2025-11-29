@@ -14,21 +14,28 @@ logger = logging.getLogger(__name__)
 
 
 def _get_default_scaffolding():
+    """Returns default Refined scaffolding."""
     ruleset = Ruleset(
-        meta={"name": "Default", "genre": "Generic"},
+        meta={"name": "Default System", "genre": "Generic"},
         physics=PhysicsConfig(
             dice_notation="1d20",
-            roll_mechanic="Roll+Mod",
-            success_condition=">=DC",
-            crit_rules="Nat20",
+            roll_mechanic="Roll + Mod vs DC",
+            success_condition="Result >= Target Number",
+            crit_rules="Nat 20 = Critical Success",
         ),
-        gameplay_loops=GameLoopConfig(
-            combat=ProcedureDef(
-                name="Combat", description="Turn Based", steps=["Action"]
-            ),
-            exploration=ProcedureDef(
-                name="Exploration", description="Freeform", steps=["Act"]
-            ),
+        gameplay_procedures=GameLoopConfig(
+            encounter={
+                "Standard Combat": ProcedureDef(
+                    description="Turn Based Combat",
+                    steps=["Roll Initiative", "Take Turns", "Resolve Actions"],
+                )
+            },
+            exploration={
+                "Freeform": ProcedureDef(
+                    description="General Exploration",
+                    steps=["Describe Scene", "Player Action", "Result"],
+                )
+            },
         ),
     )
 
@@ -48,6 +55,7 @@ def _get_default_scaffolding():
 
 
 def inject_setup_scaffolding(session_id: int, prompt_manifest_json: str, db_manager):
+    """Injects scaffolding using Refined Models."""
     ruleset_model = None
     st_model = None
 
@@ -59,7 +67,7 @@ def inject_setup_scaffolding(session_id: int, prompt_manifest_json: str, db_mana
             if data.get("stat_template"):
                 st_model = StatBlockTemplate(**data["stat_template"])
         except Exception as e:
-            logger.error(f"Manifest error: {e}")
+            logger.error(f"Manifest parse error: {e}. Using defaults.")
 
     if not ruleset_model or not st_model:
         ruleset_model, st_model = _get_default_scaffolding()
@@ -72,51 +80,59 @@ def inject_setup_scaffolding(session_id: int, prompt_manifest_json: str, db_mana
         rs_id = db_manager.rulesets.create(ruleset_model)
         st_id = db_manager.stat_templates.create(rs_id, st_model)
 
-        # Add rules to Vector Store (Convert dict to list for embedding)
         try:
             from app.core.vector_store import VectorStore
 
             vs = VectorStore()
-            # Convert Map to List of Objects for embedding logic
             rule_dicts = []
-            for name, rule in ruleset_model.mechanics.items():
+            # Updated to use 'rules' field instead of 'mechanics'
+            for name, rule in ruleset_model.rules.items():
                 d = rule.model_dump()
-                d["name"] = name  # Inject name back for vector store indexing
+                d["name"] = name
                 rule_dicts.append(d)
             vs.add_rules(rs_id, rule_dicts)
         except Exception as e:
-            logger.error(f"Vector store error: {e}")
+            logger.error(f"Failed to index initial rules: {e}")
 
-        SetupManifest(db_manager).update_manifest(
+        manifest_mgr = SetupManifest(db_manager)
+        manifest_mgr.update_manifest(
             session_id,
             {
                 "ruleset_id": rs_id,
                 "stat_template_id": st_id,
-                "genre": ruleset_model.meta.get("genre"),
-                "tone": ruleset_model.meta.get("tone"),
+                "genre": ruleset_model.meta.get("genre", "Generic"),
+                "tone": ruleset_model.meta.get("tone", "Neutral"),
             },
         )
 
-        # Init Player
+        # Initialize Player Data
+        fund_stats = {a.name: a.default for a in st_model.fundamental_stats.values()}
+
+        vitals = {}
+        for name, m in st_model.vital_resources.items():
+            vitals[name] = {"current": 10, "max": 10}
+
+        consumables = {}
+        for name, m in st_model.consumable_resources.items():
+            consumables[name] = {"current": 0, "max": 0}
+
+        skills = {s: 0 for s in st_model.skills.keys()}
+        features = {f: [] for f in st_model.features.keys()}
+
         player_data = {
             "name": "Player",
             "template_id": st_id,
             "identity": {},
-            "fundamental_stats": {
-                k: v.default for k, v in st_model.fundamental_stats.items()
-            },
-            "vital_resources": {
-                k: {"current": 10, "max": 10} for k in st_model.vital_resources
-            },
-            "consumable_resources": {
-                k: {"current": 0, "max": 0} for k in st_model.consumable_resources
-            },
-            "skills": {k: 0 for k in st_model.skills},
-            "features": {k: [] for k in st_model.features},
+            "fundamental_stats": fund_stats,
+            "vital_resources": vitals,
+            "consumable_resources": consumables,
+            "skills": skills,
+            "features": features,
             "equipment": {"inventory": [], "equipped": {}},
             "derived_stats": {},
         }
+
         db_manager.game_state.set_entity(session_id, "character", "player", player_data)
 
     except Exception as e:
-        logger.error(f"Injection error: {e}", exc_info=True)
+        logger.error(f"Error during scaffolding injection: {e}", exc_info=True)
