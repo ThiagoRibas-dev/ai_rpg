@@ -1,13 +1,13 @@
-
 from typing import Any, Dict, Optional
 from app.tools.builtin._state_storage import get_entity, set_entity
+
 
 def handler(
     target_key: str,
     updates: Optional[Dict[str, Any]] = None,
     adjustments: Optional[Dict[str, int]] = None,
     inventory: Optional[Dict[str, Any]] = None,
-    **context: Any
+    **context: Any,
 ) -> dict:
     session_id = context["session_id"]
     db = context["db_manager"]
@@ -31,7 +31,7 @@ def handler(
                 old = entity["fundamentals"][k]
                 entity["fundamentals"][k] += delta
                 changes_log.append(f"{k}: {old} -> {entity['fundamentals'][k]}")
-            
+
             # Check Derived (Manual Override)
             elif k in entity.get("derived", {}):
                 old = entity["derived"][k]
@@ -73,7 +73,7 @@ def handler(
         col_key = "inventory"
         if "inventory" not in col_map and col_map:
             col_key = next(iter(col_map))
-        
+
         target_list = col_map.setdefault(col_key, [])
         target_list.append(item)
         changes_log.append(f"Added {item.get('name')} to {col_key}")

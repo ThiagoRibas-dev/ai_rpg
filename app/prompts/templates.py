@@ -49,14 +49,15 @@ Fundamentals: {fundamentals_list}
 Collections: {collections_list}
 
 **TASK:**
-Identify **Derived Stats** (Calculated Formulas) and **Gauges** (Resources).
+Identify **Derived Stats** (Calculated), **Gauges** (Pools), and **Tracks** (Progress).
 
-1.  **Derived Stats:** Values calculated from Fundamentals (e.g., `AC = 10 + Dex`).
-    *   *Constraint:* You MUST provide a Python-syntax formula in the `calculation` field using the keys from Fundamentals.
-2.  **Gauges:** Pools that fluctuate (e.g., HP, Mana, Ammo).
-    *   *Constraint:* `max_formula` should reference Fundamentals (e.g., `10 + Con`).
+1. **Derived Stats:** ...
+2. **Gauges:** Pools with Current/Max (HP, Mana).
+3. **Tracks:** Segmented progress bars or checkboxes (0 to N).
+   * Used for: Stress, Harm, Clocks, Experience points.
+   * Define `length` (how many boxes).
 
-Output a JSON with `derived` and `gauges`.
+Output a JSON with `derived`, `gauges`, and `tracks`.
 """
 
 # Step 4: Layout (Mapping)

@@ -15,6 +15,7 @@ from app.models.stat_block import (
     StatBlockTemplate,
     StatValue,
     StatGauge,
+    StatTrack,
     StatCollection,
 )
 from app.prompts.templates import (
@@ -149,6 +150,7 @@ class TemplateGenerationService:
         class DerivedDef(BaseModel):
             derived: List[StatValue]
             gauges: List[StatGauge]
+            tracks: List[StatTrack]
 
         derived_prompt = GENERATE_DERIVED_INSTRUCTION.format(
             target_game=game_name,

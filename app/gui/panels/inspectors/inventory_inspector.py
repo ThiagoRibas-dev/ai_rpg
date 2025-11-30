@@ -48,22 +48,47 @@ class InventoryInspectorView(ctk.CTkFrame):
         for col_key, col_def in template.collections.items():
             if col_def.panel == "equipment":
                 items = collections_data.get(col_key, [])
-                self._render_collection(col_def.label, items)
+                self._render_collection(col_def.label, items, col_def.item_schema)
 
-    def _render_collection(self, title, items):
+    def _render_collection(self, title, items, item_schema):
+        # Header
         ctk.CTkLabel(
             self.scroll, text=f"{title} ({len(items)})", font=Theme.fonts.subheading
         ).pack(anchor="w", padx=10, pady=(10, 5))
+
+        if not items:
+            return
 
         for item in items:
             row = ctk.CTkFrame(self.scroll, fg_color=Theme.colors.bg_secondary)
             row.pack(fill="x", padx=5, pady=2)
 
-            name = item.get("name", "???")
-            qty = item.get("qty", 1)
+            # Primary Label (Name) is usually first, or hardcoded 'name'
+            name = item.get("name", "Item")
 
-            txt = f"{name}"
-            if qty > 1:
-                txt += f" (x{qty})"
+            # Left side: Name
+            ctk.CTkLabel(row, text=name, font=("Arial", 12, "bold")).pack(
+                side="left", padx=5
+            )
 
-            ctk.CTkLabel(row, text=txt, anchor="w").pack(side="left", padx=10, pady=5)
+            # Right side: Dynamic Schema Fields
+            details = []
+
+            # Always show Qty if > 1
+            if item.get("qty", 1) > 1:
+                details.append(f"x{item.get('qty')}")
+
+            # Loop through schema for extras (e.g. Weight, Ammo, Quality)
+            if item_schema:
+                for field in item_schema:
+                    if field.key in ["name", "qty"]:
+                        continue  # Skip standard fields
+
+                    val = item.get(field.key)
+                    if val:
+                        details.append(f"{field.label}: {val}")
+
+            if details:
+                ctk.CTkLabel(
+                    row, text=" | ".join(details), text_color="gray", font=("Arial", 11)
+                ).pack(side="right", padx=5)

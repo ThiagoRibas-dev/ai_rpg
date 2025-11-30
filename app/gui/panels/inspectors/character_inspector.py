@@ -80,6 +80,18 @@ class CharacterInspectorView(ctk.CTkFrame):
                 val = entity.get("derived", {}).get(key, def_.default)
                 items.append((def_.group, def_.label, val, def_.widget, None))
 
+        # Tracks
+        # Entity data stored in 'tracks' key: { "stress": 2 }
+        tracks_data = entity.get("tracks", {})
+        for key, def_ in template.tracks.items():
+            if def_.panel == panel_name:
+                val = tracks_data.get(key, 0)
+                meta = {
+                    "max": def_.length,
+                    "rendering": def_.rendering.model_dump() if def_.rendering else {},
+                }
+                items.append((def_.group, def_.label, val, def_.widget, meta))
+
         # Gauges
         for key, def_ in template.gauges.items():
             if def_.panel == panel_name:
