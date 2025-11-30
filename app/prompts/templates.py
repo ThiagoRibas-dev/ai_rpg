@@ -1,131 +1,119 @@
 """
 Templates for LLM prompts.
-Simplified to be directive commands, relying on Schema Descriptions for context.
+Updated for Flattened Layout and Strict Procedure Extraction.
 """
 
-# [Gameplay Prompts]
+# --- GAMEPLAY ---
 GAME_MASTER_SYSTEM_PROMPT = """
 You are an expert Game Master (GM).
 Your goal is to provide a vivid, immersive experience while adhering to the extracted rules.
-
-### OPERATIONAL LOOP
-1. **Analyze**: Read user input.
-2. **Check Context**: Read 'ACTIVE PROCEDURE' and 'RELEVANT MECHANICS'.
-3. **Execute**:
-   - Use `game.roll` for checks.
-   - Use `entity.update` for damage/resource usage.
-   - Use `game.log` for facts.
-   - Use `game.set_mode` to switch between Combat/Exploration.
-4. **Narrate**: Describe the result in 2nd person.
 """
+
+# --- TEMPLATE GENERATION ---
 
 TEMPLATE_GENERATION_SYSTEM_PROMPT = """
-You are a Game System Architect and Analyst converting rulebooks into a Game JSON Template.
-Your task is to extract the rules from the provided rules text reference, to identify the **Functional Shape** of mechanics, and write organize them into JSON.
-The rules, procedures, and structures you are extracting must reflect the text exactly. Do not invent rules.
+You are a **Tabletop RPG Database Architect**.
+Your goal is to extract **Game Rules** and then esign a **BLANK Character Sheet Template** for use by the Player later on.
+
+### CRITICAL INSTRUCTIONS
+1. **No Meta-Commentary:** When extracting rules or procedures, output ONLY the content. Do not say "Here is the procedure" or "I found this text".
+2. **Design the Character Sheet Template, Don't Fill It:** Define the fields the Player will fill out.
+3. **Generic Defaults:** Use 0, 10, or "" as defaults. Never use specific character data.
 """
 
-# --- PHASE 1: IDENTITY & PHYSICS ---
+# Phase 1: Core Stats
+GENERATE_CORE_STATS_INSTRUCTION = """
+You are creating a character sheet template for the game {target_game}.
+Identify the **Fixed Global Stats** (Values & Gauges).
 
-GENERATE_META_INSTRUCTION = """
-Extract the Game Metadata (Name, Genre, Description) into the specified JSON structure.
+**DISTINCTIONS:**
+*   **StatValue**: Static properties (Str, Dex, Level, AC).
+*   **StatGauge**: Fluctuating resources (HP, Mana, Ammo).
+
+**CONSTRAINTS:**
+*   Mutually Exclusive: A stat cannot be both Value and Gauge.
+*   Formulas: Use Python syntax (`10 + dex`) for derived stats. Do not write the result (`14`).
+
+Output a JSON with `values` and `gauges`.
 """
 
-GENERATE_PHYSICS_INSTRUCTION = """
-Extract the Core Physics Engine configuration. 
-Populate the schema with the dice notation, resolution mechanic, and success conditions found in the text.
+# Phase 2: Containers
+GENERATE_CONTAINERS_INSTRUCTION = """
+You are creating a character sheet template for the game {target_game}.
+Identify the **Dynamic Lists** (Collections).
+Define the fields for items in these lists.
+
+Examples:
+- Skills (Name, Rank)
+- Inventory (Name, Weight)
+- Spells (Name, Cost, Effect)
+
+Output a JSON with `collections`.
 """
 
-# --- PHASE 2: STATBLOCK (REFINED) ---
+# Phase 3: Layout (Flattened)
+ORGANIZE_LAYOUT_INSTRUCTION = """
+Now that you created the character sheet template for the game {target_game}, you are going to configure how everything will be laid out in the UI.
+Assign every defined Stat (Value, Gauge, Collection) to a **Panel** and a **Group**.
 
-ANALYZE_STATBLOCK_INSTRUCTION = """
-Analyze the Character Sheet structure described in the rules.
-Break down the numbers by their lifecycle:
-- What are the base stats? (Fundamental)
-- What is calculated from them? (Derived)
-- What kills you if it runs out? (Vitals)
-- What do you spend? (Consumables)
-- What defines who you are? (Identity)
+**PANELS (Strict Assignment):**
+*   `header`: Vital info (HP, Name, Level, Class, XP).
+*   `sidebar`: Core Stats (Attributes, Saves, Passive Defenses).
+*   `main`: Combat actions, Attacks, Initiative, Speed.
+*   `equipment`: Inventory, Money, Encumbrance.
+*   `skills`: Skill lists.
+*   `spells`: Magic/Powers.
+*   `notes`: Bio, Background.
+
+**INSTRUCTION:**
+Update the objects to set their `panel` field.
+Use the `group` field to label the section within that panel (e.g. Panel: 'sidebar', Group: 'Attributes').
+Do NOT dump everything in 'main'.
 """
 
-GENERATE_IDENTITY_INSTRUCTION = """
-Extract the Identity Categories (Race, Class, Background, etc.) into the schema.
-"""
-
-GENERATE_FUNDAMENTAL_INSTRUCTION = """
-Extract the Fundamental Stats (Attributes) into the schema. 
-Do NOT include skills, abilities, perks, feats, or derived stats here. Only the Fundamental Stats used used directly in the resolution mechanics or to calculate the Secondary Stats.
-"""
-
-GENERATE_DERIVED_INSTRUCTION = """
-Extract the Derived Stats and their formulas. 
-Use the provided variable names for the formulas. Python syntax only.
-"""
-
-GENERATE_VITALS_INSTRUCTION = """
-Extract the Vital Resources (Life/Sanity meters) into the schema.
-"""
-
-GENERATE_CONSUMABLES_INSTRUCTION = """
-Extract the Consumable Resources (Fuel/Ammo/Slots) into the schema.
-"""
-
-GENERATE_SKILLS_INSTRUCTION = """
-Extract the full list of Skills and their linked attributes into the schema.
-"""
-
-GENERATE_FEATURES_INSTRUCTION = """
-Extract the categories of Features (e.g. Feats, Traits, Spells) into the schema.
-"""
-
-GENERATE_EQUIPMENT_INSTRUCTION = """
-Extract the Inventory Slots and Carrying Capacity rules into the schema.
-"""
-
-# --- PHASE 3: PROCEDURES ---
-
+# Phase 4: Procedures (Strict)
 IDENTIFY_MODES_INSTRUCTION = """
-Identify the distinct Game Modes (Combat, Exploration, Social, etc.) described in the text.
-Return a list of mode names.
+Identify the distinct **Game Modes** (Loops).
+Return ONLY a JSON list of strings.
+Example: `["Combat", "Exploration", "Social"]`
 """
 
 EXTRACT_PROCEDURE_INSTRUCTION = """
-Extract the step-by-step Procedure for **{mode_name}** into the schema.
-Ensure the steps are sequential and cover the entire loop.
+Extract the step-by-step **Procedure** for **{mode_name}**.
+
+**STRICT FORMATTING:**
+*   `description`: A concise summary of what this mode resolves.
+*   `steps`: A list of strings. Each string is one step.
+*   **NO CHAT:** Do not write "The user is asking..." or "I will extract...". Just output the data.
 """
 
+# Phase 5: Mechanics
 GENERATE_MECHANICS_INSTRUCTION = """
-Extract specific Game Mechanics (Conditions, Environmental Rules, Combat Maneuvers) into the 'mechanics' dictionary.
+Extract specific **Game Rules** (Conditions, Actions, Magic Rules) for the Reference Index.
+Key: Rule Name. Value: Rule Text + Tags.
 """
 
-# [World Gen Prompts]
+# --- WORLD GEN ---
 CHARACTER_EXTRACTION_PROMPT = """
-You are a Character Sheet Parser. 
-Extract the character data from the description below into the JSON schema.
-Use the provided template to ensure stats are mapped correctly.
-
-**INPUT:** "{description}"
-**TEMPLATE CONTEXT:** {template}
+Extract character data into the schema.
+Context: {template}
+Input: "{description}"
 """
 
 WORLD_EXTRACTION_PROMPT = """
-You are a World Building Engine. 
-Extract the world details, location, and lore from the description below into the JSON schema.
-
-**INPUT:** "{description}"
+Extract world details.
+Input: "{description}"
 """
 
 OPENING_CRAWL_PROMPT = """
-You are the Narrator. Write the opening scene.
-**Context**: {genre} / {tone}
-**Protagonist**: {name}
-**Location**: {location}
-**Instruction**: Write in Second Person. End with "What do you do?".
+Write a 2nd-person opening scene.
+Genre: {genre}
+Protagonist: {name}
+Location: {location}
 """
 
 JIT_SIMULATION_TEMPLATE = """
-You are a World Simulator.
-**Context:** {npc_name} ({directive}) has been off-screen from {last_updated_time} to {current_time}.
-**Task:** Generate a brief summary of what they did.
-**Output:** JSON WorldTickOutcome.
+Simulate NPC actions.
+NPC: {npc_name}
+Time: {last_updated_time} -> {current_time}
 """

@@ -13,27 +13,15 @@ from app.models.ruleset import (
 )
 from app.models.stat_block import (
     StatBlockTemplate,
-    IdentityDef,
-    FundamentalStatDef,
-    VitalResourceDef,
-    ConsumableResourceDef,
-    FeatureContainerDef,
-    EquipmentConfig,
-    SkillValue,
+    StatValue,
+    StatGauge,
+    StatCollection,
 )
 from app.prompts.templates import (
     TEMPLATE_GENERATION_SYSTEM_PROMPT,
-    GENERATE_META_INSTRUCTION,
-    GENERATE_PHYSICS_INSTRUCTION,
-    ANALYZE_STATBLOCK_INSTRUCTION,
-    GENERATE_IDENTITY_INSTRUCTION,
-    GENERATE_FUNDAMENTAL_INSTRUCTION,
-    GENERATE_DERIVED_INSTRUCTION,
-    GENERATE_VITALS_INSTRUCTION,
-    GENERATE_CONSUMABLES_INSTRUCTION,
-    GENERATE_SKILLS_INSTRUCTION,
-    GENERATE_FEATURES_INSTRUCTION,
-    GENERATE_EQUIPMENT_INSTRUCTION,
+    GENERATE_CORE_STATS_INSTRUCTION,
+    GENERATE_CONTAINERS_INSTRUCTION,
+    ORGANIZE_LAYOUT_INSTRUCTION,
     IDENTIFY_MODES_INSTRUCTION,
     EXTRACT_PROCEDURE_INSTRUCTION,
     GENERATE_MECHANICS_INSTRUCTION,
@@ -43,7 +31,9 @@ logger = logging.getLogger(__name__)
 
 
 class TemplateGenerationService:
-    """Generates optimized dict-based templates with prompt caching efficiency."""
+    """
+    Generates templates using the 5-step process with Flattened Layout.
+    """
 
     def __init__(
         self,
@@ -54,12 +44,7 @@ class TemplateGenerationService:
         self.llm = llm_connector
         self.rules_text = rules_text
         self.status_callback = status_callback
-
-        base_clean = (
-            TEMPLATE_GENERATION_SYSTEM_PROMPT.split("**{game_name}**")[0]
-            + "the provided rules text."
-        )
-        self.static_system_prompt = f"{base_clean}\n\n# RULES TEXT\n{self.rules_text}"
+        self.static_system_prompt = f"{TEMPLATE_GENERATION_SYSTEM_PROMPT}\n\n# RULES REFERENCE\n{self.rules_text}"
 
     def _update_status(self, message: str):
         if self.status_callback:
@@ -67,195 +52,143 @@ class TemplateGenerationService:
         logger.info(f"[TemplateGen] {message}")
 
     def generate_template(self) -> Tuple[Ruleset, StatBlockTemplate]:
-        # --- 1. META & PHYSICS ---
-        self._update_status("Identifying Identity...")
+        # --- PRE-REQ ---
+        self._update_status("Reading Ruleset Metadata...")
 
-        class RulesetMeta(BaseModel):
+        class QuickMeta(BaseModel):
             name: str
             genre: str
-            description: str
+            dice_notation: str
+            roll_mechanic: str
 
         meta_res = self.llm.get_structured_response(
             self.static_system_prompt,
-            [Message(role="user", content=GENERATE_META_INSTRUCTION)],
-            RulesetMeta,
-        )
-
-        meta_data = {
-            "name": meta_res.name,
-            "genre": meta_res.genre,
-            "description": meta_res.description,
-        }
-        game_context = f"Target Game: {meta_res.name}\n"
-        self._update_status(f"Analyzed: {meta_res.name}")
-
-        self._update_status("Defining Physics...")
-        phys_res = self.llm.get_structured_response(
-            self.static_system_prompt,
-            [Message(role="user", content=game_context + GENERATE_PHYSICS_INSTRUCTION)],
-            PhysicsConfig,
-        )
-
-        # --- 2. STATBLOCK (DICTS) ---
-        self._update_status("Analyzing Stats...")
-        stat_gen = self.llm.get_streaming_response(
-            self.static_system_prompt,
             [
                 Message(
-                    role="user", content=game_context + ANALYZE_STATBLOCK_INSTRUCTION
+                    role="user",
+                    content="Extract Game Name, Genre, and Core Dice Mechanics.",
                 )
             ],
+            QuickMeta,
         )
-        analysis_text = "".join(stat_gen)
-        context = f"{game_context}*** ANALYSIS ***\n{analysis_text}\n\n"
 
-        class IdDict(BaseModel):
-            items: dict[str, IdentityDef]
+        ruleset = Ruleset(
+            meta={"name": meta_res.name, "genre": meta_res.genre},
+            physics=PhysicsConfig(
+                dice_notation=meta_res.dice_notation,
+                roll_mechanic=meta_res.roll_mechanic,
+                success_condition="See Rules",
+                crit_rules="See Rules",
+            ),
+        )
 
-        class FundDict(BaseModel):
-            items: dict[str, FundamentalStatDef]
+        # --- STEP 1: CORE STATS ---
+        self._update_status("Phase 1: Defining Core Stats...")
 
-        class DerDict(BaseModel):
-            items: dict[str, str]
+        class CoreStatsDef(BaseModel):
+            values: List[StatValue]
+            gauges: List[StatGauge]
 
-        class VitDict(BaseModel):
-            items: dict[str, VitalResourceDef]
-
-        class ConDict(BaseModel):
-            items: dict[str, ConsumableResourceDef]
-
-        class SkillDict(BaseModel):
-            items: dict[str, SkillValue]
-
-        class FeatDict(BaseModel):
-            items: dict[str, FeatureContainerDef]
-
-        self._update_status("Defining Identity...")
-        id_res = self.llm.get_structured_response(
+        core_res = self.llm.get_structured_response(
             self.static_system_prompt,
-            [Message(role="user", content=context + GENERATE_IDENTITY_INSTRUCTION)],
-            IdDict,
+            [Message(role="user", content=GENERATE_CORE_STATS_INSTRUCTION.format(target_game=meta_res.name))],
+            CoreStatsDef,
         )
 
-        self._update_status("Defining Fundamentals...")
-        fund_res = self.llm.get_structured_response(
+        # --- STEP 2: CONTAINERS ---
+        self._update_status("Phase 2: Defining Containers...")
+        stats_summary = f"Defined Values: {[v.id for v in core_res.values]}\nDefined Gauges: {[g.id for g in core_res.gauges]}"
+
+        class ContainerDef(BaseModel):
+            collections: List[StatCollection]
+
+        container_res = self.llm.get_structured_response(
             self.static_system_prompt,
-            [Message(role="user", content=context + GENERATE_FUNDAMENTAL_INSTRUCTION)],
-            FundDict,
+            [
+                Message(role="user", content=GENERATE_CORE_STATS_INSTRUCTION),
+                Message(
+                    role="assistant",
+                    content=stats_summary,
+                ),
+                Message(role="user", content=GENERATE_CONTAINERS_INSTRUCTION.format(target_game=meta_res.name)),
+            ],
+            ContainerDef,
         )
 
-        var_list = (
-            ", ".join(fund_res.items.keys())
-            + ", "
-            + ", ".join([f"{k}_Mod" for k in fund_res.items.keys()])
+        # --- STEP 3: LAYOUT (ASSIGNMENT) ---
+        self._update_status("Phase 3: Assigning Panels...")
+
+        # We ask the LLM to return the SAME lists, but with 'panel' and 'group' fields populated.
+        # This acts as a "Refinement" pass.
+        class LayoutAssignment(BaseModel):
+            values: List[StatValue]
+            gauges: List[StatGauge]
+            collections: List[StatCollection]
+
+        collections_summary = (
+            f"Defined Collections: {[c.id for c in container_res.collections]}"
         )
 
-        self._update_status("Defining Derived...")
-        prompt_der = GENERATE_DERIVED_INSTRUCTION.format(variable_list=var_list)
-        der_res = self.llm.get_structured_response(
-            self.static_system_prompt,
-            [Message(role="user", content=context + prompt_der)],
-            DerDict,
+        history_layout = [
+            Message(role="user", content=GENERATE_CORE_STATS_INSTRUCTION),
+            Message(role="assistant", content="Core Stats Defined."),
+            Message(role="user", content=GENERATE_CONTAINERS_INSTRUCTION),
+            Message(role="assistant", content=collections_summary),
+            Message(role="user", content=ORGANIZE_LAYOUT_INSTRUCTION),
+        ]
+
+        # In this step, we expect the LLM to echo back the objects with updated panel/group fields
+        layout_res = self.llm.get_structured_response(
+            self.static_system_prompt, history_layout, LayoutAssignment
         )
 
-        if der_res.items:
-            var_list += ", " + ", ".join(der_res.items.keys())
-
-        self._update_status("Defining Vitals...")
-        prompt_vit = GENERATE_VITALS_INSTRUCTION.format(variable_list=var_list)
-        vit_res = self.llm.get_structured_response(
-            self.static_system_prompt,
-            [Message(role="user", content=context + prompt_vit)],
-            VitDict,
-        )
-
-        self._update_status("Defining Consumables...")
-        con_res = self.llm.get_structured_response(
-            self.static_system_prompt,
-            [Message(role="user", content=context + GENERATE_CONSUMABLES_INSTRUCTION)],
-            ConDict,
-        )
-
-        self._update_status("Defining Skills...")
-        skill_res = self.llm.get_structured_response(
-            self.static_system_prompt,
-            [Message(role="user", content=context + GENERATE_SKILLS_INSTRUCTION)],
-            SkillDict,
-        )
-
-        self._update_status("Defining Features...")
-        feat_res = self.llm.get_structured_response(
-            self.static_system_prompt,
-            [Message(role="user", content=context + GENERATE_FEATURES_INSTRUCTION)],
-            FeatDict,
-        )
-
-        self._update_status("Defining Equipment...")
-        eq_res = self.llm.get_structured_response(
-            self.static_system_prompt,
-            [Message(role="user", content=context + GENERATE_EQUIPMENT_INSTRUCTION)],
-            EquipmentConfig,
-        )
-
-        stat_template = StatBlockTemplate(
-            template_name=meta_res.name + " Character",
-            identity_categories=id_res.items,
-            fundamental_stats=fund_res.items,
-            derived_stats=der_res.items,
-            vital_resources=vit_res.items,
-            consumable_resources=con_res.items,
-            skills=skill_res.items,
-            features=feat_res.items,
-            equipment=eq_res,
-        )
-
-        # --- 3. PROCEDURES ---
-        self._update_status("Identifying Modes...")
+        # --- STEP 4: PROCEDURES ---
+        self._update_status("Phase 4: Extracting Game Logic...")
 
         class GameModes(BaseModel):
             names: List[str]
 
+        # Use clean context for logic to avoid pollution from schema JSON
+        logic_context = f"Target Game: {meta_res.name}\n"
+
         modes = self.llm.get_structured_response(
             self.static_system_prompt,
-            [Message(role="user", content=game_context + IDENTIFY_MODES_INSTRUCTION)],
+            [Message(role="user", content=logic_context + IDENTIFY_MODES_INSTRUCTION)],
             GameModes,
         )
 
         loops = GameLoopConfig()
-
         for mode in modes.names[:6] if modes else []:
-            self._update_status(f"Extracting {mode}...")
+            self._update_status(f"Extracting Procedure: {mode}...")
             try:
                 proc = self.llm.get_structured_response(
                     self.static_system_prompt,
                     [
                         Message(
                             role="user",
-                            content=game_context
+                            content=logic_context
                             + EXTRACT_PROCEDURE_INSTRUCTION.format(mode_name=mode),
                         )
                     ],
                     ProcedureDef,
                 )
                 m = mode.lower()
-
-                # Logic to assign to correct dictionary
-                if "combat" in m or "encounter" in m or "battle" in m:
+                if "combat" in m or "encounter" in m:
                     loops.encounter[mode] = proc
                 elif "exploration" in m or "travel" in m:
                     loops.exploration[mode] = proc
-                elif "social" in m or "interact" in m:
+                elif "social" in m:
                     loops.social[mode] = proc
-                elif "downtime" in m or "rest" in m or "camp" in m:
+                elif "downtime" in m:
                     loops.downtime[mode] = proc
                 else:
                     loops.misc[mode] = proc
             except Exception as e:
-                logger.warning(f"Error extracting {mode}: {e}")
+                logger.warning(f"Error extracting procedure: {e}")
                 pass
 
-        # --- 4. MECHANICS (RAG) ---
-        self._update_status("Extracting Mechanics...")
+        # --- STEP 5: MECHANICS ---
+        self._update_status("Phase 5: Indexing Mechanics...")
 
         class MechDict(BaseModel):
             items: dict[str, RuleEntry]
@@ -264,17 +197,38 @@ class TemplateGenerationService:
             self.static_system_prompt,
             [
                 Message(
-                    role="user", content=game_context + GENERATE_MECHANICS_INSTRUCTION
+                    role="user", content=logic_context + GENERATE_MECHANICS_INSTRUCTION
                 )
             ],
             MechDict,
         )
 
+        # --- ASSEMBLY ---
+        self._update_status("Finalizing Template...")
+
         ruleset = Ruleset(
-            meta=meta_data,
-            physics=phys_res,
-            gameplay_procedures=loops,  # Updated field name
-            rules=mech_res.items,  # Updated field name
+            meta={"name": meta_res.name, "genre": meta_res.genre},
+            physics=PhysicsConfig(
+                dice_notation=meta_res.dice_notation,
+                roll_mechanic=meta_res.roll_mechanic,
+                success_condition="See Rules",
+                crit_rules="See Rules",
+            ),
+            gameplay_procedures=loops,
+            rules=mech_res.items,
         )
 
-        return ruleset, stat_template
+        # Convert Lists to Dicts for the Template
+        # We use the output from Step 3 (LayoutAssignment) as it has the final panel data
+        final_values = {v.id: v for v in layout_res.values}
+        final_gauges = {g.id: g for g in layout_res.gauges}
+        final_collections = {c.id: c for c in layout_res.collections}
+
+        template = StatBlockTemplate(
+            template_name=meta_res.name,
+            values=final_values,
+            gauges=final_gauges,
+            collections=final_collections,
+        )
+
+        return ruleset, template

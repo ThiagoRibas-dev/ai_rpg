@@ -8,23 +8,22 @@ class ValidationError(ValueError):
     pass
 
 class StateValidator:
-    """Validates against Refined Schema (Dict-based)."""
+    """Validates against Functional Schema (Values/Gauges/Collections)."""
 
     def __init__(self, template: StatBlockTemplate):
         self.template = template
 
     def validate_update(self, key: str, value: Any) -> str:
-        # Check Keys in Dicts
-        if key in self.template.fundamental_stats:
-            return "fundamental_stat"
+        # Check Values
+        if key in self.template.values:
+            return "value"
 
-        if key in self.template.vital_resources:
-            return "vital"
+        # Check Gauges
+        if key in self.template.gauges:
+            return "gauge"
 
-        if key in self.template.consumable_resources:
-            return "consumable"
-
-        if key in self.template.skills:
-            return "skill"
+        # Check Collections
+        if key in self.template.collections:
+            return "collection"
 
         raise ValidationError(f"Property '{key}' not found in template.")

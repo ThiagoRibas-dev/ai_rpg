@@ -12,7 +12,7 @@ class RuleEntry(BaseModel):
     text: str = Field(..., description="The concise text of this rule entry.")
     tags: List[str] = Field(
         default_factory=list,
-        description="Keywords to find this rule entry (e.g. 'combat', 'stealth', 'magic').",
+        description="Keywords to find this rule entry (e.g. 'combat', 'stealth', 'magic', 'hacking', 'madness', etc).",
     )
 
 
@@ -53,22 +53,22 @@ class GameLoopConfig(BaseModel):
 
     encounter: dict[str, ProcedureDef] = Field(
         default_factory=dict,
-        description="Procedures for resolving encounters (Standard Combat, Duels, Chases, Netrunning).",
+        description="Step-by-step procedures for resolving encounters (Standard Combat, Duels, Chases, Netrunning).",
     )
 
     exploration: dict[str, ProcedureDef] = Field(
         default_factory=dict,
-        description="Procedures for navigating the environment (Dungeon Crawl, Hex Travel, Investigation).",
+        description="Step-by-step procedures for navigating the environment (Dungeon Crawl, Hex Travel, Investigation).",
     )
 
     social: dict[str, ProcedureDef] = Field(
         default_factory=dict,
-        description="Procedures for influencing NPCs (Persuasion, Intimidation, Bartering, Interrogation).",
+        description="Step-by-step procedures for influencing NPCs (Persuasion, Intimidation, Bartering, Interrogation).",
     )
 
     downtime: dict[str, ProcedureDef] = Field(
         default_factory=dict,
-        description="Procedures for resting and recovery (Camping, Crafting, Training, Level Up).",
+        description="Step-by-step procedures for resting and recovery (Camping, Crafting, Training, Level Up).",
     )
 
     misc: dict[str, ProcedureDef] = Field(
@@ -88,13 +88,11 @@ class Ruleset(BaseModel):
         ..., description="The core engine rules for dice and resolution."
     )
 
-    # Renamed from 'mechanics' to 'rules' per request
     rules: dict[str, RuleEntry] = Field(
         default_factory=dict,
         description="The dictionary of specific rule entries.",
     )
 
-    # Renamed from 'gameplay_loops' to 'gameplay_procedures' per request
     gameplay_procedures: GameLoopConfig = Field(
         default_factory=GameLoopConfig,
         description="The structured procedures for handling different game modes.",

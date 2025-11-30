@@ -25,54 +25,41 @@ def recalculate_derived_stats(entity_data: Dict[str, Any], stat_template: StatBl
         return entity_data
 
     math_context = {}
-    fund = entity_data.get("fundamental_stats", {})
     
-    # 1. Fundamental
-    for name, value in fund.items():
-        math_context[name] = value
-        if isinstance(value, int) and value >= 1:
-            mod = (value - 10) // 2
-            math_context[f"{name}_Mod"] = mod
+    # 1. Load Raw Values into Context
+    values = entity_data.get("values", {})
+    for key, val in values.items():
+        math_context[key] = val
+        # Legacy D20 helper (optional, can be removed if prompt handles formula generation well)
+        if isinstance(val, int):
+            math_context[f"{key}_mod"] = (val - 10) // 2
 
-    math_context["Level"] = entity_data.get("level", 1)
+    # 2. Calculate Derived Values
+    for key, def_ in stat_template.values.items():
+        if def_.calculation:
+            res = safe_evaluate(def_.calculation, math_context)
+            # Update entity data
+            values[key] = int(res) if def_.data_type == "integer" else res
+            # Update math context for subsequent formulas
+            math_context[key] = values[key]
+    
+    entity_data["values"] = values
 
-    # 2. Derived (Iterate Dict items)
-    if stat_template.derived_stats:
-        entity_data.setdefault("derived_stats", {})
-        for name, formula in stat_template.derived_stats.items():
-            if formula:
-                val = safe_evaluate(formula, math_context)
-                entity_data["derived_stats"][name] = int(val)
-                math_context[name] = int(val)
-
-    # 3. Vitals (Iterate Dict items)
-    if stat_template.vital_resources:
-        entity_data.setdefault("vital_resources", {})
-        for name, v_def in stat_template.vital_resources.items():
-            if v_def.max_formula:
-                max_val = safe_evaluate(v_def.max_formula, math_context)
-                max_val = max(v_def.min_value, int(max_val))
-                
-                curr_data = entity_data["vital_resources"].get(name, {})
-                if not curr_data:
-                    curr_data = {"current": max_val, "max": max_val}
-                else:
-                    curr_data["max"] = max_val
-                entity_data["vital_resources"][name] = curr_data
-
-    # 4. Consumables
-    if stat_template.consumable_resources:
-        entity_data.setdefault("consumable_resources", {})
-        for name, c_def in stat_template.consumable_resources.items():
-            if c_def.max_formula:
-                max_val = safe_evaluate(c_def.max_formula, math_context)
-                max_val = max(0, int(max_val))
-                
-                curr_data = entity_data["consumable_resources"].get(name, {})
-                if not curr_data:
-                    curr_data = {"current": max_val, "max": max_val}
-                else:
-                    curr_data["max"] = max_val
-                entity_data["consumable_resources"][name] = curr_data
+    # 3. Update Gauge Maxima
+    gauges = entity_data.get("gauges", {})
+    for key, def_ in stat_template.gauges.items():
+        if def_.max_formula:
+            max_val = int(safe_evaluate(def_.max_formula, math_context))
+            max_val = max(def_.min_val, max_val)
+            
+            gauge_data = gauges.get(key, {})
+            if not gauge_data:
+                gauge_data = {"current": max_val, "max": max_val}
+            else:
+                gauge_data["max"] = max_val
+            
+            gauges[key] = gauge_data
+            
+    entity_data["gauges"] = gauges
 
     return entity_data

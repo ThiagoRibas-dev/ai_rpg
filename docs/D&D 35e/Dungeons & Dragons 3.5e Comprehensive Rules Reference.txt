@@ -1209,3 +1209,121 @@ These store Power Points (PP). A psionic character can use the points in the cry
 	Rule Death: Rules are removed ("killed") when they stop being fun or bog down play (e.g., THAC0, facing).
 	Abstraction vs. Simulation: D&D chooses abstraction (HP, AC) over realism (broken bones, specific organ damage) to keep the game playable and heroic.
 	The "Free" Action: Swift and Immediate actions were created because "Free actions" became too cluttered and powerful, needing a resource limit.
+
+
+Name: Triel Fitheaben
+Race: Human
+Alignment: Neutral Good
+Deity: Enthariel
+Age: 29
+Level: 15
+Classes: Cleric 4, Ordained Champion 3, Knight of the Raven 6, Crusader 1, Righteous Cohort 1
+Origin: Mithraelis (Principados Brilhantes)
+
+--- ATTRIBUTES ---
+# Format: Score (Modifier)
+Strength: 25 (+7)      # Base 15 + 10 Temp
+Dexterity: 12 (+1)     # Base 10 + 2 Equip
+Constitution: 15 (+2)
+Intelligence: 11 (+0)
+Wisdom: 20 (+5)        # Base 17 + 3 Level?
+Charisma: 17 (+3)      # Base 13 + 4 Equip
+
+--- VITALS & COMBAT ---
+HP (Hit Points): 106 / 106    # Gauge
+AC (Armor Class): 33          # Value
+Touch AC: 20
+Flat-footed AC: 32
+Initiative: +3
+Speed: 35 ft
+Base Attack Bonus (BAB): +15
+Grapple: +22
+Spell Resistance: 22
+Action Points: 7 / 12         # Gauge
+
+--- SAVING THROWS ---
+Fortitude: +27
+Reflex: +14
+Will: +28
+
+--- RESOURCES ---
+Turn Undead: 14 / 16 (Uses/Day)
+Destroy Undead: 7 / 11
+Smite Evil: 11 / 11
+Law Devotion: 0 / 33
+Steely Resolve: 0 / 5
+
+--- ATTACKS ---
+Weapon: Longsword Keen +1 (Lesser Crystal of Return)
+Attack Bonus: +29
+Damage: 2d6 + 19
+Critical: 17-20 x2
+Type: Slashing
+
+--- SKILLS ---
+Concentration: +20
+Heal: +11
+Diplomacy: +11
+Spellcraft: +4
+Knowledge (Religion): +15
+Knowledge (Arcana): +1
+Knowledge (History): +1
+Knowledge (Planes): +1
+Spot: +9
+Listen: +5
+Use Magic Device: +4
+
+--- FEATS  ---
+- Power Attack
+- Extended Spell
+- Persist Spell
+- Divine Metamagic (Persist)
+- Holy Warrior
+- Extra Turning
+- Weapon Focus (Longsword)
+- Diehard
+- Practiced Spellcaster
+- Law Devotion
+
+--- CLASS FEATURES ---
+- Aura (Good)
+- War Domain / Healing Domain / Law Domain / Sun Domain
+- Spontaneous Casting (Healing)
+- Smite (Su)
+- Raven Harrier (Harry, Baffle, Falter)
+- Speak with Ravens
+- Light Focus
+- Furious Counterstrike
+- Fraternal Oath
+- Rallying Cry (1/day)
+
+--- SPELLCASTING (Cleric CL 15) ---
+0-Level Slots: 6
+1st-Level Slots: 7
+2nd-Level Slots: 7
+3rd-Level Slots: 6
+4th-Level Slots: 5
+5th-Level Slots: 5
+6th-Level Slots: 4
+7th-Level Slots: 2
+8th-Level Slots: 1
+9th-Level Slots: 1
+
+--- MANEUVERS (Crusader) ---
+Stance: Martial Spirit
+Readied: 5 (Douse the Flames, Mountain Hammer, Revitalizing Strike, White Raven Strike, Divine Surge)
+
+--- INVENTORY ---
+- Full Plate +1
+- Heavy Shield +1
+- Longsword Keen +1
+- Gauntlets of War
+- Belt of Battle
+- Extend Rod
+
+--- COMPANION ---
+Name: Remi (Celestial Raven)
+HP: 53 / 53
+AC: 14
+Speed: 10ft (Fly 40ft)
+Special: Darkvision, DR 10/Magic, Resistance (Acid 10, Cold 10, Elec 10)

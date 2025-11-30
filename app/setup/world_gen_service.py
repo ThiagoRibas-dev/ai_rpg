@@ -27,18 +27,33 @@ class WorldGenService:
     def _build_dynamic_stats_model(
         self, template: StatBlockTemplate
     ) -> Type[BaseModel]:
+        """
+        Dynamically creates a Pydantic model representing the specific RPG system's stats.
+        Iterates over the new 'values' and 'gauges' dicts.
+        """
         fields = {}
-        # Iterate Dicts now
-        for name, fund in template.fundamental_stats.items():
-            t = (
-                float
-                if fund.data_type == "float"
-                else (str if fund.data_type in ["string", "die_code"] else int)
-            )
-            fields[name] = (t, Field(..., description=f"{name}"))
 
-        for name, vital in template.vital_resources.items():
-            fields[name] = (int, Field(..., description=f"Starting {name}"))
+        # 1. Values (Attributes, Skills, etc)
+        for key, val_def in template.values.items():
+            if val_def.calculation:
+                continue  # Skip derived stats
+
+            t = str  # Default
+            if val_def.data_type == "integer":
+                t = int
+            elif val_def.data_type == "boolean":
+                t = bool
+            elif val_def.data_type == "float":
+                t = float
+
+            fields[key] = (t, Field(..., description=val_def.label))
+
+        # 2. Gauges (Start values)
+        for key, gauge_def in template.gauges.items():
+            if "formula" in gauge_def.max_formula:
+                continue  # Skip derived max
+            # We usually ask for the current/starting value
+            fields[key] = (int, Field(..., description=f"Starting {gauge_def.label}"))
 
         StatsModel = create_model("DynamicStats", **fields)
 
@@ -62,8 +77,10 @@ class WorldGenService:
 
         # Summary for LLM context
         summary = {
-            "abilities": list(stat_template.fundamental_stats.keys()),
-            "vitals": list(stat_template.vital_resources.keys()),
+            "fields": [
+                v.label for v in stat_template.values.values() if not v.calculation
+            ],
+            "resources": [g.label for g in stat_template.gauges.values()],
         }
 
         try:
