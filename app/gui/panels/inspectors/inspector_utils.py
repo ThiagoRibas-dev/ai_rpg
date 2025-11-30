@@ -58,20 +58,25 @@ def render_widget(parent, label, value, widget_type, meta=None):
         badge.pack(side="right", padx=5)
 
     elif widget_type == "ladder":
-        # Fate style lookup (e.g. 4 -> "Great (+4)")
-        lookup = rendering.get("lookup_map", {})
-        adj = lookup.get(str(value), "")
-
-        # Format: "Adjective (+Value)"
+        # 1. Default display
         display_text = str(value)
+
+        # 2. Use the 'rendering' variable defined at the top of the function
+        #    (No need to check 'if meta' again, because rendering defaults to {})
+        lookup = rendering.get("lookup_map", {})
+
+        # 3. Try to find the adjective
+        adj = lookup.get(str(value))
+
         if adj:
-            val_int = (
-                int(value)
-                if str(value).isdigit()
-                or (str(value).startswith("-") and str(value)[1:].isdigit())
-                else 0
-            )
-            sign = "+" if val_int > 0 else ""
+            # 4. Calculate sign
+            try:
+                val_int = int(value)
+                sign = "+" if val_int > 0 else ""
+            except (ValueError, TypeError):
+                sign = ""
+
+            # 5. Format
             display_text = f"{adj} ({sign}{value})"
 
         ctk.CTkLabel(

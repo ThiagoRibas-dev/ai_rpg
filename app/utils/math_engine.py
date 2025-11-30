@@ -45,16 +45,16 @@ def recalculate_derived_stats(
                 logger.warning(f"Invalid fundamental '{key}' value '{val}': {e}")
                 math_context[key] = 0.0
         elif stat_def and stat_def.data_type == "die":
-            # OPTIONAL: Extract max value from "d20" -> 20 for math?
-            # For now, just ignore or store 0
-            math_context[key] = 0.0
+            # Extract 8 from "d8" for math purposes
+            try:
+                val_str = str(val).lower().replace("d", "")
+                math_context[key] = float(val_str)
+            except Exception as e:
+                logger.warning(f"Invalid die fundamental '{key}' value '{val}': {e}")
+                math_context[key] = 0.0
         else:
             # Pass strings/bools through for display or non-math logic
             math_context[key] = val
-
-        # Legacy D20 helper
-        if isinstance(val, int) and val > 0:
-            math_context[f"{key}_mod"] = (val - 10) // 2
 
     # 2. Calculate Derived Values
     derived = entity_data.get("derived", {})

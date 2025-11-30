@@ -54,6 +54,7 @@ class StatValue(BaseModel):
     widget: str = "number"
     panel: str = Field("main", description="Target Panel.")
     group: str = Field("General", description="Section header.")
+    rendering: Optional[StatRendering] = None
 
 
 class StatGauge(BaseModel):
