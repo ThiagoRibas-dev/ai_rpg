@@ -1,6 +1,6 @@
 """
 Models for the Generic Functional StatBlock.
-Layout is now flattened: Stats directly declare their Panel and Group.
+Refactored to separate Fundamental Inputs from Derived Outputs.
 """
 
 from typing import List, Optional, Literal, Dict, Any
@@ -22,26 +22,26 @@ class WidgetType(str):
     CHECK_GRID = "check_grid"
 
 class PanelType(str):
-    HEADER = "header"       # Top bar (Name, Class)
-    SIDEBAR = "sidebar"     # Left col (Attributes, Saves)
-    MAIN = "main"           # Center (Combat, Actions)
-    EQUIPMENT = "equipment" # Inventory
-    SPELLS = "spells"       # Magic
-    NOTES = "notes"         # Bio
+    HEADER = "header"
+    SIDEBAR = "sidebar"
+    MAIN = "main"
+    EQUIPMENT = "equipment"
+    SPELLS = "spells"
+    NOTES = "notes"
 
 # --- Data Primitives ---
 
 class StatValue(BaseModel):
     id: str = Field(..., description="Unique key (e.g. 'str').")
     label: str = Field(..., description="Display name.")
-    data_type: Literal["string", "integer", "boolean", "formula"]
+    data_type: Literal["string", "integer", "boolean", "formula"] = "integer"
     default: Any = 0
     calculation: Optional[str] = None
     
-    # Direct Layout Assignment
+    # Layout
     widget: str = "number"
-    panel: str = Field("main", description="Target Panel (header, sidebar, main, etc).")
-    group: str = Field("General", description="Section header within the panel (e.g. 'Attributes').")
+    panel: str = Field("main", description="Target Panel.")
+    group: str = Field("General", description="Section header.")
 
 class StatGauge(BaseModel):
     id: str = Field(..., description="Unique key (e.g. 'hp').")
@@ -72,7 +72,15 @@ class StatCollection(BaseModel):
 
 class StatBlockTemplate(BaseModel):
     template_name: str
-    values: Dict[str, StatValue] = Field(default_factory=dict)
-    gauges: Dict[str, StatGauge] = Field(default_factory=dict)
+    
+    # 1. Base Inputs (Str, Dex, Bio)
+    fundamentals: Dict[str, StatValue] = Field(default_factory=dict)
+    
+    # 2. Lists (Inventory, Skills)
     collections: Dict[str, StatCollection] = Field(default_factory=dict)
-    # layout_groups is removed. Logic is distributed.
+    
+    # 3. Calculated Outputs (AC, Save Bonuses)
+    derived: Dict[str, StatValue] = Field(default_factory=dict)
+    
+    # 4. Resources (HP, Mana)
+    gauges: Dict[str, StatGauge] = Field(default_factory=dict)

@@ -1,3 +1,4 @@
+
 import logging
 from typing import Dict, Any
 from simpleeval import simple_eval
@@ -9,6 +10,7 @@ def safe_evaluate(expression: str, context: Dict[str, Any]) -> int | float:
     if not expression or expression == "0" or expression == "null":
         return 0
     try:
+        # Convert all context values to float for math safety
         safe_context = {}
         for k, v in context.items():
             try:
@@ -26,24 +28,25 @@ def recalculate_derived_stats(entity_data: Dict[str, Any], stat_template: StatBl
 
     math_context = {}
     
-    # 1. Load Raw Values into Context
-    values = entity_data.get("values", {})
-    for key, val in values.items():
+    # 1. Load Fundamentals (Source of Truth)
+    fundamentals = entity_data.get("fundamentals", {})
+    for key, val in fundamentals.items():
         math_context[key] = val
-        # Legacy D20 helper (optional, can be removed if prompt handles formula generation well)
-        if isinstance(val, int):
+        # D20 Legacy Helper (automatically add _mod if it looks like an ability score)
+        if isinstance(val, int) and val > 0:
             math_context[f"{key}_mod"] = (val - 10) // 2
 
     # 2. Calculate Derived Values
-    for key, def_ in stat_template.values.items():
+    derived = entity_data.get("derived", {})
+    for key, def_ in stat_template.derived.items():
         if def_.calculation:
             res = safe_evaluate(def_.calculation, math_context)
-            # Update entity data
-            values[key] = int(res) if def_.data_type == "integer" else res
-            # Update math context for subsequent formulas
-            math_context[key] = values[key]
+            final_val = int(res) if def_.data_type == "integer" else res
+            derived[key] = final_val
+            # Add to context for subsequent formulas
+            math_context[key] = final_val
     
-    entity_data["values"] = values
+    entity_data["derived"] = derived
 
     # 3. Update Gauge Maxima
     gauges = entity_data.get("gauges", {})

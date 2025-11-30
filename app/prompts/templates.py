@@ -1,12 +1,6 @@
 """
 Templates for LLM prompts.
-Updated for Flattened Layout and Strict Procedure Extraction.
-"""
-
-# --- GAMEPLAY ---
-GAME_MASTER_SYSTEM_PROMPT = """
-You are an expert Game Master (GM).
-Your goal is to provide a vivid, immersive experience while adhering to the extracted rules.
+Updated for 3-Step Definition Flow (Fundamentals -> Collections -> Derived).
 """
 
 # --- TEMPLATE GENERATION ---
@@ -21,69 +15,72 @@ Your goal is to extract **Game Rules** and then esign a **BLANK Character Sheet 
 3. **Generic Defaults:** Use 0, 10, or "" as defaults. Never use specific character data.
 """
 
-# Phase 1: Containers
-ANALYZE_CONTAINERS_INSTRUCTION = """
-You are creating a character sheet template for the game {target_game} as markdown.
-Analyze which parts of a character or game entity should be represented as lists or complex objects in a JSON formatted character sheet.
+# Step 1: Fundamentals
+GENERATE_FUNDAMENTALS_INSTRUCTION = """
+You are defining the template for **{target_game}**.
 
-Things like the entity's body parts where gear can be equiped, list of features/perks and the like, list of jobs/classes/professions/role and such, etc.
-For now, just list these things with a brief explanation of what each represent in the game system.
+Identify the **Fundamental Stats** (Raw Inputs).
+These are values the player assigns directly (e.g., Attributes, Level, Race, Class).
+
+**DO NOT** include stats that are calculated from other stats (like AC or Save Bonuses).
+**DO NOT** include lists (like Skills or Inventory).
+
+Output a JSON with `fundamentals` (List of StatValue).
 """
 
+# Step 2: Collections
 GENERATE_CONTAINERS_INSTRUCTION = """
-You are creating a character sheet template for the game {target_game} in JSON format.
-Identify the **Dynamic Lists** (Collections) and define the fields for each record in these lists.
+Identify the **Collections** (Dynamic Lists) for **{target_game}**.
+Define the **Table Schema** (Columns) for items in these lists.
+
+Examples:
+- Skills (Name, Rank, Attribute Used)
+- Inventory (Name, Weight, Qty)
+- Spells (Name, Level, School)
+- Feats/Talents (Name, Description)
 
 Output a JSON with `collections`.
 """
 
-# Phase 2: Core Stats
-ANALYZE_CORE_STATS_INSTRUCTION = """
-You are creating a character sheet template for the game {target_game} as markdown.
-Analyze and identify the following :
- - Basic values (stats,attributes, etc) of a character or entity;
- - Derived values, which are calculated based on a formula that uses other values;
- - Gauges (resources) that have a minimum and maximum value, and can fluctuate based on some condition (use, damage, time, etc);
+# Step 3: Derived & Gauges
+GENERATE_DERIVED_INSTRUCTION = """
+I have defined the following for **{target_game}**:
+Fundamentals: {fundamentals_list}
+Collections: {collections_list}
 
-For each item, provide a brief description or summary, and if appropriate the formulas or rules governing that value or gauge.
+**TASK:**
+Identify **Derived Stats** (Calculated Formulas) and **Gauges** (Resources).
+
+1.  **Derived Stats:** Values calculated from Fundamentals (e.g., `AC = 10 + Dex`).
+    *   *Constraint:* You MUST provide a Python-syntax formula in the `calculation` field using the keys from Fundamentals.
+2.  **Gauges:** Pools that fluctuate (e.g., HP, Mana, Ammo).
+    *   *Constraint:* `max_formula` should reference Fundamentals (e.g., `10 + Con`).
+
+Output a JSON with `derived` and `gauges`.
 """
 
-GENERATE_CORE_STATS_INSTRUCTION = """
-You are creating a character sheet template for the game {target_game} in JSON format.
-Identify and define the **Fixed Global Stats** (Values & Gauges).
-
-**DISTINCTIONS:**
-*   **StatValue**: Static basic/fundamental properties (Str, Dex, Grit, Level, Movement, Speed, etc).
-*   **StatGauge**: Fluctuating resources (HP, Mana, Ammo, Action Points, etc).
-
-**CONSTRAINTS:**
-*   Mutually Exclusive: A stat cannot be both Value and Gauge.
-*   Formulas: Use Python syntax (`10 + dex`) for derived stats. Do not write the result (`14`).
-
-Output a JSON with `values` and `gauges`.
-"""
-
-# Phase 3: Layout (Flattened)
+# Step 4: Layout (Mapping)
 ORGANIZE_LAYOUT_INSTRUCTION = """
-Now that you created the character sheet template for the game {target_game}, you are going to configure how everything will be laid out in the UI.
-Assign every defined Stat (Value, Gauge, Collection) to a **Panel** and a **Group**.
+I have defined the following IDs for **{target_game}**:
+{stat_list}
 
-**PANELS (Strict Assignment):**
-*   `header`: Vital info (HP, Name, Level, Classes, Race, Profession, XP, etc).
-*   `sidebar`: Core Stats (Attributes, Saves, Passive Defenses, etc).
-*   `main`: Combat actions, Attacks, Initiative, Speed, etc.
-*   `equipment`: Inventory, Money, Encumbrance, etc.
+**TASK:**
+Assign a **Panel** and a **Group** for EACH of these IDs.
+
+**PANELS:**
+*   `header`: Vital info (HP, Name, Level, Class).
+*   `sidebar`: Core Stats (Attributes, Saves).
+*   `main`: Combat actions, Attacks, Speed.
+*   `equipment`: Inventory, Money.
 *   `skills`: Skill lists.
-*   `spells`: Magic, Powers, etc.
-*   `notes`: Bio, Background, etc.
+*   `spells`: Magic.
+*   `notes`: Bio.
 
-**INSTRUCTION:**
-Update the objects to set their `panel` field.
-Use the `group` field to label the section within that panel (e.g. Panel: 'sidebar', Group: 'Attributes').
-Do NOT dump everything in 'main'.
+**OUTPUT:**
+A JSON object mapping ID -> {{ "panel": "...", "group": "..." }}.
 """
 
-# Phase 4: Procedures (Strict)
+# ... (Procedures/Mechanics/WorldGen remain the same) ...
 IDENTIFY_MODES_INSTRUCTION = """
 Identify the distinct **Game Modes** (Loops).
 Return ONLY a JSON list of strings.
@@ -92,22 +89,14 @@ Example: `["Combat", "Exploration", "Social"]`
 
 EXTRACT_PROCEDURE_INSTRUCTION = """
 Extract the step-by-step **Procedure** for **{mode_name}**.
-
-**STRICT FORMATTING:**
-*   `description`: A concise summary of what this mode resolves.
-*   `steps`: A list of strings. Each string is one step.
-*   **NO CHAT:** Do not write "The user is asking..." or "I will extract...". Just output the data.
 """
 
-# Phase 5: Mechanics
 GENERATE_MECHANICS_INSTRUCTION = """
-Extract specific **Game Rules** (Conditions, Actions, Magic Rules) for the Reference Index.
-Key: Rule Name. Value: Rule Text + Tags.
+Extract specific **Game Rules** (Conditions, Actions, Magic Rules).
 """
 
-# --- WORLD GEN ---
 CHARACTER_EXTRACTION_PROMPT = """
-Extract character data into the schema.
+Extract character data.
 Context: {template}
 Input: "{description}"
 """
@@ -119,13 +108,8 @@ Input: "{description}"
 
 OPENING_CRAWL_PROMPT = """
 Write a 2nd-person opening scene.
-Genre: {genre}
-Protagonist: {name}
-Location: {location}
 """
 
 JIT_SIMULATION_TEMPLATE = """
 Simulate NPC actions.
-NPC: {npc_name}
-Time: {last_updated_time} -> {current_time}
 """

@@ -1211,13 +1211,16 @@ These store Power Points (PP). A psionic character can use the points in the cry
 	The "Free" Action: Swift and Immediate actions were created because "Free actions" became too cluttered and powerful, needing a resource limit.
 
 
+### Sample Character Sheet
+
+--- Identity
 Name: Triel Fitheaben
 Race: Human
 Alignment: Neutral Good
 Deity: Enthariel
 Age: 29
 Level: 15
-Classes: Cleric 4, Ordained Champion 3, Knight of the Raven 6, Crusader 1, Righteous Cohort 1
+Classes: Cleric 4 / Ordained Champion 3 / Knight of the Raven 6 / Crusader 1 / Righteous Cohort 1
 Origin: Mithraelis (Principados Brilhantes)
 
 --- ATTRIBUTES ---
@@ -1298,16 +1301,16 @@ Use Magic Device: +4
 - Rallying Cry (1/day)
 
 --- SPELLCASTING (Cleric CL 15) ---
-0-Level Slots: 6
-1st-Level Slots: 7
-2nd-Level Slots: 7
-3rd-Level Slots: 6
-4th-Level Slots: 5
-5th-Level Slots: 5
-6th-Level Slots: 4
-7th-Level Slots: 2
-8th-Level Slots: 1
-9th-Level Slots: 1
+0-Level Slots: [][][][][][]
+1st-Level Slots: [][][][][][][]
+2nd-Level Slots: [][][][][][][]
+3rd-Level Slots: [][][][][][]
+4th-Level Slots: [][][][][]
+5th-Level Slots: [][][][][]
+6th-Level Slots: [][][][]
+7th-Level Slots: [][]
+8th-Level Slots: []
+9th-Level Slots: []
 
 --- MANEUVERS (Crusader) ---
 Stance: Martial Spirit

@@ -513,7 +513,7 @@ class SetupWizard(ctk.CTkToplevel):
             guidance = self.input_world_text # Simple pass-through of the concept text
 
             self.generated_opening = service.generate_opening_crawl(
-                self.extracted_char, self.extracted_world, scenario_guidance=guidance
+                self.extracted_char, self.extracted_world, guidance
             )
 
             # Transition

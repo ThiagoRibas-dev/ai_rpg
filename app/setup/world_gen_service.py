@@ -1,3 +1,4 @@
+
 import json
 import logging
 from typing import Type
@@ -29,15 +30,13 @@ class WorldGenService:
     ) -> Type[BaseModel]:
         """
         Dynamically creates a Pydantic model representing the specific RPG system's stats.
-        Iterates over the new 'values' and 'gauges' dicts.
+        Iterates over 'fundamentals' and 'gauges'.
         """
         fields = {}
 
-        # 1. Values (Attributes, Skills, etc)
-        for key, val_def in template.values.items():
-            if val_def.calculation:
-                continue  # Skip derived stats
-
+        # 1. Fundamentals (Attributes, Bio, etc) - The Inputs
+        # We DO NOT extract Derived stats (AC, Saves) because the engine calculates them.
+        for key, val_def in template.fundamentals.items():
             t = str  # Default
             if val_def.data_type == "integer":
                 t = int
@@ -51,8 +50,9 @@ class WorldGenService:
         # 2. Gauges (Start values)
         for key, gauge_def in template.gauges.items():
             if "formula" in gauge_def.max_formula:
-                continue  # Skip derived max
-            # We usually ask for the current/starting value
+                continue  # Skip derived max, let the engine handle it
+            
+            # If it's a fixed pool (like 'Luck' points), extract it.
             fields[key] = (int, Field(..., description=f"Starting {gauge_def.label}"))
 
         StatsModel = create_model("DynamicStats", **fields)
@@ -75,11 +75,9 @@ class WorldGenService:
             logger.error(f"Model creation failed: {e}")
             DynamicModel = CharacterExtraction
 
-        # Summary for LLM context
+        # Summary for LLM context (Only show what needs to be filled)
         summary = {
-            "fields": [
-                v.label for v in stat_template.values.values() if not v.calculation
-            ],
+            "fields": [v.label for v in stat_template.fundamentals.values()],
             "resources": [g.label for g in stat_template.gauges.values()],
         }
 
@@ -87,7 +85,8 @@ class WorldGenService:
             prompt = CHARACTER_EXTRACTION_PROMPT.format(
                 description=char_description, template=json.dumps(summary)
             )
-            raw = self.llm.get_structured_response(prompt, [], DynamicModel, 0.1, 0.1)
+            # Higher temperature for creative filling of stats
+            raw = self.llm.get_structured_response(prompt, [], DynamicModel, 0.2, 0.1)
 
             stats_dict = {}
             if hasattr(raw, "stats"):
@@ -115,7 +114,7 @@ class WorldGenService:
                 WORLD_EXTRACTION_PROMPT.format(description=desc),
                 [],
                 WorldExtraction,
-                0.1,
+                0.3, # Slight creativity
                 0.1,
             )
         except Exception as e:
