@@ -6,20 +6,23 @@ Updated for 3-Step Definition Flow (Fundamentals -> Collections -> Derived).
 # --- TEMPLATE GENERATION ---
 
 TEMPLATE_GENERATION_SYSTEM_PROMPT = """
-You are a **Tabletop RPG Database Architect**.
-Your goal is to extract **Game Rules** and then esign a **BLANK Character Sheet Template** for use by the Player later on.
+You are a **Tabletop RPG Analyst and Architect**.
+Your goal is to extract **Game Rules** and then design a **BLANK Character Sheet Template** for use by the Player later on.
 
 ### CRITICAL INSTRUCTIONS
-1. **No Meta-Commentary:** When extracting rules or procedures, output ONLY the content. Do not say "Here is the procedure" or "I found this text".
-2. **Design the Character Sheet Template, Don't Fill It:** Define the fields the Player will fill out.
-3. **Generic Defaults:** Use 0, 10, or "" as defaults. Never use specific character data.
+1. **Precision:** Be precise and through in your extraction and design. Extract all relevant information, rules, and details.
+2. **No Meta-Commentary:** When extracting rules or procedures, output ONLY the content. Do not say "Here is the procedure" or "I found this text".
+3. **Design the Character Sheet Template, Don't Fill It:** Define the fields the Player will fill out.
+4. **Generic Defaults:** Use 0, 10, or "" as defaults. Never use specific character data.
 """
 
 # Step 1: Fundamentals
 ANALYZE_FUNDAMENTALS_INSTRUCTION = """
 You are creating a character sheet template for the game {target_game} as markdown.
+
 Analyze and identify the Basic values (stats, attributes, etc) of a character or entity.
-These are the basic values from which other values may be derived.
+These are the basic values a Player would fill directly (usually a number or dice), and are not calculated based on anything else.
+These are not tracks, gauges, derived stats, or collections of things.
 
 For each item, provide a brief description or summary.
 """
@@ -28,7 +31,8 @@ GENERATE_FUNDAMENTALS_INSTRUCTION = """
 You are creating a character sheet template for the game {target_game} as JSON.
 
 Define the Basic values (stats, attributes, etc) of a character or entity.
-These are the basic values from which other values may be derived.
+These are the basic values a Player would fill directly (usually a number or dice), and are not calculated based on anything else.
+These are not tracks, gauges, derived stats, or collections of things.
 
 Output a JSON with `fundamentals` (List of StatValue).
 """
@@ -115,20 +119,65 @@ GENERATE_MECHANICS_INSTRUCTION = """
 Extract specific **Game Rules** (Conditions, Actions, Magic Rules).
 """
 
-# Setup Prompts for World and Character Extraction
-CHARACTER_EXTRACTION_PROMPT = """
-Extract character data.
-Context: {template}
-Input: "{description}"
+# --- SETUP / NEW GAME PROMPTS ---
+
+# Step 1: World Generation
+ANALYZE_WORLD_INSTRUCTION = """
+You are an expert World Builder and Game Master.
+Analyze the user's concept for a new RPG campaign.
+
+**Input:** "{description}"
+
+**Your Task:**
+1.  **Genre & Tone:** Determine the specific sub-genre and atmospheric tone.
+2.  **Starting Location:** Visualize the immediate starting scene location/zone. What does it look/smell/sound like?
+3.  **Adjacency:** After defining the starting location, define all other locations that are directly adjacent to the starting zone.
+4.  **Lore:** Extract or infer the key facts about the world (factions, history, technology, etc).
+5.  **NPCs:** Identify who is immediately present in the scene.
+
+Output your analysis as a structured thought process.
 """
 
-WORLD_EXTRACTION_PROMPT = """
-Extract world details.
-Input: "{description}"
+GENERATE_WORLD_INSTRUCTION = """
+Based on your analysis, extract the World Data into JSON.
+"""
+
+# Step 2: Character Generation
+ANALYZE_CHARACTER_INSTRUCTION = """
+You are an expert RPG Character Designer.
+Analyze the user's character concept and map it to the provided Game System Template.
+
+**Game System Context:**
+{template_context}
+
+**User Input:** "{description}"
+
+**Your Task:**
+1.  **Identity:** Refine the Name, Visual Description, and Bio.
+2.  **Inventory:** List starting gear appropriate for the setting and concept.
+3.  **Stat Allocation:** Analyze the provided 'Game System Context'. Assign values to the specific **Fundamentals** and **Gauges** defined there.
+    *   *Logic:* If the character is 'Strong', find the 'Strength' or 'Physique' stat and assign a high value.
+    *   *Constraints:* Do not invent new stats. Use only what is in the template.
+
+Output your analysis as a structured thought process.
+"""
+
+GENERATE_CHARACTER_INSTRUCTION = """
+Based on your analysis, extract the Character Data into JSON.
+Ensure keys in `suggested_stats` match the Template IDs exactly.
 """
 
 OPENING_CRAWL_PROMPT = """
-Write a 2nd-person opening scene.
+Write a compelling, 2nd-person opening scene (approx 100-150 words).
+Set the scene and end with a call to action.
+
+**Context:**
+*   **Genre:** {genre}
+*   **Tone:** {tone}
+*   **Protagonist:** {name}
+*   **Location:** {location}
+
+**Guidance:** {guidance}
 """
 
 # Gameplay Prompts
