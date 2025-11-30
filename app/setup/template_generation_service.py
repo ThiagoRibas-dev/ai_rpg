@@ -20,8 +20,11 @@ from app.models.stat_block import (
 )
 from app.prompts.templates import (
     TEMPLATE_GENERATION_SYSTEM_PROMPT,
+    ANALYZE_FUNDAMENTALS_INSTRUCTION,
     GENERATE_FUNDAMENTALS_INSTRUCTION,
+    ANALYZE_CONTAINERS_INSTRUCTION,
     GENERATE_CONTAINERS_INSTRUCTION,
+    ANALYZE_DERIVED_INSTRUCTION,
     GENERATE_DERIVED_INSTRUCTION,
     ORGANIZE_LAYOUT_INSTRUCTION,
     IDENTIFY_MODES_INSTRUCTION,
@@ -94,6 +97,20 @@ class TemplateGenerationService:
         )
 
         # --- STEP 1: FUNDAMENTALS (Inputs) ---
+        self._update_status("Phase 1: Analyzing Fundamentals...")
+
+        fund_analysis = self.llm.get_streaming_response(
+            system_prompt,
+            [
+                Message(
+                    role="user",
+                    content=ANALYZE_FUNDAMENTALS_INSTRUCTION.format(
+                        target_game=game_name
+                    ),
+                )
+            ],
+        )
+
         self._update_status("Phase 1: Defining Fundamentals...")
 
         class FundamentalsDef(BaseModel):
@@ -102,12 +119,13 @@ class TemplateGenerationService:
         fund_res = self.llm.get_structured_response(
             system_prompt,
             [
+                Message(role="assistant", content="".join(fund_analysis)),
                 Message(
                     role="user",
                     content=GENERATE_FUNDAMENTALS_INSTRUCTION.format(
                         target_game=game_name
                     ),
-                )
+                ),
             ],
             FundamentalsDef,
         )
@@ -116,6 +134,21 @@ class TemplateGenerationService:
         fund_summary = f"Defined Fundamentals: {fund_ids}"
 
         # --- STEP 2: COLLECTIONS (Lists) ---
+        self._update_status("Phase 2: Analyzing Collections...")
+
+        coll_analysis = self.llm.get_streaming_response(
+            system_prompt,
+            [
+                Message(role="assistant", content=fund_summary),
+                Message(
+                    role="user",
+                    content=ANALYZE_CONTAINERS_INSTRUCTION.format(
+                        target_game=game_name
+                    ),
+                ),
+            ],
+        )
+
         self._update_status("Phase 2: Defining Collections...")
 
         class ContainerDef(BaseModel):
@@ -124,13 +157,7 @@ class TemplateGenerationService:
         coll_res = self.llm.get_structured_response(
             system_prompt,
             [
-                Message(
-                    role="user",
-                    content=GENERATE_FUNDAMENTALS_INSTRUCTION.format(
-                        target_game=game_name
-                    ),
-                ),
-                Message(role="assistant", content=fund_summary),
+                Message(role="assistant", content="".join(coll_analysis)),
                 Message(
                     role="user",
                     content=GENERATE_CONTAINERS_INSTRUCTION.format(
@@ -145,6 +172,19 @@ class TemplateGenerationService:
         coll_summary = f"Defined Collections: {coll_ids}"
 
         # --- STEP 3: DERIVED & GAUGES (Outputs) ---
+        self._update_status("Phase 3: Analyzing Derived Stats...")
+
+        derived_analysis = self.llm.get_streaming_response(
+            system_prompt,
+            [
+                Message(role="assistant", content=coll_summary),
+                Message(
+                    role="user",
+                    content=ANALYZE_DERIVED_INSTRUCTION.format(target_game=game_name),
+                ),
+            ],
+        )
+
         self._update_status("Phase 3: Defining Derived Stats...")
 
         class DerivedDef(BaseModel):
@@ -161,20 +201,7 @@ class TemplateGenerationService:
         derived_res = self.llm.get_structured_response(
             system_prompt,
             [
-                Message(
-                    role="user",
-                    content=GENERATE_FUNDAMENTALS_INSTRUCTION.format(
-                        target_game=game_name
-                    ),
-                ),
-                Message(role="assistant", content=fund_summary),
-                Message(
-                    role="user",
-                    content=GENERATE_CONTAINERS_INSTRUCTION.format(
-                        target_game=game_name
-                    ),
-                ),
-                Message(role="assistant", content=coll_summary),
+                Message(role="assistant", content="".join(derived_analysis)),
                 Message(role="user", content=derived_prompt),
             ],
             DerivedDef,

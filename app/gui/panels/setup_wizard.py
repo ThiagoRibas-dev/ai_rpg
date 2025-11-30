@@ -144,8 +144,12 @@ class SetupWizard(ctk.CTkToplevel):
                 self.extracted_world.lore = new_lore
 
         # 2. Get Opening Crawl Settings
-        generate_crawl = bool(self.var_generate_crawl.get()) if hasattr(self, "var_generate_crawl") else True
-        # Note: generated_opening might be empty if the user unchecked the box before step 2, 
+        generate_crawl = (
+            bool(self.var_generate_crawl.get())
+            if hasattr(self, "var_generate_crawl")
+            else True
+        )
+        # Note: generated_opening might be empty if the user unchecked the box before step 2,
         # but we allow them to toggle it off here too.
 
         # 3. Pass to Session Manager
@@ -154,7 +158,7 @@ class SetupWizard(ctk.CTkToplevel):
             self.extracted_char,
             self.extracted_world,
             self.generated_opening,
-            generate_crawl=generate_crawl
+            generate_crawl=generate_crawl,
         )
         self.destroy()
 
@@ -224,7 +228,8 @@ class SetupWizard(ctk.CTkToplevel):
                     if abilities:
                         hint_text += f"\n\nSystem: {t.get('template_name', 'Custom')}"
                         hint_text += f"\nKey Stats: {', '.join(abilities)}"
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to parse template manifest for hints: {e}")
             pass
 
         ctk.CTkLabel(
@@ -410,17 +415,17 @@ class SetupWizard(ctk.CTkToplevel):
 
         # --- TAB 3: OPENING ---
         tab_opening = tabview.add("Opening")
- 
+
         # Controls
         controls_frame = ctk.CTkFrame(tab_opening, fg_color="transparent")
         controls_frame.pack(fill="x", padx=5, pady=5)
 
         self.var_generate_crawl = ctk.BooleanVar(value=True)
         self.check_gen = ctk.CTkCheckBox(
-            controls_frame, 
-            text="Use Opening Narration", 
+            controls_frame,
+            text="Use Opening Narration",
             variable=self.var_generate_crawl,
-            command=self._toggle_opening_text
+            command=self._toggle_opening_text,
         )
         self.check_gen.pack(side="left")
 
@@ -428,7 +433,7 @@ class SetupWizard(ctk.CTkToplevel):
         self.text_opening = ctk.CTkTextbox(tab_opening, font=Theme.fonts.body)
         self.text_opening.pack(fill="both", expand=True, padx=5, pady=5)
         self.text_opening.insert("1.0", self.generated_opening)
-        
+
         self.text_opening.bind(
             "<KeyRelease>",
             lambda e: setattr(
@@ -439,9 +444,13 @@ class SetupWizard(ctk.CTkToplevel):
     def _toggle_opening_text(self):
         """Enable/Disable the opening text box based on checkbox."""
         if self.var_generate_crawl.get():
-            self.text_opening.configure(state="normal", fg_color=Theme.colors.bg_secondary)
+            self.text_opening.configure(
+                state="normal", fg_color=Theme.colors.bg_secondary
+            )
         else:
-            self.text_opening.configure(state="disabled", fg_color=Theme.colors.bg_tertiary)
+            self.text_opening.configure(
+                state="disabled", fg_color=Theme.colors.bg_tertiary
+            )
 
     def _update_stat(self, key, value):
         """Update stat in extracted model, handling type conversion if possible."""
@@ -510,7 +519,7 @@ class SetupWizard(ctk.CTkToplevel):
             logger.info("Wizard: Generating Opening...")
             # Extract Scenario Guidance (implicit from World Input for now, or added as step 1 field?)
             # For now, we treat the raw input as the guidance context.
-            guidance = self.input_world_text # Simple pass-through of the concept text
+            guidance = self.input_world_text  # Simple pass-through of the concept text
 
             self.generated_opening = service.generate_opening_crawl(
                 self.extracted_char, self.extracted_world, guidance

@@ -1,4 +1,3 @@
-
 import json
 import logging
 from typing import Type
@@ -51,7 +50,7 @@ class WorldGenService:
         for key, gauge_def in template.gauges.items():
             if "formula" in gauge_def.max_formula:
                 continue  # Skip derived max, let the engine handle it
-            
+
             # If it's a fixed pool (like 'Luck' points), extract it.
             fields[key] = (int, Field(..., description=f"Starting {gauge_def.label}"))
 
@@ -78,7 +77,8 @@ class WorldGenService:
         # Summary for LLM context (Only show what needs to be filled)
         summary = {
             "fields": [v.label for v in stat_template.fundamentals.values()],
-            "resources": [g.label for g in stat_template.gauges.values()],
+            "gauges": [g.label for g in stat_template.gauges.values()],
+            "tracks": [g.label for g in stat_template.tracks.values()],
         }
 
         try:
@@ -114,7 +114,7 @@ class WorldGenService:
                 WORLD_EXTRACTION_PROMPT.format(description=desc),
                 [],
                 WorldExtraction,
-                0.3, # Slight creativity
+                0.3,  # Slight creativity
                 0.1,
             )
         except Exception as e:
