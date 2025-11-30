@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Dict, Any
 from app.tools.builtin._state_storage import get_entity, set_entity
 
 
@@ -7,6 +7,8 @@ def handler(
     item_name: str,
     quantity: int = 1,
     target_slot: Optional[str] = None,
+    description: Optional[str] = None,
+    properties: Optional[Dict[str, Any]] = None,
     **context,
 ) -> dict:
     session_id = context["session_id"]
@@ -40,11 +42,25 @@ def handler(
     for item in items:
         if item.get("name") == item_name:
             item["qty"] = item.get("qty", 1) + quantity
+            # Update metadata if provided (merge strategy)
+            if description:
+                item["description"] = description
+            if properties:
+                item.update(properties)  # Merge new props into existing item
             found = True
             break
 
     if not found:
-        items.append({"name": item_name, "qty": quantity})
+        # Create new item structure
+        new_item = {
+            "name": item_name,
+            "qty": quantity,
+            "description": description or "",
+        }
+        if properties:
+            new_item.update(properties)  # Flatten properties into the item dict
+
+        items.append(new_item)
 
     set_entity(session_id, db, "character", owner_key, entity)
     return {"success": True, "item": item_name, "collection": col_id}

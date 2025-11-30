@@ -97,7 +97,7 @@ def render_widget(parent, label, value, widget_type, meta=None):
         for i in range(total):
             is_checked = i < current
             # Visual style: Filled box vs Empty box
-            char = "â—¼" if is_checked else "â—fb"
+            char = "[x]" if is_checked else "[ ]"
             color = Theme.colors.tool_error if is_checked else "gray"
 
             lbl = ctk.CTkLabel(
