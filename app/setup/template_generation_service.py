@@ -82,22 +82,8 @@ class TemplateGenerationService:
             ),
         )
 
-        # --- STEP 1: CORE STATS ---
-        self._update_status("Phase 1: Defining Core Stats...")
-
-        class CoreStatsDef(BaseModel):
-            values: List[StatValue]
-            gauges: List[StatGauge]
-
-        core_res = self.llm.get_structured_response(
-            self.static_system_prompt,
-            [Message(role="user", content=GENERATE_CORE_STATS_INSTRUCTION.format(target_game=meta_res.name))],
-            CoreStatsDef,
-        )
-
-        # --- STEP 2: CONTAINERS ---
-        self._update_status("Phase 2: Defining Containers...")
-        stats_summary = f"Defined Values: {[v.id for v in core_res.values]}\nDefined Gauges: {[g.id for g in core_res.gauges]}"
+        # --- STEP 1: CONTAINERS ---
+        self._update_status("Phase 1: Defining Containers...")
 
         class ContainerDef(BaseModel):
             collections: List[StatCollection]
@@ -105,15 +91,52 @@ class TemplateGenerationService:
         container_res = self.llm.get_structured_response(
             self.static_system_prompt,
             [
-                Message(role="user", content=GENERATE_CORE_STATS_INSTRUCTION.format(target_game=meta_res.name)),
                 Message(
-                    role="assistant",
-                    content=stats_summary,
+                    role="user",
+                    content=GENERATE_CONTAINERS_INSTRUCTION.format(
+                        target_game=meta_res.name
+                    ),
                 ),
-                Message(role="user", content=GENERATE_CONTAINERS_INSTRUCTION.format(target_game=meta_res.name)),
             ],
             ContainerDef,
         )
+
+        collections_summary = (
+            f"Defined Collections: {[c.id for c in container_res.collections]}"
+        )
+        logger.info(f"collections_summary : {collections_summary}")
+
+        # --- STEP 2: CORE STATS ---
+        self._update_status("Phase 2: Defining Core Stats...")
+
+        class CoreStatsDef(BaseModel):
+            values: List[StatValue]
+            gauges: List[StatGauge]
+
+        core_res = self.llm.get_structured_response(
+            self.static_system_prompt,
+            [
+                Message(
+                    role="user",
+                    content=GENERATE_CONTAINERS_INSTRUCTION.format(
+                        target_game=meta_res.name
+                    ),
+                ),
+                Message(
+                    role="assistant",
+                    content=collections_summary,
+                ),
+                Message(
+                    role="user",
+                    content=GENERATE_CORE_STATS_INSTRUCTION.format(
+                        target_game=meta_res.name
+                    ),
+                ),
+            ],
+            CoreStatsDef,
+        )
+        stats_summary = f"Defined Values: {[v.id for v in core_res.values]}\nDefined Gauges: {[g.id for g in core_res.gauges]}"
+        logger.info(f"stats_summary : {stats_summary}")
 
         # --- STEP 3: LAYOUT (ASSIGNMENT) ---
         self._update_status("Phase 3: Assigning Panels...")
@@ -125,17 +148,21 @@ class TemplateGenerationService:
             gauges: List[StatGauge]
             collections: List[StatCollection]
 
-        collections_summary = (
-            f"Defined Collections: {[c.id for c in container_res.collections]}"
-        )
-
         history_layout = [
-            Message(role="user", content=GENERATE_CORE_STATS_INSTRUCTION.format(target_game=meta_res.name)),
+            Message(
+                role="user",
+                content=GENERATE_CORE_STATS_INSTRUCTION.format(
+                    target_game=meta_res.name
+                ),
+            ),
             Message(role="assistant", content=stats_summary),
-            
-            Message(role="user", content=GENERATE_CONTAINERS_INSTRUCTION.format(target_game=meta_res.name)),
+            Message(
+                role="user",
+                content=GENERATE_CONTAINERS_INSTRUCTION.format(
+                    target_game=meta_res.name
+                ),
+            ),
             Message(role="assistant", content=collections_summary),
-
             Message(role="user", content=ORGANIZE_LAYOUT_INSTRUCTION),
         ]
 

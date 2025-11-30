@@ -21,14 +21,33 @@ Your goal is to extract **Game Rules** and then esign a **BLANK Character Sheet 
 3. **Generic Defaults:** Use 0, 10, or "" as defaults. Never use specific character data.
 """
 
-# Phase 1: Core Stats
+# Phase 1: Containers
+GENERATE_CONTAINERS_INSTRUCTION = """
+You are creating a character sheet template for the game {target_game}.
+Identify the **Dynamic Lists** (Collections).
+Define the fields for items in these lists.
+
+Examples:
+- Ancestry (Name, Description, Heritage)
+- Classes (Name, Description, Levels)
+- Skills (Name, Rank)
+- Inventory (Name, Weight)
+- Body Slots (Name, Description, Allowed Items)
+- Spells (Name, Cost, Effect)
+- Professions (Name, Description)
+- Perks (Name, Description, Effects)
+
+Output a JSON with `collections`.
+"""
+
+# Phase 2: Core Stats
 GENERATE_CORE_STATS_INSTRUCTION = """
 You are creating a character sheet template for the game {target_game}.
 Identify the **Fixed Global Stats** (Values & Gauges).
 
 **DISTINCTIONS:**
-*   **StatValue**: Static properties (Str, Dex, Level, AC).
-*   **StatGauge**: Fluctuating resources (HP, Mana, Ammo).
+*   **StatValue**: Static basic/fundamental properties (Str, Dex, Grit, Level, Movement, Speed, etc).
+*   **StatGauge**: Fluctuating resources (HP, Mana, Ammo, Action Points, etc).
 
 **CONSTRAINTS:**
 *   Mutually Exclusive: A stat cannot be both Value and Gauge.
@@ -37,33 +56,19 @@ Identify the **Fixed Global Stats** (Values & Gauges).
 Output a JSON with `values` and `gauges`.
 """
 
-# Phase 2: Containers
-GENERATE_CONTAINERS_INSTRUCTION = """
-You are creating a character sheet template for the game {target_game}.
-Identify the **Dynamic Lists** (Collections).
-Define the fields for items in these lists.
-
-Examples:
-- Skills (Name, Rank)
-- Inventory (Name, Weight)
-- Spells (Name, Cost, Effect)
-
-Output a JSON with `collections`.
-"""
-
 # Phase 3: Layout (Flattened)
 ORGANIZE_LAYOUT_INSTRUCTION = """
 Now that you created the character sheet template for the game {target_game}, you are going to configure how everything will be laid out in the UI.
 Assign every defined Stat (Value, Gauge, Collection) to a **Panel** and a **Group**.
 
 **PANELS (Strict Assignment):**
-*   `header`: Vital info (HP, Name, Level, Class, XP).
-*   `sidebar`: Core Stats (Attributes, Saves, Passive Defenses).
-*   `main`: Combat actions, Attacks, Initiative, Speed.
-*   `equipment`: Inventory, Money, Encumbrance.
+*   `header`: Vital info (HP, Name, Level, Classes, Race, Profession, XP, etc).
+*   `sidebar`: Core Stats (Attributes, Saves, Passive Defenses, etc).
+*   `main`: Combat actions, Attacks, Initiative, Speed, etc.
+*   `equipment`: Inventory, Money, Encumbrance, etc.
 *   `skills`: Skill lists.
-*   `spells`: Magic/Powers.
-*   `notes`: Bio, Background.
+*   `spells`: Magic, Powers, etc.
+*   `notes`: Bio, Background, etc.
 
 **INSTRUCTION:**
 Update the objects to set their `panel` field.
