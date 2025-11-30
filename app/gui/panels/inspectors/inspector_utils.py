@@ -3,6 +3,7 @@
 import logging
 import customtkinter as ctk
 from app.gui.styles import Theme
+from app.utils.stat_renderer import render_stat_string
 
 logger = logging.getLogger(__name__)
 
@@ -39,11 +40,11 @@ def render_widget(parent, label, value, widget_type, meta=None):
 
         # Color code based on die size size for visual flair
         bg_color = Theme.colors.bg_tertiary
-        if text_val in ["d20", "d12"]:
+        if "d20" in text_val or "d12" in text_val:
             bg_color = "#8e44ad"  # Purple
-        elif text_val in ["d8", "d10"]:
+        elif "d8" in text_val or "d10" in text_val:
             bg_color = "#2980b9"  # Blue
-        elif text_val in ["d4", "d6"]:
+        elif "d4" in text_val or "d6" in text_val:
             bg_color = "#7f8c8d"  # Grey
 
         badge = ctk.CTkLabel(
@@ -58,26 +59,8 @@ def render_widget(parent, label, value, widget_type, meta=None):
         badge.pack(side="right", padx=5)
 
     elif widget_type == "ladder":
-        # 1. Default display
-        display_text = str(value)
-
-        # 2. Use the 'rendering' variable defined at the top of the function
-        #    (No need to check 'if meta' again, because rendering defaults to {})
-        lookup = rendering.get("lookup_map", {})
-
-        # 3. Try to find the adjective
-        adj = lookup.get(str(value))
-
-        if adj:
-            # 4. Calculate sign
-            try:
-                val_int = int(value)
-                sign = "+" if val_int > 0 else ""
-            except (ValueError, TypeError):
-                sign = ""
-
-            # 5. Format
-            display_text = f"{adj} ({sign}{value})"
+        # Use shared renderer for the text
+        display_text = render_stat_string(value, widget_type, rendering)
 
         ctk.CTkLabel(
             frame,
@@ -88,8 +71,6 @@ def render_widget(parent, label, value, widget_type, meta=None):
 
     elif widget_type == "track":
         # Scum & Villainy / Vampire style checkboxes
-        # value = current marked boxes (int)
-        # meta['max'] = total boxes (length)
         try:
             current = int(value) if value is not None else 0
             total = int(meta.get("max", 5))
@@ -101,20 +82,17 @@ def render_widget(parent, label, value, widget_type, meta=None):
 
         for i in range(total):
             is_checked = i < current
-            # Visual style: Filled box vs Empty box
-            char = "[x]" if is_checked else "[ ]"
+            char = "■" if is_checked else "□"
             color = Theme.colors.tool_error if is_checked else "gray"
 
             lbl = ctk.CTkLabel(
-                track_frame, text=char, text_color=color, font=("Arial", 14), width=15
+                track_frame, text=char, text_color=color, font=("Arial", 16), width=15
             )
             lbl.pack(side="left", padx=1)
 
     elif widget_type == "bar":
         # Existing Progress Bar logic
         max_val = meta.get("max")
-
-        # Calculate percentage safely
         try:
             pct = 0
             if max_val and float(max_val) > 0:
@@ -123,11 +101,9 @@ def render_widget(parent, label, value, widget_type, meta=None):
             pct = 0
             max_val = "?"
 
-        # Container for the bar + text
         bar_container = ctk.CTkFrame(frame, fg_color="transparent")
         bar_container.pack(side="right", fill="x", expand=True, padx=5)
 
-        # Text overlay (Value / Max)
         ctk.CTkLabel(
             bar_container,
             text=f"{value}/{max_val}",
@@ -135,45 +111,35 @@ def render_widget(parent, label, value, widget_type, meta=None):
             anchor="e",
         ).pack(side="top", fill="x")
 
-        # The Bar itself
         bar = ctk.CTkProgressBar(bar_container, height=8)
         bar.pack(side="bottom", fill="x", pady=(2, 0))
         bar.set(pct)
 
-        # Color coding hints
         if label and "hp" in label.lower():
-            bar.configure(progress_color="#c0392b")  # Red
+            bar.configure(progress_color="#c0392b")
         elif label and ("mana" in label.lower() or "mp" in label.lower()):
-            bar.configure(progress_color="#2980b9")  # Blue
+            bar.configure(progress_color="#2980b9")
 
     elif widget_type == "clock":
-        # Segmented circle representation (Simulated with chars)
+        # Segmented circle representation
         try:
             cur = int(value)
             mx = int(meta.get("max", 4))
         except (ValueError, TypeError):
             cur, mx = 0, 4
 
-        # Visual: Filled dots vs Empty diamonds
         dots = "•" * cur + "◇" * max(0, mx - cur)
         ctk.CTkLabel(
             frame, text=dots, text_color=Theme.colors.text_gold, font=("Arial", 16)
         ).pack(side="right", padx=5)
 
     elif widget_type == "checkbox":
-        # Boolean state
         state = "✔️" if value else "❌"
         ctk.CTkLabel(frame, text=state, font=("Arial", 16)).pack(side="right", padx=5)
 
     else:
-        # Default: Text/Number/Bonus
-        val_str = str(value)
-        if widget_type == "bonus":
-            try:
-                if float(value) >= 0:
-                    val_str = f"+{value}"
-            except (ValueError, TypeError):
-                pass
+        # Default with shared rendering (handles +Bonus, etc.)
+        val_str = render_stat_string(value, widget_type, rendering)
 
         ctk.CTkLabel(
             frame, text=val_str, anchor="e", text_color=Theme.colors.text_secondary
@@ -181,7 +147,7 @@ def render_widget(parent, label, value, widget_type, meta=None):
 
 
 def display_message_state(parent, message, is_error=False):
-    """Helper to show a centered message in a frame (e.g. 'No Session')."""
+    """Helper to show a centered message in a frame."""
     for widget in parent.winfo_children():
         widget.destroy()
     color = Theme.colors.tool_error if is_error else Theme.colors.text_muted
@@ -229,11 +195,9 @@ def create_memory_card(parent: ctk.CTkFrame, memory, callbacks: dict):
     card = ctk.CTkFrame(parent, fg_color=Theme.colors.bg_tertiary)
     card.pack(fill="x", padx=5, pady=5)
 
-    # Top Row: Badge + Priority
     top_row = ctk.CTkFrame(card, fg_color="transparent")
     top_row.pack(fill="x", padx=10, pady=(5, 0))
 
-    # Kind Badge
     kind_color = get_memory_kind_color(memory.kind)
     ctk.CTkLabel(
         top_row,
@@ -244,13 +208,11 @@ def create_memory_card(parent: ctk.CTkFrame, memory, callbacks: dict):
         font=("Arial", 10, "bold"),
     ).pack(side="left")
 
-    # Priority Stars
-    stars = "â˜…" * memory.priority
+    stars = "★" * memory.priority
     ctk.CTkLabel(top_row, text=stars, text_color="gold", font=("Arial", 12)).pack(
         side="right"
     )
 
-    # Content
     content_text = memory.content
     if len(content_text) > 150:
         content_text = content_text[:150] + "..."
@@ -259,24 +221,21 @@ def create_memory_card(parent: ctk.CTkFrame, memory, callbacks: dict):
         card, text=content_text, wraplength=350, anchor="w", justify="left"
     ).pack(fill="x", padx=10, pady=5)
 
-    # Footer: Tags + Buttons
     footer = ctk.CTkFrame(card, fg_color="transparent")
     footer.pack(fill="x", padx=10, pady=(0, 5))
 
-    # Tags
     tags_str = ", ".join(memory.tags_list()[:3])
     if tags_str:
         ctk.CTkLabel(
             footer, text=f"Tags: {tags_str}", text_color="gray", font=("Arial", 10)
         ).pack(side="left")
 
-    # Buttons
     btn_frame = ctk.CTkFrame(footer, fg_color="transparent")
     btn_frame.pack(side="right")
 
     ctk.CTkButton(
         btn_frame,
-        text="âœ ",
+        text="✎",
         width=30,
         height=20,
         command=lambda: callbacks["on_view"](memory),
@@ -284,7 +243,7 @@ def create_memory_card(parent: ctk.CTkFrame, memory, callbacks: dict):
 
     ctk.CTkButton(
         btn_frame,
-        text="â—fb",
+        text="🗑",
         width=30,
         height=20,
         fg_color="darkred",
