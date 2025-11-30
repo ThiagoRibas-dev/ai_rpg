@@ -105,7 +105,7 @@ class TemplateGenerationService:
         container_res = self.llm.get_structured_response(
             self.static_system_prompt,
             [
-                Message(role="user", content=GENERATE_CORE_STATS_INSTRUCTION),
+                Message(role="user", content=GENERATE_CORE_STATS_INSTRUCTION.format(target_game=meta_res.name)),
                 Message(
                     role="assistant",
                     content=stats_summary,
@@ -130,10 +130,12 @@ class TemplateGenerationService:
         )
 
         history_layout = [
-            Message(role="user", content=GENERATE_CORE_STATS_INSTRUCTION),
-            Message(role="assistant", content="Core Stats Defined."),
-            Message(role="user", content=GENERATE_CONTAINERS_INSTRUCTION),
+            Message(role="user", content=GENERATE_CORE_STATS_INSTRUCTION.format(target_game=meta_res.name)),
+            Message(role="assistant", content=stats_summary),
+            
+            Message(role="user", content=GENERATE_CONTAINERS_INSTRUCTION.format(target_game=meta_res.name)),
             Message(role="assistant", content=collections_summary),
+
             Message(role="user", content=ORGANIZE_LAYOUT_INSTRUCTION),
         ]
 
