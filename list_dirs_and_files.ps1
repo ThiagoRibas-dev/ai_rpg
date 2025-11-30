@@ -1,4 +1,4 @@
-# --- Function Definition (Place this at the beginning of your script) ---
+# --- Function Definition ---
 function Get-DirectoryTreeString {
     param(
         [string]$Path,
@@ -24,6 +24,9 @@ function Get-DirectoryTreeString {
     }
     return $treeString
 }
+
+# Ensure the console itself can display UTF8 (Optional, helpful for debugging logs)
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 [string[]]$excludeFolderList = @( # Exclusion list
     "*list_dirs_and_files*",
@@ -66,12 +69,15 @@ function Get-DirectoryTreeString {
 	"*__pycache__*",
 	"*\tests\*",
     "*package-lock.json",
-    "*.DS_Store", # macOS folder metadata file
-    "*\docs*"        # Exclude documentation directory
+    "*.DS_Store", 
+    "*\docs*"        
 )
 
-$directoryToCrawl = ".\" #  <---  Set your directory path here
-$outputFilePath = ".\list_dirs_and_files.txt" # <--- Set output file path
+$directoryToCrawl = ".\" 
+$outputFilePath = ".\list_dirs_and_files.txt" 
+
+# Use a StringBuilder for better memory performance with large text
+$sb = [System.Text.StringBuilder]::new()
 
 Write-Host "Crawling directory: $($directoryToCrawl)" -ForegroundColor Cyan
 Write-Host "Excluding items:" $($excludeFolderList -join ", ") -ForegroundColor Cyan
@@ -80,11 +86,12 @@ Write-Host "Generating directory tree..." -ForegroundColor Cyan
 $treeOutput = Get-DirectoryTreeString -Path $directoryToCrawl -ExcludeList $excludeFolderList
 Write-Host "Directory tree generated." -ForegroundColor Cyan
 
-$outputContent = "" # Initialize variable to store output content
-
-$outputContent += "--- Directory Tree Structure ---`n" # Add tree section header
-$outputContent += '```' + "`n" + $treeOutput + "`n" + '```' # Append directory tree string
-$outputContent += "`n--- File List and Contents ---`n" # Add file list section header
+# Append Header info
+[void]$sb.AppendLine("--- Directory Tree Structure ---")
+[void]$sb.AppendLine('```')
+[void]$sb.AppendLine($treeOutput)
+[void]$sb.AppendLine('```')
+[void]$sb.AppendLine("`n--- File List and Contents ---")
 
 Get-ChildItem -Path $directoryToCrawl -Recurse -File -Exclude $excludeFolderList | ForEach-Object {
     $allowed = $true
@@ -96,17 +103,40 @@ Get-ChildItem -Path $directoryToCrawl -Recurse -File -Exclude $excludeFolderList
     }
     if ($allowed) {
         Write-Host "Processing file: $($_.FullName)" -ForegroundColor Cyan 
-        $outputContent += '```' + "`nFile: $($_.FullName)`n" # Add filename to output content
-        $outputContent += (Get-Content -Path $_.FullName) -join "`n" # Add file content
-        $outputContent += "`n" + '```' + "`n`n" # Add blank lines between files
+        
+        # Append File Header
+        [void]$sb.AppendLine('```')
+        [void]$sb.AppendLine("File: $($_.FullName)")
+        
+        # --- THE FIX: Use .NET File Reader to force UTF8 reading ---
+        try {
+            # This reads the file forcing UTF-8 encoding. 
+            # If your files are strictly ASCII or UTF-8, this works perfectly.
+            $fileContent = [System.IO.File]::ReadAllText($_.FullName, [System.Text.Encoding]::UTF8)
+            [void]$sb.AppendLine($fileContent)
+        }
+        catch {
+            Write-Host "Error reading file $($_.FullName): $_" -ForegroundColor Red
+            [void]$sb.AppendLine("[Error reading file content]")
+        }
+
+        # Append File Footer
+        [void]$sb.AppendLine('```')
+        [void]$sb.AppendLine("") 
     } else {
-        Write-Host "Ignoring: $($_.FullName)" -ForegroundColor Gray # Use Write-Verbose for "Ignoring" messages
+        Write-Host "Ignoring: $($_.FullName)" -ForegroundColor Gray 
     }
 }
 
-$outputContent | Out-File -FilePath $outputFilePath -Encoding UTF8 # Write accumulated content to file (overwriting) <--- No -Append
+# --- THE FIX: Use .NET File Writer to ensure output is UTF8 ---
+try {
+    [System.IO.File]::WriteAllText($outputFilePath, $sb.ToString(), [System.Text.Encoding]::UTF8)
+    Write-Host "Output written to: $($outputFilePath)" -ForegroundColor Cyan 
+}
+catch {
+    Write-Host "Failed to write output file: $_" -ForegroundColor Red
+}
 
-Write-Host "Output written to: $($outputFilePath)" -ForegroundColor Cyan 
-Write-Host "Run script with -Verbose to see 'Ignoring' messages." -ForegroundColor DarkGray # Inform user about -Verbose
+Write-Host "Run script with -Verbose to see 'Ignoring' messages." -ForegroundColor DarkGray 
 
 pause
