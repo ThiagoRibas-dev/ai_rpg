@@ -2,6 +2,9 @@
 
 import customtkinter as ctk
 from app.gui.styles import Theme
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class PromptDialog(ctk.CTkToplevel):
@@ -84,6 +87,7 @@ class PromptDialog(ctk.CTkToplevel):
                 None,
             )
         except Exception as e:
+            logger.error(f"Error generating template: {e}")
             self.after(0, self._on_gen, None, str(e))
 
     def _upd_status(self, msg):

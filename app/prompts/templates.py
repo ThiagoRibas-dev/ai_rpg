@@ -22,28 +22,35 @@ Your goal is to extract **Game Rules** and then esign a **BLANK Character Sheet 
 """
 
 # Phase 1: Containers
-GENERATE_CONTAINERS_INSTRUCTION = """
-You are creating a character sheet template for the game {target_game}.
-Identify the **Dynamic Lists** (Collections).
-Define the fields for items in these lists.
+ANALYZE_CONTAINERS_INSTRUCTION = """
+You are creating a character sheet template for the game {target_game} as markdown.
+Analyze which parts of a character or game entity should be represented as lists or complex objects in a JSON formatted character sheet.
 
-Examples:
-- Ancestry (Name, Description, Heritage)
-- Classes (Name, Description, Levels)
-- Skills (Name, Rank)
-- Inventory (Name, Weight)
-- Body Slots (Name, Description, Allowed Items)
-- Spells (Name, Cost, Effect)
-- Professions (Name, Description)
-- Perks (Name, Description, Effects)
+Things like the entity's body parts where gear can be equiped, list of features/perks and the like, list of jobs/classes/professions/role and such, etc.
+For now, just list these things with a brief explanation of what each represent in the game system.
+"""
+
+GENERATE_CONTAINERS_INSTRUCTION = """
+You are creating a character sheet template for the game {target_game} in JSON format.
+Identify the **Dynamic Lists** (Collections) and define the fields for each record in these lists.
 
 Output a JSON with `collections`.
 """
 
 # Phase 2: Core Stats
+ANALYZE_CORE_STATS_INSTRUCTION = """
+You are creating a character sheet template for the game {target_game} as markdown.
+Analyze and identify the following :
+ - Basic values (stats,attributes, etc) of a character or entity;
+ - Derived values, which are calculated based on a formula that uses other values;
+ - Gauges (resources) that have a minimum and maximum value, and can fluctuate based on some condition (use, damage, time, etc);
+
+For each item, provide a brief description or summary, and if appropriate the formulas or rules governing that value or gauge.
+"""
+
 GENERATE_CORE_STATS_INSTRUCTION = """
-You are creating a character sheet template for the game {target_game}.
-Identify the **Fixed Global Stats** (Values & Gauges).
+You are creating a character sheet template for the game {target_game} in JSON format.
+Identify and define the **Fixed Global Stats** (Values & Gauges).
 
 **DISTINCTIONS:**
 *   **StatValue**: Static basic/fundamental properties (Str, Dex, Grit, Level, Movement, Speed, etc).

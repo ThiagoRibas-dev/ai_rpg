@@ -19,7 +19,9 @@ from app.models.stat_block import (
 )
 from app.prompts.templates import (
     TEMPLATE_GENERATION_SYSTEM_PROMPT,
+    ANALYZE_CORE_STATS_INSTRUCTION,
     GENERATE_CORE_STATS_INSTRUCTION,
+    ANALYZE_CONTAINERS_INSTRUCTION,
     GENERATE_CONTAINERS_INSTRUCTION,
     ORGANIZE_LAYOUT_INSTRUCTION,
     IDENTIFY_MODES_INSTRUCTION,
@@ -85,12 +87,28 @@ class TemplateGenerationService:
         # --- STEP 1: CONTAINERS ---
         self._update_status("Phase 1: Defining Containers...")
 
+        analysis_container_res = self.llm.get_streaming_response(
+            self.static_system_prompt,
+            [
+                Message(
+                    role="user",
+                    content=ANALYZE_CORE_STATS_INSTRUCTION.format(
+                        target_game=meta_res.name
+                    ),
+                ),
+            ],
+        )
+
         class ContainerDef(BaseModel):
             collections: List[StatCollection]
 
         container_res = self.llm.get_structured_response(
             self.static_system_prompt,
             [
+                Message(
+                    role="assistant",
+                    content="".join(analysis_container_res),
+                ),
                 Message(
                     role="user",
                     content=GENERATE_CONTAINERS_INSTRUCTION.format(
@@ -109,6 +127,22 @@ class TemplateGenerationService:
         # --- STEP 2: CORE STATS ---
         self._update_status("Phase 2: Defining Core Stats...")
 
+        analysis_stats_res = self.llm.get_streaming_response(
+            self.static_system_prompt,
+            [
+                Message(
+                    role="assistant",
+                    content=collections_summary,
+                ),
+                Message(
+                    role="user",
+                    content=ANALYZE_CONTAINERS_INSTRUCTION.format(
+                        target_game=meta_res.name
+                    ),
+                ),
+            ],
+        )
+
         class CoreStatsDef(BaseModel):
             values: List[StatValue]
             gauges: List[StatGauge]
@@ -117,14 +151,8 @@ class TemplateGenerationService:
             self.static_system_prompt,
             [
                 Message(
-                    role="user",
-                    content=GENERATE_CONTAINERS_INSTRUCTION.format(
-                        target_game=meta_res.name
-                    ),
-                ),
-                Message(
                     role="assistant",
-                    content=collections_summary,
+                    content="".join(analysis_stats_res),
                 ),
                 Message(
                     role="user",

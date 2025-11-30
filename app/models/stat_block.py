@@ -34,7 +34,7 @@ class PanelType(str):
 class StatValue(BaseModel):
     id: str = Field(..., description="Unique key (e.g. 'str').")
     label: str = Field(..., description="Display name.")
-    data_type: Literal["string", "integer", "boolean", "formula"] = "integer"
+    data_type: Literal["string", "integer", "boolean", "formula"]
     default: Any = 0
     calculation: Optional[str] = None
     

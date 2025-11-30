@@ -1,10 +1,8 @@
-# File: app/gui/managers/input_manager.py
-# --- NEW FILE ---
-
 import customtkinter as ctk
 import logging
 
 logger = logging.getLogger(__name__)
+
 
 class InputManager:
     """
@@ -12,7 +10,14 @@ class InputManager:
     This class centralizes logic previously handled by MainView.
     """
 
-    def __init__(self, orchestrator, session_manager, user_input_widget: ctk.CTkTextbox, send_button_widget: ctk.CTkButton, choice_button_frame: ctk.CTkFrame):
+    def __init__(
+        self,
+        orchestrator,
+        session_manager,
+        user_input_widget: ctk.CTkTextbox,
+        send_button_widget: ctk.CTkButton,
+        choice_button_frame: ctk.CTkFrame,
+    ):
         """
         Initializes the InputManager.
 
