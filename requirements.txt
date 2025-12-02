@@ -8,7 +8,7 @@ grpcio
 grpcio-status
 pydantic
 
-# 🆕 Required by chromadb
+# Required by chromadb
 pydantic-settings
 python-dotenv
 requests
@@ -19,23 +19,10 @@ chromadb
 # Math evaluation
 simpleeval
 
-# If Nvidia GPU
-#onnxruntime-gpu
-
-# If Windows on CPU
-onnxruntime-directml
-
-# If Linux on CPU
-#onnxruntime
-
+# Embeddings
 fastembed
 
-# Optional (uncomment if/when you add local RAG)
-# faiss-cpu
-# sqlite-vss
-
 # GUI
-customtkinter
-nicegui>=1.4.0  # Replaces customtkinter
+nicegui>=1.4.0
 pywebview
 watchfiles

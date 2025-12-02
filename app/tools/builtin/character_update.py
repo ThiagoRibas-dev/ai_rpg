@@ -1,7 +1,7 @@
 import logging
 
 from typing import Any, Dict, List
-from app.tools.builtin._state_storage import get_entity, set_entity
+from app.services.state_service import get_entity, set_entity
 from app.utils.state_validator import StateValidator
 from app.utils.math_engine import recalculate_derived_stats
 

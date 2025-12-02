@@ -1,10 +1,12 @@
+
 from nicegui import ui
 from app.gui.theme import Theme
-from app.tools.builtin._state_storage import get_entity
+from app.services.state_service import get_entity
 
 class InventoryInspector:
-    def __init__(self, db_manager):
+    def __init__(self, db_manager, orchestrator):
         self.db = db_manager
+        self.orchestrator = orchestrator
         self.session_id = None
         self.container = None
 
@@ -71,5 +73,40 @@ class InventoryInspector:
                             # Context Menu Button
                             with ui.button(icon='more_vert').props('flat dense round size=sm color=grey'):
                                 with ui.menu():
-                                    ui.menu_item('Use/Equip', on_click=lambda i=item: ui.notify(f"Used {i['name']}"))
-                                    ui.menu_item('Drop', on_click=lambda: ui.notify("Drop not implemented"))
+                                    ui.menu_item('Use/Equip', on_click=lambda i=item: self.trigger_action("use", i['name']))
+                                    ui.menu_item('Drop', on_click=lambda i=item: self.trigger_action("drop", i['name']))
+                                    ui.menu_item('Inspect', on_click=lambda i=item: self.trigger_action("inspect", i['name']))
+
+    def trigger_action(self, verb: str, item_name: str):
+        """
+        Constructs a natural language command and sends it to the Orchestrator.
+        """
+        if not self.session_id or not self.orchestrator:
+            ui.notify("Game engine not ready", type='negative')
+            return
+
+        # 1. Fetch the GameSession object (required by orchestrator)
+        game_session = self.db.sessions.get_by_id(self.session_id)
+        if not game_session:
+            ui.notify("Session data error", type='negative')
+            return
+
+        # 2. Construct Input
+        # "I use the Potion." / "I drop the Sword."
+        command = f"I {verb} the {item_name}."
+        
+        # 3. Inject into Bridge (Simulate typing)
+        # This ensures the chat UI updates and the orchestrator picks it up
+        self.orchestrator.bridge._last_input = command
+        
+        # 4. Trigger Turn
+        # Use a background task or notify the UI to start loading
+        ui.notify(f"Action: {command}")
+        
+        # Signal the Chat Component to show 'Generating...' state
+        if self.orchestrator.bridge.chat_component:
+            self.orchestrator.bridge.chat_component.set_generating(True)
+            self.orchestrator.bridge.chat_component.add_message("You", command, "user")
+
+        # Execute
+        self.orchestrator.plan_and_execute(game_session)

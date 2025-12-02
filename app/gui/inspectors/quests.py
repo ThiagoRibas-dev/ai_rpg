@@ -1,6 +1,6 @@
 from nicegui import ui
 from app.gui.theme import Theme
-from app.tools.builtin._state_storage import get_all_of_type
+from app.services.state_service import get_all_of_type
 
 class QuestInspector:
     def __init__(self, db_manager):

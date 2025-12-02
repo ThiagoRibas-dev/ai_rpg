@@ -1,3 +1,4 @@
+
 from nicegui import ui, app
 import logging
 from app.gui.theme import Theme
@@ -25,32 +26,46 @@ def init_gui(db_path: str):
     def main_page():
         Theme.apply_global_styles()
         
-        # --- Init ---
-        inspector_mgr = InspectorManager(app.db_manager)
+        # --- Init Components ---
+        # Pass orchestrator to InspectorManager so Inventory can trigger actions
+        inspector_mgr = InspectorManager(app.db_manager, app.orchestrator)
         app.bridge.register_inspector(inspector_mgr)
         
         session_list = SessionListComponent(app.db_manager, inspector_mgr, app.orchestrator)
         prompt_list = PromptListComponent(app.db_manager, app.orchestrator, session_list)
         chat_comp = ChatComponent(app.orchestrator, app.bridge, session_list)
         
-        # Map
         map_comp = MapComponent(app.bridge, app.db_manager)
         session_list.set_map_component(map_comp)
-        
         session_list.set_chat_component(chat_comp)
         
         # --- Layout ---
+        
+        # Header
         with Theme.header():
             ui.label('Generative Text RPG').classes('text-xl font-bold ' + Theme.text_accent)
             ui.space()
-            session_label = ui.label('No Session Loaded').classes('text-xs text-gray-500')
-            app.bridge.register_header_label(session_label)
+            
+            # Header Labels
+            with ui.row().classes('gap-4 text-xs text-gray-400'):
+                sess_lbl = ui.label('No Session')
+                time_lbl = ui.label('')
+                mode_lbl = ui.label('')
+                app.bridge.register_header_labels(sess_lbl, time_lbl, mode_lbl)
+            
+            ui.space()
+            
+            # Zen Mode Button
+            ui.button(icon='fullscreen', on_click=lambda: toggle_zen()).props('flat round dense')
             ui.button(icon='power_settings_new', on_click=app.shutdown).props('flat dense round color=red')
 
-        with Theme.drawer_left():
+        # Drawers
+        left_drawer = Theme.drawer_left()
+        with left_drawer:
             inspector_mgr.render()
 
-        with Theme.drawer_right():
+        right_drawer = Theme.drawer_right()
+        with right_drawer:
             with ui.tabs().classes('w-full text-gray-400') as tabs:
                 t_sessions = ui.tab('Sessions')
                 t_prompts = ui.tab('New Game')
@@ -61,17 +76,23 @@ def init_gui(db_path: str):
                 with ui.tab_panel(t_prompts):
                     prompt_list.render()
 
+        # Zen Mode Logic
+        def toggle_zen():
+            current = left_drawer.value
+            left_drawer.set_value(not current)
+            right_drawer.set_value(not current)
+
         # Center Column
         with ui.column().classes('w-full h-[calc(100vh-4rem)] p-0 gap-0'):
             
-            # Map Section (Top 30% or expandable)
-            # We wrap it in a collapsible or just a fixed box
+            # Map Section
             with ui.expansion('Tactical Map', icon='map').classes('w-full bg-slate-900 border-b border-slate-700'):
                 map_comp.render()
             
-            # Chat Section (Fills rest)
+            # Chat Section
             chat_comp.render()
 
+        # Polling Loop
         ui.timer(0.1, app.bridge.process_queue)
 
     async def cleanup():

@@ -1,3 +1,4 @@
+
 import logging
 import os
 import queue
@@ -7,7 +8,6 @@ from typing import Callable
 from app.core.react_turn_manager import ReActTurnManager
 from app.core.vector_store import VectorStore
 from app.database.db_manager import DBManager
-from app.gui.main_view import MainView
 from app.llm.gemini_connector import GeminiConnector
 from app.llm.llm_connector import LLMConnector
 from app.llm.openai_connector import OpenAIConnector
@@ -18,8 +18,8 @@ from app.tools.registry import ToolRegistry
 logger = logging.getLogger(__name__)
 
 class Orchestrator:
-    def __init__(self, view: MainView, db_path: str):
-        self.view = view
+    def __init__(self, bridge, db_path: str):
+        self.bridge = bridge
         self.db_path = db_path
         self.ui_queue: queue.Queue = queue.Queue()
         self.tool_event_callback: Callable[[str], None] | None = None
@@ -31,12 +31,11 @@ class Orchestrator:
         self.vector_store = VectorStore()
         self.session: Session | None = None
         
-        # Turn Manager - handles the main game loop
-        # Turn Manager - handles the main game loop (ReAct Version)
+        # Turn Manager
         self.turn_manager = ReActTurnManager(self)
         
-        # Wire GUI
-        self.view.orchestrator = self
+        # Threading Control
+        self.stop_event = threading.Event()
 
     def _get_llm_connector(self) -> LLMConnector:
         provider = os.environ.get("LLM_PROVIDER", "GEMINI").upper()
@@ -47,20 +46,26 @@ class Orchestrator:
         else:
             raise ValueError(f"Unsupported LLM_PROVIDER: {provider}")
 
+    def stop_generation(self):
+        """Signal the running turn to stop."""
+        self.logger.info("🛑 Stop signal received.")
+        self.stop_event.set()
+
     def plan_and_execute(self, session: GameSession):
         logger.debug("Starting plan_and_execute (non-blocking)")
-        user_input = self.view.get_input()
+        user_input = self.bridge.get_input()
+        
         if not user_input or not self.session:
             return
 
-        if self.session is None:
-            self.ui_queue.put({"type": "error", "message": "No active session."})
-            return
-            
         self.session.add_message("user", user_input)
         self.ui_queue.put({"type": "message_bubble", "role": "user", "content": user_input})
-        self.view.clear_input()
+        self.bridge.clear_input()
+        
         session.session_data = self.session.to_json()
+
+        # Reset stop flag before starting
+        self.stop_event.clear()
 
         thread = threading.Thread(
             target=self._background_execute, args=(session, user_input), daemon=True, name=f"Turn-{session.id}"
@@ -87,8 +92,7 @@ class Orchestrator:
         self.session = final_session_state
         self.session.id = game_session.id
 
-    def run(self):
-        self.view.mainloop()
+    # --- Session Management ---
 
     def new_session(self, system_prompt: str, setup_phase_data: str = "{}"):
         self.session = Session(
@@ -105,9 +109,8 @@ class Orchestrator:
             game_session = db_manager.sessions.create(
                 name, session_data, prompt_id, self.session.setup_phase_data
             )
-        if self.session: # Add check for None
+        if self.session:
             self.session.id = game_session.id
-        self.view.session_name_label.configure(text=name)
 
     def load_game(self, session_id: int):
         with DBManager(self.db_path) as db_manager:
@@ -115,3 +118,58 @@ class Orchestrator:
         if game_session:
             self.session = Session.from_json(game_session.session_data)
             self.session.id = game_session.id
+
+    # --- History Manipulation ---
+
+    def reroll_last_turn(self, game_session: GameSession):
+        """Deletes the last Assistant response and re-runs the turn with the previous User input."""
+        if not self.session or not self.session.history:
+            return
+
+        history = self.session.history
+        
+        if history[-1].role != "assistant":
+            self.ui_queue.put({"type": "error", "message": "Cannot reroll: Last message was not from AI."})
+            return
+
+        history.pop()
+        
+        last_user_msg = ""
+        if history and history[-1].role == "user":
+            last_user_msg = history[-1].content
+        
+        self.session.session_data = self.session.to_json()
+        game_session.session_data = self.session.to_json()
+        
+        with DBManager(self.db_path) as db:
+            db.sessions.update(game_session)
+
+        self.ui_queue.put({"type": "history_changed"}) 
+
+        # Reset stop flag
+        self.stop_event.clear()
+
+        if last_user_msg:
+            thread = threading.Thread(
+                target=self._background_execute, args=(game_session, last_user_msg), daemon=True
+            )
+            thread.start()
+
+    def undo_last_turn(self, game_session: GameSession):
+        """Deletes the last Assistant response AND the last User message."""
+        if not self.session or not self.session.history:
+            return
+
+        history = self.session.history
+        
+        if history and history[-1].role == "assistant":
+            history.pop()
+        
+        if history and history[-1].role == "user":
+            history.pop()
+            
+        game_session.session_data = self.session.to_json()
+        with DBManager(self.db_path) as db:
+            db.sessions.update(game_session)
+            
+        self.ui_queue.put({"type": "history_changed"})

@@ -1,3 +1,4 @@
+
 import json
 import logging
 from typing import Dict, Type
@@ -19,14 +20,12 @@ from app.tools.schemas import EntityUpdate, GameLog, GameRoll, TimeAdvance, Worl
 logger = logging.getLogger(__name__)
 
 MAX_HISTORY_MESSAGES = 50
-TOOL_BUDGET_PER_TURN = 10
 MAX_REACT_LOOPS = 5
 
 
 class ReActTurnManager:
     """
     Executes a game turn using an Iterative ReAct (Reason + Act) Loop.
-    Optimized for local models (Llama 3, Mistral) and strict API compliance.
     """
 
     def __init__(self, orchestrator):
@@ -45,12 +44,12 @@ class ReActTurnManager:
 
     def execute_turn(self, game_session: GameSession, thread_db_manager):
         """
-        Main ReAct Loop:
-        1. Build Context
-        2. Phase A: Action Loop (Thought -> Tool -> Result)
-        3. Phase B: Narrative Generation
+        Main ReAct Loop.
+        Checks orchestrator.stop_event at every major step.
         """
-        # --- Setup Services with Thread-Local DB ---
+        if self.orchestrator.stop_event.is_set(): return
+
+        # --- Setup Services ---
         state_builder = StateContextBuilder(
             self.tool_registry, thread_db_manager, self.logger
         )
@@ -90,10 +89,9 @@ class ReActTurnManager:
             game_session, chat_history
         )
 
-        # Construct Working Memory (Augmented User Prompt Strategy)
+        # Construct Working Memory
         working_history = list(chat_history)
 
-        # Inject Context into the LAST User message to avoid "System-in-Middle" issues
         if working_history and working_history[-1].role == "user":
             last_msg = working_history[-1]
             augmented_content = (
@@ -104,14 +102,13 @@ class ReActTurnManager:
             )
             working_history[-1] = Message(role="user", content=augmented_content)
         else:
-            # Fallback if no user message found
             working_history.append(
                 Message(
                     role="user", content=f"### CURRENT STATE ###\n{dynamic_context}"
                 )
             )
 
-        # Define the "Super Tools"
+        # Define Tools
         active_tool_names = [
             EntityUpdate.model_fields["name"].default,
             GameRoll.model_fields["name"].default,
@@ -128,16 +125,25 @@ class ReActTurnManager:
         final_narrative = ""
 
         while loop_count < MAX_REACT_LOOPS:
+            if self.orchestrator.stop_event.is_set():
+                self.ui_queue.put({"type": "error", "message": "Stopped by user."})
+                return
+
             loop_count += 1
 
             # API Call
-            response = self.llm_connector.chat_with_tools(
-                system_prompt=static_instruction,
-                chat_history=working_history,
-                tools=llm_tools,
-            )
+            try:
+                response = self.llm_connector.chat_with_tools(
+                    system_prompt=static_instruction,
+                    chat_history=working_history,
+                    tools=llm_tools,
+                )
+            except Exception as e:
+                # If API fails, check stop event again
+                if self.orchestrator.stop_event.is_set(): return
+                raise e
 
-            # 1. Append the ASSISTANT's message to history
+            # Append Assistant Message
             assistant_msg = Message(
                 role="assistant",
                 content=response.content,
@@ -145,30 +151,23 @@ class ReActTurnManager:
             )
             working_history.append(assistant_msg)
 
-            # CASE 1: The model wants to use Tools
+            # CASE 1: Tools
             if response.tool_calls:
-                self.logger.info(
-                    f"ReAct Loop {loop_count}: Model called {len(response.tool_calls)} tools."
-                )
+                self.logger.info(f"ReAct Loop {loop_count}: Model called {len(response.tool_calls)} tools.")
 
-                # If there is text alongside the tool, it is a THOUGHT (Yellow)
                 if response.content:
-                    self.ui_queue.put(
-                        {"type": "thought_bubble", "content": response.content}
-                    )
+                    self.ui_queue.put({"type": "thought_bubble", "content": response.content})
 
                 for call_data in response.tool_calls:
-                    # OpenAI/Llama.cpp returns an 'id'. Gemini doesn't (we handle that in connector).
+                    if self.orchestrator.stop_event.is_set(): return
+
                     call_id = call_data.get("id", "call_default")
                     name = call_data["name"]
                     args = call_data["arguments"]
 
-                    # Execute Python Logic
                     if name in self.tool_map:
                         try:
                             pydantic_model = self.tool_map[name](**args)
-
-                            # Run Tool (Using executor and manifest!)
                             extra_ctx = {"simulation_service": sim_service}
 
                             result, _ = executor.execute(
@@ -179,15 +178,8 @@ class ReActTurnManager:
                                 current_game_time=game_session.game_time,
                                 extra_context=extra_ctx,
                             )
+                            res_data = result[0]["result"] if result else {"error": "No result"}
 
-                            # Extract result data
-                            res_data = (
-                                result[0]["result"]
-                                if result
-                                else {"error": "No result"}
-                            )
-
-                            # 2. Append the TOOL RESULT to history (Strict Protocol)
                             tool_msg = Message(
                                 role="tool",
                                 tool_call_id=call_id,
@@ -197,7 +189,6 @@ class ReActTurnManager:
                             working_history.append(tool_msg)
 
                         except Exception as e:
-                            # Handle execution error gracefully
                             error_msg = Message(
                                 role="tool",
                                 tool_call_id=call_id,
@@ -205,16 +196,8 @@ class ReActTurnManager:
                                 content=json.dumps({"error": str(e)}),
                             )
                             working_history.append(error_msg)
-                            self.ui_queue.put(
-                                {
-                                    "type": "tool_result",
-                                    "result": str(e),
-                                    "is_error": True,
-                                }
-                            )
-
+                            self.ui_queue.put({"type": "tool_result", "result": str(e), "is_error": True})
                     else:
-                        # Handle unknown tool error
                         error_msg = Message(
                             role="tool",
                             tool_call_id=call_id,
@@ -223,58 +206,38 @@ class ReActTurnManager:
                         )
                         working_history.append(error_msg)
 
-                # Continue the loop to let the model react to the tool results
                 continue
 
-            # CASE 2: The model did NOT call tools. It is done.
+            # CASE 2: No Tools (Done)
             else:
-                # The text it produced is the FINAL NARRATIVE (Green)
                 if response.content:
                     final_narrative = response.content
-
-                # Break the Action Loop
                 break
 
         # --- 3. Phase B: Narrative Handling ---
-        # If we already got the narrative from the last loop step, use it.
+        if self.orchestrator.stop_event.is_set(): return
+
         if final_narrative:
-            self.ui_queue.put(
-                {
-                    "type": "message_bubble",
-                    "role": "assistant",
-                    "content": final_narrative,
-                }
-            )
+            self.ui_queue.put({"type": "message_bubble", "role": "assistant", "content": final_narrative})
             full_response = final_narrative
-
         else:
-            # Fallback: Force a final narrative generation if the loop ended without text
+            # Fallback generation
             working_history.append(
-                Message(
-                    role="user",
-                    content="[System: Actions resolved. Now write the narrative response to the player.]",
-                )
+                Message(role="user", content="[System: Actions resolved. Now write the narrative response to the player.]")
             )
-
             stream = self.llm_connector.get_streaming_response(
                 system_prompt=static_instruction, chat_history=working_history
             )
-
+            
             full_response = ""
             for chunk in stream:
+                if self.orchestrator.stop_event.is_set(): return
                 full_response += chunk
 
             if full_response.strip():
-                self.ui_queue.put(
-                    {
-                        "type": "message_bubble",
-                        "role": "assistant",
-                        "content": full_response,
-                    }
-                )
+                self.ui_queue.put({"type": "message_bubble", "role": "assistant", "content": full_response})
 
         # --- 4. Cleanup & Persistence ---
-        # Save the FINAL narrative to the session
         if full_response.strip():
             session_in_thread.add_message("assistant", full_response)
 
@@ -282,7 +245,6 @@ class ReActTurnManager:
             game_session, thread_db_manager, session_in_thread
         )
 
-        # Turn Metadata
         turnmeta = TurnMetadataService(thread_db_manager, self.vector_store)
         turnmeta.persist(
             session_id=game_session.id,

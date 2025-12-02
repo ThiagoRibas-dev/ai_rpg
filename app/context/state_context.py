@@ -2,7 +2,7 @@ import logging
 from typing import List
 from app.tools.registry import ToolRegistry
 from app.tools.schemas import StateQuery
-from app.tools.builtin._state_storage import get_entity
+from app.services.state_service import get_entity
 from app.utils.stat_renderer import render_stat_from_model
 from app.utils.stat_renderer import render_stat_string
 

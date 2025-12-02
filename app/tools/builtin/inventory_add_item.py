@@ -1,5 +1,5 @@
 from typing import Optional, Dict, Any
-from app.tools.builtin._state_storage import get_entity, set_entity
+from app.services.state_service import get_entity, set_entity
 
 
 def handler(

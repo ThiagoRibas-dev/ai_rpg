@@ -31,7 +31,7 @@ def handler(description: str, new_time: str, **context: dict) -> dict:
     if sim_service and duration > 4:  # Only simulate if > 4 hours passed
         # Get all active NPCs (simple approximation: check scene members)
         # For a robust system, we might query all NPCs in the region, but for local models, keep it scoped.
-        from app.tools.builtin._state_storage import get_entity
+        from app.services.state_service import get_entity
 
         scene = get_entity(session_id, db, "scene", "active_scene")
         members = scene.get("members", [])

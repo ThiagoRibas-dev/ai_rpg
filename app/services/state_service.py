@@ -1,6 +1,7 @@
 """
 State storage layer using dedicated SQL table.
 Provides session-scoped entity management with versioning.
+Refactored from app.tools.builtin._state_storage.
 """
 
 import logging

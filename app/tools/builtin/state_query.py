@@ -1,5 +1,5 @@
 from typing import Any, Dict
-from app.tools.builtin._state_storage import get_entity, get_all_of_type
+from app.services.state_service import get_entity, get_all_of_type
 
 def handler(entity_type: str, key: str, json_path: str, **context) -> Dict[str, Any]:
     """

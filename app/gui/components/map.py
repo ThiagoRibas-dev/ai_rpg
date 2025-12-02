@@ -25,7 +25,7 @@ class MapComponent:
         if not self.session_id: return
         
         try:
-            from app.tools.builtin._state_storage import get_entity
+            from app.services.state_service import get_entity
             scene = get_entity(self.session_id, self.db, "scene", "active_scene")
             
             if scene and "tactical_map" in scene:

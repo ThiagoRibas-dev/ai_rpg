@@ -1,6 +1,6 @@
 import logging
 from typing import Any
-from app.tools.builtin._state_storage import get_entity, set_entity
+from app.services.state_service import get_entity, set_entity
 
 logger = logging.getLogger(__name__)
 
