@@ -1,11 +1,3 @@
-import os
-
-FILE_PATH = "app/gui/components/map.py"
-
-# We just need to add `sanitize=False` to the ui.html call.
-# I will rewrite the file with the fix.
-
-CONTENT = """
 from nicegui import ui
 from app.gui.theme import Theme
 import math
@@ -155,9 +147,3 @@ class MapComponent:
         
         svg_parts.append('</svg>')
         return "".join(svg_parts)
-"""
-
-with open(FILE_PATH, "w", encoding="utf-8") as f:
-    f.write(CONTENT.strip())
-
-print(f"✅ Fixed {FILE_PATH} to satisfy ui.html(sanitize=False) requirement.")

@@ -1,25 +1,11 @@
-from app.gui.main_view import MainView
-from app.core.orchestrator import Orchestrator
-from app.database.db_manager import DBManager
+from app.gui.main import run
+from app.utils.logger_config import setup_logging
 from dotenv import load_dotenv
-from app.utils.logger_config import setup_logging # Import the new setup function
 
 DB_PATH = "ai_rpg.db"
 
-
-def main():
-    # Configure logging using the centralized setup
+# Allow __mp_main__ for NiceGUI reload/multiprocessing on Windows
+if __name__ in {"__main__", "__mp_main__"}:
     setup_logging()
-    
     load_dotenv()
-    with DBManager(DB_PATH) as db_manager:
-        db_manager.create_tables()
-        view = MainView(db_manager)
-        orchestrator = Orchestrator(view, DB_PATH)  # Pass DB_PATH instead of db_manager
-        view.set_orchestrator(orchestrator)
-        orchestrator.tool_event_callback = view.log_tool_event
-        orchestrator.run()
-
-
-if __name__ == "__main__":
-    main()
+    run(DB_PATH)

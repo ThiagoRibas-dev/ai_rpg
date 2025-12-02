@@ -7,10 +7,10 @@ google.genai
 grpcio
 grpcio-status
 pydantic
+
 # 🆕 Required by chromadb
 pydantic-settings
 python-dotenv
-customtkinter
 requests
 
 # Vector store and embeddings
@@ -33,3 +33,9 @@ fastembed
 # Optional (uncomment if/when you add local RAG)
 # faiss-cpu
 # sqlite-vss
+
+# GUI
+customtkinter
+nicegui>=1.4.0  # Replaces customtkinter
+pywebview
+watchfiles
