@@ -1,8 +1,16 @@
 from nicegui import ui
-from app.gui.theme import Theme
-from app.services.state_service import get_entity, get_versions
+from app.services.state_service import get_entity
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class CharacterInspector:
+    """
+    Universal Character Sheet Renderer.
+    Adapts to any CharacterSheetSpec structure.
+    """
+
     def __init__(self, db_manager):
         self.db = db_manager
         self.session_id = None
@@ -16,131 +24,172 @@ class CharacterInspector:
     def refresh(self):
         if not self.container:
             return
-        
         self.container.clear()
-        
+
         if not self.session_id:
             with self.container:
-                ui.label("No Session Loaded").classes('text-gray-500 italic')
+                ui.label("No Session").classes("text-gray-500")
             return
 
-        # Fetch Data
+        # 1. Fetch Entity & Template
         entity = get_entity(self.session_id, self.db, "character", self.entity_key)
         if not entity:
-            with self.container:
-                ui.label("Player entity not found").classes('text-red-400')
             return
 
-        # Fetch Template
         tid = entity.get("template_id")
         template = self.db.stat_templates.get_by_id(tid) if tid else None
 
         if not template:
             with self.container:
-                ui.label("No Stat Template linked").classes('text-yellow-600')
+                ui.label("Legacy/No Template").classes("text-yellow-600")
             return
 
-        # Render
+        # 2. Render Loop
+        # We iterate through the standard categories if they exist in the template
         with self.container:
-            self._render_header(entity)
-            self._render_gauges(entity, template)
-            self._render_stats_grid(entity, template)
+            self._render_header(entity, template)
 
-    def _render_header(self, entity):
-        with ui.row().classes('w-full items-center justify-between mb-4'):
-            ui.label(entity.get('name', 'Unknown')).classes('text-2xl font-bold text-white')
-            ui.chip(entity.get('disposition', 'Player'), icon='person').classes('bg-slate-700')
+            # Categories to render in order
+            cats = [
+                "attributes",
+                "resources",
+                "skills",
+                "features",
+                "inventory",
+                "connections",
+                "narrative",
+            ]
 
-    def _render_gauges(self, entity, template):
-        """Render HP, Mana, etc. as visual bars."""
-        gauges_data = entity.get('gauges', {})
-        
-        # Filter template for gauges assigned to 'header' or 'main'
-        # For this MVP, we render all gauges
-        if not template.gauges:
+            # Convert template to dict if it's a model
+            spec = (
+                template.model_dump() if hasattr(template, "model_dump") else template
+            )
+
+            for cat_key in cats:
+                if cat_key in spec:
+                    self._render_category(
+                        cat_key, spec[cat_key], entity.get(cat_key, {})
+                    )
+
+    def _render_header(self, entity, template):
+        name = entity.get("name", "Unknown")
+
+        # Try to find "concept" or "occupation" in identity
+        identity = entity.get("identity", {})
+        subtext = (
+            identity.get("concept")
+            or identity.get("occupation")
+            or identity.get("background")
+            or "Player Character"
+        )
+
+        with ui.row().classes("w-full items-center justify-between mb-2"):
+            with ui.column().classes("gap-0"):
+                ui.label(name).classes("text-2xl font-bold text-white leading-none")
+                ui.label(subtext).classes("text-xs text-amber-400")
+
+            ui.icon("person").classes("text-slate-600 text-4xl")
+
+    def _render_category(self, cat_key, cat_def, cat_data):
+        """Renders a whole category (e.g. Attributes)."""
+        fields = cat_def.get("fields", {})
+        if not fields:
             return
 
-        with ui.card().classes('w-full bg-slate-800 p-2 mb-4 border-l-4 border-red-500'):
-            ui.label('Vitals').classes('text-xs font-bold text-gray-400 uppercase mb-1')
-            
-            for key, def_ in template.gauges.items():
-                data = gauges_data.get(key, {})
-                curr = data.get('current', 0)
-                mx = data.get('max', 10)
-                
-                # Prevent div by zero
+        with ui.column().classes(
+            "w-full mb-2 bg-slate-800/50 rounded border border-slate-700/50 p-2"
+        ):
+            ui.label(cat_key.title()).classes(
+                "text-xs font-bold text-gray-500 uppercase mb-2"
+            )
+
+            # We want to group by 'molecule' (like Pools) vs 'atom' (Stats) to layout them nicely.
+            # For now, simple vertical stack or grid.
+
+            for field_key, field_def in fields.items():
+                self._render_field(field_key, field_def, cat_data)
+
+    def _render_field(self, key, definition, data_source):
+        container_type = definition.get("container_type", "atom")
+        display = definition.get("display", {})
+        label = display.get("label", key)
+        widget = display.get("widget", "text")
+
+        if container_type == "atom":
+            val = data_source.get(key, definition.get("default", ""))
+
+            with ui.row().classes("w-full justify-between items-center mb-1"):
+                ui.label(label).classes("text-sm text-gray-300")
+
+                if widget == "die":
+                    ui.badge(str(val), color="purple").props("text-color=white")
+                elif widget == "number":
+                    ui.label(str(val)).classes("font-mono font-bold text-blue-300")
+                elif widget == "toggle":
+                    icon = "check_box" if val else "check_box_outline_blank"
+                    ui.icon(icon).classes("text-green-400" if val else "text-gray-600")
+                else:
+                    ui.label(str(val)).classes("text-sm text-gray-400")
+
+        elif container_type == "molecule":
+            val_obj = data_source.get(key, {})
+
+            if widget == "pool":
+                # Current / Max
+                curr = val_obj.get("current", 0)
+                mx = val_obj.get("max", 10)
                 pct = max(0, min(1, curr / mx)) if mx > 0 else 0
-                
-                with ui.row().classes('w-full items-center gap-2'):
-                    ui.label(def_.label).classes('w-20 text-sm')
-                    with ui.column().classes('flex-grow gap-0'):
-                        ui.linear_progress(value=pct, size='10px', show_value=False).classes('rounded')
-                        ui.label(f"{curr} / {mx}").classes('text-xs text-center w-full text-gray-500')
 
-    def _render_stats_grid(self, entity, template):
-        """Render Attributes, Skills, etc using CSS Grid."""
-        fundamentals = entity.get('fundamentals', {})
-        derived = entity.get('derived', {})
-        
-        # Merge stats for display, keyed by Group
-        groups = {}
-        
-        # Process Fundamentals
-        for key, def_ in template.fundamentals.items():
-            groups.setdefault(def_.group, []).append({**def_.model_dump(), 'value': fundamentals.get(key, def_.default)})
-            
-        # Process Derived
-        for key, def_ in template.derived.items():
-            groups.setdefault(def_.group, []).append({**def_.model_dump(), 'value': derived.get(key, def_.default)})
+                with ui.column().classes("w-full mb-2"):
+                    with ui.row().classes("w-full justify-between text-xs"):
+                        ui.label(label).classes("font-bold")
+                        ui.label(f"{curr} / {mx}")
+                    ui.linear_progress(value=pct, size="8px", show_value=False).classes(
+                        "rounded"
+                    )
 
-        # Render Groups
-        for group_name, stats in groups.items():
-            with ui.column().classes('w-full mb-4'):
-                ui.label(group_name).classes('text-lg font-bold ' + Theme.text_accent)
-                
-                # CSS Grid: 2 Columns
-                with ui.grid(columns=2).classes('w-full gap-2'):
-                    for stat in stats:
-                        self._render_stat_widget(stat)
-
-    def _render_stat_widget(self, stat):
-        """Decide how to draw a single stat based on its widget type."""
-        widget_type = stat.get('widget', 'text')
-        val = stat.get('value')
-        
-        with ui.card().classes('bg-slate-700 p-2 items-center flex-row justify-between'):
-            ui.label(stat['label']).classes('text-sm text-gray-300')
-            
-            if widget_type == 'die':
-                # Die Badge
-                ui.badge(str(val), color='purple').props('text-color=white')
-            
-            elif widget_type == 'bonus':
-                # +2 formatted text
-                color = 'text-green-400' if int(val or 0) >= 0 else 'text-red-400'
-                fmt = f"+{val}" if int(val or 0) >= 0 else str(val)
-                ui.label(fmt).classes(f'text-xl font-bold {color}')
-                
-            elif widget_type == 'track':
+            elif widget == "track":
                 # Checkboxes
-                # We assume 'max' is passed in rendering or defaulted
-                length = 5 # Default fallback
-                if 'rendering' in stat and stat['rendering']:
-                     length = stat['rendering'].get('max', 5) # Simplify logic for MVP
-                
-                with ui.row().classes('gap-1'):
-                    for i in range(length):
-                        # Calculate if checked
-                        is_checked = i < (int(val) if val else 0)
-                        icon = 'check_box' if is_checked else 'check_box_outline_blank'
-                        color = 'text-green-400' if is_checked else 'text-gray-600'
-                        ui.icon(icon).classes(color)
-            
-            else:
-                # Default Number/Text
-                ui.label(str(val)).classes('text-lg font-mono')
+                # Logic: We need 'value' (how many marked) and 'length' (total)
+                # Spec usually defines 'components' -> 'value'
+                # If 'max' is in components, use it, else check display options
+                val = val_obj.get("value", 0)
+                # Try to find max in components default or display options
+                length = 5
+                # (Simplification: defaulting to 5 for prototype)
+
+                with ui.row().classes("w-full justify-between items-center mb-1"):
+                    ui.label(label).classes("text-sm")
+                    with ui.row().classes("gap-1"):
+                        for i in range(length):
+                            icon = (
+                                "circle" if i < val else "circle_notifications"
+                            )  # filled vs outline approx
+                            color = "text-red-400" if i < val else "text-gray-700"
+                            ui.icon("circle").classes(f"text-[10px] {color}")
+
+        elif container_type == "list":
+            # Repeater
+            items = data_source.get(key, [])  # List of dicts
+
+            with ui.expansion(f"{label} ({len(items)})", icon="list").classes(
+                "w-full bg-slate-900 rounded mb-1"
+            ):
+                if not items:
+                    ui.label("Empty").classes("text-xs text-gray-600 p-2")
+                else:
+                    with ui.column().classes("w-full gap-1 p-2"):
+                        for item in items:
+                            # Try to find a 'name' or 'label' key
+                            item_name = (
+                                item.get("name")
+                                or item.get("label")
+                                or next(iter(item.values()))
+                            )
+                            ui.label(str(item_name)).classes(
+                                "text-xs text-gray-300 border-b border-slate-800 w-full pb-1"
+                            )
 
     def render(self):
-        # Create the container that refresh() will populate
-        self.container = ui.column().classes('w-full p-2')
+        self.container = ui.column().classes("w-full p-2")
         self.refresh()

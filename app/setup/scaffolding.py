@@ -1,18 +1,15 @@
 import json
 import logging
 from app.models.ruleset import Ruleset, PhysicsConfig
-from app.models.stat_block import (
-    StatBlockTemplate,
-    StatValue,
-    StatGauge,
-    StatCollection,
-)
+from app.models.sheet_schema import CharacterSheetSpec, SheetField, FieldDisplay
 from app.setup.setup_manifest import SetupManifest
 
 logger = logging.getLogger(__name__)
 
 
 def _get_default_scaffolding():
+    """Returns a default Ruleset and CharacterSheetSpec (New Schema)."""
+
     ruleset = Ruleset(
         meta={"name": "Simple RPG", "genre": "Fantasy"},
         physics=PhysicsConfig(
@@ -23,91 +20,101 @@ def _get_default_scaffolding():
         ),
     )
 
-    fundamentals = {
-        "str": StatValue(
-            id="str",
-            label="Strength",
-            widget="number",
-            panel="sidebar",
-            group="Attributes",
+    # Define the Sheet Structure
+    spec = CharacterSheetSpec()
+
+    # Attributes
+    spec.attributes.fields = {
+        "str": SheetField(
+            key="str",
+            container_type="atom",
+            data_type="number",
             default=10,
+            display=FieldDisplay(widget="number", label="Strength"),
         ),
-        "dex": StatValue(
-            id="dex",
-            label="Dexterity",
-            widget="number",
-            panel="sidebar",
-            group="Attributes",
+        "dex": SheetField(
+            key="dex",
+            container_type="atom",
+            data_type="number",
             default=10,
-        ),
-        "class": StatValue(
-            id="class",
-            label="Class",
-            data_type="string",
-            widget="text_line",
-            panel="header",
-            group="Identity",
-            default="Adventurer",
+            display=FieldDisplay(widget="number", label="Dexterity"),
         ),
     }
 
-    derived = {
-        "ac": StatValue(
-            id="ac",
-            label="Armor Class",
-            widget="number",
-            panel="main",
-            group="Combat",
-            default=10,
-            calculation="10 + ((dex - 10) // 2)",
+    # Resources (HP)
+    spec.resources.fields = {
+        "hp": SheetField(
+            key="hp",
+            container_type="molecule",
+            display=FieldDisplay(widget="pool", label="Hit Points"),
+            components={
+                "current": SheetField(
+                    key="current",
+                    container_type="atom",
+                    data_type="number",
+                    default=10,
+                    display=FieldDisplay(widget="number", label="Cur"),
+                ),
+                "max": SheetField(
+                    key="max",
+                    container_type="atom",
+                    data_type="derived",
+                    default=10,
+                    formula="10 + ((str - 10) // 2)",
+                    display=FieldDisplay(widget="number", label="Max"),
+                ),
+            },
         )
     }
 
-    gauges = {
-        "hp": StatGauge(
-            id="hp",
-            label="Hit Points",
-            widget="bar",
-            panel="header",
-            group="Vitals",
-            min_val=0,
-            max_formula="10 + ((str - 10) // 2)",
-        )
-    }
-
-    collections = {
-        "inventory": StatCollection(
-            id="inventory", label="Backpack", panel="equipment", group="Gear"
-        )
-    }
-
-    template = StatBlockTemplate(
-        template_name="Adventurer",
-        fundamentals=fundamentals,
-        derived=derived,
-        gauges=gauges,
-        collections=collections,
+    # Derived (AC)
+    spec.attributes.fields["ac"] = SheetField(
+        key="ac",
+        container_type="atom",
+        data_type="derived",
+        default=10,
+        formula="10 + ((dex - 10) // 2)",
+        display=FieldDisplay(widget="number", label="Armor Class"),
     )
-    return ruleset, template
+
+    # Inventory
+    spec.inventory.fields = {
+        "backpack": SheetField(
+            key="backpack",
+            container_type="list",
+            display=FieldDisplay(widget="repeater", label="Backpack"),
+            item_schema={
+                "name": SheetField(
+                    key="name",
+                    container_type="atom",
+                    data_type="string",
+                    display=FieldDisplay(widget="text", label="Item"),
+                ),
+                "qty": SheetField(
+                    key="qty",
+                    container_type="atom",
+                    data_type="number",
+                    default=1,
+                    display=FieldDisplay(widget="number", label="Qty"),
+                ),
+            },
+        )
+    }
+
+    return ruleset, spec
 
 
+# ... (Rest of file is mostly unchanged, just ensure imports match)
 def inject_setup_scaffolding(session_id: int, prompt_manifest_json: str, db_manager):
-    ruleset_model = None
-    st_model = None
+    ruleset_model, st_model = _get_default_scaffolding()
 
     if prompt_manifest_json and prompt_manifest_json != "{}":
         try:
             data = json.loads(prompt_manifest_json)
             if data.get("ruleset"):
                 ruleset_model = Ruleset(**data["ruleset"])
-            if data.get("stat_template"):
-                st_model = StatBlockTemplate(**data["stat_template"])
-        except Exception as e:
-            logger.warning(f"Failed to parse prompt manifest scaffolding: {e}")
+        except Exception:
             pass
-
-    if not ruleset_model or not st_model:
-        ruleset_model, st_model = _get_default_scaffolding()
 
     ruleset_model.meta["name"] = (
         f"{ruleset_model.meta.get('name', 'Untitled')} (Session {session_id})"
@@ -118,10 +125,9 @@ def inject_setup_scaffolding(session_id: int, prompt_manifest_json: str, db_mana
     entity_data = {
         "name": "Player",
         "template_id": st_id,
-        "fundamentals": {k: v.default for k, v in st_model.fundamentals.items()},
-        "derived": {k: v.default for k, v in st_model.derived.items()},
-        "gauges": {k: {"current": 10, "max": 10} for k, v in st_model.gauges.items()},
-        "collections": {k: [] for k, v in st_model.collections.items()},
+        "attributes": {"str": 10, "dex": 10, "ac": 10},
+        "resources": {"hp": {"current": 10, "max": 10}},
+        "inventory": {"backpack": []},
     }
 
     db_manager.game_state.set_entity(session_id, "character", "player", entity_data)

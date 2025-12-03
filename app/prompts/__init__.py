@@ -1,4 +1,3 @@
-File: D:\Projects\Game Dev\ai-rpg\app\prompts\__init__.py
 from app.prompts.architect_templates import (
     ARCHITECT_SYSTEM_PROMPT,
     ARCHITECT_USER_TEMPLATE,

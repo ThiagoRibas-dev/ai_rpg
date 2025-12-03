@@ -1,6 +1,5 @@
 
 from nicegui import ui
-from app.gui.theme import Theme
 
 # Import Sub-Inspectors
 from app.gui.inspectors.character import CharacterInspector

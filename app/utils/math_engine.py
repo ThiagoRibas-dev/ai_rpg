@@ -1,7 +1,7 @@
 import logging
 from typing import Dict, Any
 from simpleeval import simple_eval
-from app.models.stat_block import StatBlockTemplate
+from app.models.sheet_schema import CharacterSheetSpec
 
 logger = logging.getLogger(__name__)
 
@@ -10,7 +10,7 @@ def safe_evaluate(expression: str, context: Dict[str, Any]) -> int | float:
     if not expression or expression == "0" or expression == "null":
         return 0
     try:
-        # Convert all context values to float for math safety
+        # Convert context to float
         safe_context = {}
         for k, v in context.items():
             try:
@@ -24,65 +24,70 @@ def safe_evaluate(expression: str, context: Dict[str, Any]) -> int | float:
 
 
 def recalculate_derived_stats(
-    entity_data: Dict[str, Any], stat_template: StatBlockTemplate
+    entity_data: Dict[str, Any], template: Any
 ) -> Dict[str, Any]:
-    if not entity_data or not stat_template:
+    """
+    Recalculates formulas defined in the CharacterSheetSpec.
+    """
+    if not entity_data or not template:
+        return entity_data
+
+    # Check if it's the new spec
+    if not isinstance(template, CharacterSheetSpec):
+        # Fallback for old templates if any exist (Legacy support)
         return entity_data
 
     math_context = {}
 
-    # 1. Load Fundamentals
-    fundamentals = entity_data.get("fundamentals", {})
-    for key, val in fundamentals.items():
-        # CHECK TEMPLATE TYPE BEFORE FORCING FLOAT
-        stat_def = stat_template.fundamentals.get(key)
+    # 1. Harvest Values for Context
+    # We flatten the entity data categories into a single context for formulas
+    # e.g. attributes.str -> "str" in context
+    cats = ["attributes", "resources", "skills", "features"]
 
-        # SAFEGUARD: Only put numbers into the math context
-        if stat_def and stat_def.data_type in ["integer", "float"]:
-            try:
+    for cat in cats:
+        data = entity_data.get(cat, {})
+        for key, val in data.items():
+            if isinstance(val, (int, float)):
+                math_context[key] = val
+            elif isinstance(val, dict) and "current" in val:
+                # For pools, expose current and max
+                math_context[f"{key}_current"] = val.get("current", 0)
+                math_context[f"{key}_max"] = val.get("max", 0)
+                # Also expose base key as current for convenience
+                math_context[key] = val.get("current", 0)
+            elif isinstance(val, str) and val.isdigit():
                 math_context[key] = float(val)
-            except Exception as e:
-                logger.warning(f"Invalid fundamental '{key}' value '{val}': {e}")
-                math_context[key] = 0.0
-        elif stat_def and stat_def.data_type == "die":
-            # Extract 8 from "d8" for math purposes
-            try:
-                val_str = str(val).lower().replace("d", "")
-                math_context[key] = float(val_str)
-            except Exception as e:
-                logger.warning(f"Invalid die fundamental '{key}' value '{val}': {e}")
-                math_context[key] = 0.0
-        else:
-            # Pass strings/bools through for display or non-math logic
-            math_context[key] = val
 
-    # 2. Calculate Derived Values
-    derived = entity_data.get("derived", {})
-    for key, def_ in stat_template.derived.items():
-        if def_.calculation:
-            res = safe_evaluate(def_.calculation, math_context)
-            final_val = int(res) if def_.data_type == "integer" else res
-            derived[key] = final_val
-            # Add to context for subsequent formulas
-            math_context[key] = final_val
+    # 2. Iterate Template to find Formulas
+    # Helper to process a category
+    spec_dict = template.model_dump()
 
-    entity_data["derived"] = derived
+    for cat_name, cat_def in spec_dict.items():
+        if "fields" not in cat_def:
+            continue
 
-    # 3. Update Gauge Maxima
-    gauges = entity_data.get("gauges", {})
-    for key, def_ in stat_template.gauges.items():
-        if def_.max_formula:
-            max_val = int(safe_evaluate(def_.max_formula, math_context))
-            max_val = max(def_.min_val, max_val)
+        fields = cat_def["fields"]
+        entity_cat = entity_data.setdefault(cat_name, {})
 
-            gauge_data = gauges.get(key, {})
-            if not gauge_data:
-                gauge_data = {"current": max_val, "max": max_val}
-            else:
-                gauge_data["max"] = max_val
+        for field_key, field_def in fields.items():
+            # Atom Formula
+            if field_def.get("container_type") == "atom":
+                formula = field_def.get("formula")
+                if formula:
+                    res = safe_evaluate(formula, math_context)
+                    entity_cat[field_key] = int(res)  # Assume int for stats usually
+                    math_context[field_key] = res  # Update context for subsequent deps
 
-            gauges[key] = gauge_data
+            # Molecule Formula (e.g. Max HP)
+            elif field_def.get("container_type") == "molecule":
+                components = field_def.get("components", {})
+                entity_mol = entity_cat.setdefault(field_key, {})
 
-    entity_data["gauges"] = gauges
+                for comp_key, comp_def in components.items():
+                    formula = comp_def.get("formula")
+                    if formula:
+                        res = safe_evaluate(formula, math_context)
+                        entity_mol[comp_key] = int(res)
+                        math_context[f"{field_key}_{comp_key}"] = res
 
     return entity_data

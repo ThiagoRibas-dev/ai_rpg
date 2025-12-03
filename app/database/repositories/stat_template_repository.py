@@ -1,13 +1,16 @@
 """Repository for StatBlockTemplate operations."""
 
-from typing import List, Optional
+from typing import List, Optional, Any
 from .base_repository import BaseRepository
+from pydantic import BaseModel
+# We import both for backward compatibility check if needed, 
+# but mostly we rely on model_dump_json
 from app.models.stat_block import StatBlockTemplate
-
+from app.models.sheet_schema import CharacterSheetSpec
 
 class StatTemplateRepository(BaseRepository):
     """
-    Handles database operations for StatBlockTemplates (entity definitions).
+    Handles database operations for Entity Templates (StatBlocks or SheetSpecs).
     These define the 'shape' of a character sheet.
     """
 
@@ -29,12 +32,21 @@ class StatTemplateRepository(BaseRepository):
         )
         self.conn.commit()
 
-    def create(self, ruleset_id: int, template: StatBlockTemplate) -> int:
+    def create(self, ruleset_id: int, template: BaseModel) -> int:
         """
-        Save a new StatBlockTemplate. Returns the new ID.
+        Save a new Template. Returns the new ID.
+        Accepts either StatBlockTemplate (Old) or CharacterSheetSpec (New).
         """
         data_str = template.model_dump_json()
-        name = template.template_name
+        
+        # Determine name
+        name = "Untitled Template"
+        if hasattr(template, "template_name"):
+            name = template.template_name
+        elif hasattr(template, "meta") and hasattr(template.meta, "fields"):
+            # Try to find a system name in meta fields of new spec
+            # Fallback to generic
+            pass
 
         cursor = self._execute(
             """INSERT INTO stat_templates (ruleset_id, name, data_json) 
@@ -46,14 +58,22 @@ class StatTemplateRepository(BaseRepository):
             return cursor.lastrowid
         raise ValueError("Failed to create stat template")
 
-    def get_by_id(self, template_id: int) -> Optional[StatBlockTemplate]:
-        """Retrieve a template by ID."""
+    def get_by_id(self, template_id: int) -> Optional[Any]:
+        """Retrieve a template by ID. Tries New Spec first, then Old."""
         row = self._fetchone(
             "SELECT data_json FROM stat_templates WHERE id = ?", (template_id,)
         )
         if row:
+            json_data = row["data_json"]
+            # Try parsing as New Spec
             try:
-                return StatBlockTemplate.model_validate_json(row["data_json"])
+                return CharacterSheetSpec.model_validate_json(json_data)
+            except Exception:
+                pass
+            
+            # Try parsing as Old Spec
+            try:
+                return StatBlockTemplate.model_validate_json(json_data)
             except Exception:
                 return None
         return None
@@ -69,10 +89,12 @@ class StatTemplateRepository(BaseRepository):
         )
         return [{"id": row["id"], "name": row["name"]} for row in rows]
 
-    def update(self, template_id: int, template: StatBlockTemplate):
+    def update(self, template_id: int, template: BaseModel):
         """Update an existing template."""
         data_str = template.model_dump_json()
-        name = template.template_name
+        name = "Updated Template"
+        if hasattr(template, "template_name"):
+            name = template.template_name
 
         self._execute(
             """UPDATE stat_templates 

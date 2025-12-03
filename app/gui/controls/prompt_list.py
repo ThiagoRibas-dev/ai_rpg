@@ -1,6 +1,5 @@
 
 from nicegui import ui
-from app.gui.theme import Theme
 from app.gui.dialogs.setup_wizard import SetupWizard
 from app.gui.dialogs.prompt_editor import PromptEditorDialog
 

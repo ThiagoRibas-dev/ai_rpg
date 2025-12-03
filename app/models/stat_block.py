@@ -1,4 +1,7 @@
 """
+DEPRECATED: Use app.models.sheet_schema instead.
+This model is kept for backward compatibility during migration.
+
 Models for the Generic Functional StatBlock.
 Refactored to separate Fundamental Inputs from Derived Outputs.
 """

@@ -1,4 +1,3 @@
-
 import json
 import logging
 from typing import Dict, Type
@@ -47,7 +46,8 @@ class ReActTurnManager:
         Main ReAct Loop.
         Checks orchestrator.stop_event at every major step.
         """
-        if self.orchestrator.stop_event.is_set(): return
+        if self.orchestrator.stop_event.is_set():
+            return
 
         # --- Setup Services ---
         state_builder = StateContextBuilder(
@@ -140,7 +140,8 @@ class ReActTurnManager:
                 )
             except Exception as e:
                 # If API fails, check stop event again
-                if self.orchestrator.stop_event.is_set(): return
+                if self.orchestrator.stop_event.is_set():
+                    return
                 raise e
 
             # Append Assistant Message
@@ -153,13 +154,18 @@ class ReActTurnManager:
 
             # CASE 1: Tools
             if response.tool_calls:
-                self.logger.info(f"ReAct Loop {loop_count}: Model called {len(response.tool_calls)} tools.")
+                self.logger.info(
+                    f"ReAct Loop {loop_count}: Model called {len(response.tool_calls)} tools."
+                )
 
                 if response.content:
-                    self.ui_queue.put({"type": "thought_bubble", "content": response.content})
+                    self.ui_queue.put(
+                        {"type": "thought_bubble", "content": response.content}
+                    )
 
                 for call_data in response.tool_calls:
-                    if self.orchestrator.stop_event.is_set(): return
+                    if self.orchestrator.stop_event.is_set():
+                        return
 
                     call_id = call_data.get("id", "call_default")
                     name = call_data["name"]
@@ -178,7 +184,11 @@ class ReActTurnManager:
                                 current_game_time=game_session.game_time,
                                 extra_context=extra_ctx,
                             )
-                            res_data = result[0]["result"] if result else {"error": "No result"}
+                            res_data = (
+                                result[0]["result"]
+                                if result
+                                else {"error": "No result"}
+                            )
 
                             tool_msg = Message(
                                 role="tool",
@@ -196,7 +206,13 @@ class ReActTurnManager:
                                 content=json.dumps({"error": str(e)}),
                             )
                             working_history.append(error_msg)
-                            self.ui_queue.put({"type": "tool_result", "result": str(e), "is_error": True})
+                            self.ui_queue.put(
+                                {
+                                    "type": "tool_result",
+                                    "result": str(e),
+                                    "is_error": True,
+                                }
+                            )
                     else:
                         error_msg = Message(
                             role="tool",
@@ -215,27 +231,44 @@ class ReActTurnManager:
                 break
 
         # --- 3. Phase B: Narrative Handling ---
-        if self.orchestrator.stop_event.is_set(): return
+        if self.orchestrator.stop_event.is_set():
+            return
 
         if final_narrative:
-            self.ui_queue.put({"type": "message_bubble", "role": "assistant", "content": final_narrative})
+            self.ui_queue.put(
+                {
+                    "type": "message_bubble",
+                    "role": "assistant",
+                    "content": final_narrative,
+                }
+            )
             full_response = final_narrative
         else:
             # Fallback generation
             working_history.append(
-                Message(role="user", content="[System: Actions resolved. Now write the narrative response to the player.]")
+                Message(
+                    role="user",
+                    content="[System: Actions resolved. Now write the narrative response to the player.]",
+                )
             )
             stream = self.llm_connector.get_streaming_response(
                 system_prompt=static_instruction, chat_history=working_history
             )
-            
+
             full_response = ""
             for chunk in stream:
-                if self.orchestrator.stop_event.is_set(): return
+                if self.orchestrator.stop_event.is_set():
+                    return
                 full_response += chunk
 
             if full_response.strip():
-                self.ui_queue.put({"type": "message_bubble", "role": "assistant", "content": full_response})
+                self.ui_queue.put(
+                    {
+                        "type": "message_bubble",
+                        "role": "assistant",
+                        "content": full_response,
+                    }
+                )
 
         # --- 4. Cleanup & Persistence ---
         if full_response.strip():

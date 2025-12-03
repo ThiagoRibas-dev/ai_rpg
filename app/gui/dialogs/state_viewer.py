@@ -1,5 +1,4 @@
 from nicegui import ui
-import json
 
 class StateViewerDialog:
     def __init__(self, db_manager, session_id):
