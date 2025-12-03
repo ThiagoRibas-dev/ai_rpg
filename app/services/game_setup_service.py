@@ -103,22 +103,35 @@ class GameSetupService:
     def _apply_dynamic_scaffolding(
         self, session_id: int, prompt: Any, spec: Any, values: Dict, char_name: str
     ):
-        # 1. Create Ruleset
-        ruleset = Ruleset(
-            meta={"name": prompt.name, "genre": "Custom"},
-            physics=PhysicsConfig(
-                dice_notation="1d20",
-                roll_mechanic="See System Prompt",
-                success_condition="See System Prompt",
-                crit_rules="See System Prompt",
-            ),
-        )
+        # 1. Try to load Pre-Extracted Ruleset from Prompt Manifest
+        ruleset = None
+        if prompt.template_manifest:
+            try:
+                data = json.loads(prompt.template_manifest)
+                if "ruleset" in data:
+                    ruleset = Ruleset(**data["ruleset"])
+            except Exception as e:
+                logger.warning(f"Failed to load ruleset from manifest: {e}")
+        
+        # 2. Fallback to Stub if missing
+        if not ruleset:
+            ruleset = Ruleset(
+                meta={"name": prompt.name, "genre": "Custom"},
+                physics=PhysicsConfig(
+                    dice_notation="1d20",
+                    roll_mechanic="See System Prompt",
+                    success_condition="See System Prompt",
+                    crit_rules="See System Prompt",
+                )
+            )
+        
+        # 3. Create Ruleset in DB
         rs_id = self.db.rulesets.create(ruleset)
 
-        # 2. Create Template
+        # 4. Create Template
         st_id = self.db.stat_templates.create(rs_id, spec)
 
-        # 3. Create Entity
+        # 5. Create Entity
         entity_data = values.copy()
         entity_data["name"] = char_name
         entity_data["template_id"] = st_id
@@ -152,7 +165,7 @@ class GameSetupService:
         )
 
     def _apply_character_extraction(self, session_id: int, char_data: Any):
-        # Legacy
+        # Legacy logic for backward compatibility
         player = get_entity(session_id, self.db, "character", "player")
         if not player:
             return

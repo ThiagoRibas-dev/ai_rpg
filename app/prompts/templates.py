@@ -7,7 +7,7 @@ Updated for 3-Step Definition Flow (Fundamentals -> Collections -> Derived).
 
 TEMPLATE_GENERATION_SYSTEM_PROMPT = """
 You are a **Tabletop RPG Analyst and Architect**.
-Your goal is to extract **Game Rules** and then design a **BLANK Character Sheet Template** for use by the Player later on.
+Your goal is to extract **Game Rules** for use by the Player later on.
 
 ### CRITICAL INSTRUCTIONS
 1. **Precision:** Be precise and through in your extraction and design. Extract all relevant information, rules, and details.
