@@ -168,11 +168,11 @@ Hhe is something between a Knights Hospitaller, a Hedge Knight, and a Mercenary.
 Name: Thiago
 Race: Human
 Alignment: Neutral Good
-Deity: The Valorous One (Torm/Heironeous Archetype)
+Deity: Enthariel
 Age: 25
 Level: 5
 Classes: Cleric 4 / Ordained Champion 1
-Origin: Unknown (Hedge Knight)
+Origin: Wandering Priest Knight
 
 --- ATTRIBUTES ---
 # Format: Score (Modifier)
@@ -180,12 +180,12 @@ Strength: 15 (+2)
 Dexterity: 10 (+0)
 Constitution: 15 (+2)
 Intelligence: 11 (+0)
-Wisdom: 18 (+4)        # Base 17 + 1 Level
+Wisdom: 18 (+4)
 Charisma: 13 (+1)
 
 --- VITALS & COMBAT ---
-HP (Hit Points): 42 / 42      # Base Rolls (32) + Con (10)
-AC (Armor Class): 20          # Full Plate (+8) + Shield (+2)
+HP (Hit Points): 42 / 42
+AC (Armor Class): 20
 Touch AC: 10
 Flat-footed AC: 20
 Initiative: +2
@@ -193,7 +193,7 @@ Speed: 20 ft (Heavy Armor)
 Base Attack Bonus (BAB): +4
 Grapple: +6
 Spell Resistance: 0
-Action Points: 5 / 5          # Standard/Eberron default (if used)
+Action Points: 5 / 5
 
 --- SAVING THROWS ---
 Fortitude: +8
@@ -207,7 +207,7 @@ Smite (Ordained Champ): Uses Turn Attempts
 
 --- ATTACKS ---
 Weapon: Longsword
-Attack Bonus: +7              # +4 BAB +2 Str +1 Focus
+Attack Bonus: (+4 BAB +2 Str +1 Weapon Focus) = +7
 Damage: 1d8 + 2
 Critical: 19-20 x2
 Type: Slashing

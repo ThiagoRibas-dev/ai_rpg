@@ -143,14 +143,15 @@ class SetupWizard:
             self.prompt.rules_document, self.input_char
         )
 
-        # 3. Sheet Population
+        # 3. Sheet Population (Now passing rules_text)
         self._update_status("Populating Character Data...")
         self.generated_values = sheet_gen.populate_sheet(
-            self.generated_spec, self.input_char
+            self.generated_spec, self.input_char, rules_text=self.prompt.rules_document
         )
 
         # 4. Opening Crawl
         self._update_status("Writing Intro...")
+
         class DummyChar:
             name = self.generated_values.get("identity", {}).get("name", "Player")
 
@@ -170,10 +171,9 @@ class SetupWizard:
             for lore in self.extracted_world.lore:
                 # Convert list of tags to comma-string for easy editing
                 tags_str = ", ".join(lore.tags) if lore.tags else "world_gen"
-                self.lore_ui_items.append({
-                    "content": lore.content,
-                    "tags_str": tags_str
-                })
+                self.lore_ui_items.append(
+                    {"content": lore.content, "tags_str": tags_str}
+                )
 
     def _render_review(self):
         self.review_container.clear()
@@ -199,7 +199,7 @@ class SetupWizard:
                         ui.input(label="Location Name").bind_value(
                             self.extracted_world.starting_location, "name"
                         ).classes("w-full mb-2")
-                        
+
                         ui.textarea(label="Description").bind_value(
                             self.extracted_world.starting_location, "description_visual"
                         ).classes("w-full mb-4").props("rows=3")
@@ -209,7 +209,9 @@ class SetupWizard:
                             ui.label("World Lore & Secrets").classes(
                                 "text-xs font-bold text-gray-500 uppercase"
                             )
-                            ui.button(icon="add", on_click=self._add_lore_row).props("flat dense round size=sm")
+                            ui.button(icon="add", on_click=self._add_lore_row).props(
+                                "flat dense round size=sm"
+                            )
 
                         # Render the list of lore items
                         self.lore_list_container = ui.column().classes("w-full gap-2")
@@ -229,15 +231,23 @@ class SetupWizard:
         self.lore_list_container.clear()
         with self.lore_list_container:
             for index, item in enumerate(self.lore_ui_items):
-                with ui.row().classes("w-full items-start gap-2 bg-slate-900 p-2 rounded"):
+                with ui.row().classes(
+                    "w-full items-start gap-2 bg-slate-900 p-2 rounded"
+                ):
                     # Content (Wide)
-                    ui.textarea(label="Fact/Event").bind_value(item, "content").classes("flex-grow").props("rows=2 dense")
-                    
+                    ui.textarea(label="Fact/Event").bind_value(item, "content").classes(
+                        "flex-grow"
+                    ).props("rows=2 dense")
+
                     # Tags (Narrow)
-                    ui.input(label="Tags").bind_value(item, "tags_str").classes("w-1/4").props("dense")
-                    
+                    ui.input(label="Tags").bind_value(item, "tags_str").classes(
+                        "w-1/4"
+                    ).props("dense")
+
                     # Delete Button
-                    ui.button(icon="delete", on_click=lambda i=index: self._delete_lore_row(i)).props("flat dense color=red round").classes("mt-2")
+                    ui.button(
+                        icon="delete", on_click=lambda i=index: self._delete_lore_row(i)
+                    ).props("flat dense color=red round").classes("mt-2")
 
     def _add_lore_row(self):
         self.lore_ui_items.append({"content": "", "tags_str": "world_gen"})
@@ -254,7 +264,14 @@ class SetupWizard:
             return
 
         spec_dict = self.generated_spec.model_dump()
-        cats = ["identity", "attributes", "resources", "skills", "inventory", "features"]
+        cats = [
+            "identity",
+            "attributes",
+            "resources",
+            "skills",
+            "inventory",
+            "features",
+        ]
 
         for cat_key in cats:
             if cat_key not in spec_dict:
@@ -265,7 +282,9 @@ class SetupWizard:
             if not fields:
                 continue
 
-            if cat_key not in self.generated_values or not isinstance(self.generated_values[cat_key], dict):
+            if cat_key not in self.generated_values or not isinstance(
+                self.generated_values[cat_key], dict
+            ):
                 self.generated_values[cat_key] = {}
 
             ui.label(cat_key.title()).classes(
@@ -288,12 +307,14 @@ class SetupWizard:
                 val = cat_data.get(key, 0)
                 is_num = isinstance(val, int)
                 is_digit = isinstance(val, str) and val.isdigit()
-                
+
                 if is_num or is_digit:
                     ui.number(
                         label=label,
                         value=int(val),
-                        on_change=lambda e, c=cat_data, k=key: c.update({k: int(e.value)}),
+                        on_change=lambda e, c=cat_data, k=key: c.update(
+                            {k: int(e.value)}
+                        ),
                     ).classes("w-full")
                 else:
                     ui.input(
@@ -302,22 +323,30 @@ class SetupWizard:
                         on_change=lambda e, c=cat_data, k=key: c.update({k: e.value}),
                     ).classes("w-full")
             else:
-                ui.input(label=label, value=str(cat_data.get(key, ""))).bind_value(cat_data, key).classes("w-full")
+                ui.input(label=label, value=str(cat_data.get(key, ""))).bind_value(
+                    cat_data, key
+                ).classes("w-full")
 
         elif container_type == "molecule":
             raw_val = cat_data.get(key)
             if raw_val is not None and not isinstance(raw_val, dict):
                 cat_data[key] = {"current": raw_val, "max": raw_val}
-            
+
             if key not in cat_data or not isinstance(cat_data[key], dict):
                 cat_data[key] = {"current": 0, "max": 0}
 
             if widget == "pool":
-                with ui.row().classes("items-center gap-2 border border-slate-700 p-2 rounded"):
+                with ui.row().classes(
+                    "items-center gap-2 border border-slate-700 p-2 rounded"
+                ):
                     ui.label(label).classes("text-xs font-bold w-20")
-                    ui.number(label="Cur", value=cat_data[key].get("current", 0)).bind_value(cat_data[key], "current").classes("w-20")
+                    ui.number(
+                        label="Cur", value=cat_data[key].get("current", 0)
+                    ).bind_value(cat_data[key], "current").classes("w-20")
                     ui.label("/")
-                    ui.number(label="Max", value=cat_data[key].get("max", 0)).bind_value(cat_data[key], "max").classes("w-20")
+                    ui.number(
+                        label="Max", value=cat_data[key].get("max", 0)
+                    ).bind_value(cat_data[key], "max").classes("w-20")
 
     def finish(self):
         # Reconstruct MemoryUpsert objects from the UI List, preserving tags
@@ -326,17 +355,17 @@ class SetupWizard:
             content = item.get("content", "").strip()
             if not content:
                 continue
-            
+
             # Split tags string back into list
             tags_str = item.get("tags_str", "")
             tags = [t.strip() for t in tags_str.split(",") if t.strip()]
             if "world_gen" not in tags:
                 tags.append("world_gen")
-                
+
             final_lore.append(
                 MemoryUpsert(kind="lore", content=content, priority=3, tags=tags)
             )
-            
+
         self.extracted_world.lore = final_lore
 
         service = GameSetupService(self.db)

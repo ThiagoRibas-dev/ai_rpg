@@ -1,6 +1,7 @@
-import logging
 import json
-from typing import Dict, Any, List, Type
+import logging
+from typing import Any, Dict, List, Type
+
 from pydantic import BaseModel, create_model
 
 from app.llm.llm_connector import LLMConnector
@@ -8,16 +9,19 @@ from app.models.message import Message
 from app.models.sheet_schema import (
     CharacterSheetSpec,
     FieldDisplay,
-    SheetField,
     SheetCategory,
+    SheetField,
+)
+from app.prompts.architect_templates import (
+    ARCHITECT_INSTRUCTION,
+    ARCHITECT_USER_TEMPLATE,
+    CHAR_ANALYSIS_INSTRUCTION,
+    CHAR_ANALYSIS_USER_TEMPLATE,
+    POPULATE_INSTRUCTION,
+    POPULATE_WITH_ANALYSIS_TEMPLATE,
+    SHEET_GENERATOR_SYSTEM_PROMPT,
 )
 from app.setup.blueprints import SheetBlueprint
-from app.prompts.architect_templates import (
-    ARCHITECT_SYSTEM_PROMPT,
-    ARCHITECT_USER_TEMPLATE,
-    POPULATE_SYSTEM_PROMPT,
-    POPULATE_USER_TEMPLATE,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -31,14 +35,17 @@ class SheetGenerator:
     ) -> CharacterSheetSpec:
         """Pass 1: Architecting the Sheet (Blueprint Mode)."""
         logger.info("Architecting sheet structure...")
+
+        # Inject the specific instruction into the user template
         user_prompt = ARCHITECT_USER_TEMPLATE.format(
             rules_text=rules_text or "Generic RPG Rules",
             character_concept=character_concept,
+            instruction=ARCHITECT_INSTRUCTION,
         )
 
         try:
             blueprint = self.llm.get_structured_response(
-                system_prompt=ARCHITECT_SYSTEM_PROMPT,
+                system_prompt=SHEET_GENERATOR_SYSTEM_PROMPT,
                 chat_history=[Message(role="user", content=user_prompt)],
                 output_schema=SheetBlueprint,
                 temperature=0.7,
@@ -49,40 +56,63 @@ class SheetGenerator:
             return CharacterSheetSpec()
 
     def populate_sheet(
-        self, spec: CharacterSheetSpec, character_concept: str
+        self, spec: CharacterSheetSpec, character_concept: str, rules_text: str = ""
     ) -> Dict[str, Any]:
-        """Pass 2: Populating Data with Strict Dynamic Schema."""
+        """
+        Pass 2: Populating Data with Two-Step Analysis.
+        Uses single system prompt with specific instructions in user messages.
+        """
         logger.info("Populating sheet data...")
 
-        # 1. Build a Strict Pydantic Model on the fly based on the Spec
-        # This replaces Dict[str, Any] with a rigid structure.
-        DynamicSchema = self._build_dynamic_schema(spec)
-
-        # 2. Generate Prompt
-        # We still provide the skeleton in text to help the "reasoning" part of the LLM,
-        # but the enforcement happens via output_schema.
+        # 1. Prepare Schema Hint
         skeleton = self._generate_data_skeleton(spec)
         schema_json = json.dumps(skeleton, indent=2)
 
-        user_prompt = POPULATE_USER_TEMPLATE.format(
-            schema_json=schema_json, character_concept=character_concept
+        # --- Sub-Step A: Analysis ---
+        logger.info(" > Step A: Analyzing character details...")
+
+        safe_rules = rules_text[:4000] if rules_text else "Generic RPG"
+
+        analysis_prompt = CHAR_ANALYSIS_USER_TEMPLATE.format(
+            rules_text=safe_rules,
+            sheet_structure=schema_json,
+            character_concept=character_concept,
+            instruction=CHAR_ANALYSIS_INSTRUCTION,
         )
 
         try:
-            # 3. Call LLM with the strict model
+            analysis_stream = self.llm.get_streaming_response(
+                system_prompt=SHEET_GENERATOR_SYSTEM_PROMPT,
+                chat_history=[Message(role="user", content=analysis_prompt)],
+            )
+            analysis_text = "".join(analysis_stream)
+            logger.debug(f"Character Analysis: {analysis_text[:100]}...")
+        except Exception as e:
+            logger.error(f"Character analysis failed: {e}")
+            analysis_text = character_concept
+
+        # --- Sub-Step B: Schema Mapping ---
+        logger.info(" > Step B: Mapping to schema...")
+
+        DynamicSchema = self._build_dynamic_schema(spec)
+
+        user_prompt = POPULATE_WITH_ANALYSIS_TEMPLATE.format(
+            analysis_text=analysis_text,
+            schema_json=schema_json,
+            instruction=POPULATE_INSTRUCTION,
+        )
+
+        try:
             result_model = self.llm.get_structured_response(
-                system_prompt=POPULATE_SYSTEM_PROMPT,
+                system_prompt=SHEET_GENERATOR_SYSTEM_PROMPT,
                 chat_history=[Message(role="user", content=user_prompt)],
                 output_schema=DynamicSchema,
                 temperature=0.7,
             )
-
-            # 4. Convert back to Dict
             return result_model.model_dump()
 
         except Exception as e:
             logger.error(f"Data population failed: {e}")
-            # Fallback: return empty dict (renderer handles missing data gracefully now)
             return {}
 
     def _build_dynamic_schema(self, spec: CharacterSheetSpec) -> Type[BaseModel]:
@@ -182,7 +212,6 @@ class SheetGenerator:
         return spec
 
     def _create_field_from_concept(self, bp_field: Any) -> Any:
-        # ... (Same as previous step, kept for completeness of file) ...
         if bp_field.concept in ["stat", "text", "die", "toggle"]:
             widget_map = {
                 "stat": "number",
