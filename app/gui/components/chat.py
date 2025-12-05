@@ -36,7 +36,9 @@ class ChatComponent:
             self.nav_container.set_visibility(False)
 
             # Input Row
-            with ui.row().classes("w-full p-4 " + Theme.bg_tertiary + " items-end"):
+            with ui.row().classes(
+                "w-full p-4 " + Theme.bg_tertiary + " items-end gap-2 flex-nowrap"
+            ):
                 # Global History Menu
                 with (
                     ui.button(icon="history")
@@ -50,10 +52,11 @@ class ChatComponent:
                             "Clear Chat View", on_click=lambda: self.container.clear()
                         )
 
+                # This tells the input to take all AVAILABLE space, not 100% of parent space.
                 self.input_area = (
                     ui.textarea(placeholder="What do you do?")
                     .props('autogrow rows=1 rounded outlined input-class="text-white"')
-                    .classes("w-full text-lg flex-grow")
+                    .classes("flex-grow text-lg")
                     .on("keydown.enter.prevent", self.handle_enter)
                 )
 
@@ -64,7 +67,7 @@ class ChatComponent:
                     .classes(Theme.text_accent)
                 )
 
-                # Stop Button (Hidden by default)
+                # Stop Button
                 self.stop_btn = (
                     ui.button(icon="stop", on_click=self.handle_stop)
                     .props("flat round dense")

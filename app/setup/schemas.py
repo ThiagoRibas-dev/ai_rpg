@@ -1,41 +1,32 @@
-from typing import Any, Dict, List
-
+from typing import List, Literal
 from pydantic import BaseModel, Field
 
-from app.tools.schemas import LocationCreate, MemoryUpsert, NpcSpawn
+# NOTE: We define independent models here to avoid coupling with Tool Schemas.
+# Tool Schemas have strict Literal["name"] fields which confuse the LLM during data extraction.
 
 
-class CharacterExtractionBase(BaseModel):
-    """
-    Base structure for character extraction.
-    The 'stats' field is omitted here; it will be injected dynamically
-    based on the Game System Template at runtime.
-    """
-
-    name: str = Field(..., description="Name of the protagonist.")
+class NpcData(BaseModel):
+    name: str = Field(..., description="Name of the NPC.")
     visual_description: str = Field(..., description="Physical appearance.")
-    bio: str = Field(..., description="Short backstory/biography.")
-
-    inventory: List[str] = Field(
-        default_factory=list,
-        description="List of starting items inferred from the description.",
+    stat_template: str = Field(
+        ..., description="Archetype (e.g. 'Guard', 'Civilian', 'Boss')."
     )
-
-    companions: List[NpcSpawn] = Field(
-        default_factory=list,
-        description="Familiars, pets, or followers mentioned in the text.",
-    )
+    initial_disposition: Literal["hostile", "neutral", "friendly"] = "neutral"
 
 
-class CharacterExtraction(CharacterExtractionBase):
-    """
-    The legacy/fallback structure using a loose dictionary.
-    Used when no specific template is available.
-    """
+class LocationData(BaseModel):
+    key: str = Field(..., description="Unique snake_case ID (e.g. 'loc_market').")
+    name: str = Field(..., description="Display name (e.g. 'The Market').")
+    description_visual: str = Field(...)
+    description_sensory: str = Field(...)
+    type: str = Field(..., description="indoor, outdoor, structure, etc.")
 
-    suggested_stats: Dict[str, Any] = Field(
-        ..., description="Key-value pairs of attributes/skills inferred from text."
-    )
+
+class LoreData(BaseModel):
+    content: str
+    tags: List[str]
+    priority: int = 3
+    kind: str = "lore"
 
 
 class WorldExtraction(BaseModel):
@@ -44,25 +35,18 @@ class WorldExtraction(BaseModel):
     """
 
     genre: str = Field(
-        ...,
-        description="The specific sub-genre inferred from the text (e.g. 'Cosmic Horror', 'High Fantasy').",
+        ..., description="The specific sub-genre inferred from the text."
     )
-    tone: str = Field(
-        ..., description="The atmospheric tone (e.g. 'Gritty', 'Whimsical', 'Tense')."
-    )
+    tone: str = Field(..., description="The atmospheric tone.")
 
-    starting_location: LocationCreate = Field(
+    starting_location: LocationData = Field(
         ..., description="The initial scene location."
     )
-    adjacent_locations: List[LocationCreate] = Field(
+    adjacent_locations: List[LocationData] = Field(
         default_factory=list,
-        description="2-3 locations directly connected to the starting location (e.g. 'Street Outside', 'Kitchen')."
+        description="2-3 locations directly connected to the starting location.",
     )
-    lore: List[MemoryUpsert] = Field(
-        ...,
-        description="Key facts about the world mentioned in the text (e.g. factions, history).",
-    )
-    initial_npcs: List[NpcSpawn] = Field(
-        default_factory=list,
-        description="NPCs present in the starting scene (enemies, quest givers).",
+    lore: List[LoreData] = Field(..., description="Key facts about the world.")
+    initial_npcs: List[NpcData] = Field(
+        default_factory=list, description="NPCs present in the starting scene."
     )

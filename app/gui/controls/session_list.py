@@ -105,8 +105,9 @@ class SessionListComponent:
             self.map_component.set_session(session.id)
         self.context_editor.set_session(session.id)
 
-        self.refresh()
+        # Notify BEFORE refresh to avoid losing context
         ui.notify(f"Loaded: {session.name}")
+        self.refresh()
 
     def rename_session(self, session):
         with ui.dialog() as dialog, ui.card():
@@ -229,7 +230,9 @@ class SessionListComponent:
             try:
                 self.orchestrator.vector_store.delete_session_data(session.id)
             except Exception as e:
-                logger.warn(f"Failed to delete vector data for session {session.id}: {e}")
+                logger.warn(
+                    f"Failed to delete vector data for session {session.id}: {e}"
+                )
                 pass
 
         if self._active_session and self._active_session.id == session.id:

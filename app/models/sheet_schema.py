@@ -54,7 +54,7 @@ class SheetCategory(BaseModel):
 class CharacterSheetSpec(BaseModel):
     """The Blueprint of the Character Sheet"""
 
-    meta: SheetCategory = Field(default_factory=SheetCategory)
+    meta: SheetCategory = Field(default_factory=SheetCategory,)
     identity: SheetCategory = Field(default_factory=SheetCategory)
     attributes: SheetCategory = Field(default_factory=SheetCategory)
     skills: SheetCategory = Field(default_factory=SheetCategory)

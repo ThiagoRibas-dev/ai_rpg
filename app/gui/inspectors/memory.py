@@ -22,6 +22,9 @@ class MemoryInspector:
     def refresh(self):
         if not self.container:
             return
+
+        # We clear the container to rebuild the view.
+        # Note: This does cause search input to lose focus on refresh.
         self.container.clear()
 
         if not self.session_id:
@@ -56,19 +59,26 @@ class MemoryInspector:
                 ui.label(f"⚙️ {counts.get('user_pref', 0)}").tooltip("Preferences")
 
             # --- Controls ---
-            ui.input(placeholder="Search...", on_change=self._on_search).props(
-                "outlined dense rounded debounce=300"
-            ).classes("w-full mb-2 bg-slate-800 text-white text-sm")
+            # Search Input
+            ui.input(
+                placeholder="Search...",
+                value=self.search_term,
+                on_change=self._on_search,
+            ).props("outlined dense rounded debounce=300").classes(
+                "w-full mb-2 bg-slate-800 text-white text-sm"
+            )
 
-            with ui.tabs().classes("w-full text-xs") as tabs:
+            # Tabs
+            # Fix: Initialize with value to avoid triggering on_change immediately
+            with (
+                ui.tabs(value=self.active_tab)
+                .classes("w-full text-xs")
+                .on_value_change(self._on_tab_change)
+            ):
                 ui.tab("All")
                 ui.tab("Episodic")
                 ui.tab("Facts")
                 ui.tab("Lore")
-
-            # Bind tabs to filter logic
-            tabs.on_change(self._on_tab_change)
-            tabs.set_value(self.active_tab)  # Restore state
 
             # --- List ---
             with ui.scroll_area().classes("h-[500px] w-full pr-2"):
@@ -81,14 +91,16 @@ class MemoryInspector:
                     self._render_memory_card(mem)
 
     def _on_search(self, e):
-        self.search_term = e.value
-        self.refresh()
+        # Only refresh if value actually changed
+        if self.search_term != e.value:
+            self.search_term = e.value
+            self.refresh()
 
     def _on_tab_change(self, e):
-        # Map tab object back to string name if needed, or just use e.value
-        # NiceGUI tabs return the name/label as value usually
-        self.active_tab = e.value
-        self.refresh()
+        # Only refresh if value actually changed
+        if self.active_tab != e.value:
+            self.active_tab = e.value
+            self.refresh()
 
     def _render_memory_card(self, mem):
         kind_colors = {

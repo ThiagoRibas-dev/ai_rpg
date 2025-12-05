@@ -1,46 +1,32 @@
 """
 Prompts for the Dynamic Sheet Generator (The Architect).
-These prompts drive the creation of the JSON Schema (Structure) and the Data (Values).
 """
 
-# --- PASS 1: STRUCTURE GENERATION ---
+# --- PASS 1: STRUCTURE GENERATION (Targeting Blueprint) ---
 
 ARCHITECT_SYSTEM_PROMPT = """
 You are an expert **TTRPG Systems Architect**.
-Your goal is to design a **Character Sheet Data Structure** (JSON Schema) based on the provided Game Rules and Character Concept.
+Your goal is to design a **Character Sheet Blueprint** based on the Rules and Concept.
 
 ### THE GOAL
-You must define the "Shape" of the character sheet. You are NOT filling in values yet, you are defining the fields (e.g., "Strength is a Number", "Skills is a List").
+Define the "Shape" of the character sheet using the 10 Semantic Categories.
+For each field, verify its `concept` type carefully.
 
-### THE 10 SEMANTIC CATEGORIES
-You must organize the data into exactly these 10 categories:
-1.  **meta**: System version, player name.
-2.  **identity**: Name, concept, background, appearance.
-3.  **attributes**: Core innate stats (STR, DEX, IQ, etc.).
-4.  **skills**: Learned abilities or proficiencies.
-5.  **resources**: Fluctuating pools (HP, Mana, Sanity, Ammo, Stress).
-6.  **features**: Static abilities, feats, traits, racial bonuses.
-7.  **inventory**: Physical gear and equipment.
-8.  **connections**: Relationships, contacts, allies.
-9.  **narrative**: Story hooks, beliefs, instincts, goals.
-10. **progression**: XP, Level, Milestones.
-
-### THE PRIMITIVES
-For each field, you must decide its type:
-*   **Atom (ValueField)**: A single value (Number, String, Boolean).
-    *   *Widgets:* `text`, `number`, `die` (e.g. d6), `toggle`, `select`.
-*   **Molecule (CompositeField)**: A group of related fields.
-    *   *Use Case:* Resource Pools (Current + Max), Clocks (Segments).
-    *   *Widgets:* `pool`, `track`.
-*   **List (RepeaterField)**: A dynamic list where the player adds rows.
-    *   *Use Case:* Inventory, Skill List, Spellbook.
-    *   *Widget:* `repeater`.
+### FIELD CONCEPTS (Choose One)
+1.  **stat**: A numeric attribute (e.g. Strength, XP).
+2.  **text**: A text field (e.g. Name, Race).
+3.  **die**: A die code (e.g. 1d6, d20).
+4.  **pool**: A resource with Current/Max (e.g. HP, Mana).
+5.  **list**: A container for multiple items (e.g. Inventory, Skills, Feats).
+6.  **toggle**: A true/false checkbox.
 
 ### CRITICAL RULES
-1.  **Analyze the Rules Text:** If the rules say "Sanity is 0-99", define it as a Resource with min 0 and max 99.
-2.  **Analyze the Concept:** If the user says "I am a Cyborg", ensure there are fields for "Cybernetics" (likely in Features or Inventory).
-3.  **Ambiguity:** If the rules are vague, hallucinate a logical structure that fits the *tone* of the concept.
-4.  **Output:** Return ONLY the JSON structure matching the `CharacterSheetSpec` schema.
+1.  **Lists:** If the rules imply a list (e.g. "Weapons", "Spells"), use `concept="list"` and provide `list_columns` (e.g. ["name", "damage"]).
+2.  **Pools:** If a stat goes up and down (HP, Sanity), use `concept="pool"`.
+3.  **Defaults:** Provide reasonable defaults (e.g. HP max = 10).
+4.  **Categories:** strictly adhere to the 10 categories (meta, identity, attributes, skills, resources, features, inventory, connections, narrative, progression).
+
+Output strictly JSON matching the `SheetBlueprint` schema.
 """
 
 ARCHITECT_USER_TEMPLATE = """
@@ -54,31 +40,28 @@ ARCHITECT_USER_TEMPLATE = """
 Design the Character Sheet Structure (JSON) for this specific character in this specific system.
 """
 
-# --- PASS 2: DATA POPULATION ---
+# --- PASS 2: DATA POPULATION (Targeting Full Spec) ---
 
 POPULATE_SYSTEM_PROMPT = """
 You are an expert **TTRPG Character Creator**.
 Your goal is to fill in the **Values** for a character sheet based on a provided **Schema** and **Concept**.
 
+### CRITICAL INSTRUCTION: RESPECT THE STRUCTURE
+1. **Molecule Fields:** If a field is defined as a `molecule` (e.g., HP), you MUST provide a dictionary with the components.
+   *   *Wrong:* `"hp": 10`
+   *   *Right:* `"hp": { "current": 10, "max": 10 }`
+2. **List Fields:** If a field is a `list` container (e.g. Inventory), you MUST provide a dictionary containing the list key.
+   *   *Wrong:* `"inventory": [ ...items... ]`
+   *   *Right:* `"inventory": { "backpack": [ ...items... ] }`
+   *   *(Note: Look at the schema to see the actual list key, usually 'backpack' or 'items')*
+
 ### INSTRUCTIONS
-1.  **Read the Schema:** You will be given a JSON structure defining fields like "attributes.strength" or "resources.hp".
-2.  **Read the Concept:** Analyze the user's description (e.g., "Strong but dumb barbarian").
-3.  **Assign Values:**
-    *   If the schema says "Strength" is a number 1-20, and the character is "Strong", assign 16-18.
-    *   If the schema has an "Inventory" list, add items mentioned in the concept (e.g., "Great Axe").
-4.  **Constraints:**
-    *   **DO NOT** invent new keys. You must strictly follow the provided Schema.
-    *   **DO NOT** change the structure. Only fill the `default` or `value` fields.
-    *   Return a JSON dictionary where keys match the Schema categories.
+1.  **Read the Schema:** You will be given a JSON structure defining fields.
+2.  **Read the Concept:** Analyze the user's description.
+3.  **Assign Values:** Fill in the data matching the schema types.
 
 ### OUTPUT FORMAT
-A flat JSON dictionary of the data, organized by category:
-{{
-  "identity": {{ "name": "..." }},
-  "attributes": {{ "str": 18, "int": 6 }},
-  "resources": {{ "hp": {{ "current": 12, "max": 12 }} }},
-  "inventory": [ {{ "name": "Axe", "qty": 1 }} ]
-}}
+Return a JSON dictionary where keys match the Schema categories exactly.
 """
 
 POPULATE_USER_TEMPLATE = """

@@ -1,3 +1,4 @@
+
 """Repository for Ruleset operations."""
 
 from typing import List, Optional
@@ -52,6 +53,15 @@ class RulesetRepository(BaseRepository):
                 return Ruleset.model_validate_json(row["data_json"])
             except Exception:
                 return None
+        return None
+
+    def get_by_name(self, name: str) -> Optional[dict]:
+        """Retrieve a Ruleset ID and Data by Name."""
+        row = self._fetchone(
+            "SELECT id, data_json FROM rulesets WHERE name = ?", (name,)
+        )
+        if row:
+            return {"id": row["id"], "data_json": row["data_json"]}
         return None
 
     def get_all(self) -> List[dict]:

@@ -9,7 +9,7 @@ from app.models.sheet_schema import CharacterSheetSpec
 class StateContextBuilder:
     """
     Builds the CURRENT STATE section by querying game state.
-    Refactored to support Dynamic CharacterSheetSpec.
+    Includes explicit Scene Roster for tool targeting.
     """
 
     def __init__(
@@ -36,16 +36,10 @@ class StateContextBuilder:
             tid = player.get("template_id")
             template = self.db.stat_templates.get_by_id(tid) if tid else None
 
-            # If no template, we can't render semantically, just dump raw?
-            # Better to try to render what we can find.
-
             name = player.get("name", "Player")
             lines.append(f"**Player Character**: {name}")
 
             # 2. Render Categories (Dynamic)
-            # We want to present this to the LLM in a clean, dense format.
-
-            # Categories to include in context (in order of importance)
             cats = [
                 "attributes",
                 "resources",
@@ -56,7 +50,6 @@ class StateContextBuilder:
                 "narrative",
             ]
 
-            # Helper to get field definition
             def get_field_def(cat, key):
                 if template and isinstance(template, CharacterSheetSpec):
                     cat_obj = getattr(template, cat, None)
@@ -72,7 +65,6 @@ class StateContextBuilder:
                 cat_lines = []
 
                 for key, val in data.items():
-                    # Get definition for label
                     field_def = get_field_def(cat, key)
                     label = (
                         field_def.display.label
@@ -80,16 +72,13 @@ class StateContextBuilder:
                         else key.replace("_", " ").title()
                     )
 
-                    # Formatting based on value type
                     display_val = str(val)
 
-                    # Case: Pool (Current/Max)
                     if isinstance(val, dict) and "current" in val:
                         curr = val.get("current", 0)
                         mx = val.get("max", "?")
                         display_val = f"{curr}/{mx}"
 
-                    # Case: List (Inventory/Skills)
                     elif isinstance(val, list):
                         if not val:
                             continue
@@ -109,8 +98,7 @@ class StateContextBuilder:
                 if cat_lines:
                     lines.append(f"**{cat.capitalize()}**: " + ", ".join(cat_lines))
 
-            # 3. Active Quests (Legacy/Side-channel)
-            # Quests might still use the old 'quest' entity type, which is fine.
+            # 3. Active Quests
             quest_result = self.tools.execute(
                 StateQuery(entity_type="quest", key="*", json_path="."),
                 context={"session_id": session_id, "db_manager": self.db},
@@ -130,6 +118,30 @@ class StateContextBuilder:
                     lines.append("**Active Quests**:")
                     for q in active_q:
                         lines.append(f"- {q}")
+
+            # 4. SCENE ROSTER (The Fix)
+            # Explicitly map names to IDs for the LLM
+            scene = self.db.game_state.get_entity(session_id, "scene", "active_scene")
+            if scene and "members" in scene:
+                roster_lines = []
+                for member_str in scene["members"]:
+                    # Skip player in roster as they are Context
+                    if "player" in member_str:
+                        continue
+
+                    if ":" in member_str:
+                        etype, ekey = member_str.split(":", 1)
+                        entity = self.db.game_state.get_entity(session_id, etype, ekey)
+                        if entity:
+                            e_name = entity.get("name", "Unknown")
+                            e_disp = entity.get("disposition", "")
+                            status = f" [{e_disp}]" if e_disp else ""
+                            roster_lines.append(f"- {e_name} (ID: `{ekey}`){status}")
+
+                if roster_lines:
+                    lines.append("")
+                    lines.append("**SCENE ROSTER (Use IDs for tools):**")
+                    lines.extend(roster_lines)
 
         except Exception as e:
             if self.logger:

@@ -58,11 +58,13 @@ class MapComponent:
             print(f"Map refresh error: {e}")
 
     def render(self):
-        with ui.column().classes("w-full p-0 gap-0"):
+        with ui.column().classes("w-full h-full p-0 gap-0"):
             with ui.row().classes(
                 "w-full bg-slate-900 p-2 items-center justify-between border-b border-slate-700"
             ):
-                with ui.row().classes("gap-1"):
+                with ui.row().classes(
+                    "w-full bg-slate-900 p-2 items-center justify-between border-b border-slate-700 shrink-0"
+                ):
                     ui.icon("map").classes("text-gray-400")
                     ui.label("Visuals").classes("font-bold text-gray-200")
 
@@ -74,9 +76,9 @@ class MapComponent:
                         "dense"
                     )
 
-            # ✅ FIX: Added sanitize=False
+            # Map Area (Flex Grow to fill the splitter pane)
             self.content = ui.html("", sanitize=False).classes(
-                "w-full bg-slate-950 flex justify-center items-center overflow-hidden"
+                "w-full flex-grow bg-slate-950 flex justify-center items-center overflow-hidden"
             )
 
     def set_mode(self, mode):

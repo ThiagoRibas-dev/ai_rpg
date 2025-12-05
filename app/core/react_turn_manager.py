@@ -44,7 +44,6 @@ class ReActTurnManager:
     def execute_turn(self, game_session: GameSession, thread_db_manager):
         """
         Main ReAct Loop.
-        Checks orchestrator.stop_event at every major step.
         """
         if self.orchestrator.stop_event.is_set():
             return
@@ -108,7 +107,7 @@ class ReActTurnManager:
                 )
             )
 
-        # Define Tools
+        # --- DYNAMIC TOOL INJECTION ---
         active_tool_names = [
             EntityUpdate.model_fields["name"].default,
             GameRoll.model_fields["name"].default,
@@ -117,6 +116,22 @@ class ReActTurnManager:
             TimeAdvance.model_fields["name"].default,
         ]
         llm_tools = self.tool_registry.get_llm_tool_schemas(active_tool_names)
+
+        # Inject Ruleset Mechanics into GameRoll tool description
+        ruleset_id = manifest.get("ruleset_id")
+        if ruleset_id:
+            ruleset = thread_db_manager.rulesets.get_by_id(ruleset_id)
+            if ruleset:
+                for tool in llm_tools:
+                    if tool["function"]["name"] == GameRoll.model_fields["name"].default:
+                        eng = ruleset.engine
+                        desc = (
+                            f"Roll dice to resolve actions. "
+                            f"SYSTEM RULES: Dice='{eng.dice_notation}'. "
+                            f"Mechanic='{eng.roll_mechanic}'. "
+                            f"Crit='{eng.crit_rules}'."
+                        )
+                        tool["function"]["description"] = desc
 
         # --- 2. Phase A: The Action Loop ---
         self.ui_queue.put({"type": "planning_started", "content": "Thinking..."})
@@ -131,7 +146,6 @@ class ReActTurnManager:
 
             loop_count += 1
 
-            # API Call
             try:
                 response = self.llm_connector.chat_with_tools(
                     system_prompt=static_instruction,
@@ -139,12 +153,10 @@ class ReActTurnManager:
                     tools=llm_tools,
                 )
             except Exception as e:
-                # If API fails, check stop event again
                 if self.orchestrator.stop_event.is_set():
                     return
                 raise e
 
-            # Append Assistant Message
             assistant_msg = Message(
                 role="assistant",
                 content=response.content,
@@ -152,7 +164,6 @@ class ReActTurnManager:
             )
             working_history.append(assistant_msg)
 
-            # CASE 1: Tools
             if response.tool_calls:
                 self.logger.info(
                     f"ReAct Loop {loop_count}: Model called {len(response.tool_calls)} tools."
@@ -223,8 +234,6 @@ class ReActTurnManager:
                         working_history.append(error_msg)
 
                 continue
-
-            # CASE 2: No Tools (Done)
             else:
                 if response.content:
                     final_narrative = response.content
@@ -244,7 +253,6 @@ class ReActTurnManager:
             )
             full_response = final_narrative
         else:
-            # Fallback generation
             working_history.append(
                 Message(
                     role="user",

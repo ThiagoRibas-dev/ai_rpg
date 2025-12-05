@@ -9,6 +9,7 @@ class CharacterInspector:
     """
     Universal Character Sheet Renderer.
     Adapts to any CharacterSheetSpec structure.
+    Includes defensive coding to handle LLM structure mismatches.
     """
 
     def __init__(self, db_manager):
@@ -45,11 +46,9 @@ class CharacterInspector:
             return
 
         # 2. Render Loop
-        # We iterate through the standard categories if they exist in the template
         with self.container:
             self._render_header(entity, template)
 
-            # Categories to render in order
             cats = [
                 "attributes",
                 "resources",
@@ -60,7 +59,6 @@ class CharacterInspector:
                 "narrative",
             ]
 
-            # Convert template to dict if it's a model
             spec = (
                 template.model_dump() if hasattr(template, "model_dump") else template
             )
@@ -73,8 +71,6 @@ class CharacterInspector:
 
     def _render_header(self, entity, template):
         name = entity.get("name", "Unknown")
-
-        # Try to find "concept" or "occupation" in identity
         identity = entity.get("identity", {})
         subtext = (
             identity.get("concept")
@@ -87,11 +83,15 @@ class CharacterInspector:
             with ui.column().classes("gap-0"):
                 ui.label(name).classes("text-2xl font-bold text-white leading-none")
                 ui.label(subtext).classes("text-xs text-amber-400")
-
             ui.icon("person").classes("text-slate-600 text-4xl")
 
     def _render_category(self, cat_key, cat_def, cat_data):
         """Renders a whole category (e.g. Attributes)."""
+        
+        # DEFENSIVE: If data isn't a dict (e.g. legacy inventory list), skip
+        if not isinstance(cat_data, dict):
+            return
+
         fields = cat_def.get("fields", {})
         if not fields:
             return
@@ -102,9 +102,6 @@ class CharacterInspector:
             ui.label(cat_key.title()).classes(
                 "text-xs font-bold text-gray-500 uppercase mb-2"
             )
-
-            # We want to group by 'molecule' (like Pools) vs 'atom' (Stats) to layout them nicely.
-            # For now, simple vertical stack or grid.
 
             for field_key, field_def in fields.items():
                 self._render_field(field_key, field_def, cat_data)
@@ -134,8 +131,12 @@ class CharacterInspector:
         elif container_type == "molecule":
             val_obj = data_source.get(key, {})
 
+            # DEFENSIVE: If we expect a molecule (dict) but got a primitive (int/str)
+            # This happens if LLM ignored structure prompts.
+            if not isinstance(val_obj, dict):
+                val_obj = {"current": val_obj, "max": val_obj, "value": val_obj}
+
             if widget == "pool":
-                # Current / Max
                 curr = val_obj.get("current", 0)
                 mx = val_obj.get("max", 10)
                 pct = max(0, min(1, curr / mx)) if mx > 0 else 0
@@ -149,28 +150,25 @@ class CharacterInspector:
                     )
 
             elif widget == "track":
-                # Checkboxes
-                # Logic: We need 'value' (how many marked) and 'length' (total)
-                # Spec usually defines 'components' -> 'value'
-                # If 'max' is in components, use it, else check display options
                 val = val_obj.get("value", 0)
-                # Try to find max in components default or display options
-                length = 5
-                # (Simplification: defaulting to 5 for prototype)
-
+                length = 5 # Default
+                
                 with ui.row().classes("w-full justify-between items-center mb-1"):
                     ui.label(label).classes("text-sm")
                     with ui.row().classes("gap-1"):
                         for i in range(length):
                             icon = (
                                 "circle" if i < val else "circle_notifications"
-                            )  # filled vs outline approx
+                            )
                             color = "text-red-400" if i < val else "text-gray-700"
                             ui.icon("circle").classes(f"text-[10px] {color}")
 
         elif container_type == "list":
-            # Repeater
-            items = data_source.get(key, [])  # List of dicts
+            items = data_source.get(key, [])
+            
+            # DEFENSIVE: If items isn't a list (e.g. dict or None), handle gracefully
+            if not isinstance(items, list):
+                items = []
 
             with ui.expansion(f"{label} ({len(items)})", icon="list").classes(
                 "w-full bg-slate-900 rounded mb-1"
