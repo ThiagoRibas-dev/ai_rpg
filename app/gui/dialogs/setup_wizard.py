@@ -2,6 +2,7 @@ from nicegui import ui
 import asyncio
 import logging
 import json
+import time
 from app.setup.world_gen_service import WorldGenService
 from app.setup.sheet_generator import SheetGenerator
 from app.services.game_setup_service import GameSetupService
@@ -33,6 +34,11 @@ class SetupWizard:
         self.generated_opening = ""
 
         self.is_generating = False
+        
+        # Status
+        self.status_msg = ""
+        self.start_time = None
+        self.status_timer = None
 
         # UI State for Lore
         self.lore_ui_items = []
@@ -100,8 +106,15 @@ class SetupWizard:
                     ):
                         self.spinner = ui.spinner(size="lg").classes("text-blue-500")
                         self.status_label = ui.label("Initializing...").classes(
-                            "text-lg animate-pulse"
+                            "text-lg animate-pulse font-mono"
                         )
+                        
+                        # Error Container (Hidden by default)
+                        self.error_container = ui.column().classes("items-center hidden")
+                        with self.error_container:
+                            ui.icon("error", size="4em").classes("text-red-500")
+                            self.error_msg = ui.label("Error").classes("text-red-400 text-center")
+                            ui.button("Back", on_click=self.stepper.previous).props("flat")
 
                         with ui.stepper_navigation():
                             self.btn_review = ui.button(
@@ -123,67 +136,103 @@ class SetupWizard:
     async def run_generation(self):
         self.stepper.next()
         self.is_generating = True
-        await asyncio.to_thread(self._execute_pipeline)
-        self._prepare_review_data()
-        self._render_review()
-        self.btn_review.classes(remove="hidden")
-        self.stepper.next()
-
-    def _execute_pipeline(self):
-        connector = self.orchestrator._get_llm_connector()
-        sheet_gen = SheetGenerator(connector)
-
-        # 1. World Gen
-        self._update_status("Building World...")
-        world_service = WorldGenService(connector)
-        self.extracted_world = world_service.extract_world_data(self.input_world)
-
-        # 2. Check for Vocabulary (The Smart Path)
-        vocabulary = None
-        if self.prompt.template_manifest:
-            try:
-                data = json.loads(self.prompt.template_manifest)
-                if "vocabulary" in data:
-                    vocabulary = GameVocabulary(**data["vocabulary"])
-            except Exception as e:
-                logger.warning(f"Failed to load vocabulary from manifest: {e}")
-
-        # 3. Character Gen
-        if vocabulary:
-            # === STRATEGY 2: VOCABULARY-AWARE ===
-            self._update_status("Generating from Rules Vocabulary...")
-            self.generated_spec, self.generated_values = (
-                sheet_gen.generate_from_vocabulary(
-                    vocabulary, self.input_char, rules_text=self.prompt.rules_document
-                )
-            )
+        
+        # Reset UI
+        self.spinner.classes(remove="hidden")
+        self.status_label.classes(remove="hidden")
+        self.error_container.classes(add="hidden")
+        self.btn_review.classes(add="hidden")
+        
+        self.start_time = time.time()
+        self.status_timer = ui.timer(0.1, self._update_timer_ui)
+        
+        # Run Pipeline
+        success = await asyncio.to_thread(self._execute_pipeline)
+        
+        if self.status_timer:
+            self.status_timer.cancel()
+            
+        if success:
+            self.spinner.classes(add="hidden")
+            self.status_label.set_text("Complete!")
+            self._prepare_review_data()
+            self._render_review()
+            self.btn_review.classes(remove="hidden")
+            self.stepper.next()
         else:
-            # === STRATEGY 1: LEGACY / ARCHITECT ===
-            self._update_status("Architecting Character Sheet (Legacy)...")
-            self.generated_spec = sheet_gen.generate_structure(
-                self.prompt.rules_document, self.input_char
-            )
-            self._update_status("Populating Character Data...")
-            self.generated_values = sheet_gen.populate_sheet(
-                self.generated_spec,
-                self.input_char,
-                rules_text=self.prompt.rules_document,
-            )
+            # Error state handled in _execute_pipeline wrapper, but we update UI here
+            self.spinner.classes(add="hidden")
+            self.status_label.classes(add="hidden")
+            self.error_container.classes(remove="hidden")
 
-        # 4. Opening Crawl
-        self._update_status("Writing Intro...")
-
-        class DummyChar:
-            name = self.generated_values.get("identity", {}).get("name", "Player")
-
-        self.generated_opening = world_service.generate_opening_crawl(
-            DummyChar(), self.extracted_world, self.input_world
-        )
-
-        self._update_status("Done!")
+    def _update_timer_ui(self):
+        if self.start_time:
+            elapsed = time.time() - self.start_time
+            self.status_label.set_text(f"{self.status_msg} ({elapsed:.1f}s)")
 
     def _update_status(self, msg):
-        self.status_label.set_text(msg)
+        self.status_msg = msg
+
+    def _execute_pipeline(self):
+        try:
+            connector = self.orchestrator._get_llm_connector()
+            sheet_gen = SheetGenerator(connector)
+            
+            # 1. World Gen
+            self._update_status("[Step 1/4] Building World...")
+            world_service = WorldGenService(connector)
+            self.extracted_world = world_service.extract_world_data(self.input_world)
+
+            # 2. Check for Vocabulary
+            vocabulary = None
+            if self.prompt.template_manifest:
+                try:
+                    data = json.loads(self.prompt.template_manifest)
+                    if "vocabulary" in data:
+                        vocabulary = GameVocabulary(**data["vocabulary"])
+                except Exception as e:
+                    logger.warning(f"Failed to load vocabulary from manifest: {e}")
+
+            # 3. Character Gen
+            self._update_status("[Step 2/4] Generating Character...")
+            if vocabulary:
+                # STRATEGY 2: VOCABULARY-AWARE
+                self._update_status("[Step 2/4] Generating from Vocabulary...")
+                self.generated_spec, self.generated_values = (
+                    sheet_gen.generate_from_vocabulary(
+                        vocabulary, self.input_char, rules_text=self.prompt.rules_document
+                    )
+                )
+            else:
+                # STRATEGY 1: LEGACY
+                self._update_status("[Step 2/4] Architecting Sheet...")
+                self.generated_spec = sheet_gen.generate_structure(
+                    self.prompt.rules_document, self.input_char
+                )
+                self._update_status("[Step 3/4] Populating Data...")
+                self.generated_values = sheet_gen.populate_sheet(
+                    self.generated_spec,
+                    self.input_char,
+                    rules_text=self.prompt.rules_document,
+                )
+
+            # 4. Opening Crawl
+            self._update_status("[Step 4/4] Writing Intro...")
+
+            class DummyChar:
+                name = self.generated_values.get("identity", {}).get("name", "Player")
+
+            self.generated_opening = world_service.generate_opening_crawl(
+                DummyChar(), self.extracted_world, self.input_world
+            )
+
+            self._update_status("Done!")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Generation Pipeline Failed: {e}", exc_info=True)
+            self.error_msg.set_text(f"Generation Failed: {str(e)}")
+            return False
 
     def _prepare_review_data(self):
         if self.extracted_world:
@@ -375,7 +424,6 @@ class SetupWizard:
 
         self.extracted_world.lore = final_lore
         
-        # FIX: Pass vector_store to service
         service = GameSetupService(self.db, self.orchestrator.vector_store)
 
         try:

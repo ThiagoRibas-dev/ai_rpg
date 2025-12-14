@@ -1,6 +1,7 @@
 from nicegui import ui
 import json
 import asyncio
+import time
 from app.models.prompt import Prompt
 from app.setup.rules_generator import RulesGenerator
 import logging
@@ -28,6 +29,11 @@ class PromptEditorDialog:
 
         self.status_label = None
         self.gen_btn = None
+        
+        # Extraction State
+        self.extraction_start_time = None
+        self.current_status_msg = ""
+        self.status_timer = None
 
     def open(self):
         with (
@@ -82,8 +88,9 @@ class PromptEditorDialog:
                             .props("icon=auto_awesome")
                         )
                         self.status_label = ui.label("").classes(
-                            "text-xs text-green-400"
+                            "text-xs text-green-400 font-mono"
                         )
+
                         ui.textarea().bind_value(self, "manifest_json").classes(
                             "w-full h-full font-mono text-xs"
                         ).props('outlined input-class="h-full"')
@@ -100,10 +107,29 @@ class PromptEditorDialog:
         if not self.rules.strip():
             ui.notify("Please enter Rules text first.", type="warning")
             return
+        
         self.gen_btn.disable()
-        self.status_label.set_text("Extracting...")
+        self.extraction_start_time = time.time()
+        self.current_status_msg = "Initializing..."
+        
+        # Start UI timer to update label with elapsed time
+        self.status_timer = ui.timer(0.1, self._refresh_status_ui)
+        
         await asyncio.to_thread(self._execute_extraction)
+        
+        # Cleanup
+        if self.status_timer:
+            self.status_timer.cancel()
+            self.status_timer = None
+            
+        elapsed = time.time() - self.extraction_start_time
+        self.status_label.set_text(f"Complete! ({elapsed:.1f}s)")
         self.gen_btn.enable()
+
+    def _refresh_status_ui(self):
+        if self.extraction_start_time:
+            elapsed = time.time() - self.extraction_start_time
+            self.status_label.set_text(f"{self.current_status_msg} ({elapsed:.1f}s)")
 
     def _execute_extraction(self):
         connector = self.orchestrator._get_llm_connector()
@@ -124,7 +150,9 @@ class PromptEditorDialog:
             self._update_status(f"Error: {str(e)}")
 
     def _update_status(self, msg):
-        self.status_label.set_text(msg)
+        # Update state variable (thread-safe for simple types)
+        # The UI timer will pick this up on the main thread
+        self.current_status_msg = msg
 
     def save(self):
         if not self.name or not self.content:
