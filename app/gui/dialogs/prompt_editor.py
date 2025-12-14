@@ -84,10 +84,9 @@ class PromptEditorDialog:
                         self.status_label = ui.label("").classes(
                             "text-xs text-green-400"
                         )
-
-                    ui.textarea().bind_value(self, "manifest_json").classes(
-                        "w-full h-full font-mono text-xs"
-                    ).props('outlined input-class="h-full"')
+                        ui.textarea().bind_value(self, "manifest_json").classes(
+                            "w-full h-full font-mono text-xs"
+                        ).props('outlined input-class="h-full"')
 
             with ui.row().classes(
                 "w-full bg-slate-950 p-4 justify-end gap-2 border-t border-slate-700 absolute bottom-0"
