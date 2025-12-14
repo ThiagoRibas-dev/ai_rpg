@@ -5,6 +5,7 @@ from app.models.game_session import GameSession
 from app.models.message import Message
 from app.setup.setup_manifest import SetupManifest
 from app.services.state_service import get_entity
+from app.models.vocabulary import ROLE_TO_CATEGORY, SemanticRole
 
 
 class ContextBuilder:
@@ -42,6 +43,11 @@ class ContextBuilder:
             ruleset = self.db.rulesets.get_by_id(ruleset_id)
             if ruleset:
                 sections.append(self._render_engine_config(ruleset))
+
+        # Vocabulary Hints (Valid Paths)
+        vocab_hints = self._build_vocabulary_hints(manifest)
+        if vocab_hints:
+            sections.append(vocab_hints)
 
         if game_session.authors_note:
             sections.append("# AUTHOR'S NOTE")
@@ -154,27 +160,40 @@ class ContextBuilder:
             lines.append("")
         return "\n".join(lines)
 
-
     def _build_vocabulary_hints(self, manifest: dict) -> str:
-        """Build vocabulary hints for the LLM context."""
+        """
+        Build vocabulary hints for the LLM context.
+        Updated to use canonical paths from ROLE_TO_CATEGORY.
+        """
         vocab_data = manifest.get("vocabulary")
         if not vocab_data:
             return ""
-        
+
         try:
             from app.models.vocabulary import GameVocabulary
+
             vocab = GameVocabulary(**vocab_data)
-            
+
             lines = ["# VALID UPDATE PATHS #"]
-            
+
             # Group by semantic role
-            for role in ["core_trait", "resource", "capability", "status", "progression"]:
-                role_paths = [p for p in vocab.valid_paths if p.startswith(f"{role}.")]
+            for role in SemanticRole:
+                # Map role (e.g. core_trait) to category (e.g. attributes)
+                category = ROLE_TO_CATEGORY.get(role, role.value)
+
+                # Filter paths that start with this category
+                # valid_paths are now like "attributes.str", "resources.hp"
+                role_paths = [
+                    p for p in vocab.valid_paths if p.startswith(f"{category}.")
+                ]
+
                 if role_paths:
-                    lines.append(f"**{role.replace('_', ' ').title()}**: {', '.join(role_paths[:5])}")
-                    if len(role_paths) > 5:
-                        lines.append(f"  ... and {len(role_paths) - 5} more")
-            
+                    lines.append(
+                        f"**{category.replace('_', ' ').title()}**: {', '.join(role_paths[:6])}"
+                    )
+                    if len(role_paths) > 6:
+                        lines.append(f"  ... and {len(role_paths) - 6} more")
+
             return "\n".join(lines)
         except Exception as e:
             self.logger.debug(f"Failed to build vocabulary hints: {e}")
@@ -203,7 +222,7 @@ class ContextBuilder:
                         lines.append("Exits: " + ", ".join(exits))
             return "\n".join(lines)
         except Exception as e:
-            self.logger.warning(f"Failed to build spatial context: {e}")
+            self.logger.debug(f"Failed to build spatial context: {e}")
             return ""
 
     def get_truncated_history(

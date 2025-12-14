@@ -1,8 +1,8 @@
-
 import logging
 import os
 import queue
 import threading
+import uuid
 from typing import Callable
 
 from app.core.react_turn_manager import ReActTurnManager
@@ -36,6 +36,7 @@ class Orchestrator:
         
         # Threading Control
         self.stop_event = threading.Event()
+        self.active_turn_id: str | None = None
 
     def _get_llm_connector(self) -> LLMConnector:
         provider = os.environ.get("LLM_PROVIDER", "GEMINI").upper()
@@ -47,9 +48,13 @@ class Orchestrator:
             raise ValueError(f"Unsupported LLM_PROVIDER: {provider}")
 
     def stop_generation(self):
-        """Signal the running turn to stop."""
+        """Signal the running turn to stop and ignore subsequent UI events."""
         self.logger.info("🛑 Stop signal received.")
         self.stop_event.set()
+        
+        # Invalidate current turn ID so late UI events are dropped
+        self.active_turn_id = None
+        self.bridge.set_active_turn(None)
 
     def plan_and_execute(self, session: GameSession):
         logger.debug("Starting plan_and_execute (non-blocking)")
@@ -58,8 +63,18 @@ class Orchestrator:
         if not user_input or not self.session:
             return
 
+        # 1. Generate Turn ID
+        self.active_turn_id = uuid.uuid4().hex
+        self.bridge.set_active_turn(self.active_turn_id)
+
+        # 2. Optimistic UI update (tagged with turn_id)
         self.session.add_message("user", user_input)
-        self.ui_queue.put({"type": "message_bubble", "role": "user", "content": user_input})
+        self.ui_queue.put({
+            "type": "message_bubble", 
+            "role": "user", 
+            "content": user_input,
+            "turn_id": self.active_turn_id
+        })
         self.bridge.clear_input()
         
         session.session_data = self.session.to_json()
@@ -68,20 +83,30 @@ class Orchestrator:
         self.stop_event.clear()
 
         thread = threading.Thread(
-            target=self._background_execute, args=(session, user_input), daemon=True, name=f"Turn-{session.id}"
+            target=self._background_execute, 
+            args=(session, user_input, self.active_turn_id), 
+            daemon=True, 
+            name=f"Turn-{session.id}-{self.active_turn_id}"
         )
         thread.start()
 
-    def _background_execute(self, game_session: GameSession, user_input: str):
-        logger.debug(f"Executing _background_execute for session {game_session.id}")
+    def _background_execute(self, game_session: GameSession, user_input: str, turn_id: str):
+        logger.debug(f"Executing _background_execute for session {game_session.id}, turn {turn_id}")
         try:
             with DBManager(self.db_path) as thread_db_manager:
-                self.turn_manager.execute_turn(game_session, thread_db_manager)
+                self.turn_manager.execute_turn(game_session, thread_db_manager, turn_id)
         except Exception as e:
             logger.error(f"Turn failed: {e}", exc_info=True)
-            self.ui_queue.put({"type": "error", "message": str(e)})
+            self.ui_queue.put({
+                "type": "error", 
+                "message": str(e),
+                "turn_id": turn_id
+            })
         finally:
-            self.ui_queue.put({"type": "turn_complete"})
+            self.ui_queue.put({
+                "type": "turn_complete",
+                "turn_id": turn_id
+            })
 
     def _update_game_in_thread(self, game_session: GameSession, db_manager: DBManager, final_session_state: Session):
         """Helper to update the game session in the database from a background thread."""
@@ -146,12 +171,16 @@ class Orchestrator:
 
         self.ui_queue.put({"type": "history_changed"}) 
 
-        # Reset stop flag
+        # Reset stop flag and set new turn ID
         self.stop_event.clear()
+        self.active_turn_id = uuid.uuid4().hex
+        self.bridge.set_active_turn(self.active_turn_id)
 
         if last_user_msg:
             thread = threading.Thread(
-                target=self._background_execute, args=(game_session, last_user_msg), daemon=True
+                target=self._background_execute, 
+                args=(game_session, last_user_msg, self.active_turn_id), 
+                daemon=True
             )
             thread.start()
 

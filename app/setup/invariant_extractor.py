@@ -2,13 +2,6 @@
 Invariant Extractor
 ===================
 Vocabulary-aware extraction of state invariants from rules text.
-
-The extractor:
-1. Uses vocabulary to provide valid paths in the prompt
-2. Validates extracted invariants against vocabulary
-3. Filters out invalid invariants with warnings
-
-This ensures all invariants are guaranteed to work at runtime.
 """
 
 import logging
@@ -29,7 +22,6 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 class ExtractedInvariant(BaseModel):
-    """An invariant as extracted by the LLM."""
     name: str = Field(..., description="Human-readable name")
     target_path: str = Field(..., description="Path to constrained value")
     constraint: str = Field(..., description="Comparison: >=, <=, ==, !=, in_range")
@@ -39,7 +31,6 @@ class ExtractedInvariant(BaseModel):
 
 
 class InvariantList(BaseModel):
-    """List of extracted invariants."""
     invariants: List[ExtractedInvariant] = Field(default_factory=list)
 
 
@@ -50,17 +41,17 @@ class InvariantList(BaseModel):
 def build_invariant_extraction_prompt(vocab: GameVocabulary) -> str:
     """
     Build a vocabulary-aware extraction prompt.
-    
     Includes valid paths so the LLM knows exactly what it can reference.
     """
-    # Get sample paths grouped by role
+    # Get sample paths grouped by category (first part of path)
     path_examples = []
-    seen_roles = set()
+    seen_cats = set()
     
-    for path in vocab.valid_paths[:30]:  # Limit for prompt size
+    # vocab.valid_paths now returns canonical paths (e.g. resources.hp.current)
+    for path in vocab.valid_paths[:40]:  
         parts = path.split(".")
-        if parts[0] not in seen_roles:
-            seen_roles.add(parts[0])
+        if parts[0] not in seen_cats:
+            seen_cats.add(parts[0])
             path_examples.append(f"\n  **{parts[0]}**:")
         path_examples.append(f"    - `{path}`")
     
@@ -75,9 +66,9 @@ You may ONLY use paths that match this vocabulary:
 {paths_text}
 
 For wildcards, use patterns like:
-- `core_trait.*` — all core traits
-- `resource.*.current` — current value of all resources
-- `capability.*` — all capabilities
+- `attributes.*` — all core attributes
+- `resources.*.current` — current value of all resources
+- `skills.*` — all skills
 
 ## CONSTRAINT TYPES
 
@@ -93,8 +84,8 @@ For wildcards, use patterns like:
 
 References can be:
 - **Literal numbers**: `"0"`, `"-10"`, `"100"`
-- **Paths**: `"resource.hp.max"`, `"core_trait.strength"`
-- **Expressions**: `"progression.level + 3"`, `"(core_trait.constitution - 10) // 2"`
+- **Paths**: `"resources.hp.max"`, `"attributes.strength"`
+- **Expressions**: `"progression.level + 3"`, `"(attributes.constitution - 10) // 2"`
 
 ## VIOLATION ACTIONS
 
@@ -109,18 +100,18 @@ References can be:
 ```json
 {{
   "name": "HP cannot exceed maximum",
-  "target_path": "resource.hp.current",
+  "target_path": "resources.hp.current",
   "constraint": "<=",
-  "reference": "resource.hp.max",
+  "reference": "resources.hp.max",
   "on_violation": "clamp",
-  "correction_value": "resource.hp.max"
+  "correction_value": "resources.hp.max"
 }}
 ```
 
 ```json
 {{
-  "name": "Core traits minimum",
-  "target_path": "core_trait.*",
+  "name": "Attributes minimum",
+  "target_path": "attributes.*",
   "constraint": ">=",
   "reference": "1",
   "on_violation": "clamp",
@@ -141,12 +132,6 @@ Focus on:
 # =============================================================================
 
 class InvariantExtractor:
-    """
-    Extracts state invariants with vocabulary validation.
-    
-    Only invariants with valid paths are included in the result.
-    """
-    
     def __init__(
         self,
         llm: LLMConnector,
@@ -163,22 +148,12 @@ class InvariantExtractor:
         logger.info(f"[InvariantExtractor] {message}")
     
     def extract(self, rules_text: str) -> List[StateInvariant]:
-        """
-        Extract invariants from rules text.
-        
-        Args:
-            rules_text: The game rules to analyze
-            
-        Returns:
-            List of validated StateInvariant objects
-        """
         self._update_status("Building extraction prompt...")
         prompt = build_invariant_extraction_prompt(self.vocab)
         
         self._update_status("Extracting invariants...")
         
-        # Truncate rules if too long
-        max_len = 4000
+        max_len = 6000
         if len(rules_text) > max_len:
             rules_text = rules_text[:max_len] + "\n[truncated]"
         
@@ -195,18 +170,16 @@ class InvariantExtractor:
             logger.error(f"Invariant extraction failed: {e}")
             return self._get_default_invariants()
         
-        # Validate and convert
         self._update_status("Validating invariants...")
         valid_invariants = []
         
         for inv in result.invariants:
-            # Validate path
             if not self.vocab.validate_path(inv.target_path):
                 logger.warning(f"Skipping invariant with invalid path: {inv.target_path}")
                 continue
             
-            # Validate reference path if it looks like a path
             ref = inv.reference
+            # Simple check if ref is a path
             if ref and "." in ref and not any(op in ref for op in ["+", "-", "*", "/"]):
                 if not self.vocab.validate_path(ref):
                     logger.warning(f"Skipping invariant with invalid reference path: {ref}")
@@ -225,17 +198,9 @@ class InvariantExtractor:
         return valid_invariants
     
     def _get_default_invariants(self) -> List[StateInvariant]:
-        """
-        Return default invariants when extraction fails.
-        
-        These are generic constraints that apply to most systems.
-        """
         defaults = []
-        
-        # Check if vocabulary has resources with pools
         for path in self.vocab.valid_paths:
-            if "resource." in path and path.endswith(".current"):
-                # Add current <= max constraint
+            if "resources." in path and path.endswith(".current"):
                 max_path = path.replace(".current", ".max")
                 if max_path in self.vocab.valid_paths:
                     base_name = path.split(".")[1]
@@ -247,7 +212,6 @@ class InvariantExtractor:
                         on_violation="clamp",
                         correction_value=max_path,
                     ))
-        
         return defaults
 
 
@@ -257,6 +221,5 @@ def extract_invariants_with_vocabulary(
     rules_text: str,
     status_callback: Optional[Callable[[str], None]] = None,
 ) -> List[StateInvariant]:
-    """Convenience function for invariant extraction."""
     extractor = InvariantExtractor(llm, vocabulary, status_callback)
     return extractor.extract(rules_text)

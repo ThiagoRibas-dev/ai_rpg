@@ -13,12 +13,14 @@ from app.tools.schemas import (
     InventoryAddItem,
     MemoryUpsert,
 )
+from app.tools.schemas import WorldTravel
 
 
 class ToolExecutor:
     """
     Executes tool calls from the LLM using type-based dispatch.
     Integrates with UI queue and handles per-tool hooks.
+    Lifecycle-aware: attaches turn_id to all UI events.
     """
 
     def __init__(
@@ -43,6 +45,7 @@ class ToolExecutor:
         tool_budget: int,
         current_game_time: str | None = None,
         extra_context: Dict[str, Any] | None = None,
+        turn_id: str | None = None,  # New Argument
     ) -> Tuple[List[Dict[str, Any]], bool]:
         """
         Execute a list of tool calls from the LLM.
@@ -63,7 +66,7 @@ class ToolExecutor:
             "current_game_time": current_game_time,
             "ui_queue": self.ui_queue,
         }
-        
+
         if extra_context:
             ctx.update(extra_context)
 
@@ -91,7 +94,12 @@ class ToolExecutor:
             if self.ui_queue:
                 try:
                     self.ui_queue.put(
-                        {"type": "tool_call", "name": tool_name, "args": tool_args}
+                        {
+                            "type": "tool_call",
+                            "name": tool_name,
+                            "args": tool_args,
+                            "turn_id": turn_id,
+                        }
                     )
                 except Exception as e:
                     self.logger.error(f"Failed to put tool_call on UI queue: {e}")
@@ -107,8 +115,9 @@ class ToolExecutor:
                             "type": "dice_roll",
                             "spec": tool_args.get("formula"),
                             "rolls": result.get("rolls", []),
-                            "modifier": 0, 
+                            "modifier": 0,
                             "total": result.get("total", 0),
+                            "turn_id": turn_id,
                         }
                     )
 
@@ -119,13 +128,17 @@ class ToolExecutor:
                 # Notify UI: Tool Success
                 if self.ui_queue:
                     self.ui_queue.put(
-                        {"type": "tool_result", "result": result, "is_error": False}
+                        {
+                            "type": "tool_result",
+                            "result": result,
+                            "is_error": False,
+                            "turn_id": turn_id,
+                        }
                     )
 
                 # --- POST EXECUTION HOOKS ---
-                self._post_hook(tool_name, result, session)
+                self._post_hook(tool_name, result, session, turn_id)
 
-                # Track memory usage for return flag
                 if isinstance(call, (GameLog, MemoryUpsert)):
                     memory_tool_used = True
 
@@ -139,42 +152,90 @@ class ToolExecutor:
 
                 if self.ui_queue:
                     self.ui_queue.put(
-                        {"type": "tool_result", "result": str(e), "is_error": True}
+                        {
+                            "type": "tool_result",
+                            "result": str(e),
+                            "is_error": True,
+                            "turn_id": turn_id,
+                        }
                     )
 
         return results, memory_tool_used
 
-    def _post_hook(self, tool_name: str, result: Any, session):
+    def _post_hook(self, tool_name: str, result: Any, session, turn_id: str | None):
         """
         Execute post-execution hooks for specific tools to update UI/Session state.
         """
         # 1. Time Advance: Update Session & UI Label
-        if tool_name == TimeAdvance.model_fields["name"].default and isinstance(result, dict) and "new_time" in result:
+        if (
+            tool_name == TimeAdvance.model_fields["name"].default
+            and isinstance(result, dict)
+            and "new_time" in result
+        ):
             if session:
                 try:
                     self.db.sessions.update_game_time(session.id, result["new_time"])
                     session.game_time = result["new_time"]
                     if self.ui_queue:
                         self.ui_queue.put(
-                            {"type": "update_game_time", "new_time": result["new_time"]}
+                            {
+                                "type": "update_game_time",
+                                "new_time": result["new_time"],
+                                "turn_id": turn_id,
+                            }
                         )
                 except Exception as e:
                     self.logger.error(f"Failed to update game time: {e}")
 
         # 2. State Changes: Trigger Inspector Refreshes
-        # We check for the Super Tool 'entity.update'
         if tool_name == EntityUpdate.model_fields["name"].default:
             if self.ui_queue:
-                # Refresh everything to be safe
-                self.ui_queue.put({"type": "state_changed", "entity_type": "character"})
-                self.ui_queue.put({"type": "state_changed", "entity_type": "inventory"})
+                self.ui_queue.put(
+                    {
+                        "type": "state_changed",
+                        "entity_type": "character",
+                        "turn_id": turn_id,
+                    }
+                )
+                self.ui_queue.put(
+                    {
+                        "type": "state_changed",
+                        "entity_type": "inventory",
+                        "turn_id": turn_id,
+                    }
+                )
 
-        # Legacy/Wizard Tools
-        if tool_name in [CharacterUpdate.model_fields["name"].default, InventoryAddItem.model_fields["name"].default]:
+        if tool_name in [
+            CharacterUpdate.model_fields["name"].default,
+            InventoryAddItem.model_fields["name"].default,
+        ]:
             if self.ui_queue:
-                self.ui_queue.put({"type": "state_changed", "entity_type": "unknown"})
+                self.ui_queue.put(
+                    {
+                        "type": "state_changed",
+                        "entity_type": "unknown",
+                        "turn_id": turn_id,
+                    }
+                )
 
         # 3. Memory/Log Updates
-        if tool_name in [GameLog.model_fields["name"].default, MemoryUpsert.model_fields["name"].default]:
+        if tool_name in [
+            GameLog.model_fields["name"].default,
+            MemoryUpsert.model_fields["name"].default,
+        ]:
             if self.ui_queue:
-                self.ui_queue.put({"type": "refresh_memory_inspector"})
+                self.ui_queue.put(
+                    {"type": "refresh_memory_inspector", "turn_id": turn_id}
+                )
+
+        # 4. Navigation Updates
+        if tool_name == WorldTravel.model_fields["name"].default and isinstance(
+            result, dict
+        ):
+            loc = result.get("location_data") or {}
+            conns = (loc.get("connections") or {}).keys()
+            exits = list(conns)
+            if self.ui_queue:
+                self.ui_queue.put(
+                    {"type": "update_nav", "exits": exits, "turn_id": turn_id}
+                )

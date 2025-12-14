@@ -1,10 +1,12 @@
 from nicegui import ui
 import asyncio
 import logging
+import json
 from app.setup.world_gen_service import WorldGenService
 from app.setup.sheet_generator import SheetGenerator
 from app.services.game_setup_service import GameSetupService
 from app.tools.schemas import MemoryUpsert
+from app.models.vocabulary import GameVocabulary
 
 logger = logging.getLogger(__name__)
 
@@ -32,8 +34,7 @@ class SetupWizard:
 
         self.is_generating = False
 
-        # UI State for Lore (List of dicts for binding)
-        # Structure: [{"content": "The king is dead", "tags_str": "politics, king"}]
+        # UI State for Lore
         self.lore_ui_items = []
 
     def open(self):
@@ -130,24 +131,44 @@ class SetupWizard:
 
     def _execute_pipeline(self):
         connector = self.orchestrator._get_llm_connector()
+        sheet_gen = SheetGenerator(connector)
 
         # 1. World Gen
         self._update_status("Building World...")
         world_service = WorldGenService(connector)
         self.extracted_world = world_service.extract_world_data(self.input_world)
 
-        # 2. Sheet Architecture
-        self._update_status("Architecting Character Sheet...")
-        sheet_gen = SheetGenerator(connector)
-        self.generated_spec = sheet_gen.generate_structure(
-            self.prompt.rules_document, self.input_char
-        )
+        # 2. Check for Vocabulary (The Smart Path)
+        vocabulary = None
+        if self.prompt.template_manifest:
+            try:
+                data = json.loads(self.prompt.template_manifest)
+                if "vocabulary" in data:
+                    vocabulary = GameVocabulary(**data["vocabulary"])
+            except Exception as e:
+                logger.warning(f"Failed to load vocabulary from manifest: {e}")
 
-        # 3. Sheet Population (Now passing rules_text)
-        self._update_status("Populating Character Data...")
-        self.generated_values = sheet_gen.populate_sheet(
-            self.generated_spec, self.input_char, rules_text=self.prompt.rules_document
-        )
+        # 3. Character Gen
+        if vocabulary:
+            # === STRATEGY 2: VOCABULARY-AWARE ===
+            self._update_status("Generating from Rules Vocabulary...")
+            self.generated_spec, self.generated_values = (
+                sheet_gen.generate_from_vocabulary(
+                    vocabulary, self.input_char, rules_text=self.prompt.rules_document
+                )
+            )
+        else:
+            # === STRATEGY 1: LEGACY / ARCHITECT ===
+            self._update_status("Architecting Character Sheet (Legacy)...")
+            self.generated_spec = sheet_gen.generate_structure(
+                self.prompt.rules_document, self.input_char
+            )
+            self._update_status("Populating Character Data...")
+            self.generated_values = sheet_gen.populate_sheet(
+                self.generated_spec,
+                self.input_char,
+                rules_text=self.prompt.rules_document,
+            )
 
         # 4. Opening Crawl
         self._update_status("Writing Intro...")
@@ -165,11 +186,9 @@ class SetupWizard:
         self.status_label.set_text(msg)
 
     def _prepare_review_data(self):
-        """Convert WorldExtraction objects into bindable UI dictionaries."""
         if self.extracted_world:
             self.lore_ui_items = []
             for lore in self.extracted_world.lore:
-                # Convert list of tags to comma-string for easy editing
                 tags_str = ", ".join(lore.tags) if lore.tags else "world_gen"
                 self.lore_ui_items.append(
                     {"content": lore.content, "tags_str": tags_str}
@@ -186,11 +205,9 @@ class SetupWizard:
             with ui.tab_panels(tabs, value=t_char).classes(
                 "w-full flex-grow bg-slate-800 p-2 rounded scroll-y"
             ):
-                # --- CHARACTER SHEET ---
                 with ui.tab_panel(t_char):
                     self._render_dynamic_sheet_form()
 
-                # --- WORLD TAB ---
                 with ui.tab_panel(t_world):
                     with ui.scroll_area().classes("h-full pr-4"):
                         ui.label("Starting Location").classes(
@@ -199,12 +216,9 @@ class SetupWizard:
                         ui.input(label="Location Name").bind_value(
                             self.extracted_world.starting_location, "name"
                         ).classes("w-full mb-2")
-
                         ui.textarea(label="Description").bind_value(
                             self.extracted_world.starting_location, "description_visual"
                         ).classes("w-full mb-4").props("rows=3")
-
-                        # --- LORE EDITOR (List View) ---
                         with ui.row().classes("w-full justify-between items-center"):
                             ui.label("World Lore & Secrets").classes(
                                 "text-xs font-bold text-gray-500 uppercase"
@@ -212,13 +226,10 @@ class SetupWizard:
                             ui.button(icon="add", on_click=self._add_lore_row).props(
                                 "flat dense round size=sm"
                             )
-
-                        # Render the list of lore items
                         self.lore_list_container = ui.column().classes("w-full gap-2")
                         with self.lore_list_container:
                             self._render_lore_list()
 
-                # --- INTRO TAB ---
                 with ui.tab_panel(t_intro):
                     ui.label("Opening Crawl").classes(
                         "text-xs font-bold text-gray-500 uppercase"
@@ -234,17 +245,12 @@ class SetupWizard:
                 with ui.row().classes(
                     "w-full items-start gap-2 bg-slate-900 p-2 rounded"
                 ):
-                    # Content (Wide)
                     ui.textarea(label="Fact/Event").bind_value(item, "content").classes(
                         "flex-grow"
                     ).props("rows=2 dense")
-
-                    # Tags (Narrow)
                     ui.input(label="Tags").bind_value(item, "tags_str").classes(
                         "w-1/4"
                     ).props("dense")
-
-                    # Delete Button
                     ui.button(
                         icon="delete", on_click=lambda i=index: self._delete_lore_row(i)
                     ).props("flat dense color=red round").classes("mt-2")
@@ -271,12 +277,14 @@ class SetupWizard:
             "skills",
             "inventory",
             "features",
+            "progression",
+            "connections",
+            "narrative",
         ]
 
         for cat_key in cats:
             if cat_key not in spec_dict:
                 continue
-
             category = spec_dict[cat_key]
             fields = category.get("fields", {})
             if not fields:
@@ -303,9 +311,13 @@ class SetupWizard:
         cat_data = self.generated_values[cat]
 
         if container_type == "atom":
-            if widget == "number" or widget == "die":
+            if widget in ["number", "die", "ladder"]:
                 val = cat_data.get(key, 0)
-                is_num = isinstance(val, int)
+                # Handle ladder values which might be dicts {value, label} or just ints
+                if isinstance(val, dict) and "value" in val:
+                    val = val["value"]
+
+                is_num = isinstance(val, (int, float))
                 is_digit = isinstance(val, str) and val.isdigit()
 
                 if is_num or is_digit:
@@ -329,10 +341,9 @@ class SetupWizard:
 
         elif container_type == "molecule":
             raw_val = cat_data.get(key)
-            if raw_val is not None and not isinstance(raw_val, dict):
-                cat_data[key] = {"current": raw_val, "max": raw_val}
-
-            if key not in cat_data or not isinstance(cat_data[key], dict):
+            if raw_val is None:
+                cat_data[key] = {"current": 0, "max": 0}
+            if not isinstance(cat_data[key], dict):
                 cat_data[key] = {"current": 0, "max": 0}
 
             if widget == "pool":
@@ -349,26 +360,23 @@ class SetupWizard:
                     ).bind_value(cat_data[key], "max").classes("w-20")
 
     def finish(self):
-        # Reconstruct MemoryUpsert objects from the UI List, preserving tags
         final_lore = []
         for item in self.lore_ui_items:
             content = item.get("content", "").strip()
             if not content:
                 continue
-
-            # Split tags string back into list
             tags_str = item.get("tags_str", "")
             tags = [t.strip() for t in tags_str.split(",") if t.strip()]
             if "world_gen" not in tags:
                 tags.append("world_gen")
-
             final_lore.append(
                 MemoryUpsert(kind="lore", content=content, priority=3, tags=tags)
             )
 
         self.extracted_world.lore = final_lore
-
-        service = GameSetupService(self.db)
+        
+        # FIX: Pass vector_store to service
+        service = GameSetupService(self.db, self.orchestrator.vector_store)
 
         try:
             game_session = service.create_game(

@@ -1,6 +1,6 @@
 import queue
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +25,9 @@ class NiceGUIBridge:
         self.inspector_component = None
         self.map_component = None
 
+        # Lifecycle Management
+        self.active_turn_id: Optional[str] = None
+
         # Header Labels
         self.session_label = MockElement()
         self.time_label = MockElement()
@@ -46,6 +49,17 @@ class NiceGUIBridge:
         self.time_label.ui_element = time_lbl
         self.mode_label.ui_element = mode_lbl
 
+    def set_active_turn(self, turn_id: str | None):
+        """
+        Sets the current valid turn ID. 
+        Any UI messages arriving with a different (old) turn_id will be dropped.
+        """
+        self.active_turn_id = turn_id
+        if turn_id is None:
+            logger.info("Bridge: Active turn cleared. UI will ignore pending turn events.")
+        else:
+            logger.debug(f"Bridge: Active turn set to {turn_id}")
+
     # --- Interface ---
     def get_input(self) -> str:
         return self._last_input
@@ -66,6 +80,15 @@ class NiceGUIBridge:
             logger.error(f"Error processing UI queue: {e}", exc_info=True)
 
     async def _dispatch_message(self, msg: Dict[str, Any]):
+        # --- LIFECYCLE FILTER ---
+        # If the message is tagged with a turn_id, check if it matches the active one.
+        # Messages without a turn_id (system events) are allowed through.
+        msg_turn_id = msg.get("turn_id")
+        
+        if msg_turn_id and self.active_turn_id and msg_turn_id != self.active_turn_id:
+            # Drop zombie message from previous turn/thread
+            return
+
         msg_type = msg.get("type")
 
         # --- Chat & Interaction ---

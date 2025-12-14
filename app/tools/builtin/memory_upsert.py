@@ -1,3 +1,5 @@
+import logging
+
 schema = {
     "name": "memory.upsert",
     "description": "Create a new memory entry. Use this to remember important facts, events, character details, or user preferences.",
@@ -16,25 +18,25 @@ schema = {
     },
 }
 
+logger = logging.getLogger(__name__)
 
 def handler(
     kind: str, content: str, priority: int = 3, tags: list[str] | None = None, **context
 ) -> dict:
     """
     Create a memory. Context should contain session_id and db_manager.
-
-    ✅ FIX: Deduplication logic moved here from registry.
+    Includes logic to deduplicate against existing memories using Vector Search.
     """
     session_id = context.get("session_id")
     db_manager = context.get("db_manager")
-    fictional_time = context.get("current_game_time") # Get fictional time from context
+    fictional_time = context.get("current_game_time")
 
     if not session_id or not db_manager:
         raise ValueError("Missing session context")
 
-
-    # ✅ MOVED FROM REGISTRY: Check for near-duplicates
     vs = context.get("vector_store")
+    
+    # --- Deduplication Logic ---
     if vs:
         try:
             # Find near-duplicates using semantic search
@@ -42,36 +44,39 @@ def handler(
 
             for hit in sem_results:
                 mid = int(hit["memory_id"])
-                existing = db_manager.get_memory_by_id(mid)
+                
+                # FIX: Use correct repository accessor (db.memories.get_by_id)
+                existing = db_manager.memories.get_by_id(mid)
                 if not existing:
                     continue
 
-                # cosine distance ~ 0 => very similar; treat <=0.10 as duplicate
+                # cosine distance ~ 0 => very similar; treat <=0.12 as duplicate
                 dist = hit.get("distance") or 0.0
-                if dist <= 0.10 and existing.kind == kind:
+                if dist <= 0.12 and existing.kind == kind:
                     # Found duplicate - update instead of create
                     merged_tags = sorted(
                         set((existing.tags_list() or []) + (tags or []))
                     )
                     new_priority = min(5, max(existing.priority, priority))
 
-                    # Update existing memory
-                    updated = db_manager.update_memory(
+                    # FIX: Use correct repository accessor (db.memories.update)
+                    updated = db_manager.memories.update(
                         existing.id,
                         content=content if content != existing.content else None,
                         priority=new_priority,
                         tags=merged_tags,
                     )
 
-                    # Update embedding
-                    vs.upsert_memory(
-                        session_id,
-                        updated.id,
-                        updated.content,
-                        updated.kind,
-                        updated.tags_list(),
-                        updated.priority,
-                    )
+                    # Update embedding in Vector Store
+                    if updated:
+                        vs.upsert_memory(
+                            session_id,
+                            updated.id,
+                            updated.content,
+                            updated.kind,
+                            updated.tags_list(),
+                            updated.priority,
+                        )
 
                     return {
                         "id": updated.id,
@@ -84,23 +89,19 @@ def handler(
                         "note": f"Merged with existing memory {existing.id}",
                     }
         except Exception as e:
-            import logging
+            logger.warning(f"Memory deduplication failed: {e}", exc_info=True)
 
-            logging.getLogger(__name__).debug(
-                f"Memory deduplication failed: {e}", exc_info=True
-            )
-
-    # No duplicate found - create new memory
+    # --- Creation Logic ---
     memory = db_manager.memories.create(
         session_id, kind, content, priority, tags or [], fictional_time=fictional_time
     )
 
-    # If a vector store is available, embed
+    # If a vector store is available, embed new memory
     if vs:
         try:
             vs.upsert_memory(session_id, memory.id, content, kind, tags or [], priority)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Failed to embed new memory: {e}")
 
     return {
         "id": memory.id,

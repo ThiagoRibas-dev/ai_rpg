@@ -41,6 +41,7 @@ function Get-DirectoryTreeString {
     "*.ruff_cache*",
     "*\output*",
     "*\dist*",
+    "*.bak*"
     "*\build\*",
     "*\temp*",
     "*.log",

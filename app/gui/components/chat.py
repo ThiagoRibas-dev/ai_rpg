@@ -52,7 +52,6 @@ class ChatComponent:
                             "Clear Chat View", on_click=lambda: self.container.clear()
                         )
 
-                # This tells the input to take all AVAILABLE space, not 100% of parent space.
                 self.input_area = (
                     ui.textarea(placeholder="What do you do?")
                     .props('autogrow rows=1 rounded outlined input-class="text-white"')
@@ -368,7 +367,10 @@ class ChatComponent:
             return
 
         self.input_area.value = ""
-        self.add_message("You", text, "user")
+        
+        # FIX: Do NOT add message here. The Orchestrator adds it to the queue via plan_and_execute.
+        # self.add_message("You", text, "user") 
+        
         self.bridge._last_input = text
 
         self.set_generating(True)

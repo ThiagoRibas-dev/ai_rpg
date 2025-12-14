@@ -1,4 +1,3 @@
-
 import json
 import logging
 import datetime
@@ -16,8 +15,9 @@ logger = logging.getLogger(__name__)
 
 
 class GameSetupService:
-    def __init__(self, db_manager):
+    def __init__(self, db_manager, vector_store=None):
         self.db = db_manager
+        self.vs = vector_store
 
     def create_game(
         self,
@@ -128,6 +128,7 @@ class GameSetupService:
         # 1. Load Ruleset from Manifest (or create default)
         ruleset = None
         base_rules = []
+        vocab_data = None
 
         if prompt.template_manifest:
             try:
@@ -136,6 +137,8 @@ class GameSetupService:
                     ruleset = Ruleset(**data["ruleset"])
                 if "base_rules" in data:
                     base_rules = data["base_rules"]
+                if "vocabulary" in data:
+                    vocab_data = data["vocabulary"]
             except Exception:
                 pass
 
@@ -149,25 +152,36 @@ class GameSetupService:
         
         if existing_rs:
             rs_id = existing_rs["id"]
-            # Optional: Update the definition if it changed? 
-            # For now, we update to ensure the latest manifest changes apply.
             self.db.rulesets.update(rs_id, ruleset)
         else:
             rs_id = self.db.rulesets.create(ruleset)
 
-        # 3. Persist Base Rules (Memories)
+        # 3. Persist Base Rules (Memories) AND Index to Vector Store
         for rule in base_rules:
-            self.db.memories.create(
+            # Create in SQL
+            mem = self.db.memories.create(
                 session_id=session_id,
                 kind="rule",
                 content=rule.get("content", ""),
                 tags=rule.get("tags", []),
                 priority=3,
             )
+            
+            # Index in Vector Store
+            if self.vs:
+                try:
+                    self.vs.upsert_memory(
+                        session_id=session_id,
+                        memory_id=mem.id,
+                        text=mem.content,
+                        kind=mem.kind,
+                        tags=mem.tags_list(),
+                        priority=mem.priority
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to index rule memory {mem.id}: {e}")
 
         # 4. Persist Template (The Spec)
-        # Note: Templates are specific to the Ruleset, but we might want unique templates per session
-        # or shared templates. For now, creating a new one per session is safest for customization.
         st_id = self.db.stat_templates.create(rs_id, spec)
 
         # 5. Create Player Entity
@@ -176,7 +190,7 @@ class GameSetupService:
         entity_data["template_id"] = st_id
         entity_data["scene_state"] = {"zone_id": None, "is_hidden": False}
 
-        # Ensure all categories exist in entity data to prevent renderer checks failing
+        # Ensure all categories exist
         for cat in [
             "meta",
             "identity",
@@ -185,6 +199,9 @@ class GameSetupService:
             "resources",
             "inventory",
             "features",
+            "progression",
+            "connections",
+            "narrative"
         ]:
             if cat not in entity_data:
                 entity_data[cat] = {}
@@ -192,14 +209,16 @@ class GameSetupService:
         set_entity(session_id, self.db, "character", "player", entity_data)
 
         # 6. Update Manifest
-        SetupManifest(self.db).update_manifest(
-            session_id,
-            {
-                "ruleset_id": rs_id,
-                "stat_template_id": st_id,
-                "player_character": {"name": char_name},
-            },
-        )
+        manifest_update = {
+            "ruleset_id": rs_id,
+            "stat_template_id": st_id,
+            "player_character": {"name": char_name},
+        }
+        
+        if vocab_data:
+            manifest_update["vocabulary"] = vocab_data
+
+        SetupManifest(self.db).update_manifest(session_id, manifest_update)
 
     def _apply_world_extraction(self, session_id: int, world_data: Any):
         SetupManifest(self.db).update_manifest(
@@ -225,7 +244,7 @@ class GameSetupService:
                 args["name_display"] = args.pop("name")
                 location_create_handler(**args, **context)
             except Exception as e:
-                logger.warn(f"Failed to create neighbor location {neighbor.key}: {e}")
+                logger.warning(f"Failed to create neighbor location {neighbor.key}: {e}")
                 pass
 
         # Scene & NPCs
@@ -242,9 +261,21 @@ class GameSetupService:
 
         # Lore
         for mem in world_data.lore:
-            self.db.memories.create(
+            new_mem = self.db.memories.create(
                 session_id, mem.kind, mem.content, mem.priority, mem.tags
             )
+            if self.vs:
+                try:
+                    self.vs.upsert_memory(
+                        session_id, 
+                        new_mem.id, 
+                        new_mem.content, 
+                        new_mem.kind, 
+                        new_mem.tags_list(), 
+                        new_mem.priority
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to index lore memory {new_mem.id}: {e}")
 
     def _create_npc_entity(
         self,
@@ -257,7 +288,6 @@ class GameSetupService:
         name = getattr(npc_data, "name", "Unknown")
         desc = getattr(npc_data, "visual_description", "")
 
-        # Link to same template as player
         manifest = SetupManifest(self.db).get_manifest(session_id)
         template_id = manifest.get("stat_template_id")
 

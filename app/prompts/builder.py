@@ -3,35 +3,29 @@ from app.models.ruleset import Ruleset
 def build_ruleset_summary(ruleset: Ruleset) -> str:
     """
     Generate minimal Ruleset summary for system prompt.
-    Replaces the old build_lean_schema_reference.
+    Refactored to match the current Ruleset -> EngineConfig schema.
     """
     if not ruleset:
         return ""
     
-    sections = []
+    e = ruleset.engine
+    sections = ["# SYSTEM RULES"]
     
     # 1. Core Resolution
-    sections.append(f"**Resolution**: {ruleset.resolution_mechanic}")
+    sections.append(f"- **Dice**: {e.dice_notation}")
+    sections.append(f"- **Resolution**: {e.roll_mechanic}")
+    sections.append(f"- **Success**: {e.success_condition}")
+    sections.append(f"- **Crit**: {e.crit_rules}")
     
-    # 2. Tactical Rules (Key mechanics)
-    if ruleset.tactical_rules:
-        rule_names = [r.name for r in ruleset.tactical_rules[:5]]
-        sections.append(f"**Tactics**: {', '.join(rule_names)}")
+    # 2. Procedures (Highlights)
+    if ruleset.combat_procedures:
+        sections.append("**Combat Modes**: " + ", ".join(ruleset.combat_procedures.keys()))
     
-    # 3. Compendium Highlights
-    if ruleset.compendium:
-        # Conditions
-        if ruleset.compendium.conditions:
-            cond_names = [c.name for c in ruleset.compendium.conditions[:6]]
-            sections.append(f"**Conditions**: {', '.join(cond_names)}")
-            
-        # Skills
-        if ruleset.compendium.skills:
-             sections.append(f"**Skills**: {len(ruleset.compendium.skills)} available")
-    
-    # 4. Environment
-    if ruleset.exploration_rules:
-         env_names = [r.name for r in ruleset.exploration_rules[:4]]
-         sections.append(f"**Environment**: {', '.join(env_names)}")
+    if ruleset.exploration_procedures:
+        sections.append("**Exploration Modes**: " + ", ".join(ruleset.exploration_procedures.keys()))
+
+    # 3. Sheet Hints
+    if ruleset.sheet_hints:
+        sections.append("**Stats**: " + ", ".join(ruleset.sheet_hints[:5]))
     
     return "\n".join(sections)

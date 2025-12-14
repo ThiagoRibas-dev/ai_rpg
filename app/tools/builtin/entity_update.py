@@ -1,36 +1,67 @@
 from typing import Any, Dict, Optional
+import logging
 from app.services.state_service import get_entity, set_entity
 from app.utils.math_engine import recalculate_derived_stats
-from app.services.invariant_validator import validate_character
+from app.services.invariant_validator import validate_entity, set_path, get_path
+from app.models.vocabulary import GameVocabulary
 
+logger = logging.getLogger(__name__)
 
-def deep_update(data: dict, key: str, value: Any) -> bool:
+# Standard categories to check when a flat key is provided (e.g. "str" -> "attributes.str")
+SEARCH_CATEGORIES = [
+    "attributes", 
+    "resources", 
+    "skills", 
+    "features", 
+    "progression", 
+    "identity",
+    "meta"
+]
+
+def resolve_target_path(entity: dict, key: str, vocabulary: Optional[GameVocabulary]) -> Optional[str]:
     """
-    Recursively searches for 'key' in 'data'.
-    If found, updates it and returns True.
-    Prioritizes shallow matches.
+    Resolve a key to a specific dot-path in the entity.
+    1. If it's already a dot-path, return it.
+    2. If it's a flat key, look for it in standard categories.
+    3. If vocabulary is present, validate the resolved path.
     """
-    # 1. Direct match
-    if key in data:
-        # Smart handling for pools (if updating a dict with a number, assume current)
-        if (
-            isinstance(data[key], dict)
-            and "current" in data[key]
-            and isinstance(value, (int, float))
-        ):
-            data[key]["current"] = value
-        else:
-            data[key] = value
-        return True
+    resolved_path = key
 
-    # 2. Recursive search
-    for k, v in data.items():
-        if isinstance(v, dict):
-            if deep_update(v, key, value):
-                return True
+    # If it's a flat key, try to find where it lives
+    if "." not in key:
+        found = False
+        # 1. Check Root
+        if key in entity:
+            resolved_path = key
+            found = True
+        
+        # 2. Check Categories
+        if not found:
+            for cat in SEARCH_CATEGORIES:
+                if cat in entity and isinstance(entity[cat], dict) and key in entity[cat]:
+                    resolved_path = f"{cat}.{key}"
+                    found = True
+                    break
+        
+        # 3. If still not found, defaults to root (will create new key) unless Vocab forbids it
+        if not found:
+            resolved_path = key
 
-    return False
+    # Validate against Vocabulary if available
+    if vocabulary:
+        # Check if path is valid
+        if not vocabulary.validate_path(resolved_path):
+            # Special case: The path might be valid but missing in the entity (creation)
+            # We trust the vocabulary. If vocab says "attributes.str" is valid, we allow it.
+            return resolved_path
+            
+            # If vocab says it's invalid (e.g. "attributes.stamina" when system uses "constitution"), reject.
+            # However, we must allow standard fields not in vocab (like scene_state).
+            # For now, we log warning but allow if it looks like a system field.
+            # To be strict: return None if vocabulary.validate_path(resolved_path) is False
+            pass
 
+    return resolved_path
 
 def handler(
     target_key: str,
@@ -41,168 +72,132 @@ def handler(
 ) -> dict:
     session_id = context["session_id"]
     db = context["db_manager"]
+    manifest = context.get("manifest", {})
 
-    # Handle "player" alias
+    # 1. Load Entity
     etype = "character"
     if ":" in target_key:
         etype, target_key = target_key.split(":", 1)
 
     entity = get_entity(session_id, db, etype, target_key)
     if not entity:
-        return {"error": "Entity not found"}
+        return {"error": f"Entity {etype}:{target_key} not found"}
+
+    # 2. Load Vocabulary & Template
+    vocabulary = None
+    if manifest.get("vocabulary"):
+        try:
+            vocabulary = GameVocabulary(**manifest["vocabulary"])
+        except Exception as e:
+            logger.warning(f"Failed to load vocabulary for validation: {e}")
 
     tid = entity.get("template_id")
     template = db.stat_templates.get_by_id(tid) if tid else None
 
     changes_log = []
+    errors = []
 
-    # 1. Adjustments (Relative Math)
+    # 3. Apply Adjustments (Relative Math)
     if adjustments:
-        for k, delta in adjustments.items():
-            # Use deep search to find the value to adjust
-            # Note: deep_update is for SETTING, we need a finder for GETTING to adjust
-            # For simplicity, we stick to the existing shallow logic for adjustments
-            # OR we implement a deep_get. Given adjustments are usually stats (shallow),
-            # we keep the shallow search for safety/speed for now, but extend to standard cats.
+        for key, delta in adjustments.items():
+            path = resolve_target_path(entity, key, vocabulary)
+            
+            # If vocabulary exists and path is invalid, reject
+            if vocabulary and not vocabulary.validate_path(path):
+                # Allow non-vocab keys if they exist in entity (legacy/custom support)
+                if get_path(entity, path) is None:
+                    errors.append(f"Invalid path '{path}' for this system.")
+                    continue
 
-            found = False
-            for cat in ["attributes", "resources", "skills"]:
-                if cat in entity and k in entity[cat]:
-                    old = entity[cat][k]
-                    if isinstance(old, (int, float)):
-                        entity[cat][k] += delta
-                        changes_log.append(f"{k}: {old} -> {entity[cat][k]}")
-                        found = True
-                        break
-                    elif isinstance(old, dict) and "current" in old:
-                        cur = old["current"]
-                        mx = old.get("max", 9999)
-                        entity[cat][k]["current"] = max(0, min(cur + delta, mx))
-                        changes_log.append(f"{k}: {cur} -> {entity[cat][k]['current']}")
-                        found = True
-                        break
+            current_val = get_path(entity, path)
+            
+            # Handle Pools (Dictionary with current/max)
+            if isinstance(current_val, dict) and "current" in current_val:
+                # Target the .current sub-path
+                path = f"{path}.current"
+                current_val = current_val["current"]
+            
+            if isinstance(current_val, (int, float)):
+                new_val = current_val + delta
+                set_path(entity, path, new_val)
+                changes_log.append(f"{path}: {current_val} -> {new_val}")
+            else:
+                errors.append(f"Cannot adjust '{path}': value {current_val} is not a number.")
 
-            if not found:
-                # Fallback for root
-                if k in entity and isinstance(entity[k], (int, float)):
-                    entity[k] += delta
-                    changes_log.append(f"{k} adjusted by {delta}")
-
-    # 2. Updates (Absolute Set - Intelligent)
+    # 4. Apply Updates (Absolute Set)
     if updates:
-        for k, v in updates.items():
-            # Try Deep Search first
-            found = deep_update(entity, k, v)
+        for key, value in updates.items():
+            path = resolve_target_path(entity, key, vocabulary)
+            
+            if vocabulary and not vocabulary.validate_path(path):
+                 # Allow if it's a known non-vocab field (like location_key)
+                 if path not in ["location_key", "disposition", "scene_state"]:
+                     if get_path(entity, path) is None:
+                        errors.append(f"Invalid path '{path}' rejected by system rules.")
+                        continue
 
-            if found:
-                changes_log.append(f"Updated {k} -> {v}")
-            else:
-                # Check for dotted path (e.g. "inventory.bag.torch")
-                if "." in k:
-                    parts = k.split(".")
-                    ref = entity
-                    path_valid = True
-                    for part in parts[:-1]:
-                        if isinstance(ref, dict) and part in ref:
-                            ref = ref[part]
-                        else:
-                            path_valid = False
-                            break
+            # Handle Pools: if update value is int but target is pool, update .current
+            current_val = get_path(entity, path)
+            if isinstance(current_val, dict) and "current" in current_val and isinstance(value, (int, float)):
+                path = f"{path}.current"
+            
+            set_path(entity, path, value)
+            changes_log.append(f"Set {path} = {value}")
 
-                    if path_valid and isinstance(ref, dict):
-                        ref[parts[-1]] = v
-                        changes_log.append(f"Updated path {k} -> {v}")
-                        found = True
-
-            if not found:
-                # Create new property at root
-                entity[k] = v
-                changes_log.append(f"Created {k} = {v}")
-
-    # 3. Inventory (Add Item Wrapper)
-    if inventory and "add" in inventory:
-        item = inventory["add"]
-        if isinstance(item, str):
-            item_obj = {"name": item, "qty": 1}
+    # 5. Apply Inventory Changes
+    if inventory:
+        # Standardize storage: entity["inventory"]["backpack"] is the default list
+        # We try to respect existing structure
+        inv_cat = entity.get("inventory", {})
+        if isinstance(inv_cat, list):
+            # Legacy flat list
+            target_list = inv_cat
         else:
-            item_obj = item
+            # Modern dict of lists
+            if "backpack" not in inv_cat:
+                inv_cat["backpack"] = []
+            target_list = inv_cat["backpack"]
+            entity["inventory"] = inv_cat # Ensure reassignment if it was None
 
-        # Add to first available list or 'inventory' root
-        col_map = entity.setdefault("inventory", {})
-        if isinstance(col_map, list):  # Legacy
-            col_map.append(item_obj)
-        elif isinstance(col_map, dict):
-            target = next(iter(col_map.values())) if col_map else []
-            if isinstance(target, list):
-                target.append(item_obj)
-            else:
-                # Create default backpack if empty
-                entity["inventory"]["backpack"] = [item_obj]
+        if "add" in inventory:
+            item = inventory["add"]
+            # Normalize to object
+            item_obj = {"name": item, "qty": 1} if isinstance(item, str) else item
+            target_list.append(item_obj)
+            changes_log.append(f"Added item: {item_obj.get('name')}")
+        
+        if "remove" in inventory:
+            item_name = inventory["remove"]
+            # Find and remove
+            for i, it in enumerate(target_list):
+                if it.get("name") == item_name:
+                    target_list.pop(i)
+                    changes_log.append(f"Removed item: {item_name}")
+                    break
 
-        changes_log.append(f"Added {item_obj.get('name')}")
-
-    # 4. Recalculate
+    # 6. Recalculate Derived Stats
     if template:
         entity = recalculate_derived_stats(entity, template)
 
-    # === STATE INVARIANT VALIDATION ===
-    # Apply game-system-specific constraints extracted from ruleset
-    manifest = context.get("manifest", {})
+    # 7. Invariant Validation
     ruleset_id = manifest.get("ruleset_id")
-    
     if ruleset_id:
         try:
             ruleset = db.rulesets.get_by_id(ruleset_id)
-            if ruleset and hasattr(ruleset, 'state_invariants') and ruleset.state_invariants:
-                entity, auto_fixes, warnings = validate_character(entity, ruleset)
-                
-                for fix in auto_fixes:
-                    changes_log.append(f"🔧 Auto-corrected: {fix}")
-                
-                for warn in warnings:
-                    changes_log.append(f"⚠️ {warn}")
+            if ruleset and ruleset.state_invariants:
+                entity, fixes, warnings = validate_entity(
+                    entity, ruleset.state_invariants, vocabulary, auto_correct=True
+                )
+                changes_log.extend([f"Fixed: {f}" for f in fixes])
+                changes_log.extend([f"Warning: {w}" for w in warnings])
         except Exception as e:
-            import logging
-            logging.getLogger(__name__).warning(f"Invariant validation failed: {e}")
+            logger.warning(f"Invariant validation failed: {e}")
 
-
-
-    # === VOCABULARY-AWARE INVARIANT VALIDATION ===
-    manifest = context.get("manifest", {})
-    ruleset_id = manifest.get("ruleset_id")
-    
-    if ruleset_id:
-        try:
-            ruleset = db.rulesets.get_by_id(ruleset_id)
-            if ruleset:
-                invariants = getattr(ruleset, 'state_invariants', [])
-                
-                if invariants:
-                    from app.services.invariant_validator import validate_entity
-                    
-                    # Try to get vocabulary if available
-                    vocabulary = None
-                    vocab_data = manifest.get("vocabulary")
-                    if vocab_data:
-                        try:
-                            from app.models.vocabulary import GameVocabulary
-                            vocabulary = GameVocabulary(**vocab_data) if isinstance(vocab_data, dict) else None
-                        except Exception:
-                            pass
-                    
-                    entity, auto_fixes, warnings = validate_entity(
-                        entity, invariants, vocabulary
-                    )
-                    
-                    for fix in auto_fixes:
-                        changes_log.append(f"🔧 {fix}")
-                    
-                    for warn in warnings:
-                        changes_log.append(f"⚠️ {warn}")
-                        
-        except Exception as e:
-            import logging
-            logging.getLogger(__name__).warning(f"Invariant validation failed: {e}")
-
+    # 8. Persist
     set_entity(session_id, db, etype, target_key, entity)
-    return {"success": True, "changes": changes_log}
+
+    return {
+        "success": True, 
+        "changes": changes_log, 
+        "errors": errors if errors else None
+    }
