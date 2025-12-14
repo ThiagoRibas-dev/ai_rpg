@@ -3,7 +3,7 @@ Models for the Game System Rules.
 Refactored: Flattened structure, 'Engine' instead of 'Physics', and Sheet Hints.
 """
 
-from typing import List, Dict
+from typing import List, Dict, Optional
 from pydantic import BaseModel, Field
 
 
@@ -27,6 +27,36 @@ class ProcedureDef(BaseModel):
 
     description: str
     steps: List[str]
+
+
+
+class StateInvariant(BaseModel):
+    """
+    A system-specific validation constraint extracted from the rules.
+    Used to enforce game-specific bounds and constraints at runtime.
+    """
+
+    name: str = Field(..., description="Human-readable name for the constraint")
+    target_path: str = Field(
+        ...,
+        description="Dot-path to the value being constrained, e.g., 'resources.hp.current'",
+    )
+    constraint: str = Field(
+        ...,
+        description="Comparison type: '>=', '<=', '==', 'in_range', 'is_one_of'",
+    )
+    reference: str = Field(
+        ...,
+        description="Literal value ('0', '100') or path to another field ('resources.hp.max')",
+    )
+    on_violation: str = Field(
+        "clamp",
+        description="Action on violation: 'clamp' (auto-correct), 'flag' (warn), 'reject' (fail)",
+    )
+    correction_value: Optional[str] = Field(
+        None,
+        description="Value to use when clamping - literal or path. If None, uses reference.",
+    )
 
 
 class Ruleset(BaseModel):
@@ -63,3 +93,9 @@ class Ruleset(BaseModel):
         default_factory=list,
         description="Notes on stats/resources found in text (e.g. 'Uses Sanity', 'Has Strength').",
     )
+
+    state_invariants: List[StateInvariant] = Field(
+        default_factory=list,
+        description="Validation rules extracted from the game system, enforced on entity updates.",
+    )
+

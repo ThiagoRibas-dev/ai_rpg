@@ -30,6 +30,7 @@ function Get-DirectoryTreeString {
 
 [string[]]$excludeFolderList = @( # Exclusion list
     "*list_dirs_and_files*",
+    "apply_rules_update.py",
     "*\node_modules*",
     "*.git*",
     "*.clinerules",
@@ -70,7 +71,7 @@ function Get-DirectoryTreeString {
 	"*\tests\*",
     "*package-lock.json",
     "*.DS_Store", 
-    "*\docs*"        
+    "*\docs*"
 )
 
 $directoryToCrawl = ".\" 

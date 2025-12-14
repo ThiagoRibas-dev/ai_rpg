@@ -110,14 +110,18 @@ class PromptEditorDialog:
         connector = self.orchestrator._get_llm_connector()
         service = RulesGenerator(connector, status_callback=self._update_status)
         try:
-            ruleset, rule_mems = service.generate_ruleset(self.rules)
+            ruleset, rule_mems, vocabulary = service.generate_ruleset(self.rules)
 
-            # Combine into Manifest
-            manifest = {"ruleset": ruleset.model_dump(), "base_rules": rule_mems}
+            # Combine into Manifest (includes vocabulary)
+            manifest = {
+                "vocabulary": vocabulary.model_dump(),
+                "ruleset": ruleset.model_dump(),
+                "base_rules": rule_mems,
+            }
             self.manifest_json = json.dumps(manifest, indent=2)
             self._update_status("Extraction Complete!")
         except Exception as e:
-            logger.warn(f"Rules extraction failed: {e}")
+            logger.warning(f"Rules extraction failed: {e}")
             self._update_status(f"Error: {str(e)}")
 
     def _update_status(self, msg):

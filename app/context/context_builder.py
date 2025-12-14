@@ -154,6 +154,32 @@ class ContextBuilder:
             lines.append("")
         return "\n".join(lines)
 
+
+    def _build_vocabulary_hints(self, manifest: dict) -> str:
+        """Build vocabulary hints for the LLM context."""
+        vocab_data = manifest.get("vocabulary")
+        if not vocab_data:
+            return ""
+        
+        try:
+            from app.models.vocabulary import GameVocabulary
+            vocab = GameVocabulary(**vocab_data)
+            
+            lines = ["# VALID UPDATE PATHS #"]
+            
+            # Group by semantic role
+            for role in ["core_trait", "resource", "capability", "status", "progression"]:
+                role_paths = [p for p in vocab.valid_paths if p.startswith(f"{role}.")]
+                if role_paths:
+                    lines.append(f"**{role.replace('_', ' ').title()}**: {', '.join(role_paths[:5])}")
+                    if len(role_paths) > 5:
+                        lines.append(f"  ... and {len(role_paths) - 5} more")
+            
+            return "\n".join(lines)
+        except Exception as e:
+            self.logger.debug(f"Failed to build vocabulary hints: {e}")
+            return ""
+
     def _build_spatial_context(self, session_id: int) -> str:
         try:
             scene = self.db.game_state.get_entity(session_id, "scene", "active_scene")

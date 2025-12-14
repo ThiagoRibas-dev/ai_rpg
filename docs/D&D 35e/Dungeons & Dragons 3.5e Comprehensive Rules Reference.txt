@@ -1264,17 +1264,48 @@ Critical: 17-20 x2
 Type: Slashing
 
 --- SKILLS ---
-Concentration: +20
-Heal: +11
-Diplomacy: +11
-Spellcraft: +4
-Knowledge (Religion): +15
-Knowledge (Arcana): +1
-Knowledge (History): +1
-Knowledge (Planes): +1
-Spot: +9
-Listen: +5
-Use Magic Device: +4
+Open Lock: +2
+Tumble: -3
+Handle Animal: +4
+Alchemy: +2
+Escape Artist: -3
+Perform: +4
+Appraise: +2
+Bluff: +4
+Ride: +2
+Concentration: +27
+Knowledge (Dungeoneering): +2
+Knowledge (Arcana): +3/8
+Knowledge (Geography): +2
+Knowledge (History): +3/8
+Knowledge (Nature): +2
+Knowledge (Nobility and Royalty): +2
+Knowledge (Planes): +3/8
+Knowledge (Religion): +22/27
+Heal: +14
+Decipher Script: +2
+Diplomacy: +17
+Disguise: +4
+Balance: -3
+Climb: -3
+Hide: -3
+Forgery: +2
+Move Silently: -3
+Spellcraft: +6
+Intimidate: +4
+Swim: -8
+Spot: +12
+Gather Information: +4
+Craft: +2
+Disable Device: +2
+Listen: +8
+Search: +2
+Profession: +8
+Sleight of Hand: -3
+Jump: -3
+Sense Motive: +8
+Survival: +8
+Use Magic Device: +5
 
 --- FEATS  ---
 - Power Attack

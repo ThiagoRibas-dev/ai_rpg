@@ -1,6 +1,7 @@
 from typing import Any, Dict, Optional
 from app.services.state_service import get_entity, set_entity
 from app.utils.math_engine import recalculate_derived_stats
+from app.services.invariant_validator import validate_character
 
 
 def deep_update(data: dict, key: str, value: Any) -> bool:
@@ -143,6 +144,65 @@ def handler(
     # 4. Recalculate
     if template:
         entity = recalculate_derived_stats(entity, template)
+
+    # === STATE INVARIANT VALIDATION ===
+    # Apply game-system-specific constraints extracted from ruleset
+    manifest = context.get("manifest", {})
+    ruleset_id = manifest.get("ruleset_id")
+    
+    if ruleset_id:
+        try:
+            ruleset = db.rulesets.get_by_id(ruleset_id)
+            if ruleset and hasattr(ruleset, 'state_invariants') and ruleset.state_invariants:
+                entity, auto_fixes, warnings = validate_character(entity, ruleset)
+                
+                for fix in auto_fixes:
+                    changes_log.append(f"🔧 Auto-corrected: {fix}")
+                
+                for warn in warnings:
+                    changes_log.append(f"⚠️ {warn}")
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Invariant validation failed: {e}")
+
+
+
+    # === VOCABULARY-AWARE INVARIANT VALIDATION ===
+    manifest = context.get("manifest", {})
+    ruleset_id = manifest.get("ruleset_id")
+    
+    if ruleset_id:
+        try:
+            ruleset = db.rulesets.get_by_id(ruleset_id)
+            if ruleset:
+                invariants = getattr(ruleset, 'state_invariants', [])
+                
+                if invariants:
+                    from app.services.invariant_validator import validate_entity
+                    
+                    # Try to get vocabulary if available
+                    vocabulary = None
+                    vocab_data = manifest.get("vocabulary")
+                    if vocab_data:
+                        try:
+                            from app.models.vocabulary import GameVocabulary
+                            vocabulary = GameVocabulary(**vocab_data) if isinstance(vocab_data, dict) else None
+                        except Exception:
+                            pass
+                    
+                    entity, auto_fixes, warnings = validate_entity(
+                        entity, invariants, vocabulary
+                    )
+                    
+                    for fix in auto_fixes:
+                        changes_log.append(f"🔧 {fix}")
+                    
+                    for warn in warnings:
+                        changes_log.append(f"⚠️ {warn}")
+                        
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Invariant validation failed: {e}")
 
     set_entity(session_id, db, etype, target_key, entity)
     return {"success": True, "changes": changes_log}

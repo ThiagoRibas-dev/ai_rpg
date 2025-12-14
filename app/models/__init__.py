@@ -19,4 +19,20 @@ __all__ = [
     "SheetCategory",
     "SheetField",
     "FieldDisplay",
+    "FieldType",
+    "SemanticRole",
+    "FieldDefinition",
+    "GameVocabulary",
+    "create_dnd_like_vocabulary",
+    "create_fate_like_vocabulary",
+
 ]
+
+from app.models.vocabulary import (
+    FieldType,
+    SemanticRole,
+    FieldDefinition,
+    GameVocabulary,
+    create_dnd_like_vocabulary,
+    create_fate_like_vocabulary,
+)

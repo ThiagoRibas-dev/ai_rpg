@@ -185,7 +185,10 @@ class ReActTurnManager:
                     if name in self.tool_map:
                         try:
                             pydantic_model = self.tool_map[name](**args)
-                            extra_ctx = {"simulation_service": sim_service}
+                            extra_ctx = {
+                            "simulation_service": sim_service,
+                            "manifest": manifest,
+                        }
 
                             result, _ = executor.execute(
                                 [pydantic_model],
