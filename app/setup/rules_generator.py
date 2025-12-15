@@ -22,7 +22,7 @@ from app.prompts.templates import (
     IDENTIFY_MODES_INSTRUCTION,
     EXTRACT_PROCEDURE_INSTRUCTION,
     IDENTIFY_RULE_CATEGORIES_INSTRUCTION,
-    EXTRACT_RULE_CATEGORY_INSTRUCTION
+    EXTRACT_RULE_CATEGORY_INSTRUCTION,
 )
 
 logger = logging.getLogger(__name__)
@@ -36,13 +36,11 @@ class RuleEntry(BaseModel):
 
 class RulesGenerator:
     def __init__(
-        self, 
-        llm: LLMConnector, 
-        status_callback: Optional[Callable[[str], None]] = None
+        self, llm: LLMConnector, status_callback: Optional[Callable[[str], None]] = None
     ):
         self.llm = llm
         self.status_callback = status_callback
-        self.total_steps = 5 # Vocab, Engine, Invariants, Procedures, Mechanics
+        self.total_steps = 5  # Vocab, Engine, Invariants, Procedures, Mechanics
         self.current_step = 0
 
     def _update_status(self, message: str):
@@ -53,30 +51,23 @@ class RulesGenerator:
         logger.info(f"[RulesGen] {message}")
 
     def generate_ruleset(
-        self, 
-        rules_text: str
+        self, rules_text: str
     ) -> Tuple[Ruleset, List[Dict[str, Any]], GameVocabulary]:
-        
         # === 0. BUILD SHARED BASE CONTEXT ===
         self.current_step = 0
         self._update_status("Ingesting rules text...")
-        
-        base_history = [
-            Message(role="system", content=SHARED_RULES_SYSTEM_PROMPT),
-            Message(role="user", content=f"# RULES TEXT\n\n{rules_text[:12000]}") 
-        ]
+
+        system_prompt = SHARED_RULES_SYSTEM_PROMPT.format(rules_source=rules_text)
 
         # === PHASE 1: VOCABULARY ===
         self.current_step = 1
         self._update_status("Extracting game vocabulary...")
-        
+
         # Will raise exception if fails
         vocab_extractor = VocabularyExtractor(self.llm, self.status_callback)
-        vocabulary = vocab_extractor.extract(base_history)
-        
-        self._update_status(
-            f"Vocabulary: {len(vocabulary.fields)} fields found."
-        )
+        vocabulary = vocab_extractor.extract(system_prompt)
+
+        self._update_status(f"Vocabulary: {len(vocabulary.fields)} fields found.")
 
         # === PHASE 2: ENGINE META ===
         self.current_step = 2
@@ -91,15 +82,15 @@ class RulesGenerator:
             crit_rules: str
             sheet_hints: List[str]
 
-        engine_history = base_history + [Message(role="user", content=EXTRACT_ENGINE_INSTRUCTION)]
-        
+        engine_history = [Message(role="user", content=EXTRACT_ENGINE_INSTRUCTION)]
+
         # Fail Fast
         meta_res = self.llm.get_structured_response(
-            system_prompt="IGNORED",
+            system_prompt=system_prompt,
             chat_history=engine_history,
             output_schema=QuickMeta,
         )
-        
+
         ruleset = Ruleset(
             meta={"name": meta_res.name, "genre": meta_res.genre},
             engine=EngineConfig(
@@ -114,10 +105,10 @@ class RulesGenerator:
         # === PHASE 3: INVARIANTS ===
         self.current_step = 3
         self._update_status("Extracting state invariants...")
-        
+
         # Will raise exception if fails
         inv_extractor = InvariantExtractor(self.llm, vocabulary, self.status_callback)
-        invariants = inv_extractor.extract(base_history) 
+        invariants = inv_extractor.extract(system_prompt)
         ruleset.state_invariants = invariants
 
         # === PHASE 4: PROCEDURES ===
@@ -127,11 +118,11 @@ class RulesGenerator:
         class GameModes(BaseModel):
             names: List[str]
 
-        mode_history = base_history + [Message(role="user", content=IDENTIFY_MODES_INSTRUCTION)]
-        
+        mode_history = [Message(role="user", content=IDENTIFY_MODES_INSTRUCTION)]
+
         # Fail Fast
         modes = self.llm.get_structured_response(
-            system_prompt="IGNORED",
+            system_prompt=system_prompt,
             chat_history=mode_history,
             output_schema=GameModes,
         )
@@ -140,12 +131,12 @@ class RulesGenerator:
         for mode in target_modes:
             self._update_status(f"Extracting procedure: {mode}...")
             proc_instruction = EXTRACT_PROCEDURE_INSTRUCTION.format(mode_name=mode)
-            proc_history = base_history + [Message(role="user", content=proc_instruction)]
-            
-            # Fail Fast on individual procedures? 
+            proc_history = [Message(role="user", content=proc_instruction)]
+
+            # Fail Fast on individual procedures?
             # Strict mode: Yes. If API fails, we stop.
             proc = self.llm.get_structured_response(
-                system_prompt="IGNORED",
+                system_prompt=system_prompt,
                 chat_history=proc_history,
                 output_schema=ProcedureDef,
             )
@@ -165,18 +156,20 @@ class RulesGenerator:
 
         class MechList(BaseModel):
             rules: List[RuleEntry]
-            
+
         class RuleCats(BaseModel):
             categories: List[str]
 
         rule_dicts = []
-        
+
         # 5.1 Identify Categories
-        cat_history = base_history + [Message(role="user", content=IDENTIFY_RULE_CATEGORIES_INSTRUCTION)]
-        
+        cat_history = [
+            Message(role="user", content=IDENTIFY_RULE_CATEGORIES_INSTRUCTION)
+        ]
+
         # Fail Fast
         cats_res = self.llm.get_structured_response(
-            system_prompt="IGNORED",
+            system_prompt=system_prompt,
             chat_history=cat_history,
             output_schema=RuleCats,
         )
@@ -186,21 +179,23 @@ class RulesGenerator:
         for cat in target_cats:
             self._update_status(f"Extracting rules: {cat}...")
             mech_instruction = EXTRACT_RULE_CATEGORY_INSTRUCTION.format(category=cat)
-            mech_history = base_history + [Message(role="user", content=mech_instruction)]
-            
+            mech_history = [Message(role="user", content=mech_instruction)]
+
             # Fail Fast
             mech_res = self.llm.get_structured_response(
-                system_prompt="IGNORED",
+                system_prompt=system_prompt,
                 chat_history=mech_history,
                 output_schema=MechList,
             )
             for r in mech_res.rules:
-                rule_dicts.append({
-                    "kind": "rule",
-                    "content": f"{r.name}: {r.content}",
-                    "tags": r.tags + ["rule", cat.lower()],
-                })
+                rule_dicts.append(
+                    {
+                        "kind": "rule",
+                        "content": f"{r.name}: {r.content}",
+                        "tags": r.tags + ["rule", cat.lower()],
+                    }
+                )
 
         self._update_status("Rules generation complete!")
-        
+
         return ruleset, rule_dicts, vocabulary
