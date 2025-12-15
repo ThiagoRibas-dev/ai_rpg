@@ -149,6 +149,9 @@ class RulesGenerator:
                 ruleset.social_procedures[mode] = proc
             elif "downtime" in m:
                 ruleset.downtime_procedures[mode] = proc
+            else:
+                logger.warning(f"Uncategorized mode procedure: {mode}")
+                ruleset.other_procedures[mode] = proc
 
         # === PHASE 5: MECHANICS ===
         self.current_step = 5

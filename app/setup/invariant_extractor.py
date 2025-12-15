@@ -55,7 +55,7 @@ class InvariantExtractor:
         # 1. Build Instruction
         path_examples = []
         seen_cats = set()
-        for path in self.vocab.valid_paths[:50]:
+        for path in self.vocab.valid_paths():
             parts = path.split(".")
             if parts[0] not in seen_cats:
                 seen_cats.add(parts[0])

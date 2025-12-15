@@ -69,7 +69,7 @@ List the specific phases or steps players and GM must follow.
 
 # Mechanics
 GENERATE_MECHANICS_INSTRUCTION = """
-Extract specific **Game Rules** (Conditions, Actions, Magic Rules) as distinct entries.
+Extract specific **Game Rules** (Conditions, Actions, Magic Rules, etc) as distinct entries.
 Return a list of rule objects with 'name', 'content', and 'tags'.
 """
 
@@ -144,12 +144,13 @@ Return a JSON object with a `fields` list.
 # --- ITERATIVE MECHANICS EXTRACTION ---
 
 IDENTIFY_RULE_CATEGORIES_INSTRUCTION = """
-Analyze the text and list the **Rule Categories** present.
-Examples: "Combat Rules", "Spellcasting", "Condition Definitions", "Item Properties", "Travel Rules".
+Analyze the provided rules text and list the **Rule Categories** present.
+These categories are not about specific procedures, but broader groups of rules/mechanics like "Combat", "Sanity", "Spellcasting", "Conditions", "Materials", "Character Advancement", "Travel", "Social", etc.
 Return ONLY a JSON list of strings.
 """
 
 EXTRACT_RULE_CATEGORY_INSTRUCTION = """
-Extract all rules, tables, and mechanics related to **{category}**.
+Extract all rules, tables, and mechanics related of the following category: **{category}**.
+These are not procedures, but specific mechanics, conditions, actions, etc.
 Return a list of rule objects with `name`, `content`, and `tags`.
 """
