@@ -24,10 +24,7 @@ from app.setup.schema_builder import (
     build_creation_model_from_vocabulary,
     get_creation_hints_from_vocabulary,
 )
-from app.setup.invariant_extractor import (
-    InvariantExtractor,
-    extract_invariants_with_vocabulary,
-)
+from app.setup.invariant_extractor import InvariantExtractor
 from app.setup.rules_generator import RulesGenerator
 
 __all__ = [
@@ -45,7 +42,6 @@ __all__ = [
     "get_creation_hints_from_vocabulary",
     # Invariants
     "InvariantExtractor",
-    "extract_invariants_with_vocabulary",
     # Rules
     "RulesGenerator",
 ]

@@ -21,6 +21,8 @@ from app.models.vocabulary import (
 from app.prompts.templates import (
     SHARED_RULES_SYSTEM_PROMPT,
     VOCABULARY_ANALYSIS_INSTRUCTION,
+    VOCABULARY_JSON_INSTRUCTION,
+    EXTRACT_ENGINE_INSTRUCTION,
     VOCABULARY_GROUP_INSTRUCTION,
 )
 
@@ -89,17 +91,20 @@ class VocabularyExtractor:
             response_stream = self.llm.get_streaming_response(
                 system_prompt=system_prompt, chat_history=analysis_history
             )
-            # Consume stream to ensure API call completes
-            list(response_stream)
+            analysis_content = "".join(response_stream)
+            analysis_history.append(Message(role="assistant", content=analysis_content))
         except Exception as e:
             logger.warning(f"Analysis stream warning (non-fatal): {e}")
 
         # 2. Metadata Extraction
         self._update_status("Extracting system metadata...")
         # No try/except here - Fail Fast
+        meta_extraction_history = analysis_history + [
+            Message(role="user", content=EXTRACT_ENGINE_INSTRUCTION)
+        ]
         meta = self.llm.get_structured_response(
             system_prompt=system_prompt,
-            chat_history=analysis_history,
+            chat_history=meta_extraction_history,
             output_schema=ExtractedVocabularyMeta,
             temperature=0.2,
         )
@@ -129,8 +134,14 @@ class VocabularyExtractor:
             if not keys_list:
                 keys_list = "(None)"
 
-            instruction = VOCABULARY_GROUP_INSTRUCTION.format(
-                group_name=group_name, roles=", ".join(roles), existing_keys=keys_list
+            instruction = (
+                VOCABULARY_JSON_INSTRUCTION
+                + "\n\n"
+                + VOCABULARY_GROUP_INSTRUCTION.format(
+                    group_name=group_name,
+                    roles=", ".join(roles),
+                    existing_keys=keys_list,
+                )
             )
 
             step_history = analysis_history + [

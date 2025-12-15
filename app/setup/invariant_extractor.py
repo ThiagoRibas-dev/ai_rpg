@@ -14,10 +14,7 @@ from app.llm.llm_connector import LLMConnector
 from app.models.message import Message
 from app.models.vocabulary import GameVocabulary
 from app.models.ruleset import StateInvariant
-from app.prompts.templates import (
-    SHARED_RULES_SYSTEM_PROMPT,
-    EXTRACT_INVARIANTS_INSTRUCTION,
-)
+from app.prompts.templates import EXTRACT_INVARIANTS_INSTRUCTION
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +48,9 @@ class InvariantExtractor:
             self.status_callback(message)
         logger.info(f"[InvariantExtractor] {message}")
 
-    def extract(self, system_prompt: str) -> List[StateInvariant]:
+    def extract(
+        self, system_prompt: str, category: str, existing_invariants: List[str]
+    ) -> List[StateInvariant]:
         # 1. Build Instruction
         path_examples = []
         seen_cats = set()
@@ -63,7 +62,11 @@ class InvariantExtractor:
             path_examples.append(f"    - `{path}`")
 
         paths_text = "".join(path_examples)
-        instruction = EXTRACT_INVARIANTS_INSTRUCTION.format(paths_text=paths_text)
+        existing_text = "\n".join(f"- {inv}" for inv in existing_invariants) or "N/A"
+
+        instruction = EXTRACT_INVARIANTS_INSTRUCTION.format(
+            paths_text=paths_text, category=category, existing_invariants=existing_text
+        )
 
         # 2. Extract (Fail Fast)
         history = [Message(role="user", content=instruction)]
@@ -77,30 +80,22 @@ class InvariantExtractor:
 
         # 3. Validate
         valid_invariants = []
-        for inv in result.invariants:
-            if not self.vocab.validate_path(inv.target_path):
-                continue
+        if result and result.invariants:
+            for inv in result.invariants:
+                if not self.vocab.validate_path(inv.target_path):
+                    logger.warning(
+                        f"Skipping invariant '{inv.name}' with invalid path: {inv.target_path}"
+                    )
+                    continue
 
-            valid_invariants.append(
-                StateInvariant(
-                    name=inv.name,
-                    target_path=inv.target_path,
-                    constraint=inv.constraint,
-                    reference=inv.reference,
-                    on_violation=inv.on_violation,
-                    correction_value=inv.correction_value,
+                valid_invariants.append(
+                    StateInvariant(
+                        name=inv.name,
+                        target_path=inv.target_path,
+                        constraint=inv.constraint,
+                        reference=inv.reference,
+                        on_violation=inv.on_violation,
+                        correction_value=inv.correction_value,
+                    )
                 )
-            )
-
         return valid_invariants
-
-
-def extract_invariants_with_vocabulary(
-    llm: LLMConnector,
-    vocabulary: GameVocabulary,
-    rules_text: str,
-    status_callback: Optional[Callable[[str], None]] = None,
-) -> List[StateInvariant]:
-    system_prompt = SHARED_RULES_SYSTEM_PROMPT.format(rules_source=rules_text)
-    extractor = InvariantExtractor(llm, vocabulary, status_callback)
-    return extractor.extract(system_prompt)

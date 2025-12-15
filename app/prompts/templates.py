@@ -74,15 +74,27 @@ Return a list of rule objects with 'name', 'content', and 'tags'.
 """
 
 # Invariants
+IDENTIFY_INVARIANT_CATEGORIES_INSTRUCTION = """
+Analyze the rules to find categories of **State Invariants**.
+These are groups of rules that define limits, constraints, or relationships that must always hold true (e.g., HP <= Max HP).
+Examples: "Attribute Limits", "Resource Constraints", "Combat State Rules", "Character Status".
+Return ONLY a JSON list of strings.
+"""
+
 EXTRACT_INVARIANTS_INSTRUCTION = """
+Focus on the rule category: **{category}**.
 Identify STATE INVARIANTS — conditions that must ALWAYS be true (e.g. HP <= MaxHP).
+
+### PREVIOUSLY EXTRACTED
+Do NOT re-extract invariants with these names:
+{existing_invariants}
 
 ## VALID PATHS
 You may ONLY reference these paths found in the vocabulary:
 {paths_text}
 
 ## TASK
-Extract 5-15 invariants.
+Extract all invariants for the specified category, avoiding the ones already extracted.
 Constraint types: `>=` , `<=`, `==`, `in_range`.
 Violation actions: `clamp` (auto-fix), `flag` (warn), `reject`.
 """

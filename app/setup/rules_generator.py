@@ -104,12 +104,31 @@ class RulesGenerator:
 
         # === PHASE 3: INVARIANTS ===
         self.current_step = 3
-        self._update_status("Extracting state invariants...")
+        self._update_status("Extracting state invariants by vocabulary category...")
 
-        # Will raise exception if fails
-        inv_extractor = InvariantExtractor(self.llm, vocabulary, self.status_callback)
-        invariants = inv_extractor.extract(system_prompt)
-        ruleset.state_invariants = invariants
+        # Deterministic categories based on vocabulary
+        inv_categories = set()
+        if vocabulary and vocabulary.valid_paths:
+            for path in vocabulary.valid_paths:
+                inv_categories.add(path.split(".")[0])
+
+        all_invariants = []
+        if inv_categories:
+            inv_extractor = InvariantExtractor(
+                self.llm, vocabulary, self.status_callback
+            )
+            existing_invariant_names = []
+            for category in sorted(list(inv_categories)):
+                self._update_status(f"Extracting invariants for: {category}...")
+                # Will raise exception if fails
+                invariants = inv_extractor.extract(
+                    system_prompt, category, existing_invariant_names
+                )
+                if invariants:
+                    all_invariants.extend(invariants)
+                    existing_invariant_names.extend([inv.name for inv in invariants])
+
+        ruleset.state_invariants = all_invariants
 
         # === PHASE 4: PROCEDURES ===
         self.current_step = 4
@@ -150,8 +169,8 @@ class RulesGenerator:
             elif "downtime" in m:
                 ruleset.downtime_procedures[mode] = proc
             else:
-                logger.warning(f"Uncategorized mode procedure: {mode}")
-                ruleset.other_procedures[mode] = proc
+                logger.warning(f"Uncategorized mode procedure: {mode}. Adding to downtime")
+                ruleset.downtime_procedures[mode] = proc
 
         # === PHASE 5: MECHANICS ===
         self.current_step = 5

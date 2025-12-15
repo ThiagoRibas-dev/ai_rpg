@@ -20,7 +20,7 @@ class GeminiConnector(LLMConnector):
 
         self.model_name = os.environ.get("GEMINI_API_MODEL")
         if not self.model_name:
-            self.model_name = "gemini-2.0-flash" # Updated default
+            self.model_name = "gemini-flash-latest" # Updated default
         
         self.client = genai.Client(api_key=api_key)
         self.default_max_tokens = 65535
