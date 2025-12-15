@@ -56,15 +56,8 @@ I need:
 """
 
 # Procedures
-IDENTIFY_MODES_INSTRUCTION = """
-Identify the distinct **Game Modes** (Loops) described in the text.
-Examples: Combat, Exploration, Social, Downtime, Hacking, Travel.
-Return ONLY a JSON list of strings.
-"""
-
 EXTRACT_PROCEDURE_INSTRUCTION = """
-Extract the step-by-step **Procedure** for **{mode_name}**.
-List the specific phases or steps players and GM must follow.
+Extract the **{mode_name}** **Procedure** and the specific phases or steps players and/or GM must follow for each **{mode_name}** **Procedure** .
 """
 
 # Mechanics
@@ -77,7 +70,7 @@ Return a list of rule objects with 'name', 'content', and 'tags'.
 IDENTIFY_INVARIANT_CATEGORIES_INSTRUCTION = """
 Analyze the rules to find categories of **State Invariants**.
 These are groups of rules that define limits, constraints, or relationships that must always hold true (e.g., HP <= Max HP).
-Examples: "Attribute Limits", "Resource Constraints", "Combat State Rules", "Character Status".
+Examples: "Attribute Limits", "Resource Constraints", "Combat Formulas", "Character Status".
 Return ONLY a JSON list of strings.
 """
 

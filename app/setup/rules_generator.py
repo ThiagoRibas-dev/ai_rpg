@@ -19,7 +19,6 @@ from app.setup.invariant_extractor import InvariantExtractor
 from app.prompts.templates import (
     SHARED_RULES_SYSTEM_PROMPT,
     EXTRACT_ENGINE_INSTRUCTION,
-    IDENTIFY_MODES_INSTRUCTION,
     EXTRACT_PROCEDURE_INSTRUCTION,
     IDENTIFY_RULE_CATEGORIES_INSTRUCTION,
     EXTRACT_RULE_CATEGORY_INSTRUCTION,
@@ -134,18 +133,15 @@ class RulesGenerator:
         self.current_step = 4
         self._update_status("Identifying game loops...")
 
-        class GameModes(BaseModel):
-            names: List[str]
-
-        mode_history = [Message(role="user", content=IDENTIFY_MODES_INSTRUCTION)]
-
-        # Fail Fast
-        modes = self.llm.get_structured_response(
-            system_prompt=system_prompt,
-            chat_history=mode_history,
-            output_schema=GameModes,
-        )
-        target_modes = modes.names[:6] if modes and modes.names else []
+        target_modes = [
+            "combat",
+            "encounter",
+            "exploration",
+            "travel",
+            "social",
+            "downtime",
+            "other",
+        ]
 
         for mode in target_modes:
             self._update_status(f"Extracting procedure: {mode}...")
@@ -169,7 +165,9 @@ class RulesGenerator:
             elif "downtime" in m:
                 ruleset.downtime_procedures[mode] = proc
             else:
-                logger.warning(f"Uncategorized mode procedure: {mode}. Adding to downtime")
+                logger.warning(
+                    f"Uncategorized mode procedure: {mode}. Adding to downtime"
+                )
                 ruleset.downtime_procedures[mode] = proc
 
         # === PHASE 5: MECHANICS ===
