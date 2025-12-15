@@ -39,15 +39,13 @@ class MemoryRetriever:
         recent_messages: List[Message],
         limit: int = 10,
         kinds: Union[str, List[str]] = None,
-        active_npc_keys: Optional[List[str]] = None,
         extra_tags: Optional[List[str]] = None,
     ) -> List[Any]:
         """
         Retrieve relevant memories.
         Query Text = [Last Assistant Message] + [Current User Message]
         """
-        if active_npc_keys is None:
-            active_npc_keys = []
+
         if extra_tags is None:
             extra_tags = []
 

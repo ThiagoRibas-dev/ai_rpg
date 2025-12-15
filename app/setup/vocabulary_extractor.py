@@ -6,7 +6,7 @@ Updated: Fail-fast architecture (raises exceptions).
 """
 
 import logging
-from typing import List, Optional, Dict, Any, Callable, Union, Set
+from typing import List, Optional, Dict, Any, Callable, Set
 
 from pydantic import BaseModel
 

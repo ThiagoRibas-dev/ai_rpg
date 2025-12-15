@@ -20,22 +20,6 @@ class ToolCall(BaseModel):
     )
 
 
-class TurnPlan(BaseModel):
-    """The LLM's analysis of the player's intent and the strategic plan for the turn."""
-
-    analysis: str = Field(
-        description="A brief, one or two-sentence analysis of the player's last message, identifying their core intent.",
-        example="The player wants to buy a sword from the blacksmith.",
-    )
-    plan_steps: List[str] = Field(
-        description="A step-by-step logical plan of what the AI will do this turn before responding. This includes identifying necessary tool calls.",
-        example=[
-            "1. Check the player's current gold using state.query.",
-            "2. See what swords the blacksmith has in stock using state.query.",
-        ],
-    )
-
-
 class PatchOp(BaseModel):
     """A single operation within a JSON Patch, as defined by RFC 6902."""
 
@@ -68,64 +52,6 @@ class Patch(BaseModel):
     ops: List[PatchOp] = Field(
         description="A list of patch operations to apply to the entity."
     )
-
-
-class MemoryIntent(BaseModel):
-    """An instruction from the LLM to create or update a memory."""
-
-    kind: Literal["episodic", "semantic", "lore", "user_pref"] = Field(
-        description="The category of the memory.",
-        example="episodic",
-    )
-    content: str = Field(
-        description="The detailed content of the memory.",
-        example="The player met a mysterious old man in the Whispering Woods who gave them a cryptic map.",
-    )
-    priority: Optional[int] = Field(
-        default=None,
-        ge=1,
-        le=5,
-        description="The importance of the memory (1=low, 5=high).",
-        example=4,
-    )
-    tags: Optional[List[str]] = Field(
-        default_factory=list,
-        description="Keywords or tags to make the memory easily searchable.",
-        example=["quest", "map", "npc_interaction"],
-    )
-
-
-class ResponseStep(BaseModel):
-    """The LLM's main output for a turn, including the response text and any proposed changes."""
-
-    response: str = Field(
-        description="The response text to be shown to the player.",
-        example="The city of Eldoria bustles with life. You see a blacksmith's shop, a tavern, and a general store. What do you do?",
-    )
-    proposed_patches: List[Patch] = Field(
-        default_factory=list,
-        description="A list of state changes the LLM proposes based on the turn's events.",
-    )
-    memory_intents: List[MemoryIntent] = Field(
-        default_factory=list,
-        description="A list of memories the LLM wants to record from this turn.",
-    )
-    turn_summary: str = Field(
-        description="A one-sentence summary of what happened this turn.",
-        example="The player arrived in the city of Eldoria and decided to visit the blacksmith.",
-    )
-    turn_tags: List[str] = Field(
-        description="3-5 tags categorizing this turn.",
-        example=["exploration", "city", "decision"],
-    )
-    turn_importance: int = Field(
-        ge=1,
-        le=5,
-        description="How important this turn is to the overall story (1=minor, 5=critical).",
-        example=3,
-    )
-
-
 class WorldTickOutcome(BaseModel):
     """The simulated outcome of an NPC's off-screen actions during a time skip."""
 
@@ -159,33 +85,3 @@ class ActionChoices(BaseModel):
         min_length=3,
         max_length=5,
     )
-
-
-class AuditResult(BaseModel):
-    """The result of an audit on the game state or LLM's actions."""
-
-    ok: bool = Field(
-        description="Whether the audit passed without issues.",
-        example=True,
-    )
-    notes: Optional[str] = Field(
-        default=None,
-        description="Auditor's notes, explaining any issues found or suggestions for improvement.",
-        example="The player's health should not be above the maximum health defined in the character sheet.",
-    )
-    proposed_patches: Optional[List[Patch]] = Field(
-        default_factory=list,
-        description="DEPRECATED. Do not use.",
-    )
-    memory_updates: Optional[List[MemoryIntent]] = Field(
-        default_factory=list,
-        description="Memory updates to correct or add information based on the audit.",
-    )
-    suggested_tool_calls: List[ToolCall] = Field(
-        default_factory=list,
-        description="Tools that should have been executed to match the narrative (e.g. scene.move_to, character.apply_damage). Use this to fix state desync."
-    )
-
-
-class SceneSummary(BaseModel):
-    summary_text: str = Field(..., description="The concise summary of the scene.")

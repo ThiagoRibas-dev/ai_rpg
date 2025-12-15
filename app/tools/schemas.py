@@ -86,10 +86,3 @@ class InventoryAddItem(BaseModel):
     properties: Optional[Dict[str, Any]] = None
     target_slot: Optional[str] = None
 
-class CharacterUpdate(BaseModel):
-    name: Literal["character.update"] = "character.update"
-    character_key: str = Field(...)
-    updates: List[Any] = Field(...)
-
-class Deliberate(BaseModel):
-    name: Literal["deliberate"] = "deliberate"

@@ -9,7 +9,6 @@ from app.tools.schemas import (
     GameLog,
     GameRoll,
     TimeAdvance,
-    CharacterUpdate,
     InventoryAddItem,
     MemoryUpsert,
 )
@@ -206,7 +205,6 @@ class ToolExecutor:
                 )
 
         if tool_name in [
-            CharacterUpdate.model_fields["name"].default,
             InventoryAddItem.model_fields["name"].default,
         ]:
             if self.ui_queue:

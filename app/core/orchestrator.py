@@ -119,24 +119,6 @@ class Orchestrator:
 
     # --- Session Management ---
 
-    def new_session(self, system_prompt: str, setup_phase_data: str = "{}"):
-        self.session = Session(
-            "default_session",
-            system_prompt=system_prompt,
-            setup_phase_data=setup_phase_data,
-        )
-
-    def save_game(self, name: str, prompt_id: int):
-        if self.session is None:
-            return
-        session_data = self.session.to_json()
-        with DBManager(self.db_path) as db_manager:
-            game_session = db_manager.sessions.create(
-                name, session_data, prompt_id, self.session.setup_phase_data
-            )
-        if self.session:
-            self.session.id = game_session.id
-
     def load_game(self, session_id: int):
         with DBManager(self.db_path) as db_manager:
             game_session = db_manager.sessions.get_by_id(session_id)
