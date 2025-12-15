@@ -146,7 +146,7 @@ class PromptEditorDialog:
             self.manifest_json = json.dumps(manifest, indent=2)
             self._update_status("Extraction Complete!")
         except Exception as e:
-            logger.warning(f"Rules extraction failed: {e}")
+            logger.error(f"Rules extraction failed: {e}")
             self._update_status(f"Error: {str(e)}")
 
     def _update_status(self, msg):
