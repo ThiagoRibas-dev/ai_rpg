@@ -23,9 +23,6 @@ __all__ = [
     "SemanticRole",
     "FieldDefinition",
     "GameVocabulary",
-    "create_dnd_like_vocabulary",
-    "create_fate_like_vocabulary",
-
 ]
 
 from app.models.vocabulary import (
@@ -33,6 +30,4 @@ from app.models.vocabulary import (
     SemanticRole,
     FieldDefinition,
     GameVocabulary,
-    create_dnd_like_vocabulary,
-    create_fate_like_vocabulary,
 )

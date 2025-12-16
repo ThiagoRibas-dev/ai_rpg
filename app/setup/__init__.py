@@ -2,17 +2,21 @@
 Setup package for game initialization.
 
 Contains:
-- VocabularyExtractor: Extract game vocabulary from rules text
+- VocabularyExtractor: Role-scoped vocabulary extraction
+- InvariantExtractor: Structural + edge case invariants
 - SchemaBuilder: Generate Pydantic models from vocabulary
-- InvariantExtractor: Extract state invariants with vocabulary validation
 - WorldGenService: Generate world data
 - SheetGenerator: Generate character sheets
-- RulesGenerator: Extract game rules, vocabulary, and procedures
+- RulesGenerator: Orchestrate full extraction pipeline
 """
 
 from app.setup.vocabulary_extractor import (
     VocabularyExtractor,
-    extract_vocabulary_from_text,
+)
+from app.setup.invariant_extractor import (
+    InvariantExtractor,
+    generate_structural_invariants,
+    extract_invariants,
 )
 from app.setup.schema_builder import (
     SchemaBuilder,
@@ -24,13 +28,15 @@ from app.setup.schema_builder import (
     build_creation_model_from_vocabulary,
     get_creation_hints_from_vocabulary,
 )
-from app.setup.invariant_extractor import InvariantExtractor
 from app.setup.rules_generator import RulesGenerator
 
 __all__ = [
     # Vocabulary
     "VocabularyExtractor",
-    "extract_vocabulary_from_text",
+    # Invariants
+    "InvariantExtractor",
+    "generate_structural_invariants",
+    "extract_invariants",
     # Schema Builder
     "SchemaBuilder",
     "PoolValue",
@@ -40,8 +46,6 @@ __all__ = [
     "build_character_model_from_vocabulary",
     "build_creation_model_from_vocabulary",
     "get_creation_hints_from_vocabulary",
-    # Invariants
-    "InvariantExtractor",
     # Rules
     "RulesGenerator",
 ]

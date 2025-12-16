@@ -52,7 +52,7 @@ class SheetGenerator:
                 system_prompt=SHEET_GENERATOR_SYSTEM_PROMPT,
                 chat_history=[Message(role="user", content=user_prompt)],
                 output_schema=SheetBlueprint,
-                temperature=0.7,
+                temperature=0.5,
             )
             return self._hydrate_blueprint(blueprint)
         except Exception as e:
@@ -107,7 +107,7 @@ You are populating a character sheet for the system: {vocabulary.system_name}.
                 system_prompt="You are an expert TTRPG character creator.",
                 chat_history=[Message(role="user", content=prompt)],
                 output_schema=CreationModel,
-                temperature=0.7,
+                temperature=0.5,
             )
 
             # 4. Expand to Full Data (e.g. int -> {current, max})
@@ -171,7 +171,7 @@ You are populating a character sheet for the system: {vocabulary.system_name}.
                 system_prompt=SHEET_GENERATOR_SYSTEM_PROMPT,
                 chat_history=[Message(role="user", content=user_prompt)],
                 output_schema=DynamicSchema,
-                temperature=0.7,
+                temperature=0.5,
             )
             return result_model.model_dump()
         except Exception as e:
