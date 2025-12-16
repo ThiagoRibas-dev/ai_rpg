@@ -12,6 +12,7 @@ Your goal is to analyze the provided Game Rules text, understand, then extract t
 1. **Source of Truth:** The provided Rules Text is your primary source of information. While you may use your prior knowledge to fill in gaps, always prioritize the provided text.
 2. **Precision:** Be specific and precise. Extract specific numbers, formulas, dice codes, rules, keywords, mechanics, etc.
 3. **Efficiency:** Keep responses concise and to the point. Efficiently distil and extract only the relevant information.
+4. **Structure not Content:** Focus on extracting the core, basal, structural information instead of specific content. The structures that exist regardless of the player choices, where the player chooses the values.
 
 ## RULES TEXT
 {rules_source}
