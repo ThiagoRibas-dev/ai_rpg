@@ -14,7 +14,7 @@ from app.models.message import Message
 from app.models.session import Session
 from app.setup.setup_manifest import SetupManifest
 from app.tools.executor import ToolExecutor
-from app.tools.schemas import EntityUpdate, GameLog, GameRoll, TimeAdvance, WorldTravel
+from app.tools.schemas import Adjust, Set, Mark, Roll, Move, Note
 from app.llm.schemas import ActionChoices
 
 logger = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ class ReActTurnManager:
     """
     Executes a game turn using an Iterative ReAct (Reason + Act) Loop.
     Lifecycle-aware: attaches turn_id to all UI events.
-    Includes Action Suggestions.
+    Integration: Loads SystemManifest for Context and Tools.
     """
 
     def __init__(self, orchestrator):
@@ -51,13 +51,27 @@ class ReActTurnManager:
         }
 
     def execute_turn(self, game_session: GameSession, thread_db_manager, turn_id: str):
-        """
-        Main ReAct Loop with Turn ID.
-        """
         if self.orchestrator.stop_event.is_set():
             return
 
-        # --- Setup Services ---
+        # --- 1. LOAD MANIFEST ---
+        # Fetch the active system manifest for this session
+        manifest_mgr = SetupManifest(thread_db_manager)
+        setup_data = manifest_mgr.get_manifest(game_session.id)
+        
+        # Determine Manifest ID
+        manifest_id = setup_data.get("manifest_id")
+        manifest = None
+
+        if manifest_id:
+            manifest = thread_db_manager.manifests.get_by_id(manifest_id)
+        
+        # Fallback: If no manifest linked (Legacy Session), default to D&D 5e
+        # In a production migration, we would map setup_data["ruleset_id"] to a manifest here.
+        if not manifest:
+            manifest = thread_db_manager.manifests.get_by_system_id("dnd_5e")
+
+        # --- 2. SETUP SERVICES ---
         state_builder = StateContextBuilder(
             self.tool_registry, thread_db_manager, self.logger
         )
@@ -65,6 +79,8 @@ class ReActTurnManager:
             thread_db_manager, self.vector_store, self.logger
         )
         sim_service = SimulationService(self.llm_connector, self.logger)
+        
+        # Pass Manifest to Context Builder
         context_builder = ContextBuilder(
             thread_db_manager,
             self.vector_store,
@@ -72,7 +88,9 @@ class ReActTurnManager:
             mem_retriever,
             sim_service,
             self.logger,
+            manifest=manifest 
         )
+        
         executor = ToolExecutor(
             self.tool_registry,
             thread_db_manager,
@@ -80,10 +98,8 @@ class ReActTurnManager:
             self.ui_queue,
             self.logger,
         )
-        manifest_mgr = SetupManifest(thread_db_manager)
-        manifest = manifest_mgr.get_manifest(game_session.id)
 
-        # --- 1. Context Building ---
+        # --- 3. CONTEXT BUILDING ---
         session_in_thread = Session.from_json(game_session.session_data)
         session_in_thread.id = game_session.id
 
@@ -109,32 +125,30 @@ class ReActTurnManager:
         elif working_history[-1].role == "assistant":
             working_history.append(Message(role="user", content="[Continue]"))
 
-        # --- DYNAMIC TOOL INJECTION ---
+        # --- 4. TOOL INJECTION ---
         active_tool_names = [
-            EntityUpdate.model_fields["name"].default,
-            GameRoll.model_fields["name"].default,
-            WorldTravel.model_fields["name"].default,
-            GameLog.model_fields["name"].default,
-            TimeAdvance.model_fields["name"].default,
+            Adjust.model_fields["name"].default,
+            Set.model_fields["name"].default,
+            Mark.model_fields["name"].default,
+            Roll.model_fields["name"].default,
+            Move.model_fields["name"].default,
+            Note.model_fields["name"].default,
         ]
         llm_tools = self.tool_registry.get_llm_tool_schemas(active_tool_names)
 
-        ruleset_id = manifest.get("ruleset_id")
-        if ruleset_id:
-            ruleset = thread_db_manager.rulesets.get_by_id(ruleset_id)
-            if ruleset:
-                for tool in llm_tools:
-                    if tool["function"]["name"] == GameRoll.model_fields["name"].default:
-                        eng = ruleset.engine
-                        desc = (
-                            f"Roll dice to resolve actions. "
-                            f"SYSTEM RULES: Dice='{eng.dice_notation}'. "
-                            f"Mechanic='{eng.roll_mechanic}'. "
-                            f"Crit='{eng.crit_rules}'."
-                        )
-                        tool["function"]["description"] = desc
+        # Inject Dice Rules into Roll Tool
+        if manifest:
+            for tool in llm_tools:
+                if tool["function"]["name"] == "roll":
+                    eng = manifest.engine
+                    desc = (
+                        f"Roll dice. SYSTEM: Dice='{eng.dice}'. "
+                        f"Mechanic='{eng.mechanic}'. "
+                        f"Crit='{eng.crit}'."
+                    )
+                    tool["function"]["description"] = desc
 
-        # --- 2. Phase A: The Action Loop ---
+        # --- 5. ACTION LOOP ---
         self.ui_queue.put({
             "type": "planning_started", 
             "content": "Thinking...",
@@ -194,13 +208,13 @@ class ReActTurnManager:
                             pydantic_model = self.tool_map[name](**args)
                             extra_ctx = {
                                 "simulation_service": sim_service,
-                                "manifest": manifest,
+                                "manifest": manifest, # PASS MANIFEST TO TOOLS
                             }
 
                             result, _ = executor.execute(
                                 [pydantic_model],
                                 game_session,
-                                manifest,
+                                setup_data, # Pass setup data as manifest dict fallback
                                 tool_budget=1,
                                 current_game_time=game_session.game_time,
                                 extra_context=extra_ctx,
@@ -249,7 +263,7 @@ class ReActTurnManager:
                     final_narrative = response.content
                 break
 
-        # --- 3. Phase B: Narrative Handling ---
+        # --- 6. NARRATIVE HANDLING ---
         if self.orchestrator.stop_event.is_set():
             return
 
@@ -286,22 +300,18 @@ class ReActTurnManager:
                     "turn_id": turn_id
                 })
 
-        # --- 4. Suggestions (Structured) ---
+        # --- 7. SUGGESTIONS ---
         if full_response.strip() and not self.orchestrator.stop_event.is_set():
             try:
-                # Add final response to temp history for context
                 suggestion_history = working_history + [
                     Message(role="assistant", content=full_response)
                 ]
-                
-                # Ask for Action Choices
                 suggestions = self.llm_connector.get_structured_response(
                     system_prompt="Suggest 3-5 concise, actionable options for the player based on the narrative. JSON only.",
                     chat_history=suggestion_history,
                     output_schema=ActionChoices,
                     temperature=0.7
                 )
-                
                 if suggestions and suggestions.choices:
                     self.ui_queue.put({
                         "type": "choices", 
@@ -311,7 +321,7 @@ class ReActTurnManager:
             except Exception as e:
                 self.logger.warning(f"Failed to generate suggestions: {e}")
 
-        # --- 5. Cleanup & Persistence ---
+        # --- 8. PERSISTENCE ---
         if full_response.strip():
             session_in_thread.add_message("assistant", full_response)
 

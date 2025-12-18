@@ -1,0 +1,248 @@
+{
+  "id": "fate_core",
+  "name": "Fate Core",
+  "engine": {
+    "dice": "4dF",
+    "mechanic": "Roll 4 Fate dice (each shows +, blank, or -). Sum results (-4 to +4) and add skill rating. Compare to opposition or fixed difficulty.",
+    "success": "Tie = Success at minor cost or boost. Beat by 1-2 = Success. Beat by 3+ = Success with Style (get a boost or extra effect).",
+    "crit": "Success with Style (+3 or more over target): Gain a boost, inflict +1 shift of effect, or other narrative advantage.",
+    "fumble": "Fail by 3 or more: Succeed at serious cost OR fail dramatically."
+  },
+  "procedures": {
+    "conflict": "Physical or social conflict:\n1. Set the scene: Zones, situation aspects\n2. Determine turn order (Notice for physical, Empathy for social, or by narrative)\n3. Each exchange, each participant takes one action:\n   - Attack: Create advantage, then attack. Shifts become stress/consequences.\n   - Create Advantage: Make aspects, get free invokes.\n   - Overcome: Remove obstacles, aspects.\n   - Defend: Oppose attacks (usually automatic).\n4. Taking stress: Check boxes equal to shifts. If none available, take consequences.\n5. Concession: Give up before taken out, but you get to narrate how you exit.\n6. Taken Out: Opponent narrates your fate (within reason).",
+    "challenge": "Series of obstacles requiring multiple skills:\n1. GM defines the challenge and component obstacles\n2. Each obstacle requires an Overcome action with specific skill\n3. Outcomes combine: All succeed = full success. Majority = success with complications. Minority = partial. None = failure.\n4. Fate points and aspects work normally.",
+    "contest": "Opposed competition to achieve a goal first:\n1. Define the goal and victory conditions\n2. Each exchange, participants roll opposed Overcome\n3. Winner gets 1 victory. Success with style = 2 victories.\n4. First to 3 victories (or agreed number) wins."
+  },
+  "aliases": {},
+  "fields": [
+    {
+      "path": "skills.careful",
+      "label": "Careful",
+      "prefab": "VAL_LADDER",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 4,
+        "default": 0,
+        "labels": {
+          "0": "Mediocre",
+          "1": "Average",
+          "2": "Fair",
+          "3": "Good",
+          "4": "Great"
+        }
+      },
+      "usage_hint": "Taking your time, being precise, avoiding mistakes."
+    },
+    {
+      "path": "skills.clever",
+      "label": "Clever",
+      "prefab": "VAL_LADDER",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 4,
+        "default": 0,
+        "labels": {
+          "0": "Mediocre",
+          "1": "Average",
+          "2": "Fair",
+          "3": "Good",
+          "4": "Great"
+        }
+      },
+      "usage_hint": "Thinking fast, solving problems, misdirection."
+    },
+    {
+      "path": "skills.flashy",
+      "label": "Flashy",
+      "prefab": "VAL_LADDER",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 4,
+        "default": 0,
+        "labels": {
+          "0": "Mediocre",
+          "1": "Average",
+          "2": "Fair",
+          "3": "Good",
+          "4": "Great"
+        }
+      },
+      "usage_hint": "Drawing attention, being impressive, dramatic actions."
+    },
+    {
+      "path": "skills.forceful",
+      "label": "Forceful",
+      "prefab": "VAL_LADDER",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 4,
+        "default": 0,
+        "labels": {
+          "0": "Mediocre",
+          "1": "Average",
+          "2": "Fair",
+          "3": "Good",
+          "4": "Great"
+        }
+      },
+      "usage_hint": "Brute strength, power, intimidation."
+    },
+    {
+      "path": "skills.quick",
+      "label": "Quick",
+      "prefab": "VAL_LADDER",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 4,
+        "default": 0,
+        "labels": {
+          "0": "Mediocre",
+          "1": "Average",
+          "2": "Fair",
+          "3": "Good",
+          "4": "Great"
+        }
+      },
+      "usage_hint": "Speed, agility, fast reactions."
+    },
+    {
+      "path": "skills.sneaky",
+      "label": "Sneaky",
+      "prefab": "VAL_LADDER",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 4,
+        "default": 0,
+        "labels": {
+          "0": "Mediocre",
+          "1": "Average",
+          "2": "Fair",
+          "3": "Good",
+          "4": "Great"
+        }
+      },
+      "usage_hint": "Stealth, misdirection, deception."
+    },
+    {
+      "path": "resources.physical_stress",
+      "label": "Physical Stress",
+      "prefab": "RES_TRACK",
+      "category": "resources",
+      "config": {
+        "length": 3
+      },
+      "threshold_hint": "Check boxes to absorb shifts from physical attacks. If you can't absorb all shifts, take consequences or be Taken Out."
+    },
+    {
+      "path": "resources.mental_stress",
+      "label": "Mental Stress",
+      "prefab": "RES_TRACK",
+      "category": "resources",
+      "config": {
+        "length": 3
+      },
+      "threshold_hint": "Check boxes to absorb shifts from mental/social attacks. If you can't absorb all shifts, take consequences or be Taken Out."
+    },
+    {
+      "path": "resources.fate_points",
+      "label": "Fate Points",
+      "prefab": "RES_COUNTER",
+      "category": "resources",
+      "config": {
+        "min": 0,
+        "default": 3
+      },
+      "usage_hint": "Spend to invoke aspects (+2 or reroll), power stunts, or refuse compels. Gain from compels or at session start (refresh)."
+    },
+    {
+      "path": "resources.refresh",
+      "label": "Refresh",
+      "prefab": "VAL_INT",
+      "category": "resources",
+      "config": {
+        "min": 1,
+        "max": 10,
+        "default": 3
+      },
+      "usage_hint": "Fate Points reset to this at session start (if you have fewer). Reduced by extra stunts."
+    },
+    {
+      "path": "status.mild_consequence",
+      "label": "Mild Consequence",
+      "prefab": "CONT_TAGS",
+      "category": "status",
+      "config": {},
+      "usage_hint": "Absorbs 2 shifts. Clears at end of scene if addressed. Write the aspect here when taken."
+    },
+    {
+      "path": "status.moderate_consequence",
+      "label": "Moderate Consequence",
+      "prefab": "CONT_TAGS",
+      "category": "status",
+      "config": {},
+      "usage_hint": "Absorbs 4 shifts. Clears after one full session if addressed."
+    },
+    {
+      "path": "status.severe_consequence",
+      "label": "Severe Consequence",
+      "prefab": "CONT_TAGS",
+      "category": "status",
+      "config": {},
+      "usage_hint": "Absorbs 6 shifts. Clears after one scenario if addressed."
+    },
+    {
+      "path": "status.extreme_consequence",
+      "label": "Extreme Consequence",
+      "prefab": "CONT_TAGS",
+      "category": "status",
+      "config": {},
+      "usage_hint": "Absorbs 8 shifts. Permanently replaces one of your aspects."
+    },
+    {
+      "path": "narrative.high_concept",
+      "label": "High Concept",
+      "prefab": "CONT_TAGS",
+      "category": "narrative",
+      "config": {},
+      "usage_hint": "Who you are in a phrase. Can be invoked or compelled."
+    },
+    {
+      "path": "narrative.trouble",
+      "label": "Trouble",
+      "prefab": "CONT_TAGS",
+      "category": "narrative",
+      "config": {},
+      "usage_hint": "Your recurring problem. Primary target for compels."
+    },
+    {
+      "path": "narrative.aspects",
+      "label": "Other Aspects",
+      "prefab": "CONT_TAGS",
+      "category": "narrative",
+      "config": {},
+      "usage_hint": "3 additional aspects from your story. Can be invoked or compelled."
+    },
+    {
+      "path": "features.stunts",
+      "label": "Stunts",
+      "prefab": "CONT_LIST",
+      "category": "features",
+      "config": {},
+      "usage_hint": "Special abilities that break normal rules. First 3 are free, additional cost 1 Refresh each."
+    },
+    {
+      "path": "features.extras",
+      "label": "Extras",
+      "prefab": "CONT_LIST",
+      "category": "features",
+      "config": {},
+      "usage_hint": "Special permissions, gear, powers, or resources beyond normal."
+    }
+  ]
+}

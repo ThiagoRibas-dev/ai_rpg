@@ -1,0 +1,298 @@
+{
+  "id": "dnd_5e",
+  "name": "D&D 5th Edition",
+  "engine": {
+    "dice": "1d20",
+    "mechanic": "Roll d20 + ability modifier + proficiency bonus (if proficient) vs Difficulty Class (DC)",
+    "success": "Total meets or beats the DC",
+    "crit": "Natural 20 on attack roll = automatic hit + roll all damage dice twice. Natural 20 on death save = regain 1 HP.",
+    "fumble": "Natural 1 on attack roll = automatic miss. Natural 1 on death save = two failures."
+  },
+  "procedures": {
+    "combat": "Combat proceeds in rounds. Each round:\n1. Roll Initiative (d20 + DEX mod) at combat start - highest goes first\n2. On your turn: Move (up to speed), Action, Bonus Action (if available), free object interaction\n3. Actions: Attack, Cast Spell, Dash, Disengage, Dodge, Help, Hide, Ready, Search, Use Object\n4. Attacks: Roll d20 + STR/DEX mod + proficiency vs target's AC\n5. Damage: Roll weapon damage dice + STR/DEX mod\n6. At 0 HP: Fall unconscious, start making death saves",
+    "exploration": "Exploration proceeds in turns or freely:\n1. Describe the environment - what characters see, hear, smell\n2. Ask \"What do you do?\" and resolve actions\n3. Ability checks when outcome is uncertain: d20 + mod vs DC\n   - DC 5 (Very Easy), DC 10 (Easy), DC 15 (Medium), DC 20 (Hard), DC 25 (Very Hard), DC 30 (Nearly Impossible)\n4. Passive Perception = 10 + WIS mod + proficiency for noticing hidden things automatically\n5. Short Rest (1 hour): Spend Hit Dice to heal, recover some abilities\n6. Long Rest (8 hours): Regain all HP, recover half max Hit Dice, recover all abilities",
+    "social": "Social encounters use roleplaying and ability checks:\n1. Roleplay the NPC with distinct personality, goals, and knowledge\n2. Persuasion (CHA): Convince through tact, diplomacy, good nature\n3. Deception (CHA): Mislead through lies, ambiguity, half-truths\n4. Intimidation (CHA): Influence through threats, hostile actions, fear\n5. Insight (WIS): Determine true intentions, detect lies\n6. NPC attitudes: Hostile, Unfriendly, Indifferent, Friendly, Helpful\n7. Success may shift attitude one step; exceptional success two steps"
+  },
+  "aliases": {
+    "str_mod": "floor((attributes.str - 10) / 2)",
+    "dex_mod": "floor((attributes.dex - 10) / 2)",
+    "con_mod": "floor((attributes.con - 10) / 2)",
+    "int_mod": "floor((attributes.int - 10) / 2)",
+    "wis_mod": "floor((attributes.wis - 10) / 2)",
+    "cha_mod": "floor((attributes.cha - 10) / 2)",
+    "proficiency": "floor((progression.level - 1) / 4) + 2"
+  },
+  "fields": [
+    {
+      "path": "attributes.str",
+      "label": "Strength",
+      "prefab": "VAL_INT",
+      "category": "attributes",
+      "config": {
+        "min": 1,
+        "max": 30,
+        "default": 10
+      },
+      "usage_hint": "Melee attacks, athletics, carrying capacity"
+    },
+    {
+      "path": "attributes.dex",
+      "label": "Dexterity",
+      "prefab": "VAL_INT",
+      "category": "attributes",
+      "config": {
+        "min": 1,
+        "max": 30,
+        "default": 10
+      },
+      "usage_hint": "Ranged attacks, AC, initiative, stealth, acrobatics"
+    },
+    {
+      "path": "attributes.con",
+      "label": "Constitution",
+      "prefab": "VAL_INT",
+      "category": "attributes",
+      "config": {
+        "min": 1,
+        "max": 30,
+        "default": 10
+      },
+      "usage_hint": "Hit points, concentration, endurance"
+    },
+    {
+      "path": "attributes.int",
+      "label": "Intelligence",
+      "prefab": "VAL_INT",
+      "category": "attributes",
+      "config": {
+        "min": 1,
+        "max": 30,
+        "default": 10
+      },
+      "usage_hint": "Arcana, history, investigation, wizard spellcasting"
+    },
+    {
+      "path": "attributes.wis",
+      "label": "Wisdom",
+      "prefab": "VAL_INT",
+      "category": "attributes",
+      "config": {
+        "min": 1,
+        "max": 30,
+        "default": 10
+      },
+      "usage_hint": "Perception, insight, medicine, cleric/druid spellcasting"
+    },
+    {
+      "path": "attributes.cha",
+      "label": "Charisma",
+      "prefab": "VAL_INT",
+      "category": "attributes",
+      "config": {
+        "min": 1,
+        "max": 30,
+        "default": 10
+      },
+      "usage_hint": "Persuasion, deception, intimidation, bard/paladin/sorcerer/warlock spellcasting"
+    },
+    {
+      "path": "resources.hp",
+      "label": "Hit Points",
+      "prefab": "RES_POOL",
+      "category": "resources",
+      "config": {
+        "min": 0,
+        "default_max": 10
+      },
+      "threshold_hint": "At 0: unconscious and make death saves. Massive damage (remaining damage >= max HP): instant death."
+    },
+    {
+      "path": "resources.temp_hp",
+      "label": "Temporary HP",
+      "prefab": "RES_COUNTER",
+      "category": "resources",
+      "config": {
+        "min": 0,
+        "default": 0
+      },
+      "usage_hint": "Absorbed before real HP. Don't stack - use highest. Lost after long rest."
+    },
+    {
+      "path": "resources.hit_dice",
+      "label": "Hit Dice",
+      "prefab": "RES_POOL",
+      "category": "resources",
+      "config": {
+        "min": 0,
+        "default_max": 1
+      },
+      "usage_hint": "Spend during short rest to heal (roll die + CON mod). Recover half on long rest."
+    },
+    {
+      "path": "status.death_save_success",
+      "label": "Death Save Successes",
+      "prefab": "RES_TRACK",
+      "category": "status",
+      "config": {
+        "length": 3
+      },
+      "threshold_hint": "3 successes: stabilize (unconscious but no longer dying). Cleared when regain HP."
+    },
+    {
+      "path": "status.death_save_failure",
+      "label": "Death Save Failures",
+      "prefab": "RES_TRACK",
+      "category": "status",
+      "config": {
+        "length": 3
+      },
+      "threshold_hint": "3 failures: death. Taking damage while at 0 HP = 1 failure (crit = 2). Cleared when regain HP."
+    },
+    {
+      "path": "status.exhaustion",
+      "label": "Exhaustion",
+      "prefab": "RES_TRACK",
+      "category": "status",
+      "config": {
+        "length": 6
+      },
+      "threshold_hint": "1: Disadvantage on ability checks. 2: Speed halved. 3: Disadvantage on attacks/saves. 4: HP max halved. 5: Speed 0. 6: Death."
+    },
+    {
+      "path": "status.inspiration",
+      "label": "Inspiration",
+      "prefab": "VAL_BOOL",
+      "category": "status",
+      "config": {
+        "default": false
+      },
+      "usage_hint": "Spend to gain advantage on one attack, save, or ability check. Granted by DM for good roleplay."
+    },
+    {
+      "path": "combat.ac",
+      "label": "Armor Class",
+      "prefab": "VAL_INT",
+      "category": "combat",
+      "config": {
+        "min": 1,
+        "default": 10
+      },
+      "formula": "10 + dex_mod",
+      "usage_hint": "Base AC without armor. Add armor bonus, shield (+2), other modifiers."
+    },
+    {
+      "path": "combat.initiative",
+      "label": "Initiative",
+      "prefab": "VAL_INT",
+      "category": "combat",
+      "config": {
+        "default": 0
+      },
+      "formula": "dex_mod",
+      "usage_hint": "Bonus to initiative rolls. Roll d20 + this at combat start."
+    },
+    {
+      "path": "combat.speed",
+      "label": "Speed",
+      "prefab": "VAL_INT",
+      "category": "combat",
+      "config": {
+        "min": 0,
+        "default": 30
+      },
+      "usage_hint": "Movement in feet per turn. Most races: 30 ft. Dwarves/Halflings: 25 ft."
+    },
+    {
+      "path": "progression.level",
+      "label": "Level",
+      "prefab": "VAL_INT",
+      "category": "progression",
+      "config": {
+        "min": 1,
+        "max": 20,
+        "default": 1
+      }
+    },
+    {
+      "path": "progression.xp",
+      "label": "Experience Points",
+      "prefab": "RES_COUNTER",
+      "category": "progression",
+      "config": {
+        "min": 0,
+        "default": 0
+      },
+      "usage_hint": "XP thresholds: L2=300, L3=900, L4=2700, L5=6500, L6=14000, L7=23000, L8=34000, L9=48000, L10=64000..."
+    },
+    {
+      "path": "inventory.equipment",
+      "label": "Equipment",
+      "prefab": "CONT_LIST",
+      "category": "inventory",
+      "config": {}
+    },
+    {
+      "path": "inventory.gold",
+      "label": "Gold Pieces",
+      "prefab": "RES_COUNTER",
+      "category": "inventory",
+      "config": {
+        "min": 0,
+        "default": 0
+      }
+    },
+    {
+      "path": "features.proficiencies",
+      "label": "Proficiencies",
+      "prefab": "CONT_TAGS",
+      "category": "features",
+      "config": {},
+      "usage_hint": "Weapons, armor, tools, saving throws, skills you're proficient in."
+    },
+    {
+      "path": "features.languages",
+      "label": "Languages",
+      "prefab": "CONT_TAGS",
+      "category": "features",
+      "config": {}
+    },
+    {
+      "path": "features.abilities",
+      "label": "Features & Traits",
+      "prefab": "CONT_LIST",
+      "category": "features",
+      "config": {},
+      "usage_hint": "Racial traits, class features, feats."
+    },
+    {
+      "path": "resources.spell_slots_1",
+      "label": "1st Level Spell Slots",
+      "prefab": "RES_POOL",
+      "category": "resources",
+      "config": {
+        "min": 0,
+        "default_max": 0
+      }
+    },
+    {
+      "path": "resources.spell_slots_2",
+      "label": "2nd Level Spell Slots",
+      "prefab": "RES_POOL",
+      "category": "resources",
+      "config": {
+        "min": 0,
+        "default_max": 0
+      }
+    },
+    {
+      "path": "resources.spell_slots_3",
+      "label": "3rd Level Spell Slots",
+      "prefab": "RES_POOL",
+      "category": "resources",
+      "config": {
+        "min": 0,
+        "default_max": 0
+      }
+    }
+  ]
+}

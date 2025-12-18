@@ -1,15 +1,16 @@
 import logging
-from typing import List
+from typing import List, Optional, Any, Dict
 from app.tools.registry import ToolRegistry
 from app.tools.schemas import StateQuery
 from app.services.state_service import get_entity
-from app.models.sheet_schema import CharacterSheetSpec
+from app.prefabs.manifest import SystemManifest
+from app.prefabs.validation import get_path
 
 
 class StateContextBuilder:
     """
-    Builds the CURRENT STATE section by querying game state.
-    Includes explicit Scene Roster for tool targeting.
+    Builds the CURRENT STATE section.
+    Uses SystemManifest to render fields intelligently (Prefabs).
     """
 
     def __init__(
@@ -22,129 +23,126 @@ class StateContextBuilder:
         self.db = db_manager
         self.logger = logger or logging.getLogger(__name__)
 
-    def build(self, session_id: int | None) -> str:
+    def build(
+        self, session_id: int | None, manifest: Optional[SystemManifest] = None
+    ) -> str:
         if not session_id:
             return ""
 
         lines: List[str] = []
         try:
-            # 1. Load Player Entity & Template
+            # 1. Load Player Entity
             player = get_entity(session_id, self.db, "character", "player")
             if not player:
                 return "No character data found."
 
-            tid = player.get("template_id")
-            template = self.db.stat_templates.get_by_id(tid) if tid else None
-
             name = player.get("name", "Player")
             lines.append(f"**Player Character**: {name}")
 
-            # 2. Render Categories (Dynamic)
-            cats = [
-                "attributes",
-                "resources",
-                "skills",
-                "features",
-                "inventory",
-                "connections",
-                "narrative",
-            ]
+            # 2. Render Categories via Manifest (if available)
+            if manifest:
+                for category in manifest.get_categories():
+                    fields = manifest.get_fields_by_category(category)
+                    if not fields:
+                        continue
 
-            def get_field_def(cat, key):
-                if template and isinstance(template, CharacterSheetSpec):
-                    cat_obj = getattr(template, cat, None)
-                    if cat_obj and cat_obj.fields:
-                        return cat_obj.fields.get(key)
-                return None
+                    cat_lines = []
+                    for field in fields:
+                        val = get_path(player, field.path)
+                        rendered = self._render_field(val, field.prefab, field.config)
+                        cat_lines.append(f"{field.label}: {rendered}")
 
-            for cat in cats:
-                data = player.get(cat, {})
-                if not data:
-                    continue
+                    if cat_lines:
+                        lines.append(f"**{category.title()}**: " + ", ".join(cat_lines))
+            else:
+                # Legacy Fallback
+                lines.append(self._legacy_render(player))
 
-                cat_lines = []
-
-                for key, val in data.items():
-                    field_def = get_field_def(cat, key)
-                    label = (
-                        field_def.display.label
-                        if field_def
-                        else key.replace("_", " ").title()
-                    )
-
-                    display_val = str(val)
-
-                    if isinstance(val, dict) and "current" in val:
-                        curr = val.get("current", 0)
-                        mx = val.get("max", "?")
-                        display_val = f"{curr}/{mx}"
-
-                    elif isinstance(val, list):
-                        if not val:
-                            continue
-                        items = []
-                        for item in val:
-                            if isinstance(item, dict):
-                                i_name = item.get("name", "Item")
-                                i_qty = item.get("qty", 1)
-                                qty_str = f" x{i_qty}" if i_qty > 1 else ""
-                                items.append(f"{i_name}{qty_str}")
-                            else:
-                                items.append(str(item))
-                        display_val = ", ".join(items)
-
-                    cat_lines.append(f"{label}: {display_val}")
-
-                if cat_lines:
-                    lines.append(f"**{cat.capitalize()}**: " + ", ".join(cat_lines))
-
-            # 3. Active Quests
+            # 3. Active Quests (Standard Tool)
             quest_result = self.tools.execute(
                 StateQuery(entity_type="quest", key="*", json_path="."),
                 context={"session_id": session_id, "db_manager": self.db},
             )
             quests = quest_result.get("value", {}) or {}
-
             if quests and isinstance(quests, dict):
-                active_q = []
-                for q in quests.values():
-                    if q.get("status") == "active":
-                        active_q.append(
-                            f"{q.get('title')} ({q.get('description', '')[:50]}...)"
-                        )
-
+                active_q = [
+                    f"{q.get('title')}"
+                    for q in quests.values()
+                    if q.get("status") == "active"
+                ]
                 if active_q:
-                    lines.append("")
-                    lines.append("**Active Quests**:")
-                    for q in active_q:
-                        lines.append(f"- {q}")
+                    lines.append("\n**Active Quests**: " + ", ".join(active_q))
 
-            # 4. SCENE ROSTER (The Fix)
-            # Explicitly map names to IDs for the LLM
+            # 4. Scene Roster
             scene = self.db.game_state.get_entity(session_id, "scene", "active_scene")
             if scene and "members" in scene:
-                roster_lines = []
-                for member_str in scene["members"]:
-                    # Skip player in roster as they are Context
-                    if "player" in member_str:
+                roster = []
+                for member in scene["members"]:
+                    if "player" in member:
                         continue
-
-                    if ":" in member_str:
-                        etype, ekey = member_str.split(":", 1)
-                        entity = self.db.game_state.get_entity(session_id, etype, ekey)
-                        if entity:
-                            e_name = entity.get("name", "Unknown")
-                            e_disp = entity.get("disposition", "")
-                            status = f" [{e_disp}]" if e_disp else ""
-                            roster_lines.append(f"- {e_name} (ID: `{ekey}`){status}")
-
-                if roster_lines:
-                    lines.append("")
-                    lines.append("**SCENE ROSTER (Use IDs for tools):**")
-                    lines.extend(roster_lines)
+                    if ":" in member:
+                        etype, ekey = member.split(":", 1)
+                        ent = self.db.game_state.get_entity(session_id, etype, ekey)
+                        if ent:
+                            roster.append(
+                                f"{ent.get('name', 'Unknown')} (ID: `{ekey}`)"
+                            )
+                if roster:
+                    lines.append("\n**SCENE ROSTER**:\n- " + "\n- ".join(roster))
 
         except Exception as e:
             if self.logger:
                 self.logger.warning(f"State build failed: {e}", exc_info=True)
 
         return "\n".join(lines)
+
+    def _render_field(self, value: Any, prefab: str, config: Dict) -> str:
+        """Render value based on prefab type."""
+        if value is None:
+            return "None"
+
+        if prefab == "RES_POOL":
+            # Render as Current/Max
+            if isinstance(value, dict):
+                return f"{value.get('current', 0)}/{value.get('max', 0)}"
+            return str(value)
+
+        elif prefab == "RES_TRACK":
+            # Render as dots: [x][x][ ]
+            if isinstance(value, list):
+                return "".join(["[x]" if x else "[ ]" for x in value])
+            return str(value)
+
+        elif prefab == "VAL_COMPOUND":
+            # Render as Score (+Mod)
+            if isinstance(value, dict):
+                return f"{value.get('score')} ({value.get('mod'):+})"
+            return str(value)
+
+        elif prefab == "VAL_LADDER":
+            # Render as +1 (Average)
+            if isinstance(value, dict):
+                return f"{value.get('value'):+} ({value.get('label')})"
+            return str(value)
+
+        elif prefab == "CONT_LIST":
+            # Concise list
+            if isinstance(value, list):
+                items = []
+                for item in value:
+                    name = item.get("name", "Item")
+                    qty = item.get("qty", 1)
+                    items.append(f"{name}" + (f" x{qty}" if qty > 1 else ""))
+                return "[" + ", ".join(items) + "]"
+            return "[]"
+
+        elif prefab == "CONT_TAGS":
+            if isinstance(value, list):
+                return "[" + ", ".join(str(v) for v in value) + "]"
+            return "[]"
+
+        return str(value)
+
+    def _legacy_render(self, player) -> str:
+        """Old renderer for compatibility."""
+        return "Legacy Character Data (No Manifest Loaded)"

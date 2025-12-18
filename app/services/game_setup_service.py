@@ -6,10 +6,11 @@ from typing import Any, Dict, Optional
 from app.models.session import Session
 from app.models.game_session import GameSession
 from app.models.ruleset import Ruleset
+from app.prefabs.manifest import SystemManifest
 from app.setup.scaffolding import get_default_scaffolding
 from app.services.state_service import set_entity
 from app.tools.builtin.location_create import handler as location_create_handler
-from app.setup.setup_manifest import SetupManifest
+from app.setup.setup_manifest import SetupManifest as SetupManifestService
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +86,7 @@ class GameSetupService:
                 # Minimal default values
                 final_values = {"identity": {"name": c_name}, "attributes": {"str": 10}}
 
-        # 2. Apply
+        # 2. Apply Scaffolding (Rules, Templates, Manifests)
         self._apply_scaffolding(
             game_session.id, prompt, final_spec, final_values, c_name
         )
@@ -125,16 +126,29 @@ class GameSetupService:
     def _apply_scaffolding(
         self, session_id: int, prompt: Any, spec: Any, values: Dict, char_name: str
     ):
-        # 1. Load Ruleset from Manifest (or create default)
+        # --- 1. LEGACY LAYER (Ruleset & StatTemplate) ---
+        # We still need this for the CharacterInspector (UI) to work
+
         ruleset = None
         base_rules = []
         vocab_data = None
+        manifest_data = None
 
+        # Try to parse the Prompt's template_manifest
         if prompt.template_manifest:
             try:
                 data = json.loads(prompt.template_manifest)
+                manifest_data = data  # Store raw dict for Manifest logic
+
+                # Legacy extraction for Ruleset table
                 if "ruleset" in data:
                     ruleset = Ruleset(**data["ruleset"])
+                elif "engine" in data:
+                    # It's a SystemManifest JSON, not a Ruleset JSON.
+                    # We need to construct a legacy Ruleset from it for backward compat if needed.
+                    # Or better yet, rely on the Manifest logic below.
+                    pass
+
                 if "base_rules" in data:
                     base_rules = data["base_rules"]
                 if "vocabulary" in data:
@@ -146,45 +160,42 @@ class GameSetupService:
             ruleset, _ = get_default_scaffolding()
             ruleset.meta["name"] = prompt.name
 
-        # 2. Persist Ruleset (UPSERT Logic)
+        # Persist Ruleset (UPSERT Logic)
         target_name = ruleset.meta.get("name")
         existing_rs = self.db.rulesets.get_by_name(target_name)
-        
+
         if existing_rs:
             rs_id = existing_rs["id"]
             self.db.rulesets.update(rs_id, ruleset)
         else:
             rs_id = self.db.rulesets.create(ruleset)
 
-        # 3. Persist Base Rules (Memories) AND Index to Vector Store
-        for rule in base_rules:
-            # Create in SQL
-            mem = self.db.memories.create(
-                session_id=session_id,
-                kind="rule",
-                content=rule.get("content", ""),
-                tags=rule.get("tags", []),
-                priority=3,
-            )
-            
-            # Index in Vector Store
-            if self.vs:
-                try:
-                    self.vs.upsert_memory(
-                        session_id=session_id,
-                        memory_id=mem.id,
-                        text=mem.content,
-                        kind=mem.kind,
-                        tags=mem.tags_list(),
-                        priority=mem.priority
-                    )
-                except Exception as e:
-                    logger.warning(f"Failed to index rule memory {mem.id}: {e}")
-
-        # 4. Persist Template (The Spec)
+        # Persist Template (The Spec)
         st_id = self.db.stat_templates.create(rs_id, spec)
 
-        # 5. Create Player Entity
+        # --- 2. MANIFEST LAYER (The New "Lego" Brain) ---
+        manifest_db_id = None
+
+        if manifest_data:
+            try:
+                # Try to parse as SystemManifest (New Format)
+                if "fields" in manifest_data and "engine" in manifest_data:
+                    # It's a SystemManifest!
+                    sys_manifest = SystemManifest.from_dict(manifest_data)
+
+                    # Upsert into manifests table
+                    # We use system_id to check for existence
+                    existing_m = self.db.manifests.get_by_system_id(sys_manifest.id)
+                    if existing_m:
+                        self.db.manifests.update(existing_m.id, sys_manifest)
+                        manifest_db_id = existing_m.id
+                    else:
+                        manifest_db_id = self.db.manifests.create(sys_manifest)
+
+            except Exception as e:
+                logger.warning(f"Failed to process SystemManifest from prompt: {e}")
+
+        # --- 3. CREATE PLAYER ENTITY ---
         entity_data = values.copy()
         entity_data["name"] = char_name
         entity_data["template_id"] = st_id
@@ -201,27 +212,53 @@ class GameSetupService:
             "features",
             "progression",
             "connections",
-            "narrative"
+            "narrative",
         ]:
             if cat not in entity_data:
                 entity_data[cat] = {}
 
         set_entity(session_id, self.db, "character", "player", entity_data)
 
-        # 6. Update Manifest
+        # --- 4. UPDATE SETUP MANIFEST (Link everything) ---
         manifest_update = {
             "ruleset_id": rs_id,
             "stat_template_id": st_id,
             "player_character": {"name": char_name},
         }
-        
+
+        # CRITICAL FIX: Save the manifest_id so ReActTurnManager loads the correct system
+        if manifest_db_id:
+            manifest_update["manifest_id"] = manifest_db_id
+
         if vocab_data:
             manifest_update["vocabulary"] = vocab_data
 
-        SetupManifest(self.db).update_manifest(session_id, manifest_update)
+        SetupManifestService(self.db).update_manifest(session_id, manifest_update)
+
+        # --- 5. Index Base Rules (Memories) ---
+        for rule in base_rules:
+            mem = self.db.memories.create(
+                session_id=session_id,
+                kind="rule",
+                content=rule.get("content", ""),
+                tags=rule.get("tags", []),
+                priority=3,
+            )
+            if self.vs:
+                try:
+                    self.vs.upsert_memory(
+                        session_id=session_id,
+                        memory_id=mem.id,
+                        text=mem.content,
+                        kind=mem.kind,
+                        tags=mem.tags_list(),
+                        priority=mem.priority,
+                    )
+                except Exception:
+                    pass
 
     def _apply_world_extraction(self, session_id: int, world_data: Any):
-        SetupManifest(self.db).update_manifest(
+        SetupManifestService(self.db).update_manifest(
             session_id, {"genre": world_data.genre, "tone": world_data.tone}
         )
 
@@ -244,7 +281,9 @@ class GameSetupService:
                 args["name_display"] = args.pop("name")
                 location_create_handler(**args, **context)
             except Exception as e:
-                logger.warning(f"Failed to create neighbor location {neighbor.key}: {e}")
+                logger.warning(
+                    f"Failed to create neighbor location {neighbor.key}: {e}"
+                )
                 pass
 
         # Scene & NPCs
@@ -267,12 +306,12 @@ class GameSetupService:
             if self.vs:
                 try:
                     self.vs.upsert_memory(
-                        session_id, 
-                        new_mem.id, 
-                        new_mem.content, 
-                        new_mem.kind, 
-                        new_mem.tags_list(), 
-                        new_mem.priority
+                        session_id,
+                        new_mem.id,
+                        new_mem.content,
+                        new_mem.kind,
+                        new_mem.tags_list(),
+                        new_mem.priority,
                     )
                 except Exception as e:
                     logger.warning(f"Failed to index lore memory {new_mem.id}: {e}")
@@ -288,7 +327,7 @@ class GameSetupService:
         name = getattr(npc_data, "name", "Unknown")
         desc = getattr(npc_data, "visual_description", "")
 
-        manifest = SetupManifest(self.db).get_manifest(session_id)
+        manifest = SetupManifestService(self.db).get_manifest(session_id)
         template_id = manifest.get("stat_template_id")
 
         npc_dict = {

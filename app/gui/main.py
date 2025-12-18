@@ -4,6 +4,7 @@ from app.gui.theme import Theme
 from app.database.db_manager import DBManager
 from app.core.orchestrator import Orchestrator
 from app.gui.bridge import NiceGUIBridge
+from app.services.manifest_service import seed_builtin_manifests
 
 # Components
 from app.gui.components.chat import ChatComponent
@@ -16,9 +17,17 @@ logger = logging.getLogger(__name__)
 
 
 def init_gui(db_path: str):
+    # 1. Initialize DB & Seed Manifests
     app.db_manager = DBManager(db_path)
+
+    # EXPLICITLY OPEN CONNECTION for the lifecycle of the app
+    # This prevents create_tables() from opening/closing it via context manager
     app.db_manager.__enter__()
+
     app.db_manager.create_tables()
+    seed_builtin_manifests(db_path)
+
+    # 2. Init Core Systems
     app.bridge = NiceGUIBridge()
     app.orchestrator = Orchestrator(app.bridge, db_path)
 
@@ -27,7 +36,6 @@ def init_gui(db_path: str):
         Theme.apply_global_styles()
 
         # --- Init Components ---
-        # Pass orchestrator to InspectorManager so Inventory can trigger actions
         inspector_mgr = InspectorManager(app.db_manager, app.orchestrator)
         app.bridge.register_inspector(inspector_mgr)
 
@@ -102,9 +110,7 @@ def init_gui(db_path: str):
             ) as splitter:
                 # Top Pane: Map
                 with splitter.before:
-                    # We wrap it in a column to ensure the map fills the pane
                     with ui.column().classes("w-full h-full bg-slate-950 p-0 gap-0"):
-                        # Pass the container to the component so it renders here
                         map_comp.render()
 
                 # Bottom Pane: Chat
@@ -117,7 +123,7 @@ def init_gui(db_path: str):
 
     async def cleanup():
         print("🛑 Shutting down...")
-        if app.db_manager.conn:
+        if hasattr(app, "db_manager") and app.db_manager.conn:
             app.db_manager.__exit__(None, None, None)
 
     app.on_shutdown(cleanup)

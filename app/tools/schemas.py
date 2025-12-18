@@ -1,38 +1,66 @@
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Literal, Optional, Union
 from pydantic import BaseModel, Field
 
-JSONValue = Union[str, int, float, bool, dict, List]
+# --- ATOMIC GAMEPLAY TOOLS ---
 
-# --- SUPER TOOLS ---
+class Adjust(BaseModel):
+    """
+    Add or subtract from a numeric value (Resource or Attribute).
+    Use this for damage, healing, spending resources, or modifying stats.
+    """
+    name: Literal["adjust"] = "adjust"
+    path: str = Field(..., description="Full path to the field (e.g. 'resources.hp.current', 'attributes.str').")
+    delta: Union[int, float] = Field(..., description="Amount to add (positive) or subtract (negative).")
+    reason: str = Field("Action", description="Brief reason for the change (e.g. 'Goblin damage', 'Potion').")
 
-class EntityUpdate(BaseModel):
-    name: Literal["entity.update"] = "entity.update"
-    target_key: str = Field(..., description="Entity ID.")
-    adjustments: Optional[Dict[str, int]] = None
-    updates: Optional[Dict[str, Any]] = None
-    inventory: Optional[Dict[str, Any]] = None
+class Set(BaseModel):
+    """
+    Set a field to a specific absolute value.
+    Use this for changing modes, toggles, equipping items, or overriding values.
+    """
+    name: Literal["set"] = "set"
+    path: str = Field(..., description="Full path to the field (e.g. 'status.is_hiding', 'inventory.weapon').")
+    value: Any = Field(..., description="The new value to set.")
+    reason: str = Field("Update", description="Brief reason for the change.")
 
-class GameRoll(BaseModel):
-    name: Literal["game.roll"] = "game.roll"
-    formula: str = Field(..., description="Dice string.")
-    reason: str = Field(..., description="Context.")
+class Mark(BaseModel):
+    """
+    Mark or clear boxes on a Track (e.g. Stress, Wounds, Clocks).
+    """
+    name: Literal["mark"] = "mark"
+    path: str = Field(..., description="Path to the track field (e.g. 'resources.stress', 'status.harm').")
+    count: int = Field(1, description="Number of boxes to mark (positive) or clear (negative).")
 
-class WorldTravel(BaseModel):
-    name: Literal["world.travel"] = "world.travel"
-    destination: str = Field(...)
+class Roll(BaseModel):
+    """
+    Roll dice to resolve an action or check.
+    """
+    name: Literal["roll"] = "roll"
+    formula: str = Field(..., description="Dice notation (e.g. '1d20+5', '2d6', '1d100').")
+    reason: str = Field(..., description="Context for the roll (e.g. 'Attack vs AC 15', 'Sanity Check').")
 
-class GameLog(BaseModel):
-    name: Literal["game.log"] = "game.log"
-    content: str = Field(...)
-    category: Literal["event", "fact", "quest"] = "event"
-    tags: Optional[List[str]] = None
+class Move(BaseModel):
+    """
+    Move the party to a different location.
+    """
+    name: Literal["move"] = "move"
+    destination: str = Field(..., description="The ID/Key of the target location (e.g. 'loc_tavern').")
 
-class TimeAdvance(BaseModel):
-    name: Literal["time.advance"] = "time.advance"
-    description: str = Field(...)
-    new_time: str = Field(...)
+class Note(BaseModel):
+    """
+    Record a memory, fact, or event in the game log.
+    """
+    name: Literal["note"] = "note"
+    content: str = Field(..., description="The text to remember.")
+    kind: Literal["event", "fact", "lore"] = Field("event", description="Type of memory.")
 
-# --- WIZARD / SETUP TOOLS ---
+# --- UTILITY / SETUP TOOLS (Kept for compatibility/setup) ---
+
+class StateQuery(BaseModel):
+    name: Literal["state.query"] = "state.query"
+    entity_type: str = Field(...)
+    key: str = Field(...)
+    json_path: str = Field(...)
 
 class NpcSpawn(BaseModel):
     name: Literal["npc.spawn"] = "npc.spawn"
@@ -43,10 +71,6 @@ class NpcSpawn(BaseModel):
     initial_disposition: Literal["hostile", "neutral", "friendly"] = "neutral"
     location_key: Optional[str] = None
 
-class LocationNeighbor(BaseModel):
-    target_key: str
-    direction: str
-
 class LocationCreate(BaseModel):
     name: Literal["location.create"] = "location.create"
     key: str = Field(...)
@@ -54,35 +78,4 @@ class LocationCreate(BaseModel):
     description_visual: str = Field(...)
     description_sensory: str = Field(...)
     type: str = Field(...)
-    # Optimization: Dict of neighbors (Direction -> Target Key/Data)
-    # Actually, let's keep it simple for now as Dict[Direction, TargetKey]
-    neighbors: dict[str, str] = Field(default_factory=dict, description="Map of Direction -> Target Key")
-
-class MemoryUpsert(BaseModel):
-    name: Literal["memory.upsert"] = "memory.upsert"
-    kind: str = Field(...)
-    content: str = Field(...)
-    priority: int = 3
-    tags: Optional[List[str]] = None
-
-# --- UTILS ---
-
-class MathEval(BaseModel):
-    name: Literal["math.eval"] = "math.eval"
-    expression: str = Field(...)
-
-class StateQuery(BaseModel):
-    name: Literal["state.query"] = "state.query"
-    entity_type: str = Field(...)
-    key: str = Field(...)
-    json_path: str = Field(...)
-
-class InventoryAddItem(BaseModel):
-    name: Literal["inventory.add_item"] = "inventory.add_item"
-    owner_key: str = Field(...)
-    item_name: str = Field(...)
-    quantity: int = 1
-    description: Optional[str] = None
-    properties: Optional[Dict[str, Any]] = None
-    target_slot: Optional[str] = None
-
+    neighbors: dict[str, str] = Field(default_factory=dict)

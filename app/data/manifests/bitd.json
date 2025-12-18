@@ -1,0 +1,378 @@
+{
+  "id": "bitd",
+  "name": "Blades in the Dark",
+  "engine": {
+    "dice": "d6 pool",
+    "mechanic": "Roll d6s equal to Action Rating. If 0 dice, roll 2d6 and take lowest. Read the single highest die result.",
+    "success": "6 = Full Success (you do it). 4-5 = Partial Success (you do it, but with consequence or reduced effect). 1-3 = Bad Outcome (things go wrong).",
+    "crit": "Multiple 6s = Critical Success (enhanced effect or additional benefit)",
+    "fumble": ""
+  },
+  "procedures": {
+    "action": "The core action resolution:\n1. Player declares goal and approach\n2. GM sets Position (Controlled/Risky/Desperate) based on danger\n3. GM sets Effect (Limited/Standard/Great) based on approach potency\n4. Player rolls Action Rating in d6s\n5. Read highest die: 6=Success, 4-5=Partial, 1-3=Failure\n6. GM describes outcome\n7. On Partial/Failure: GM inflicts consequences based on Position\n8. Player may Resist any consequence (roll Attribute, take stress equal to 6 minus highest)",
+    "score": "Running a criminal operation:\n1. Engagement Roll: GM rolls dice based on plan quality, determines starting Position\n2. Play through the score scene by scene\n3. Use Flashbacks for preparation (0-2 stress based on complexity)\n4. Complete the objective or abort\n5. After: Payoff, Heat, Entanglements, Downtime",
+    "downtime": "Between scores, each PC gets 2 Downtime Activities:\n1. Acquire Asset: Get an item or service (roll tier)\n2. Long-term Project: Advance a clock\n3. Recover: Heal harm (roll tier, 1-2: heal 1, 3-4: heal 2, 5-6: heal 3, crit: heal all)\n4. Reduce Heat: Lower the crew's wanted level\n5. Train: Mark XP in Attribute or Playbook\n6. Indulge Vice: Roll lowest Attribute, clear that much Stress. If clear more than track, Overindulge.",
+    "combat": "Combat follows the standard action roll:\n1. There is no initiative - fiction determines who acts\n2. Group actions: One person leads, others assist (+1d per helper who takes stress on failure)\n3. Harm levels: Level 1 (Less Severe), Level 2 (Moderate), Level 3 (Severe, requires medical attention)\n4. Armor can absorb harm (special armor absorbs any one consequence per score)\n5. Death only at Level 3 harm + additional Level 3 harm, or narrative circumstances"
+  },
+  "aliases": {
+    "insight_rating": "min(4, floor((actions.hunt + actions.study + actions.survey + actions.tinker) / 1))",
+    "prowess_rating": "min(4, floor((actions.finesse + actions.prowl + actions.skirmish + actions.wreck) / 1))",
+    "resolve_rating": "min(4, floor((actions.attune + actions.command + actions.consort + actions.sway) / 1))"
+  },
+  "fields": [
+    {
+      "path": "actions.hunt",
+      "label": "Hunt",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 4,
+        "default": 0
+      },
+      "usage_hint": "Track, ambush, attack from hiding, snipe."
+    },
+    {
+      "path": "actions.study",
+      "label": "Study",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 4,
+        "default": 0
+      },
+      "usage_hint": "Research, analyze, scrutinize details, understand mechanisms."
+    },
+    {
+      "path": "actions.survey",
+      "label": "Survey",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 4,
+        "default": 0
+      },
+      "usage_hint": "Observe, search, spot trouble, gather information."
+    },
+    {
+      "path": "actions.tinker",
+      "label": "Tinker",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 4,
+        "default": 0
+      },
+      "usage_hint": "Create, repair, disable, modify devices and mechanisms."
+    },
+    {
+      "path": "actions.finesse",
+      "label": "Finesse",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 4,
+        "default": 0
+      },
+      "usage_hint": "Precise movement, sleight of hand, subtle misdirection, pilot vehicles."
+    },
+    {
+      "path": "actions.prowl",
+      "label": "Prowl",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 4,
+        "default": 0
+      },
+      "usage_hint": "Move stealthily, hide, infiltrate, ambush."
+    },
+    {
+      "path": "actions.skirmish",
+      "label": "Skirmish",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 4,
+        "default": 0
+      },
+      "usage_hint": "Fight in close quarters, melee combat, brawl."
+    },
+    {
+      "path": "actions.wreck",
+      "label": "Wreck",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 4,
+        "default": 0
+      },
+      "usage_hint": "Destroy, smash, overpower, unleash force."
+    },
+    {
+      "path": "actions.attune",
+      "label": "Attune",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 4,
+        "default": 0
+      },
+      "usage_hint": "Connect with the ghost field, sense supernatural, use electroplasmic devices."
+    },
+    {
+      "path": "actions.command",
+      "label": "Command",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 4,
+        "default": 0
+      },
+      "usage_hint": "Lead, order, intimidate, compel obedience."
+    },
+    {
+      "path": "actions.consort",
+      "label": "Consort",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 4,
+        "default": 0
+      },
+      "usage_hint": "Socialize, blend in, gain access, make connections."
+    },
+    {
+      "path": "actions.sway",
+      "label": "Sway",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 4,
+        "default": 0
+      },
+      "usage_hint": "Influence, manipulate, deceive, seduce."
+    },
+    {
+      "path": "attributes.insight",
+      "label": "Insight",
+      "prefab": "VAL_INT",
+      "category": "attributes",
+      "config": {
+        "min": 0,
+        "max": 4,
+        "default": 0
+      },
+      "usage_hint": "Derived from Hunt, Study, Survey, Tinker. Used to resist mental consequences."
+    },
+    {
+      "path": "attributes.prowess",
+      "label": "Prowess",
+      "prefab": "VAL_INT",
+      "category": "attributes",
+      "config": {
+        "min": 0,
+        "max": 4,
+        "default": 0
+      },
+      "usage_hint": "Derived from Finesse, Prowl, Skirmish, Wreck. Used to resist physical consequences."
+    },
+    {
+      "path": "attributes.resolve",
+      "label": "Resolve",
+      "prefab": "VAL_INT",
+      "category": "attributes",
+      "config": {
+        "min": 0,
+        "max": 4,
+        "default": 0
+      },
+      "usage_hint": "Derived from Attune, Command, Consort, Sway. Used to resist social/willpower consequences."
+    },
+    {
+      "path": "resources.stress",
+      "label": "Stress",
+      "prefab": "RES_TRACK",
+      "category": "resources",
+      "config": {
+        "length": 9
+      },
+      "threshold_hint": "When all 9 boxes filled: Take a Trauma, clear all Stress. Stress is gained from pushing, resisting, and helping."
+    },
+    {
+      "path": "resources.trauma",
+      "label": "Trauma",
+      "prefab": "RES_TRACK",
+      "category": "resources",
+      "config": {
+        "length": 4
+      },
+      "threshold_hint": "At 4 Trauma: Character retires from play. Each Trauma is a permanent condition (Cold, Haunted, Obsessed, Paranoid, Reckless, Soft, Unstable, Vicious)."
+    },
+    {
+      "path": "harm.level_3",
+      "label": "Level 3 Harm",
+      "prefab": "RES_TRACK",
+      "category": "status",
+      "config": {
+        "length": 1
+      },
+      "threshold_hint": "Severe harm (broken leg, stabbed gut). Need to be Disabled, Dying, or similar. Requires medical attention. -1d to all actions."
+    },
+    {
+      "path": "harm.level_2",
+      "label": "Level 2 Harm",
+      "prefab": "RES_TRACK",
+      "category": "status",
+      "config": {
+        "length": 2
+      },
+      "threshold_hint": "Moderate harm (exhausted, deep cut, concussed). -1d to related actions."
+    },
+    {
+      "path": "harm.level_1",
+      "label": "Level 1 Harm",
+      "prefab": "RES_TRACK",
+      "category": "status",
+      "config": {
+        "length": 2
+      },
+      "threshold_hint": "Lesser harm (battered, drained, distracted). Reduced effect on related actions."
+    },
+    {
+      "path": "harm.healing",
+      "label": "Healing Clock",
+      "prefab": "RES_TRACK",
+      "category": "status",
+      "config": {
+        "length": 4
+      },
+      "usage_hint": "Fill during downtime recovery. When full, reduce each harm by one level."
+    },
+    {
+      "path": "status.armor",
+      "label": "Armor",
+      "prefab": "VAL_BOOL",
+      "category": "status",
+      "config": {
+        "default": false
+      },
+      "usage_hint": "Can be used once per score to resist physical harm."
+    },
+    {
+      "path": "status.heavy_armor",
+      "label": "Heavy Armor",
+      "prefab": "VAL_BOOL",
+      "category": "status",
+      "config": {
+        "default": false
+      },
+      "usage_hint": "Additional armor use, but conspicuous and noisy."
+    },
+    {
+      "path": "status.special_armor",
+      "label": "Special Armor",
+      "prefab": "VAL_BOOL",
+      "category": "status",
+      "config": {
+        "default": false
+      },
+      "usage_hint": "Playbook-specific. Can resist one specific type of consequence per score."
+    },
+    {
+      "path": "progression.playbook_xp",
+      "label": "Playbook XP",
+      "prefab": "RES_TRACK",
+      "category": "progression",
+      "config": {
+        "length": 8
+      },
+      "threshold_hint": "At 8: Clear and take a playbook advance."
+    },
+    {
+      "path": "progression.insight_xp",
+      "label": "Insight XP",
+      "prefab": "RES_TRACK",
+      "category": "progression",
+      "config": {
+        "length": 6
+      },
+      "threshold_hint": "At 6: Clear and add 1 dot to an Insight action."
+    },
+    {
+      "path": "progression.prowess_xp",
+      "label": "Prowess XP",
+      "prefab": "RES_TRACK",
+      "category": "progression",
+      "config": {
+        "length": 6
+      },
+      "threshold_hint": "At 6: Clear and add 1 dot to a Prowess action."
+    },
+    {
+      "path": "progression.resolve_xp",
+      "label": "Resolve XP",
+      "prefab": "RES_TRACK",
+      "category": "progression",
+      "config": {
+        "length": 6
+      },
+      "threshold_hint": "At 6: Clear and add 1 dot to a Resolve action."
+    },
+    {
+      "path": "features.abilities",
+      "label": "Special Abilities",
+      "prefab": "CONT_LIST",
+      "category": "features",
+      "config": {},
+      "usage_hint": "Playbook special abilities."
+    },
+    {
+      "path": "inventory.loadout",
+      "label": "Loadout",
+      "prefab": "VAL_INT",
+      "category": "inventory",
+      "config": {
+        "min": 0,
+        "max": 6,
+        "default": 0
+      },
+      "usage_hint": "Light (3), Normal (5), Heavy (6). Chosen at score start. Items marked as carried count against this."
+    },
+    {
+      "path": "inventory.items",
+      "label": "Items",
+      "prefab": "CONT_LIST",
+      "category": "inventory",
+      "config": {},
+      "usage_hint": "Standard items cost 1 load. Check off when you use them during a score."
+    },
+    {
+      "path": "narrative.vice",
+      "label": "Vice",
+      "prefab": "CONT_TAGS",
+      "category": "narrative",
+      "config": {},
+      "usage_hint": "Faith, Gambling, Luxury, Obligation, Pleasure, Stupor, Weird. Indulge to clear stress."
+    },
+    {
+      "path": "narrative.traumas",
+      "label": "Trauma Conditions",
+      "prefab": "CONT_TAGS",
+      "category": "narrative",
+      "config": {},
+      "usage_hint": "Cold, Haunted, Obsessed, Paranoid, Reckless, Soft, Unstable, Vicious."
+    }
+  ]
+}

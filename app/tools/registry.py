@@ -13,14 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 def _clean_schema(d: Any):
-    """
-    Recursively cleans the schema for Gemini compatibility.
-    Removes keys that are not supported or cause issues in the Gemini API.
-    """
+    """Recursively cleans schema for LLM compatibility."""
     if isinstance(d, dict):
-        # Keys to remove
-        # 'additionalProperties' is not supported by Gemini function calling.
-        # 'default' and 'title' are also often problematic or unnecessary.
         keys_to_remove = [
             "default",
             "title",
@@ -30,45 +24,33 @@ def _clean_schema(d: Any):
         for key in keys_to_remove:
             if key in d:
                 del d[key]
-
-        # Recurse into values
         for value in d.values():
             _clean_schema(value)
-
     elif isinstance(d, list):
         for item in d:
             _clean_schema(item)
 
 
 def _resolve_refs(schema_part: Any, defs: Dict[str, Any]) -> Any:
-    """
-    Recursively resolves $ref in the schema by inlining definitions from $defs.
-    This is required because the Gemini SDK does not support $ref pointers in FunctionDeclarations.
-    """
+    """Recursively resolves $ref in schema."""
     if isinstance(schema_part, dict):
         if "$ref" in schema_part:
             ref_path = schema_part["$ref"]
-            # Pydantic v2 uses #/$defs/, v1 used #/definitions/
             if ref_path.startswith("#/$defs/") or ref_path.startswith("#/definitions/"):
                 def_name = ref_path.split("/")[-1]
                 if def_name in defs:
-                    # Recursively resolve the definition itself before returning
-                    # Deepcopy ensures we don't mess up if the def is used multiple times
                     return _resolve_refs(copy.deepcopy(defs[def_name]), defs)
             return schema_part
-        
         return {k: _resolve_refs(v, defs) for k, v in schema_part.items()}
-    
     elif isinstance(schema_part, list):
         return [_resolve_refs(item, defs) for item in schema_part]
-    
     return schema_part
 
 
 class ToolRegistry:
     """
-    Discovers, loads, and executes tools from the 'tools.builtin' package.
-    Uses type-based lookup for clean, type-safe execution.
+    Discovers, loads, and executes tools.
+    Updated to scan 'app.tools.handlers'.
     """
 
     def __init__(self):
@@ -78,24 +60,15 @@ class ToolRegistry:
 
     def _discover_tools(self):
         """
-        Automatically discovers and registers tools using name-based matching.
-
-        NEW APPROACH:
-        - Scan app.tools.builtin for Python files with handler() functions
-        - Match module names to Pydantic schema types by tool name
-        - No more redundant schema dicts needed!
+        Auto-discovers tools in app.tools.handlers (Atomic) AND app.tools.builtin (Legacy/Setup).
         """
+        import app.tools.handlers as atomic_tools
         import app.tools.builtin as builtin_tools
 
-        package_path = Path(builtin_tools.__file__).parent
-
-        # Build a map of tool names -> Pydantic types by inspecting the schemas module
+        # 1. Map Tool Names -> Pydantic Types
         name_to_type: Dict[str, Type[BaseModel]] = {}
-
         for attr_name in dir(tool_schemas):
             attr = getattr(tool_schemas, attr_name)
-
-            # Check if it's a Pydantic model class with a 'name' field
             if (
                 isinstance(attr, type)
                 and issubclass(attr, BaseModel)
@@ -103,168 +76,122 @@ class ToolRegistry:
                 and hasattr(attr, "model_fields")
                 and "name" in attr.model_fields
             ):
-                # Extract the tool name from the Literal field
                 tool_name = attr.model_fields["name"].default
                 name_to_type[tool_name] = attr
 
-        logger.debug(f"Found {len(name_to_type)} Pydantic tool schemas")
+        logger.debug(f"Found {len(name_to_type)} tool schemas")
 
-        # Build reverse map: expected module name -> tool name
-        # e.g., "memory.upsert" -> "memory_upsert"
-        module_name_to_tool_name: Dict[str, str] = {}
-        for tool_name in name_to_type.keys():
-            # Convert "memory.upsert" -> "memory_upsert"
-            expected_module = tool_name.replace(".", "_")
-            module_name_to_tool_name[expected_module] = tool_name
+        # 2. Discover Handlers in both packages
+        # We prefer handlers in 'atomic_tools' if duplicates exist
 
-        # Auto-discover handler modules
-        for _, module_name, _ in pkgutil.iter_modules([str(package_path)]):
-            if module_name.startswith("_"):
-                continue  # Skip private modules
+        search_packages = [
+            (atomic_tools, "app.tools.handlers"),
+            (builtin_tools, "app.tools.builtin"),
+        ]
 
-            try:
-                module = importlib.import_module(f"app.tools.builtin.{module_name}")
+        for pkg, pkg_name in search_packages:
+            path = Path(pkg.__file__).parent
 
-                # Check if module has a handler function
-                if not hasattr(module, "handler"):
-                    logger.debug(f"Skipping {module_name}: no handler() function")
+            for _, module_name, _ in pkgutil.iter_modules([str(path)]):
+                if module_name.startswith("_"):
                     continue
 
-                # Match module name to tool name
-                if module_name not in module_name_to_tool_name:
-                    logger.warning(
-                        f"Module {module_name} has no matching Pydantic schema (expected tool name: {module_name.replace('_', '.')})"
-                    )
-                    continue
+                try:
+                    module = importlib.import_module(f"{pkg_name}.{module_name}")
 
-                tool_name = module_name_to_tool_name[module_name]
-                schema_type = name_to_type[tool_name]
+                    if not hasattr(module, "handler"):
+                        continue
 
-                # Register: Type -> Handler
-                self._handlers[schema_type] = module.handler
+                    # Map module "adjust" -> tool "adjust"
+                    # Map module "npc_spawn" -> tool "npc.spawn"
 
-                # Generate JSON schema for LLM
-                self._register_schema(schema_type)
+                    # Try direct match first
+                    schema_type = None
 
-                logger.info(
-                    f"Registered tool: {tool_name} ({schema_type.__name__} <- {module_name}.py)"
-                )
+                    # Strategy A: Module name matches tool name exactly (e.g. adjust)
+                    if module_name in name_to_type:
+                        schema_type = name_to_type[module_name]
 
-            except Exception as e:
-                logger.error(
-                    f"Failed to load tool module {module_name}: {e}", exc_info=True
-                )
+                    # Strategy B: Module name with dot replaced by underscore (e.g. npc_spawn -> npc.spawn)
+                    if not schema_type:
+                        potential_name = module_name.replace("_", ".")
+                        if potential_name in name_to_type:
+                            schema_type = name_to_type[potential_name]
+
+                    if not schema_type:
+                        # logger.debug(f"Skipping {module_name}: no matching schema found.")
+                        continue
+
+                    # Register if not already registered (first come, first served)
+                    if schema_type not in self._handlers:
+                        self._handlers[schema_type] = module.handler
+                        self._register_schema(schema_type)
+                        logger.info(
+                            f"Registered tool: {schema_type.model_fields['name'].default} from {module_name}"
+                        )
+
+                except Exception as e:
+                    logger.error(f"Failed to load {module_name}: {e}", exc_info=True)
 
     def _register_schema(self, schema_type: Type[BaseModel]):
-        """Generate JSON schema from Pydantic type for LLM consumption."""
         schema = schema_type.model_json_schema()
-        description = schema_type.__doc__ or "No description available"
-
-        # Extract definitions (where Pydantic puts nested models like UpdatePair)
         defs = schema.get("$defs", {}) or schema.get("definitions", {})
-
-        # Extract properties, excluding the discriminator field 'name'
         properties = schema.get("properties", {}).copy()
         properties.pop("name", None)
-
-        # Resolve references (inline nested models)
         properties = _resolve_refs(properties, defs)
-
-        # Clean up schema for LLM (remove titles, defaults, additionalProperties)
         _clean_schema(properties)
-
-        # Extract required fields, excluding 'name'
         required = [r for r in schema.get("required", []) if r != "name"]
 
-        # Build parameters schema
         parameters_schema = {"type": "object"}
         if properties:
             parameters_schema["properties"] = properties
         if required:
             parameters_schema["required"] = required
 
-        # Store complete tool schema
         self.tool_schemas.append(
             {
                 "name": self._get_tool_name(schema_type),
-                "description": description,
+                "description": schema_type.__doc__ or "",
                 "parameters": parameters_schema,
             }
         )
 
     @staticmethod
     def _get_tool_name(schema_type: Type[BaseModel]) -> str:
-        """Extract tool name from Pydantic type."""
         return schema_type.model_fields["name"].default
 
     def get_all_schemas(self) -> List[Dict[str, Any]]:
-        """Returns the JSON schemas of all registered tools for LLM."""
         return self.tool_schemas
 
-    def get_all_tool_names(self) -> List[str]:
-        """Get all registered tool names."""
-        return [self._get_tool_name(t) for t in self._handlers.keys()]
-
     def get_all_tool_types(self) -> List[Type[BaseModel]]:
-        """Get all registered Pydantic tool types."""
         return list(self._handlers.keys())
 
-    def get_tool_models(self, tool_names: List[str]) -> List[Type[BaseModel]]:
-        """
-        Returns the Pydantic model types for a given list of tool names.
-        Used when creating discriminated unions for specific contexts (e.g., SETUP vs GAMEPLAY).
-        """
-        name_to_type = {self._get_tool_name(t): t for t in self._handlers.keys()}
-        return [name_to_type[name] for name in tool_names if name in name_to_type]
-
     def get_llm_tool_schemas(self, tool_names: List[str]) -> List[Dict[str, Any]]:
-        """
-        Returns the JSON schemas for a given list of tools, formatted for LLM tool-calling APIs.
-        This renames 'tool_name' to 'name' for API compatibility.
-        """
         llm_schemas = []
         for schema in self.tool_schemas:
             if schema["name"] in tool_names:
-                # Create the format expected by OpenAI/Gemini tool calling
-                formatted_schema = {
-                    "type": "function",
-                    "function": {
-                        "name": schema["name"],
-                        "description": schema["description"],
-                        "parameters": schema["parameters"],
-                    },
-                }
-                llm_schemas.append(formatted_schema)
+                llm_schemas.append(
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": schema["name"],
+                            "description": schema["description"],
+                            "parameters": schema["parameters"],
+                        },
+                    }
+                )
         return llm_schemas
 
     def execute(
         self, tool_model: BaseModel, context: Dict[str, Any] | None = None
     ) -> Any:
-        """
-        Execute a tool using an already-validated Pydantic model instance.
-
-        Args:
-            tool_model: A validated Pydantic instance (e.g., MathEval, MemoryUpsert)
-            context: Optional context dict (session_id, db_manager, vector_store, etc.)
-
-        Returns:
-            The result from the tool handler
-        """
         tool_type = type(tool_model)
-
         if tool_type not in self._handlers:
             raise ValueError(f"Unknown tool type: {tool_type.__name__}")
 
         handler = self._handlers[tool_type]
-
-        # Extract all fields except the discriminator 'tool_name'
-        handler_args = tool_model.model_dump(exclude={"name"})
-
-        # Merge in context
+        args = tool_model.model_dump(exclude={"name"})
         if context:
-            handler_args.update(context)
+            args.update(context)
 
-        tool_name = self._get_tool_name(tool_type)
-        logger.debug(f"Executing {tool_name} with args: {list(handler_args.keys())}")
-
-        return handler(**handler_args)
+        return handler(**args)

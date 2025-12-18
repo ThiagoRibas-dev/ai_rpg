@@ -6,6 +6,7 @@ from .game_state_repository import GameStateRepository
 from .turn_metadata_repository import TurnMetadataRepository
 from .ruleset_repository import RulesetRepository
 from .stat_template_repository import StatTemplateRepository
+from .manifest_repository import ManifestRepository
 
 __all__ = [
     "BaseRepository",
@@ -16,4 +17,5 @@ __all__ = [
     "TurnMetadataRepository",
     "RulesetRepository",
     "StatTemplateRepository",
+    "ManifestRepository",
 ]

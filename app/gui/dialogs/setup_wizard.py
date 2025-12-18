@@ -6,7 +6,7 @@ import time
 from app.setup.world_gen_service import WorldGenService
 from app.setup.sheet_generator import SheetGenerator
 from app.services.game_setup_service import GameSetupService
-from app.tools.schemas import MemoryUpsert
+from app.setup.schemas import LoreData  # CHANGED: Use LoreData instead of MemoryUpsert
 from app.models.vocabulary import GameVocabulary
 
 logger = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ class SetupWizard:
         self.generated_opening = ""
 
         self.is_generating = False
-        
+
         # Status
         self.status_msg = ""
         self.start_time = None
@@ -108,13 +108,19 @@ class SetupWizard:
                         self.status_label = ui.label("Initializing...").classes(
                             "text-lg animate-pulse font-mono"
                         )
-                        
+
                         # Error Container (Hidden by default)
-                        self.error_container = ui.column().classes("items-center hidden")
+                        self.error_container = ui.column().classes(
+                            "items-center hidden"
+                        )
                         with self.error_container:
                             ui.icon("error", size="4em").classes("text-red-500")
-                            self.error_msg = ui.label("Error").classes("text-red-400 text-center")
-                            ui.button("Back", on_click=self.stepper.previous).props("flat")
+                            self.error_msg = ui.label("Error").classes(
+                                "text-red-400 text-center"
+                            )
+                            ui.button("Back", on_click=self.stepper.previous).props(
+                                "flat"
+                            )
 
                         with ui.stepper_navigation():
                             self.btn_review = ui.button(
@@ -136,22 +142,22 @@ class SetupWizard:
     async def run_generation(self):
         self.stepper.next()
         self.is_generating = True
-        
+
         # Reset UI
         self.spinner.classes(remove="hidden")
         self.status_label.classes(remove="hidden")
         self.error_container.classes(add="hidden")
         self.btn_review.classes(add="hidden")
-        
+
         self.start_time = time.time()
         self.status_timer = ui.timer(0.1, self._update_timer_ui)
-        
+
         # Run Pipeline
         success = await asyncio.to_thread(self._execute_pipeline)
-        
+
         if self.status_timer:
             self.status_timer.cancel()
-            
+
         if success:
             self.spinner.classes(add="hidden")
             self.status_label.set_text("Complete!")
@@ -177,7 +183,7 @@ class SetupWizard:
         try:
             connector = self.orchestrator._get_llm_connector()
             sheet_gen = SheetGenerator(connector)
-            
+
             # 1. World Gen
             self._update_status("[Step 1/4] Building World...")
             world_service = WorldGenService(connector)
@@ -200,7 +206,9 @@ class SetupWizard:
                 self._update_status("[Step 2/4] Generating from Vocabulary...")
                 self.generated_spec, self.generated_values = (
                     sheet_gen.generate_from_vocabulary(
-                        vocabulary, self.input_char, rules_text=self.prompt.rules_document
+                        vocabulary,
+                        self.input_char,
+                        rules_text=self.prompt.rules_document,
                     )
                 )
             else:
@@ -228,7 +236,7 @@ class SetupWizard:
 
             self._update_status("Done!")
             return True
-            
+
         except Exception as e:
             logger.error(f"Generation Pipeline Failed: {e}", exc_info=True)
             self.error_msg.set_text(f"Generation Failed: {str(e)}")
@@ -418,12 +426,13 @@ class SetupWizard:
             tags = [t.strip() for t in tags_str.split(",") if t.strip()]
             if "world_gen" not in tags:
                 tags.append("world_gen")
+            # CHANGED: Use LoreData to match expected structure
             final_lore.append(
-                MemoryUpsert(kind="lore", content=content, priority=3, tags=tags)
+                LoreData(kind="lore", content=content, priority=3, tags=tags)
             )
 
         self.extracted_world.lore = final_lore
-        
+
         service = GameSetupService(self.db, self.orchestrator.vector_store)
 
         try:

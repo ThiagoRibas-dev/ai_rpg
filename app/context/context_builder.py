@@ -1,14 +1,16 @@
 import logging
-from typing import List
+from typing import List, Optional
 from app.models.session import Session
 from app.models.game_session import GameSession
 from app.models.message import Message
+from app.prefabs.manifest import SystemManifest
 from app.setup.setup_manifest import SetupManifest
-from app.services.state_service import get_entity
-from app.models.vocabulary import ROLE_TO_CATEGORY, SemanticRole
-
 
 class ContextBuilder:
+    """
+    Constructs the System Prompt and Dynamic Context for the LLM.
+    Now Manifest-Aware.
+    """
     def __init__(
         self,
         db_manager,
@@ -17,6 +19,7 @@ class ContextBuilder:
         mem_retriever,
         simulation_service,
         logger: logging.Logger | None = None,
+        manifest: Optional[SystemManifest] = None
     ):
         self.db = db_manager
         self.vs = vector_store
@@ -24,34 +27,32 @@ class ContextBuilder:
         self.mem_retriever = mem_retriever
         self.simulation_service = simulation_service
         self.logger = logger or logging.getLogger(__name__)
+        self.manifest = manifest
 
-    def build_static_system_instruction(
-        self,
-        game_session: GameSession,
-        ruleset_text: str = "",
-    ) -> str:
+    def build_static_system_instruction(self, game_session: GameSession) -> str:
+        """
+        Builds the permanent system instruction (Rules, Engine, Vocabulary).
+        """
         sections = []
+        
+        # 1. Core Persona
         session_data = Session.from_json(game_session.session_data)
         user_game_prompt = session_data.get_system_prompt()
         sections.append(user_game_prompt)
 
-        # Base Engine Rules (Static)
-        manifest = SetupManifest(self.db).get_manifest(game_session.id)
-        ruleset_id = manifest.get("ruleset_id")
+        # 2. Game System Rules (from Manifest)
+        if self.manifest:
+            sections.append(self._build_manifest_context())
+        else:
+            # Fallback for legacy/setup
+            sections.append(self._build_legacy_rules(game_session))
 
-        if ruleset_id:
-            ruleset = self.db.rulesets.get_by_id(ruleset_id)
-            if ruleset:
-                sections.append(self._render_engine_config(ruleset))
+        # 3. Tool Examples (Critical for atomic tools)
+        sections.append(self._build_tool_examples())
 
-        # Vocabulary Hints (Valid Paths)
-        vocab_hints = self._build_vocabulary_hints(manifest)
-        if vocab_hints:
-            sections.append(vocab_hints)
-
+        # 4. Author's Note
         if game_session.authors_note:
-            sections.append("# AUTHOR'S NOTE")
-            sections.append(game_session.authors_note)
+            sections.append(f"# AUTHOR'S NOTE\n{game_session.authors_note}")
 
         return "\n\n".join(sections)
 
@@ -60,31 +61,28 @@ class ContextBuilder:
         game_session: GameSession,
         chat_history: List[Message],
     ) -> str:
+        """
+        Builds the context that changes every turn (State, Narrative, Procedure).
+        """
         sections = []
 
-        # 1. State
-        state_text = self.state_builder.build(game_session.id)
+        # 1. Current State (Character Sheet, Location, Inventory)
+        # Passed manifest to state builder to render prefabs correctly
+        state_text = self.state_builder.build(game_session.id, self.manifest)
         if state_text:
             sections.append(f"# CURRENT STATE #\n{state_text}")
 
-        # 2. Procedures (Mode-Specific)
-        manifest = SetupManifest(self.db).get_manifest(game_session.id)
-        ruleset_id = manifest.get("ruleset_id")
-        current_mode = game_session.game_mode.lower()
+        # 2. Active Procedure (Combat/Exploration)
+        if self.manifest:
+            current_mode = game_session.game_mode.lower()
+            proc_text = self.manifest.get_procedure(current_mode)
+            if proc_text:
+                sections.append(f"# ACTIVE PROCEDURE: {current_mode.upper()}\n{proc_text}")
 
-        if ruleset_id:
-            ruleset = self.db.rulesets.get_by_id(ruleset_id)
-            if ruleset:
-                proc_text = self._render_procedures(ruleset, current_mode)
-                if proc_text:
-                    sections.append(
-                        f"# ACTIVE PROCEDURE: {current_mode.upper()}\n{proc_text}"
-                    )
-
-        # 3. Narrative Context (Episodic + Lore)
+        # 3. Narrative Context (RAG)
         session = Session.from_json(game_session.session_data)
         session.id = game_session.id
-
+        
         narrative_mems = self.mem_retriever.get_relevant(
             session, chat_history, kinds=["episodic", "lore", "semantic"], limit=8
         )
@@ -93,111 +91,58 @@ class ContextBuilder:
                 self.mem_retriever.format_for_prompt(narrative_mems, "STORY CONTEXT")
             )
 
-        # 4. Rules Context (RAG: Semantic + Tag-Based)
-        # A. Gather Tags from Player State
-        active_tags = []
-        player = get_entity(game_session.id, self.db, "character", "player")
-        if player:
-            # Look in 'features', 'conditions' (if exists), or 'attributes'
-            for cat in ["features", "conditions"]:
-                data = player.get(cat, {})
-                if isinstance(data, list):
-                    active_tags.extend([str(i) for i in data])
-                elif isinstance(data, dict):
-                    active_tags.extend(data.keys())
-
-        # B. Retrieve Rules
-        rule_mems = self.mem_retriever.get_relevant(
-            session,
-            chat_history,
-            kinds=["rule"],
-            limit=5,
-            extra_tags=active_tags,  # Pass active tags to boost relevant rules
-        )
-
-        if rule_mems:
-            sections.append(
-                self.mem_retriever.format_for_prompt(
-                    rule_mems, "RELEVANT RULES & MECHANICS"
-                )
-            )
-
-        # 5. Spatial
+        # 4. Spatial Context
         spatial_context = self._build_spatial_context(game_session.id)
         if spatial_context:
             sections.append(spatial_context)
 
         return "\n\n".join(sections)
 
-    def _render_engine_config(self, ruleset) -> str:
-        e = ruleset.engine
-        lines = ["# ENGINE CONFIG"]
-        lines.append(f"- **Dice**: {e.dice_notation}")
-        lines.append(f"- **Resolution**: {e.roll_mechanic}")
-        lines.append(f"- **Success**: {e.success_condition}")
-        lines.append(f"- **Crit**: {e.crit_rules}")
+    def _build_manifest_context(self) -> str:
+        """Generates the cheat sheet for the active game system."""
+        lines = [f"# GAME SYSTEM: {self.manifest.name}"]
+        
+        # Engine
+        lines.append(self.manifest.get_engine_text())
+        
+        # Valid Paths (The Vocabulary)
+        lines.append(self.manifest.get_path_hints())
+        
         return "\n".join(lines)
 
-    def _render_procedures(self, ruleset, mode: str) -> str:
-        target_dict = {}
-        if mode in ["combat", "encounter"]:
-            target_dict = ruleset.combat_procedures
-        elif mode in ["exploration", "travel"]:
-            target_dict = ruleset.exploration_procedures
-        elif mode == "social":
-            target_dict = ruleset.social_procedures
-        elif mode == "downtime":
-            target_dict = ruleset.downtime_procedures
+    def _build_tool_examples(self) -> str:
+        """Examples of how to use the Atomic Tools."""
+        return """# TOOL USAGE EXAMPLES
 
-        if not target_dict:
-            return ""
+1. **Modify Stats/HP:**
+   `{"name": "adjust", "path": "resources.hp.current", "delta": -5, "reason": "Goblin ambush"}`
 
-        lines = []
-        for name, proc in target_dict.items():
-            lines.append(f"**{name} ({proc.description})**")
-            for step in proc.steps:
-                lines.append(f"  {step}")
-            lines.append("")
-        return "\n".join(lines)
+2. **Set Specific Values:**
+   `{"name": "set", "path": "status.is_hiding", "value": true}`
 
-    def _build_vocabulary_hints(self, manifest: dict) -> str:
-        """
-        Build vocabulary hints for the LLM context.
-        Updated to use canonical paths from ROLE_TO_CATEGORY.
-        """
-        vocab_data = manifest.get("vocabulary")
-        if not vocab_data:
-            return ""
+3. **Roll Dice:**
+   `{"name": "roll", "formula": "1d20+5", "reason": "Attack vs AC 15"}`
 
-        try:
-            from app.models.vocabulary import GameVocabulary
+4. **Mark Tracks (Stress/Ammo):**
+   `{"name": "mark", "path": "resources.stress", "count": 1}`
 
-            vocab = GameVocabulary(**vocab_data)
+5. **Move Location:**
+   `{"name": "move", "destination": "loc_tavern"}`
 
-            lines = ["# VALID UPDATE PATHS #"]
+6. **Record Memory:**
+   `{"name": "note", "content": "The Baron is secretly a vampire.", "kind": "fact"}`
+"""
 
-            # Group by semantic role
-            for role in SemanticRole:
-                # Map role (e.g. core_trait) to category (e.g. attributes)
-                category = ROLE_TO_CATEGORY.get(role, role.value)
-
-                # Filter paths that start with this category
-                # valid_paths are now like "attributes.str", "resources.hp"
-                role_paths = [
-                    p for p in vocab.valid_paths if p.startswith(f"{category}.")
-                ]
-
-                if role_paths:
-                    lines.append(
-                        f"**{category.replace('_', ' ').title()}**: {', '.join(role_paths[:6])}"
-                    )
-                    if len(role_paths) > 6:
-                        lines.append(f"  ... and {len(role_paths) - 6} more")
-
-            return "\n".join(lines)
-        except Exception as e:
-            self.logger.debug(f"Failed to build vocabulary hints: {e}")
-            return ""
+    def _build_legacy_rules(self, game_session) -> str:
+        """Fallback for setup phase or missing manifest."""
+        manifest_data = SetupManifest(self.db).get_manifest(game_session.id)
+        ruleset_id = manifest_data.get("ruleset_id")
+        if ruleset_id:
+            ruleset = self.db.rulesets.get_by_id(ruleset_id)
+            if ruleset:
+                e = ruleset.engine
+                return f"# ENGINE CONFIG\n- Dice: {e.dice_notation}\n- Mechanic: {e.roll_mechanic}"
+        return ""
 
     def _build_spatial_context(self, session_id: int) -> str:
         try:
@@ -207,26 +152,18 @@ class ContextBuilder:
             lines = []
             loc_key = scene.get("location_key")
             if loc_key:
-                location = self.db.game_state.get_entity(
-                    session_id, "location", loc_key
-                )
+                location = self.db.game_state.get_entity(session_id, "location", loc_key)
                 if location:
-                    lines.append(f"# LOCATION: {location.get('name', 'Unknown')} #")
+                    lines.append(f"# LOCATION: {location.get('name', 'Unknown')} ({loc_key}) #")
                     lines.append(location.get("description_visual", ""))
                     conns = location.get("connections", {})
                     if conns:
-                        exits = [
-                            f"{d.upper()} -> {data.get('display_name')}"
-                            for d, data in conns.items()
-                        ]
+                        exits = [f"{d.upper()} -> {data.get('display_name')}" for d, data in conns.items()]
                         lines.append("Exits: " + ", ".join(exits))
             return "\n".join(lines)
-        except Exception as e:
-            self.logger.debug(f"Failed to build spatial context: {e}")
+        except Exception:
             return ""
 
-    def get_truncated_history(
-        self, session: Session, max_messages: int
-    ) -> List[Message]:
+    def get_truncated_history(self, session: Session, max_messages: int) -> List[Message]:
         history = session.get_history()
         return history[-max_messages:] if len(history) > max_messages else history

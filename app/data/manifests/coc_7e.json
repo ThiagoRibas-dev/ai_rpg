@@ -1,0 +1,397 @@
+{
+  "id": "coc_7e",
+  "name": "Call of Cthulhu 7th Edition",
+  "engine": {
+    "dice": "1d100",
+    "mechanic": "Roll d100 (percentile) against skill or characteristic value",
+    "success": "Roll equal or under skill = Regular success. Roll equal or under half skill = Hard success. Roll equal or under one-fifth skill = Extreme success.",
+    "crit": "Roll 01 = Critical success (maximum possible effect)",
+    "fumble": "Roll 96-100 = Fumble if skill is under 50. Roll 100 = Always fumble regardless of skill."
+  },
+  "procedures": {
+    "combat": "Combat is deadly. Avoid when possible.\n1. Each round: Declare actions, then resolve by DEX order (highest first)\n2. Attack: Roll under Fighting (melee) or Firearms (ranged)\n3. Defense: Target may Dodge (roll under Dodge) or Fight Back (roll under Fighting)\n   - Compare successes: Higher success level wins\n   - Tie on same level: Attacker wins\n4. Damage: Roll weapon damage, subtract armor\n5. Major Wound: Lose half or more HP in one hit = CON roll or fall unconscious\n6. Dying: At 0 HP, dying. Each round lose 1 HP unless First Aid succeeds.",
+    "investigation": "Investigation is the core of the game.\n1. Describe the scene with sensory details - what they see, hear, smell\n2. Spot Hidden: Notice concealed items or hidden doors\n3. Library Use: Research in books, archives, newspapers\n4. Other skills as appropriate: Medicine (examine body), Occult (identify symbols), etc.\n5. Clues should be available - rolls determine HOW MUCH they learn, not IF\n6. Failed rolls may trigger delays, complications, or partial information\n7. Pushing rolls: Player may push a failed roll for one more try, but failure has consequences",
+    "sanity": "Sanity represents mental stability when facing the unnatural.\n1. Sanity Check: Roll under current Sanity when encountering Mythos/horror\n2. Success: Lose minimum Sanity (first number)\n3. Failure: Lose maximum Sanity (second number, e.g., 1/1d6 means 1 on success, 1d6 on failure)\n4. Temporary Insanity: Lose 5+ Sanity in one check = bout of madness (1d10 rounds)\n5. Indefinite Insanity: Lose 20%+ of current Sanity in one hour = underlying insanity\n6. Maximum Sanity: 99 minus Cthulhu Mythos skill (learning the truth costs sanity)"
+  },
+  "aliases": {
+    "damage_bonus": "floor((attributes.str + attributes.siz) / 10) - 2",
+    "hp_max": "floor((attributes.con + attributes.siz) / 10)",
+    "mp_max": "floor(attributes.pow / 5)",
+    "san_max": "99 - skills.cthulhu_mythos",
+    "mov_base": "8"
+  },
+  "fields": [
+    {
+      "path": "attributes.str",
+      "label": "STR",
+      "prefab": "VAL_INT",
+      "category": "attributes",
+      "config": {
+        "min": 1,
+        "max": 99,
+        "default": 50
+      },
+      "usage_hint": "Physical power. Melee damage, lifting, breaking things."
+    },
+    {
+      "path": "attributes.con",
+      "label": "CON",
+      "prefab": "VAL_INT",
+      "category": "attributes",
+      "config": {
+        "min": 1,
+        "max": 99,
+        "default": 50
+      },
+      "usage_hint": "Health and hardiness. Contributes to HP, resisting poison/disease."
+    },
+    {
+      "path": "attributes.siz",
+      "label": "SIZ",
+      "prefab": "VAL_INT",
+      "category": "attributes",
+      "config": {
+        "min": 1,
+        "max": 99,
+        "default": 60
+      },
+      "usage_hint": "Physical size. Contributes to HP and damage bonus."
+    },
+    {
+      "path": "attributes.dex",
+      "label": "DEX",
+      "prefab": "VAL_INT",
+      "category": "attributes",
+      "config": {
+        "min": 1,
+        "max": 99,
+        "default": 50
+      },
+      "usage_hint": "Agility and speed. Determines action order in combat."
+    },
+    {
+      "path": "attributes.app",
+      "label": "APP",
+      "prefab": "VAL_INT",
+      "category": "attributes",
+      "config": {
+        "min": 1,
+        "max": 99,
+        "default": 50
+      },
+      "usage_hint": "Physical attractiveness and presence."
+    },
+    {
+      "path": "attributes.int",
+      "label": "INT",
+      "prefab": "VAL_INT",
+      "category": "attributes",
+      "config": {
+        "min": 1,
+        "max": 99,
+        "default": 50
+      },
+      "usage_hint": "Intelligence and reasoning. Idea rolls."
+    },
+    {
+      "path": "attributes.pow",
+      "label": "POW",
+      "prefab": "VAL_INT",
+      "category": "attributes",
+      "config": {
+        "min": 1,
+        "max": 99,
+        "default": 50
+      },
+      "usage_hint": "Willpower and magical aptitude. Starting Sanity = POW. Determines Magic Points."
+    },
+    {
+      "path": "attributes.edu",
+      "label": "EDU",
+      "prefab": "VAL_INT",
+      "category": "attributes",
+      "config": {
+        "min": 1,
+        "max": 99,
+        "default": 60
+      },
+      "usage_hint": "Education and knowledge. Determines occupation skill points."
+    },
+    {
+      "path": "resources.hp",
+      "label": "Hit Points",
+      "prefab": "RES_POOL",
+      "category": "resources",
+      "config": {
+        "min": 0
+      },
+      "max_formula": "hp_max",
+      "threshold_hint": "At 0: dying (lose 1 HP/round without First Aid). Major wound: lose half+ HP in one hit, CON roll or unconscious."
+    },
+    {
+      "path": "resources.mp",
+      "label": "Magic Points",
+      "prefab": "RES_POOL",
+      "category": "resources",
+      "config": {
+        "min": 0
+      },
+      "max_formula": "mp_max",
+      "threshold_hint": "At 0: unconscious. Regenerate 1 per 2 hours or all after 24h rest. Spent to cast spells."
+    },
+    {
+      "path": "resources.sanity",
+      "label": "Sanity",
+      "prefab": "RES_POOL",
+      "category": "resources",
+      "config": {
+        "min": 0,
+        "default_max": 50
+      },
+      "max_formula": "san_max",
+      "threshold_hint": "Lose 5+ at once: temporary insanity. Lose 20%+ in hour: indefinite insanity. At 0: permanent insanity, become NPC."
+    },
+    {
+      "path": "resources.luck",
+      "label": "Luck",
+      "prefab": "RES_COUNTER",
+      "category": "resources",
+      "config": {
+        "min": 0,
+        "default": 50
+      },
+      "usage_hint": "Spend to reduce any roll by amount spent. Very rarely recovers. Starting Luck = 3d6 × 5."
+    },
+    {
+      "path": "skills.spot_hidden",
+      "label": "Spot Hidden",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 25
+      },
+      "usage_hint": "Notice hidden objects, secret doors, concealed clues."
+    },
+    {
+      "path": "skills.listen",
+      "label": "Listen",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 20
+      },
+      "usage_hint": "Hear sounds, eavesdrop, detect approaching danger."
+    },
+    {
+      "path": "skills.library_use",
+      "label": "Library Use",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 20
+      },
+      "usage_hint": "Research in libraries, archives, find information in documents."
+    },
+    {
+      "path": "skills.psychology",
+      "label": "Psychology",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 10
+      },
+      "usage_hint": "Read people, detect lies, understand motivations."
+    },
+    {
+      "path": "skills.persuade",
+      "label": "Persuade",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 10
+      },
+      "usage_hint": "Convince others through charm, logic, or debate."
+    },
+    {
+      "path": "skills.fast_talk",
+      "label": "Fast Talk",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 5
+      },
+      "usage_hint": "Quick deception, short-term cons, verbal distraction."
+    },
+    {
+      "path": "skills.intimidate",
+      "label": "Intimidate",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 15
+      },
+      "usage_hint": "Coerce through threats, physical presence, or menace."
+    },
+    {
+      "path": "skills.fighting_brawl",
+      "label": "Fighting (Brawl)",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 25
+      },
+      "usage_hint": "Unarmed combat, improvised weapons, melee fighting."
+    },
+    {
+      "path": "skills.firearms_handgun",
+      "label": "Firearms (Handgun)",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 20
+      },
+      "usage_hint": "Pistols and revolvers."
+    },
+    {
+      "path": "skills.dodge",
+      "label": "Dodge",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 0
+      },
+      "default_formula": "floor(attributes.dex / 2)",
+      "usage_hint": "Evade attacks. Can be used once per round freely, then at penalty."
+    },
+    {
+      "path": "skills.first_aid",
+      "label": "First Aid",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 30
+      },
+      "usage_hint": "Emergency medical treatment. Stabilize dying, heal 1 HP."
+    },
+    {
+      "path": "skills.medicine",
+      "label": "Medicine",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 1
+      },
+      "usage_hint": "Professional medical knowledge. Diagnose illness, surgery, long-term treatment."
+    },
+    {
+      "path": "skills.occult",
+      "label": "Occult",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 5
+      },
+      "usage_hint": "Knowledge of mystical traditions, cults, folklore (not Mythos)."
+    },
+    {
+      "path": "skills.cthulhu_mythos",
+      "label": "Cthulhu Mythos",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 0
+      },
+      "usage_hint": "Knowledge of cosmic horrors. Cannot be improved by experience. Reduces maximum Sanity."
+    },
+    {
+      "path": "skills.stealth",
+      "label": "Stealth",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 20
+      },
+      "usage_hint": "Move silently, hide, avoid detection."
+    },
+    {
+      "path": "skills.drive_auto",
+      "label": "Drive Auto",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 20
+      },
+      "usage_hint": "Operate automobiles, trucks, motorcycles."
+    },
+    {
+      "path": "features.phobias",
+      "label": "Phobias & Manias",
+      "prefab": "CONT_TAGS",
+      "category": "features",
+      "config": {},
+      "usage_hint": "Mental disorders acquired from Sanity loss."
+    },
+    {
+      "path": "features.spells",
+      "label": "Spells Known",
+      "prefab": "CONT_LIST",
+      "category": "features",
+      "config": {},
+      "usage_hint": "Mythos spells learned. Each has MP cost and Sanity cost."
+    },
+    {
+      "path": "inventory.equipment",
+      "label": "Equipment",
+      "prefab": "CONT_LIST",
+      "category": "inventory",
+      "config": {}
+    },
+    {
+      "path": "inventory.weapons",
+      "label": "Weapons",
+      "prefab": "CONT_LIST",
+      "category": "inventory",
+      "config": {}
+    },
+    {
+      "path": "narrative.backstory",
+      "label": "Backstory",
+      "prefab": "CONT_TAGS",
+      "category": "narrative",
+      "config": {},
+      "usage_hint": "Key background elements, significant events, personality traits."
+    }
+  ]
+}
