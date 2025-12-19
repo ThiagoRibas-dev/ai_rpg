@@ -1,9 +1,8 @@
 from nicegui import ui
-import json
 import asyncio
 import time
 from app.models.prompt import Prompt
-from app.setup.rules_generator import RulesGenerator
+from app.setup.manifest_extractor import ManifestExtractor
 import logging
 
 logger = logging.getLogger(__name__)
@@ -22,7 +21,7 @@ class PromptEditorDialog:
         self.content = prompt.content if prompt else ""
         self.rules = prompt.rules_document if prompt else ""
 
-        # State: Manifest (Ruleset + Base Rules)
+        # State: Manifest
         self.manifest_json = "{}"
         if prompt and prompt.template_manifest:
             self.manifest_json = prompt.template_manifest
@@ -179,30 +178,21 @@ class PromptEditorDialog:
 
     def _execute_extraction(self):
         connector = self.orchestrator._get_llm_connector()
-        service = RulesGenerator(connector, status_callback=self._update_status)
+        extractor = ManifestExtractor(connector, status_callback=self._update_status)
         try:
-            ruleset, rule_mems, vocabulary = service.generate_ruleset(self.rules)
+            # 1. Run Pipeline
+            manifest = extractor.extract(self.rules)
+            
+            # 2. Update Name if empty
+            if not self.name and manifest.name:
+                self.name = manifest.name
 
-            # Combine into Manifest (includes vocabulary)
-            manifest = {
-                "vocabulary": vocabulary.model_dump(),
-                "ruleset": ruleset.model_dump(),
-                "base_rules": rule_mems,
-                # Note: A freshly extracted manifest might need conversion to the new SystemManifest format
-                # if RulesGenerator produces the old format.
-                # But since we updated RulesGenerator to use the new extractors,
-                # we should construct a SystemManifest object here.
-                # For now, we dump what we have, and the GameSetupService handles the parsing logic.
-            }
-
-            # Better approach: If we can, build a SystemManifest right here.
-            # But the RulesGenerator returns (Ruleset, List, Vocab).
-            # We'll rely on the existing JSON structure which GameSetupService knows how to handle.
-
-            self.manifest_json = json.dumps(manifest, indent=2)
+            # 3. Serialize to UI
+            self.manifest_json = manifest.to_json(indent=2)
+            
             self._update_status("Extraction Complete!")
         except Exception as e:
-            logger.error(f"Rules extraction failed: {e}")
+            logger.error(f"Rules extraction failed: {e}", exc_info=True)
             self._update_status(f"Error: {str(e)}")
 
     def _update_status(self, msg):

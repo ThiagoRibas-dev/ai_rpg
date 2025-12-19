@@ -1,5 +1,7 @@
 from nicegui import ui
 from app.services.state_service import get_entity
+from app.setup.setup_manifest import SetupManifest
+from app.prefabs.validation import get_path
 import logging
 
 logger = logging.getLogger(__name__)
@@ -8,8 +10,7 @@ logger = logging.getLogger(__name__)
 class CharacterInspector:
     """
     Universal Character Sheet Renderer.
-    Adapts to any CharacterSheetSpec structure.
-    Includes defensive coding to handle LLM structure mismatches.
+    Adapts to SystemManifest (Lego Protocol).
     """
 
     def __init__(self, db_manager):
@@ -32,70 +33,70 @@ class CharacterInspector:
                 ui.label("No Session").classes("text-gray-500")
             return
 
-        # 1. Fetch Entity & Template
+        # 1. Fetch Entity
         entity = get_entity(self.session_id, self.db, "character", self.entity_key)
         if not entity:
             return
 
-        tid = entity.get("template_id")
-        template = self.db.stat_templates.get_by_id(tid) if tid else None
+        # 2. Fetch Manifest (Source of Truth)
+        setup_data = SetupManifest(self.db).get_manifest(self.session_id)
+        manifest_id = setup_data.get("manifest_id")
+        manifest = None
 
-        if not template:
+        if manifest_id:
+            manifest = self.db.manifests.get_by_id(manifest_id)
+
+        if not manifest:
             with self.container:
-                ui.label("Legacy/No Template").classes("text-yellow-600")
+                ui.label("No System Manifest Found").classes("text-red-400 italic")
             return
 
-        # 2. Render Loop
+        # 3. Render Loop
         with self.container:
-            self._render_header(entity, template)
+            self._render_header(entity, manifest)
 
-            cats = [
+            std_order = [
                 "attributes",
                 "resources",
+                "combat",
+                "status",
                 "skills",
                 "features",
                 "inventory",
-                "connections",
                 "narrative",
+                "progression",
+            ]
+            man_cats = manifest.get_categories()
+            sorted_cats = [c for c in std_order if c in man_cats] + [
+                c for c in man_cats if c not in std_order
             ]
 
-            spec = (
-                template.model_dump() if hasattr(template, "model_dump") else template
-            )
+            for cat_key in sorted_cats:
+                if cat_key in ["meta", "identity"]:
+                    continue
 
-            for cat_key in cats:
-                if cat_key in spec:
-                    self._render_category(
-                        cat_key, spec[cat_key], entity.get(cat_key, {})
-                    )
+                fields = manifest.get_fields_by_category(cat_key)
+                if fields:
+                    self._render_category(cat_key, fields, entity)
 
-    def _render_header(self, entity, template):
+    def _render_header(self, entity, manifest):
         name = entity.get("name", "Unknown")
         identity = entity.get("identity", {})
-        subtext = (
+        concept = (
             identity.get("concept")
-            or identity.get("occupation")
-            or identity.get("background")
+            or identity.get("class")
+            or identity.get("archetype")
             or "Player Character"
         )
 
         with ui.row().classes("w-full items-center justify-between mb-2"):
             with ui.column().classes("gap-0"):
                 ui.label(name).classes("text-2xl font-bold text-white leading-none")
-                ui.label(subtext).classes("text-xs text-amber-400")
+                ui.label(concept).classes("text-xs text-amber-400")
+                ui.label(manifest.name).classes("text-[10px] text-slate-500")
             ui.icon("person").classes("text-slate-600 text-4xl")
 
-    def _render_category(self, cat_key, cat_def, cat_data):
-        """Renders a whole category (e.g. Attributes)."""
-        
-        # DEFENSIVE: If data isn't a dict (e.g. legacy inventory list), skip
-        if not isinstance(cat_data, dict):
-            return
-
-        fields = cat_def.get("fields", {})
-        if not fields:
-            return
-
+    def _render_category(self, cat_key, fields, entity):
         with ui.column().classes(
             "w-full mb-2 bg-slate-800/50 rounded border border-slate-700/50 p-2"
         ):
@@ -103,88 +104,115 @@ class CharacterInspector:
                 "text-xs font-bold text-gray-500 uppercase mb-2"
             )
 
-            for field_key, field_def in fields.items():
-                self._render_field(field_key, field_def, cat_data)
+            for field_def in fields:
+                self._render_field(field_def, entity)
 
-    def _render_field(self, key, definition, data_source):
-        container_type = definition.get("container_type", "atom")
-        display = definition.get("display", {})
-        label = display.get("label", key)
-        widget = display.get("widget", "text")
+    def _render_field(self, field_def, entity):
+        val = get_path(entity, field_def.path)
+        prefab = field_def.prefab
+        label = field_def.label
 
-        if container_type == "atom":
-            val = data_source.get(key, definition.get("default", ""))
+        # --- VAL FAMILY ---
+        if prefab.startswith("VAL_"):
+            
+            if prefab == "VAL_TEXT":
+                with ui.row().classes("w-full justify-between items-center mb-1"):
+                    ui.label(label).classes("text-sm text-gray-300")
+                    ui.label(str(val)).classes("text-sm text-white font-serif italic")
+            
+            elif prefab == "VAL_INT":
+                with ui.row().classes("w-full justify-between items-center mb-1"):
+                    ui.label(label).classes("text-sm text-gray-300")
+                    ui.label(str(val)).classes("font-mono font-bold text-blue-300")
 
+            elif prefab == "VAL_COMPOUND":
+                with ui.row().classes("w-full justify-between items-center mb-1"):
+                    ui.label(label).classes("text-sm text-gray-300")
+                    if isinstance(val, dict):
+                        score = val.get("score", 0)
+                        mod = val.get("mod", 0)
+                        sign = "+" if mod >= 0 else ""
+                        ui.label(f"{score} ({sign}{mod})").classes(
+                            "font-mono text-amber-300"
+                        )
+                    else:
+                        ui.label(str(val))
+
+            elif prefab == "VAL_STEP_DIE":
+                with ui.row().classes("w-full justify-between items-center mb-1"):
+                    ui.label(label).classes("text-sm text-gray-300")
+                    ui.badge(str(val), color="purple").props("text-color=white")
+
+            elif prefab == "VAL_BOOL":
+                with ui.row().classes("w-full justify-between items-center mb-1"):
+                    ui.label(label).classes("text-sm text-gray-300")
+                    icon = "check_box" if val else "check_box_outline_blank"
+                    color = "text-green-400" if val else "text-gray-600"
+                    ui.icon(icon).classes(color)
+
+            elif prefab == "VAL_LADDER":
+                with ui.row().classes("w-full justify-between items-center mb-1"):
+                    ui.label(label).classes("text-sm text-gray-300")
+                    if isinstance(val, dict):
+                        v = val.get("value", 0)
+                        lbl = val.get("label", "")
+                        sign = "+" if v >= 0 else ""
+                        ui.label(f"{sign}{v} {lbl}").classes("text-sm text-cyan-300")
+                    else:
+                        ui.label(str(val))
+
+        # --- RES FAMILY ---
+        elif prefab == "RES_POOL":
+            if not isinstance(val, dict):
+                val = {"current": 0, "max": 0}
+            curr = val.get("current", 0)
+            mx = val.get("max", 0)
+            pct = max(0, min(1, curr / mx)) if mx > 0 else 0
+
+            with ui.column().classes("w-full mb-2"):
+                with ui.row().classes("w-full justify-between text-xs"):
+                    ui.label(label).classes("font-bold")
+                    ui.label(f"{curr} / {mx}")
+                ui.linear_progress(value=pct, size="8px", show_value=False).classes(
+                    "rounded"
+                )
+
+        elif prefab == "RES_TRACK":
+            if not isinstance(val, list):
+                val = []
+            with ui.row().classes("w-full justify-between items-center mb-1"):
+                ui.label(label).classes("text-sm")
+                with ui.row().classes("gap-1"):
+                    for state in val:
+                        icon = "circle" if state else "circle_notifications"
+                        color = "text-red-400" if state else "text-gray-700"
+                        ui.icon("circle").classes(f"text-[10px] {color}")
+
+        elif prefab == "RES_COUNTER":
             with ui.row().classes("w-full justify-between items-center mb-1"):
                 ui.label(label).classes("text-sm text-gray-300")
+                ui.label(str(val)).classes("font-mono text-green-400")
 
-                if widget == "die":
-                    ui.badge(str(val), color="purple").props("text-color=white")
-                elif widget == "number":
-                    ui.label(str(val)).classes("font-mono font-bold text-blue-300")
-                elif widget == "toggle":
-                    icon = "check_box" if val else "check_box_outline_blank"
-                    ui.icon(icon).classes("text-green-400" if val else "text-gray-600")
-                else:
-                    ui.label(str(val)).classes("text-sm text-gray-400")
-
-        elif container_type == "molecule":
-            val_obj = data_source.get(key, {})
-
-            # DEFENSIVE: If we expect a molecule (dict) but got a primitive (int/str)
-            # This happens if LLM ignored structure prompts.
-            if not isinstance(val_obj, dict):
-                val_obj = {"current": val_obj, "max": val_obj, "value": val_obj}
-
-            if widget == "pool":
-                curr = val_obj.get("current", 0)
-                mx = val_obj.get("max", 10)
-                pct = max(0, min(1, curr / mx)) if mx > 0 else 0
-
-                with ui.column().classes("w-full mb-2"):
-                    with ui.row().classes("w-full justify-between text-xs"):
-                        ui.label(label).classes("font-bold")
-                        ui.label(f"{curr} / {mx}")
-                    ui.linear_progress(value=pct, size="8px", show_value=False).classes(
-                        "rounded"
-                    )
-
-            elif widget == "track":
-                val = val_obj.get("value", 0)
-                length = 5 # Default
-                
-                with ui.row().classes("w-full justify-between items-center mb-1"):
-                    ui.label(label).classes("text-sm")
-                    with ui.row().classes("gap-1"):
-                        for i in range(length):
-                            icon = (
-                                "circle" if i < val else "circle_notifications"
-                            )
-                            color = "text-red-400" if i < val else "text-gray-700"
-                            ui.icon("circle").classes(f"text-[10px] {color}")
-
-        elif container_type == "list":
-            items = data_source.get(key, [])
-            
-            # DEFENSIVE: If items isn't a list (e.g. dict or None), handle gracefully
-            if not isinstance(items, list):
-                items = []
-
-            with ui.expansion(f"{label} ({len(items)})", icon="list").classes(
+        # --- CONT FAMILY ---
+        elif prefab in ["CONT_LIST", "CONT_TAGS", "CONT_WEIGHTED"]:
+            count = len(val) if isinstance(val, list) else 0
+            with ui.expansion(f"{label} ({count})", icon="list").classes(
                 "w-full bg-slate-900 rounded mb-1"
             ):
-                if not items:
+                if not val or not isinstance(val, list):
                     ui.label("Empty").classes("text-xs text-gray-600 p-2")
                 else:
                     with ui.column().classes("w-full gap-1 p-2"):
-                        for item in items:
-                            # Try to find a 'name' or 'label' key
-                            item_name = (
-                                item.get("name")
-                                or item.get("label")
-                                or next(iter(item.values()))
-                            )
-                            ui.label(str(item_name)).classes(
+                        for item in val:
+                            txt = ""
+                            if isinstance(item, dict):
+                                txt = f"{item.get('name', '???')}"
+                                if item.get("qty", 1) > 1:
+                                    txt += f" (x{item['qty']})"
+                            else:
+                                txt = str(item)
+
+                            ui.label(txt).classes(
                                 "text-xs text-gray-300 border-b border-slate-800 w-full pb-1"
                             )
 

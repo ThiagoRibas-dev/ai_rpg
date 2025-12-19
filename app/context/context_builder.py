@@ -9,7 +9,7 @@ from app.setup.setup_manifest import SetupManifest
 class ContextBuilder:
     """
     Constructs the System Prompt and Dynamic Context for the LLM.
-    Now Manifest-Aware.
+    Manifest-Aware Implementation (Lego Protocol).
     """
     def __init__(
         self,
@@ -67,7 +67,6 @@ class ContextBuilder:
         sections = []
 
         # 1. Current State (Character Sheet, Location, Inventory)
-        # Passed manifest to state builder to render prefabs correctly
         state_text = self.state_builder.build(game_session.id, self.manifest)
         if state_text:
             sections.append(f"# CURRENT STATE #\n{state_text}")
@@ -102,7 +101,7 @@ class ContextBuilder:
         """Generates the cheat sheet for the active game system."""
         lines = [f"# GAME SYSTEM: {self.manifest.name}"]
         
-        # Engine
+        # Engine (Dice, Success, Crit)
         lines.append(self.manifest.get_engine_text())
         
         # Valid Paths (The Vocabulary)
@@ -111,25 +110,27 @@ class ContextBuilder:
         return "\n".join(lines)
 
     def _build_tool_examples(self) -> str:
-        """Examples of how to use the Atomic Tools."""
+        """Examples of how to use the 6 Atomic Tools."""
         return """# TOOL USAGE EXAMPLES
 
-1. **Modify Stats/HP:**
+1. **Modify Stats/HP (adjust):**
    `{"name": "adjust", "path": "resources.hp.current", "delta": -5, "reason": "Goblin ambush"}`
 
-2. **Set Specific Values:**
+2. **Set Specific Values (set):**
    `{"name": "set", "path": "status.is_hiding", "value": true}`
+   `{"name": "set", "path": "inventory.weapon", "value": "Longsword"}`
 
-3. **Roll Dice:**
+3. **Roll Dice (roll):**
    `{"name": "roll", "formula": "1d20+5", "reason": "Attack vs AC 15"}`
 
-4. **Mark Tracks (Stress/Ammo):**
-   `{"name": "mark", "path": "resources.stress", "count": 1}`
+4. **Mark Tracks/Conditions (mark):**
+   `{"name": "mark", "path": "resources.stress", "count": 1}` (Fill 1 box)
+   `{"name": "mark", "path": "resources.ammo", "count": -1}` (Clear 1 box)
 
-5. **Move Location:**
+5. **Move Location (move):**
    `{"name": "move", "destination": "loc_tavern"}`
 
-6. **Record Memory:**
+6. **Record Memory (note):**
    `{"name": "note", "content": "The Baron is secretly a vampire.", "kind": "fact"}`
 """
 

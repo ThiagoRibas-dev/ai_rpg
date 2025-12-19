@@ -15,6 +15,7 @@ from app.prefabs.validators import (
     validate_step_die,
     validate_ladder,
     validate_bool,
+    validate_text,
     validate_pool,
     validate_counter,
     validate_track,
@@ -27,6 +28,7 @@ from app.prefabs.validators import (
     get_default_step_die,
     get_default_ladder,
     get_default_bool,
+    get_default_text,
     get_default_pool,
     get_default_counter,
     get_default_track,
@@ -123,6 +125,16 @@ PREFABS: Dict[str, Prefab] = {
         get_default=get_default_bool,
         widget="toggle",
         ai_hint="True/false toggle. Use 'set' with true or false.",
+    ),
+
+    "VAL_TEXT": Prefab(
+        id="VAL_TEXT",
+        family="VAL",
+        shape="str",
+        validate=validate_text,
+        get_default=get_default_text,
+        widget="text_label",
+        ai_hint="Simple text string (e.g. Deity, Class Path). Use 'set' to change."
     ),
     
     # -------------------------------------------------------------------------

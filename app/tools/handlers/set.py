@@ -2,11 +2,11 @@ import logging
 from typing import Any, Optional
 from app.services.state_service import get_entity, set_entity
 from app.prefabs.validation import validate_entity, get_path, set_path
-from app.prefabs import SystemManifest
+from app.prefabs.manifest import SystemManifest
 
 logger = logging.getLogger(__name__)
 
-def handler(path: str, value: Any, reason: str = "", **context) -> dict:
+def handler(path: str, value: Any, reason: str = "", **context: Any) -> dict:
     """
     Handler for 'set' tool.
     Sets value directly, then runs full validation pipeline.

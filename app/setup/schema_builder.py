@@ -1,21 +1,9 @@
-"""
-Schema Builder
-==============
-Dynamically generates Pydantic models AND UI Specs from a GameVocabulary.
-"""
-
 import logging
-from typing import Any, Dict, List, Optional, Type, Union
+from typing import Any, Dict, List, Type
 
 from pydantic import BaseModel, Field, create_model, ConfigDict
 
-from app.models.vocabulary import (
-    GameVocabulary,
-    FieldDefinition,
-    FieldType,
-    SemanticRole,
-)
-from app.models.sheet_schema import CharacterSheetSpec, SheetField, FieldDisplay
+from app.prefabs.manifest import SystemManifest, FieldDef
 
 logger = logging.getLogger(__name__)
 
@@ -24,28 +12,9 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 
-class PoolValue(BaseModel):
-    current: int = 0
-    max: int = 10
-    model_config = ConfigDict(extra="allow")
-
-
-class LadderValue(BaseModel):
-    value: int = 0
-    label: str = ""
-    model_config = ConfigDict(extra="allow")
-
-
-class TagValue(BaseModel):
-    text: str = ""
-    free_invokes: int = 0
-    model_config = ConfigDict(extra="allow")
-
-
 class InventoryItem(BaseModel):
     name: str = ""
-    description: str = ""
-    quantity: int = 1
+    qty: int = 1
     model_config = ConfigDict(extra="allow")
 
 
@@ -55,369 +24,202 @@ class InventoryItem(BaseModel):
 
 
 class SchemaBuilder:
-    def __init__(self, vocabulary: GameVocabulary):
-        self.vocab = vocabulary
+    """
+    Constructs Pydantic models dynamically based on a SystemManifest.
+    Used to constrain LLM outputs during character generation.
+    """
+
+    def __init__(self, manifest: SystemManifest):
+        self.manifest = manifest
         self._cache: Dict[str, Type[BaseModel]] = {}
 
-    # -------------------------------------------------------------------------
-    # UI SPEC BUILDER (Vocabulary -> CharacterSheetSpec)
-    # -------------------------------------------------------------------------
-    def build_sheet_spec(self) -> CharacterSheetSpec:
-        """
-        Converts the GameVocabulary into a UI Specification.
-        This allows the CharacterInspector to render the sheet defined by the rules.
-        """
-        spec = CharacterSheetSpec()
-
-        # Map SemanticRole to SheetCategory
-        role_map = {
-            SemanticRole.CORE_TRAIT: spec.attributes,
-            SemanticRole.RESOURCE: spec.resources,
-            SemanticRole.CAPABILITY: spec.skills,
-            SemanticRole.STATUS: spec.features,
-            SemanticRole.ASPECT: spec.narrative,
-            SemanticRole.PROGRESSION: spec.progression,
-            SemanticRole.EQUIPMENT: spec.inventory,
-            SemanticRole.CONNECTION: spec.connections,
-        }
-
-        for role in SemanticRole:
-            target_cat = role_map.get(role)
-            if not target_cat:
-                continue
-
-            fields = self.vocab.get_fields_by_role(role)
-            for key, field_def in fields.items():
-                sheet_field = self._convert_def_to_sheet_field(field_def)
-                target_cat.fields[key] = sheet_field
-
-        return spec
-
-    def _convert_def_to_sheet_field(self, f: FieldDefinition) -> SheetField:
-        """Helper to convert a Vocabulary FieldDefinition to a UI SheetField."""
-
-        container = "atom"
-        dtype = "string"
-        widget = "text"
-        components = None
-        item_schema = None
-
-        if f.field_type == FieldType.NUMBER:
-            dtype = "number"
-            widget = "number"
-        elif f.field_type == FieldType.TEXT:
-            dtype = "string"
-            widget = "text"
-        elif f.field_type == FieldType.DIE:
-            dtype = "string"
-            widget = "die"
-        elif f.field_type == FieldType.POOL:
-            container = "molecule"
-            widget = "pool"
-            components = {
-                "current": SheetField(
-                    key="current",
-                    container_type="atom",
-                    data_type="number",
-                    default=f.default_value or 10,
-                    display=FieldDisplay(label="Cur", widget="number"),
-                ),
-                "max": SheetField(
-                    key="max",
-                    container_type="atom",
-                    data_type="number",
-                    default=f.default_value or 10,
-                    display=FieldDisplay(label="Max", widget="number"),
-                ),
-            }
-        elif f.field_type == FieldType.TRACK:
-            container = "molecule"
-            widget = "track"
-            components = {
-                "value": SheetField(
-                    key="value",
-                    container_type="atom",
-                    data_type="number",
-                    default=0,
-                    display=FieldDisplay(label="Filled", widget="number"),
-                )
-            }
-        elif f.field_type == FieldType.LADDER:
-            container = "molecule"
-            widget = "ladder"
-            components = {
-                "value": SheetField(
-                    key="value",
-                    container_type="atom",
-                    data_type="number",
-                    default=0,
-                    display=FieldDisplay(label="Val"),
-                ),
-                "label": SheetField(
-                    key="label",
-                    container_type="atom",
-                    data_type="string",
-                    default="",
-                    display=FieldDisplay(label="Label"),
-                ),
-            }
-        elif f.field_type == FieldType.LIST:
-            container = "list"
-            widget = "repeater"
-            item_schema = {
-                "name": SheetField(key="name", display=FieldDisplay(label="Name")),
-                "description": SheetField(
-                    key="description", display=FieldDisplay(label="Desc")
-                ),
-            }
-
-        return SheetField(
-            key=f.key,
-            container_type=container,
-            data_type=dtype,
-            default=f.default_value,
-            components=components,
-            item_schema=item_schema,
-            display=FieldDisplay(label=f.label, widget=widget, options=None),
-        )
-
-    # -------------------------------------------------------------------------
-    # PYDANTIC MODEL BUILDERS
-    # -------------------------------------------------------------------------
-
-    def build_character_model(self) -> Type[BaseModel]:
-        cache_key = "character"
-        if cache_key in self._cache:
-            return self._cache[cache_key]
-
-        role_models: Dict[str, Any] = {}
-        for role in SemanticRole:
-            role_fields = self.vocab.get_fields_by_role(role)
-            if not role_fields:
-                continue
-            role_model = self._build_role_model(role, role_fields)
-            role_models[role.value] = (role_model, Field(default_factory=role_model))
-
-        if "identity" not in role_models:
-            identity_model = self._build_identity_model()
-            role_models["identity"] = (
-                identity_model,
-                Field(default_factory=identity_model),
-            )
-
-        CharacterModel = create_model(
-            "Character", __config__=ConfigDict(extra="allow"), **role_models
-        )
-        self._cache[cache_key] = CharacterModel
-        return CharacterModel
-
     def build_creation_prompt_model(self) -> Type[BaseModel]:
+        """
+        Builds a simplified Pydantic model for the LLM to fill out.
+
+        Complex prefabs are flattened to simple types:
+        - RES_POOL -> int (Represents the starting value/max)
+        - RES_TRACK -> int (Represents filled boxes, usually 0)
+        - CONT_LIST -> List[str] (Just names)
+        """
         cache_key = "creation_prompt"
         if cache_key in self._cache:
             return self._cache[cache_key]
 
-        role_models: Dict[str, Any] = {}
-        for role in SemanticRole:
-            role_fields = self.vocab.get_fields_by_role(role)
-            if not role_fields:
-                continue
-            simplified = self._build_simplified_role_model(role, role_fields)
-            role_models[role.value] = (simplified, Field(default_factory=simplified))
+        # Group fields by category
+        fields_by_cat: Dict[str, List[FieldDef]] = {}
+        for field_def in self.manifest.fields:
+            if field_def.category not in fields_by_cat:
+                fields_by_cat[field_def.category] = []
+            fields_by_cat[field_def.category].append(field_def)
 
-        if "identity" not in role_models:
-            identity = self._build_identity_model()
-            role_models["identity"] = (identity, Field(default_factory=identity))
+        # Build sub-models for each category
+        category_models: Dict[str, Any] = {}
 
-        CreationModel = create_model(
-            "CharacterCreation", __config__=ConfigDict(extra="allow"), **role_models
+        # Ensure identity exists even if not in fields
+        if "identity" not in fields_by_cat:
+            fields_by_cat["identity"] = []
+
+        # Add Identity manually if missing fields (it usually is handled separately, but good to ensure)
+        identity_fields = {
+            "name": (str, Field(..., description="Character Name")),
+            "description": (str, Field(..., description="Visual Description")),
+            "concept": (
+                str,
+                Field(..., description="High Concept / Class / Archetype"),
+            ),
+        }
+        IdentityModel = create_model("IdentityCreation", **identity_fields)
+        category_models["identity"] = (
+            IdentityModel,
+            Field(default_factory=IdentityModel),
         )
+
+        # Process other categories
+        for cat, fields in fields_by_cat.items():
+            if cat == "identity":
+                continue  # Handled above
+
+            model_fields = {}
+            for f in fields:
+                py_type, default = self._get_simplified_type_and_default(f)
+                desc = f.label
+                if f.usage_hint:
+                    desc += f" ({f.usage_hint})"
+
+                model_fields[f.path.split(".")[-1]] = (
+                    py_type,
+                    Field(default, description=desc)
+                    if default is not None
+                    else Field(..., description=desc),
+                )
+
+            if model_fields:
+                CatModel = create_model(f"{cat.title()}Creation", **model_fields)
+                category_models[cat] = (CatModel, Field(default_factory=CatModel))
+
+        # Root Model
+        CreationModel = create_model(
+            "CharacterCreation", __config__=ConfigDict(extra="allow"), **category_models
+        )
+
         self._cache[cache_key] = CreationModel
         return CreationModel
 
-    def _build_role_model(
-        self, role: SemanticRole, fields: Dict[str, FieldDefinition]
-    ) -> Type[BaseModel]:
-        model_fields: Dict[str, Any] = {}
-        for key, field_def in fields.items():
-            py_type = self._get_python_type(field_def)
-            default = self._get_default_value(field_def)
-            model_fields[key] = (
-                (Optional[py_type], None)
-                if default is None
-                else (py_type, Field(default=default))
-            )
-
-        return create_model(
-            f"{role.value.title().replace('_', '')}Fields",
-            __config__=ConfigDict(extra="allow"),
-            **model_fields,
-        )
-
-    def _build_simplified_role_model(
-        self, role: SemanticRole, fields: Dict[str, FieldDefinition]
-    ) -> Type[BaseModel]:
-        model_fields: Dict[str, Any] = {}
-        for key, field_def in fields.items():
-            py_type, default = self._get_simplified_type_and_default(field_def)
-            model_fields[key] = (
-                (Optional[py_type], None)
-                if default is None
-                else (py_type, Field(default=default))
-            )
-
-        return create_model(
-            f"{role.value.title().replace('_', '')}Creation",
-            __config__=ConfigDict(extra="allow"),
-            **model_fields,
-        )
-
-    def _build_identity_model(self) -> Type[BaseModel]:
-        return create_model(
-            "Identity",
-            __config__=ConfigDict(extra="allow"),
-            name=(str, Field(default="")),
-            description=(str, Field(default="")),
-            concept=(str, Field(default="")),
-            player_name=(str, Field(default="")),
-        )
-
-    # -------------------------------------------------------------------------
-    # TYPE RESOLUTION helpers
-    # -------------------------------------------------------------------------
-    def _get_python_type(self, field_def: FieldDefinition) -> Type:
-        ft = field_def.field_type
-        if ft == FieldType.NUMBER:
-            return int
-        elif ft == FieldType.POOL:
-            return PoolValue
-        elif ft == FieldType.TRACK:
-            return List[bool]
-        elif ft == FieldType.DIE:
-            return str
-        elif ft == FieldType.LADDER:
-            return LadderValue
-        elif ft == FieldType.TAG:
-            return Union[str, TagValue]
-        elif ft == FieldType.TEXT:
-            return str
-        elif ft == FieldType.LIST:
-            return List[InventoryItem]
-        return Any
-
-    def _get_simplified_type_and_default(
-        self, field_def: FieldDefinition
-    ) -> tuple[Type, Any]:
-        ft = field_def.field_type
-        if ft == FieldType.NUMBER:
-            return int, field_def.default_value or 0
-        elif ft == FieldType.POOL:
-            return int, field_def.default_value or 10  # ask for max
-        elif ft == FieldType.TRACK:
-            return int, 0  # ask for boxes filled
-        elif ft == FieldType.DIE:
-            return str, field_def.die_default or "d6"
-        elif ft == FieldType.LADDER:
-            return int, field_def.default_value or 0
-        elif ft == FieldType.TAG:
-            return str, ""
-        elif ft == FieldType.TEXT:
-            return str, ""
-        elif ft == FieldType.LIST:
-            return List[str], []
-        return Any, None
-
-    def _get_default_value(self, field_def: FieldDefinition) -> Any:
-        ft = field_def.field_type
-        if ft == FieldType.NUMBER:
-            return field_def.default_value or 0
-        elif ft == FieldType.POOL:
-            return PoolValue(
-                current=field_def.default_value or 10, max=field_def.default_value or 10
-            )
-        elif ft == FieldType.TRACK:
-            return [False] * (field_def.track_length or 4)
-        elif ft == FieldType.DIE:
-            return field_def.die_default or "d6"
-        elif ft == FieldType.LADDER:
-            return LadderValue(value=field_def.default_value or 0)
-        elif ft == FieldType.TAG:
-            return ""
-        elif ft == FieldType.TEXT:
-            return ""
-        elif ft == FieldType.LIST:
-            return []
-        return None
-
-    # -------------------------------------------------------------------------
-    # DATA CONVERSION
-    # -------------------------------------------------------------------------
     def convert_simplified_to_full(
         self, simplified_data: Dict[str, Any]
     ) -> Dict[str, Any]:
+        """
+        Expands the simplified LLM output (int/str) into full Prefab structures.
+        e.g., {"hp": 10} -> {"hp": {"current": 10, "max": 10}}
+        """
         result: Dict[str, Any] = {}
-        for role_key, role_data in simplified_data.items():
-            if not isinstance(role_data, dict):
-                result[role_key] = role_data
+
+        for cat_key, cat_data in simplified_data.items():
+            if not isinstance(cat_data, dict):
+                result[cat_key] = cat_data
                 continue
 
-            result[role_key] = {}
-            try:
-                role = SemanticRole(role_key)
-                role_fields = self.vocab.get_fields_by_role(role)
-            except ValueError:
-                role_fields = {}
+            result[cat_key] = {}
 
-            for field_key, field_value in role_data.items():
-                field_def = role_fields.get(field_key)
+            # Find fields for this category
+            cat_fields = {
+                f.path.split(".")[-1]: f
+                for f in self.manifest.get_fields_by_category(cat_key)
+            }
+
+            for field_key, value in cat_data.items():
+                field_def = cat_fields.get(field_key)
+
                 if field_def:
-                    result[role_key][field_key] = self._expand_value(
-                        field_def, field_value
+                    # Expand based on Prefab
+                    result[cat_key][field_key] = self._expand_value(
+                        field_def.prefab, value
                     )
                 else:
-                    result[role_key][field_key] = field_value
+                    # Pass through unknown fields (identity, etc)
+                    result[cat_key][field_key] = value
+
         return result
 
-    def _expand_value(self, field_def: FieldDefinition, value: Any) -> Any:
-        ft = field_def.field_type
-        if ft == FieldType.POOL:
-            if isinstance(value, (int, float)):
-                return {"current": int(value), "max": int(value)}
-        elif ft == FieldType.TRACK:
-            length = field_def.track_length or 4
-            if isinstance(value, int):
-                return [i < value for i in range(length)]
-        elif ft == FieldType.LADDER:
-            if isinstance(value, int):
-                label = (
-                    field_def.ladder_labels.get(value, "")
-                    if field_def.ladder_labels
-                    else ""
-                )
-                return {"value": value, "label": label}
-        elif ft == FieldType.LIST:
-            if isinstance(value, list) and all(isinstance(x, str) for x in value):
-                return [{"name": x, "qty": 1} for x in value]
+    def _get_simplified_type_and_default(self, field_def: FieldDef) -> tuple[Type, Any]:
+        """Map Prefab -> (PythonType, DefaultValue) for LLM prompting."""
+        p = field_def.prefab
+
+        # VAL Family
+        if p == "VAL_INT":
+            return (int, field_def.config.get("default", 0))
+        if p == "VAL_COMPOUND":
+            return (int, field_def.config.get("default", 10))  # Ask for Score
+        if p == "VAL_STEP_DIE":
+            return (str, field_def.config.get("default", "d6"))
+        if p == "VAL_LADDER":
+            return (int, field_def.config.get("default", 0))
+        if p == "VAL_BOOL":
+            return (bool, field_def.config.get("default", False))
+        if p == "VAL_TEXT":
+            return (str, field_def.config.get("default", ""))
+
+        # RES Family
+        if p == "RES_POOL":
+            return (int, field_def.config.get("default_max", 10))  # Ask for Max
+        if p == "RES_COUNTER":
+            return (int, field_def.config.get("default", 0))
+        if p == "RES_TRACK":
+            return (int, 0)  # Ask for filled boxes (default 0)
+
+        # CONT Family
+        if p in ["CONT_LIST", "CONT_TAGS"]:
+            return (List[str], [])
+        if p == "CONT_WEIGHTED":
+            return (List[str], [])
+
+        return (Any, None)
+
+    def _expand_value(self, prefab: str, value: Any) -> Any:
+        """Hydrate simplified value into full structure."""
+        if value is None:
+            return None
+
+        # RES_POOL: int -> {current, max}
+        if prefab == "RES_POOL":
+            try:
+                val = int(value)
+                return {"current": val, "max": val}
+            except Exception as e:
+                logger.warning(f"Failed to expand RES_POOL value '{value}': {e}")
+                return {"current": 10, "max": 10}
+
+        # VAL_COMPOUND: int -> {score: int, mod: 0} (Mod calc happens in validation pipeline)
+        if prefab == "VAL_COMPOUND":
+            try:
+                return {"score": int(value), "mod": 0}
+            except Exception as e:
+                logger.warning(f"Failed to expand VAL_COMPOUND value '{value}': {e}")
+                return {"score": 10, "mod": 0}
+
+        # VAL_LADDER: int -> {value: int, label: ""}
+        if prefab == "VAL_LADDER":
+            try:
+                return {"value": int(value), "label": ""}
+            except Exception as e:
+                logger.warning(f"Failed to expand VAL_LADDER value '{value}': {e}")
+                return {"value": 0, "label": ""}
+        
+        # VAL_TEXT
+        if prefab == "VAL_TEXT":
+            return str(value) if value else ""
+
+        # CONT_LIST / WEIGHTED: List[str] -> List[{name: str, ...}]
+        if prefab in ["CONT_LIST", "CONT_WEIGHTED"]:
+            if isinstance(value, list):
+                return [
+                    {"name": str(x), "qty": 1} if isinstance(x, str) else x
+                    for x in value
+                ]
+
         return value
 
     def get_creation_prompt_hints(self) -> str:
-        return self.vocab.get_field_hints_for_prompt()
-
-
-# =============================================================================
-# CONVENIENCE FUNCTIONS
-# =============================================================================
-
-
-def build_character_model_from_vocabulary(vocab: GameVocabulary) -> Type[BaseModel]:
-    builder = SchemaBuilder(vocab)
-    return builder.build_character_model()
-
-
-def build_creation_model_from_vocabulary(vocab: GameVocabulary) -> Type[BaseModel]:
-    builder = SchemaBuilder(vocab)
-    return builder.build_creation_prompt_model()
-
-
-def get_creation_hints_from_vocabulary(vocab: GameVocabulary) -> str:
-    builder = SchemaBuilder(vocab)
-    return builder.get_creation_prompt_hints()
+        """Returns text explaining the fields to the AI."""
+        return self.manifest.get_path_hints()

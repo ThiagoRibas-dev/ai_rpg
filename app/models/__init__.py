@@ -8,6 +8,8 @@ from app.models.sheet_schema import (
     SheetField,
     FieldDisplay,
 )
+from app.models.game_session import GameSession
+from app.models.ruleset import Ruleset
 
 __all__ = [
     "Memory",
@@ -19,15 +21,6 @@ __all__ = [
     "SheetCategory",
     "SheetField",
     "FieldDisplay",
-    "FieldType",
-    "SemanticRole",
-    "FieldDefinition",
-    "GameVocabulary",
+    "GameSession",
+    "Ruleset"
 ]
-
-from app.models.vocabulary import (
-    FieldType,
-    SemanticRole,
-    FieldDefinition,
-    GameVocabulary,
-)

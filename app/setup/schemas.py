@@ -1,52 +1,51 @@
-from typing import List, Literal
-from pydantic import BaseModel, Field
+from typing import Literal, Dict, Any, List, Optional
+from pydantic import BaseModel, Field, field_validator
 
-# NOTE: We define independent models here to avoid coupling with Tool Schemas.
-# Tool Schemas have strict Literal["name"] fields which confuse the LLM during data extraction.
+# Define valid prefabs strictly matching app.prefabs.registry
+ValidPrefabType = Literal[
+    "VAL_INT", "VAL_COMPOUND", "VAL_STEP_DIE", "VAL_LADDER", "VAL_BOOL", "VAL_TEXT",
+    "RES_POOL", "RES_COUNTER", "RES_TRACK",
+    "CONT_LIST", "CONT_TAGS", "CONT_WEIGHTED"
+]
 
+CategoryType = Literal[
+    "attributes", "resources", "skills", "inventory", "features",
+    "progression", "combat", "status", "meta", "identity", "narrative"
+]
 
-class NpcData(BaseModel):
-    name: str = Field(..., description="Name of the NPC.")
-    visual_description: str = Field(..., description="Physical appearance.")
-    stat_template: str = Field(
-        ..., description="Archetype (e.g. 'Guard', 'Civilian', 'Boss')."
-    )
-    initial_disposition: Literal["hostile", "neutral", "friendly"] = "neutral"
+class ExtractedField(BaseModel):
+    label: str
+    path: str = Field(..., description="snake_case.path")
+    prefab: ValidPrefabType
+    category: CategoryType
+    config: Dict[str, Any] = Field(default_factory=dict)
+    formula: Optional[str] = None
+    usage_hint: str = Field(..., description="Short explanation for the AI")
 
+    @field_validator('prefab', mode='before')
+    @classmethod
+    def sanitize(cls, v):
+        mapping = {
+            "VAL_NUMBER": "VAL_INT", 
+            "RES_BAR": "RES_POOL", 
+            "VAL_DIE": "VAL_STEP_DIE",
+            "CONT_ARRAY": "CONT_LIST"
+        }
+        return mapping.get(v, v)
 
-class LocationData(BaseModel):
-    key: str = Field(..., description="Unique snake_case ID (e.g. 'loc_market').")
-    name: str = Field(..., description="Display name (e.g. 'The Market').")
-    description_visual: str = Field(...)
-    description_sensory: str = Field(...)
-    type: str = Field(..., description="indoor, outdoor, structure, etc.")
+class ExtractedFieldList(BaseModel):
+    fields: List[ExtractedField]
 
+class MechanicsExtraction(BaseModel):
+    dice_notation: str
+    resolution_mechanic: str
+    success_condition: str
+    crit_rules: str
+    fumble_rules: str = ""
+    aliases: Dict[str, str] = Field(default_factory=dict, description="Global derived stats formulas (e.g. str_mod)")
 
-class LoreData(BaseModel):
-    content: str
-    tags: List[str]
-    priority: int = 3
-    kind: str = "lore"
-
-
-class WorldExtraction(BaseModel):
-    """
-    Structure for extracting world details from raw text.
-    """
-
-    genre: str = Field(
-        ..., description="The specific sub-genre inferred from the text."
-    )
-    tone: str = Field(..., description="The atmospheric tone.")
-
-    starting_location: LocationData = Field(
-        ..., description="The initial scene location."
-    )
-    adjacent_locations: List[LocationData] = Field(
-        default_factory=list,
-        description="2-3 locations directly connected to the starting location.",
-    )
-    lore: List[LoreData] = Field(..., description="Key facts about the world.")
-    initial_npcs: List[NpcData] = Field(
-        default_factory=list, description="NPCs present in the starting scene."
-    )
+class ProceduresExtraction(BaseModel):
+    combat: str = ""
+    exploration: str = ""
+    social: str = ""
+    downtime: str = ""

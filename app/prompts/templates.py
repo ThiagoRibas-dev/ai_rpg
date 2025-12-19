@@ -160,3 +160,42 @@ Extract all rules, tables, and mechanics related of the following category: **{c
 These are not procedures, but specific mechanics, conditions, actions, etc.
 Return a list of rule objects with `name`, `content`, and `tags`.
 """
+
+# --- MANIFEST EXTRACTION ---
+
+EXTRACT_MECHANICS_PROMPT = """
+Extract the **Core Mechanics** and **Global Formulas** of this system.
+
+1. **Engine:** Dice used, how to resolve actions, success/crit criteria.
+2. **Aliases:** Global derived stats that apply to everyone (e.g. 'str_mod', 'proficiency').
+   - Return these as formulas using fields (e.g. "floor((attributes.str - 10)/2)").
+   - Assign them snake_case keys.
+"""
+
+EXTRACT_FIELDS_PROMPT = """
+### TASK: ARCHITECTURE
+Identify the character sheet fields for the following categories: **{categories}**.
+
+### THE MENU (STRICT)
+{menu}
+
+### GLOBAL VARIABLES
+You may use these Aliases in your formulas: {aliases}
+
+### INSTRUCTIONS
+1. Find every stat, resource, or container in the requested categories.
+2. Map it to the **Best Fit Prefab** from the menu.
+3. If a mechanic is unique, use the closest generic prefab and explain it in `usage_hint`.
+4. Extract strict bounds (min/max) into `config`.
+5. Return a list of field definitions.
+"""
+
+EXTRACT_PROCEDURES_PROMPT = """
+Extract the step-by-step **Procedures** for the following game modes:
+1. Combat (Initiative, Turns, Actions)
+2. Exploration (Checks, Movement, Resting)
+3. Social (Interaction, Influence)
+4. Downtime (if applicable)
+
+Provide clear, numbered steps for the AI Game Master to follow.
+"""

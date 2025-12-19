@@ -203,6 +203,35 @@ def validate_bool(value: Any, config: Dict[str, Any]) -> bool:
     return bool(value)
 
 
+def validate_text(value: Any, config: Dict[str, Any]) -> str:
+    """
+    Validate a simple text string.
+    
+    Config:
+        default: str (default: "")
+        max_length: int (optional)
+        options: List[str] (optional, strict enum)
+    """
+    default = config.get("default", "")
+    
+    if value is None:
+        return default
+        
+    val_str = str(value).strip()
+    
+    # Optional: Enum validation
+    options = config.get("options")
+    if options and val_str not in options:
+        return default
+        
+    # Optional: Length clamp
+    max_len = config.get("max_length")
+    if max_len and len(val_str) > max_len:
+        val_str = val_str[:max_len]
+        
+    return val_str
+
+
 # =============================================================================
 # RESOURCE VALIDATORS
 # =============================================================================
@@ -429,6 +458,11 @@ def get_default_ladder(config: Dict[str, Any]) -> Dict[str, Any]:
 def get_default_bool(config: Dict[str, Any]) -> bool:
     """Get default value for VAL_BOOL."""
     return config.get("default", False)
+
+
+def get_default_text(config: Dict[str, Any]) -> str:
+    """Get default value for VAL_TEXT."""
+    return config.get("default", "")
 
 
 def get_default_pool(config: Dict[str, Any]) -> Dict[str, int]:

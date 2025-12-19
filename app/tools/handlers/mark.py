@@ -1,13 +1,12 @@
 import logging
-from typing import Optional
+from typing import Optional, Any
 from app.services.state_service import get_entity, set_entity
 from app.prefabs.validation import validate_entity, get_path, set_path
-from app.prefabs import SystemManifest
+from app.prefabs.manifest import SystemManifest
 
 logger = logging.getLogger(__name__)
 
-
-def handler(path: str, count: int = 1, **context) -> dict:
+def handler(path: str, count: int = 1, **context: Any) -> dict:
     """
     Handler for 'mark' tool.
     Manipulates tracks, then runs validation.
@@ -25,9 +24,10 @@ def handler(path: str, count: int = 1, **context) -> dict:
     if not isinstance(track, list):
         return {"error": f"Path '{path}' is not a track/list."}
 
-    # 1. Apply Logic
+    # 1. Apply Logic (Fill left-to-right or Clear right-to-left)
     changed = 0
     if count > 0:
+        # Mark boxes
         for i in range(len(track)):
             if changed >= count:
                 break
@@ -35,6 +35,7 @@ def handler(path: str, count: int = 1, **context) -> dict:
                 track[i] = True
                 changed += 1
     elif count < 0:
+        # Clear boxes (iterate backwards)
         to_clear = abs(count)
         for i in range(len(track) - 1, -1, -1):
             if changed >= to_clear:

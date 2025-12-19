@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional, Any, Dict
+from typing import List, Optional, Any
 from app.tools.registry import ToolRegistry
 from app.tools.schemas import StateQuery
 from app.services.state_service import get_entity
@@ -39,7 +39,7 @@ class StateContextBuilder:
             name = player.get("name", "Player")
             lines.append(f"**Player Character**: {name}")
 
-            # 2. Render Categories via Manifest (if available)
+            # 2. Render Categories via Manifest
             if manifest:
                 for category in manifest.get_categories():
                     fields = manifest.get_fields_by_category(category)
@@ -48,9 +48,14 @@ class StateContextBuilder:
 
                     cat_lines = []
                     for field in fields:
+                        # Get raw value from entity
                         val = get_path(player, field.path)
-                        rendered = self._render_field(val, field.prefab, field.config)
-                        cat_lines.append(f"{field.label}: {rendered}")
+                        # Render based on Prefab Type
+                        rendered = self._render_field(val, field.prefab)
+
+                        # Only show if not None/Empty, unless it's a vital stat
+                        if rendered:
+                            cat_lines.append(f"{field.label}: {rendered}")
 
                     if cat_lines:
                         lines.append(f"**{category.title()}**: " + ", ".join(cat_lines))
@@ -96,19 +101,21 @@ class StateContextBuilder:
 
         return "\n".join(lines)
 
-    def _render_field(self, value: Any, prefab: str, config: Dict) -> str:
-        """Render value based on prefab type."""
+    def _render_field(self, value: Any, prefab: str) -> str:
+        """Render value based on prefab type for the LLM Context."""
         if value is None:
-            return "None"
+            return ""
 
         if prefab == "RES_POOL":
             # Render as Current/Max
             if isinstance(value, dict):
-                return f"{value.get('current', 0)}/{value.get('max', 0)}"
+                curr = value.get("current", 0)
+                mx = value.get("max", 0)
+                return f"{curr}/{mx}"
             return str(value)
 
         elif prefab == "RES_TRACK":
-            # Render as dots: [x][x][ ]
+            # Render as visual dots: [x][x][ ]
             if isinstance(value, list):
                 return "".join(["[x]" if x else "[ ]" for x in value])
             return str(value)
@@ -116,23 +123,37 @@ class StateContextBuilder:
         elif prefab == "VAL_COMPOUND":
             # Render as Score (+Mod)
             if isinstance(value, dict):
-                return f"{value.get('score')} ({value.get('mod'):+})"
+                score = value.get("score", 0)
+                mod = value.get("mod", 0)
+                sign = "+" if mod >= 0 else ""
+                return f"{score} ({sign}{mod})"
             return str(value)
 
         elif prefab == "VAL_LADDER":
             # Render as +1 (Average)
             if isinstance(value, dict):
-                return f"{value.get('value'):+} ({value.get('label')})"
+                val = value.get("value", 0)
+                lbl = value.get("label", "")
+                sign = "+" if val >= 0 else ""
+                return f"{sign}{val} ({lbl})"
             return str(value)
 
         elif prefab == "CONT_LIST":
-            # Concise list
+            # Concise list: [Sword, Shield]
             if isinstance(value, list):
                 items = []
                 for item in value:
-                    name = item.get("name", "Item")
-                    qty = item.get("qty", 1)
-                    items.append(f"{name}" + (f" x{qty}" if qty > 1 else ""))
+                    if isinstance(item, dict):
+                        name = item.get("name", "Item")
+                        qty = item.get("qty", 1)
+                        if qty > 1:
+                            items.append(f"{name} x{qty}")
+                        else:
+                            items.append(name)
+                    else:
+                        items.append(str(item))
+                if not items:
+                    return "Empty"
                 return "[" + ", ".join(items) + "]"
             return "[]"
 
