@@ -2,152 +2,61 @@
   "id": "fate_core",
   "name": "Fate Core",
   "engine": {
-    "dice": "4dF",
-    "mechanic": "Roll 4 Fate dice (each shows +, blank, or -). Sum results (-4 to +4) and add skill rating. Compare to opposition or fixed difficulty.",
-    "success": "Tie = Success at minor cost or boost. Beat by 1-2 = Success. Beat by 3+ = Success with Style (get a boost or extra effect).",
-    "crit": "Success with Style (+3 or more over target): Gain a boost, inflict +1 shift of effect, or other narrative advantage.",
-    "fumble": "Fail by 3 or more: Succeed at serious cost OR fail dramatically."
+    "dice": "4dF (four Fate dice; each die is -1, 0, or +1)",
+    "mechanic": "Roll 4dF plus an appropriate skill rated on the Fate ladder against a target difficulty or an opposing roll; measure shifts between result and opposition.",
+    "success": "If your total meets or beats the opposition, you succeed; the number of shifts above the target improves the effect. A tie usually grants a boost instead of full success.",
+    "crit": "There are no separate numeric critical hits; exceptional outcomes are represented by success with style (typically 3+ shifts) and narrative impact.",
+    "fumble": "There are no automatic fumbles; very low results plus hostile aspects and compels justify especially bad twists and setbacks."
   },
   "procedures": {
-    "conflict": "Physical or social conflict:\n1. Set the scene: Zones, situation aspects\n2. Determine turn order (Notice for physical, Empathy for social, or by narrative)\n3. Each exchange, each participant takes one action:\n   - Attack: Create advantage, then attack. Shifts become stress/consequences.\n   - Create Advantage: Make aspects, get free invokes.\n   - Overcome: Remove obstacles, aspects.\n   - Defend: Oppose attacks (usually automatic).\n4. Taking stress: Check boxes equal to shifts. If none available, take consequences.\n5. Concession: Give up before taken out, but you get to narrate how you exit.\n6. Taken Out: Opponent narrates your fate (within reason).",
-    "challenge": "Series of obstacles requiring multiple skills:\n1. GM defines the challenge and component obstacles\n2. Each obstacle requires an Overcome action with specific skill\n3. Outcomes combine: All succeed = full success. Majority = success with complications. Minority = partial. None = failure.\n4. Fate points and aspects work normally.",
-    "contest": "Opposed competition to achieve a goal first:\n1. Define the goal and victory conditions\n2. Each exchange, participants roll opposed Overcome\n3. Winner gets 1 victory. Success with style = 2 victories.\n4. First to 3 victories (or agreed number) wins."
+    "combat": "Conflicts are run in exchanges. 1) Establish situation, zones, and who is involved. 2) Determine turn order, usually by comparing skills or deciding who reasonably acts first. 3) On their turn, a character takes one action: Overcome, Create an Advantage, Attack, or Defend as appropriate. 4) Attacks that deal shifts of harm force the defender to absorb them using stress boxes and consequences. 5) When a character can no longer absorb all the shifts from a hit with available stress and consequences, they are taken out and the victor decides what happens (within reason).",
+    "exploration": "Use Overcome to bypass obstacles, hazards, locks, or abstract challenges; use Create an Advantage to discover or establish helpful situation aspects. The GM sets passive opposition or rolls active opposition. Difficulty targets usually map to the Fate ladder (e.g. Fair (+2) for modest challenges, Good (+3)/Great (+4) when the situation is demanding).",
+    "social": "Use skills such as Rapport, Deceive, Provoke, Contacts, and Empathy in either simple Overcome rolls or full social conflicts. Aspects on characters and the scene (High Concepts, Troubles, situation aspects) are invoked for bonuses or compels to drive drama. Mental stress and consequences represent emotional or reputational harm.",
+    "downtime": "Between big problems, resolve recovery and advancement. Clear all checked stress once characters have a breather. Begin recovery on consequences according to their severity and narrative healing scenes. Apply milestones: Minor milestones at the end of most sessions, Significant after scenarios or major plot beats, Major when the campaign changes direction. Adjust skills, aspects, and stunts according to milestone rules."
   },
   "aliases": {},
   "fields": [
     {
-      "path": "skills.careful",
-      "label": "Careful",
-      "prefab": "VAL_LADDER",
-      "category": "skills",
-      "config": {
-        "min": 0,
-        "max": 4,
-        "default": 0,
-        "labels": {
-          "0": "Mediocre",
-          "1": "Average",
-          "2": "Fair",
-          "3": "Good",
-          "4": "Great"
-        }
-      },
-      "usage_hint": "Taking your time, being precise, avoiding mistakes."
+      "path": "meta.campaign_name",
+      "label": "Campaign Name",
+      "prefab": "VAL_TEXT",
+      "category": "meta",
+      "usage_hint": "Name of the campaign or series this character belongs to."
     },
     {
-      "path": "skills.clever",
-      "label": "Clever",
-      "prefab": "VAL_LADDER",
-      "category": "skills",
-      "config": {
-        "min": 0,
-        "max": 4,
-        "default": 0,
-        "labels": {
-          "0": "Mediocre",
-          "1": "Average",
-          "2": "Fair",
-          "3": "Good",
-          "4": "Great"
-        }
-      },
-      "usage_hint": "Thinking fast, solving problems, misdirection."
+      "path": "identity.concept",
+      "label": "Concept Tagline",
+      "prefab": "VAL_TEXT",
+      "category": "identity",
+      "usage_hint": "A short non-mechanical description of who the character is (may echo the High Concept aspect)."
     },
     {
-      "path": "skills.flashy",
-      "label": "Flashy",
-      "prefab": "VAL_LADDER",
-      "category": "skills",
-      "config": {
-        "min": 0,
-        "max": 4,
-        "default": 0,
-        "labels": {
-          "0": "Mediocre",
-          "1": "Average",
-          "2": "Fair",
-          "3": "Good",
-          "4": "Great"
-        }
-      },
-      "usage_hint": "Drawing attention, being impressive, dramatic actions."
+      "path": "identity.appearance",
+      "label": "Appearance",
+      "prefab": "VAL_TEXT",
+      "category": "identity",
+      "usage_hint": "Brief physical description, style, and presence; purely descriptive."
     },
     {
-      "path": "skills.forceful",
-      "label": "Forceful",
-      "prefab": "VAL_LADDER",
-      "category": "skills",
-      "config": {
-        "min": 0,
-        "max": 4,
-        "default": 0,
-        "labels": {
-          "0": "Mediocre",
-          "1": "Average",
-          "2": "Fair",
-          "3": "Good",
-          "4": "Great"
-        }
-      },
-      "usage_hint": "Brute strength, power, intimidation."
+      "path": "narrative.high_concept",
+      "label": "High Concept",
+      "prefab": "VAL_TEXT",
+      "category": "narrative",
+      "usage_hint": "Primary character-defining aspect summarizing role and niche (e.g. 'Hard-Boiled Occult Detective'). Frequently invoked and compelled."
     },
     {
-      "path": "skills.quick",
-      "label": "Quick",
-      "prefab": "VAL_LADDER",
-      "category": "skills",
-      "config": {
-        "min": 0,
-        "max": 4,
-        "default": 0,
-        "labels": {
-          "0": "Mediocre",
-          "1": "Average",
-          "2": "Fair",
-          "3": "Good",
-          "4": "Great"
-        }
-      },
-      "usage_hint": "Speed, agility, fast reactions."
+      "path": "narrative.trouble",
+      "label": "Trouble",
+      "prefab": "VAL_TEXT",
+      "category": "narrative",
+      "usage_hint": "Core complicating aspect that regularly causes problems (e.g. 'In Too Deep with the Mob'). A prime target for compels."
     },
     {
-      "path": "skills.sneaky",
-      "label": "Sneaky",
-      "prefab": "VAL_LADDER",
-      "category": "skills",
-      "config": {
-        "min": 0,
-        "max": 4,
-        "default": 0,
-        "labels": {
-          "0": "Mediocre",
-          "1": "Average",
-          "2": "Fair",
-          "3": "Good",
-          "4": "Great"
-        }
-      },
-      "usage_hint": "Stealth, misdirection, deception."
-    },
-    {
-      "path": "resources.physical_stress",
-      "label": "Physical Stress",
-      "prefab": "RES_TRACK",
-      "category": "resources",
-      "config": {
-        "length": 3
-      },
-      "threshold_hint": "Check boxes to absorb shifts from physical attacks. If you can't absorb all shifts, take consequences or be Taken Out."
-    },
-    {
-      "path": "resources.mental_stress",
-      "label": "Mental Stress",
-      "prefab": "RES_TRACK",
-      "category": "resources",
-      "config": {
-        "length": 3
-      },
-      "threshold_hint": "Check boxes to absorb shifts from mental/social attacks. If you can't absorb all shifts, take consequences or be Taken Out."
+      "path": "narrative.other_aspects",
+      "label": "Other Aspects",
+      "prefab": "CONT_LIST",
+      "category": "narrative",
+      "usage_hint": "The remaining 1–3 personal aspects (relationships, issues, gear, beliefs). Each item should at least have a 'name' field containing the aspect text."
     },
     {
       "path": "resources.fate_points",
@@ -158,91 +67,428 @@
         "min": 0,
         "default": 3
       },
-      "usage_hint": "Spend to invoke aspects (+2 or reroll), power stunts, or refuse compels. Gain from compels or at session start (refresh)."
+      "usage_hint": "Current pool of fate points. Spend to invoke aspects, power some stunts, refuse compels, or declare story details. Refreshes up to the character's refresh rate at scenario start."
     },
     {
-      "path": "resources.refresh",
-      "label": "Refresh",
-      "prefab": "VAL_INT",
+      "path": "resources.physical_stress",
+      "label": "Physical Stress",
+      "prefab": "RES_TRACK",
       "category": "resources",
       "config": {
-        "min": 1,
-        "max": 10,
-        "default": 3
+        "length": 3
       },
-      "usage_hint": "Fate Points reset to this at session start (if you have fewer). Reduced by extra stunts."
+      "usage_hint": "Abstract track of boxes representing short-term physical harm and near-misses. By default Fate Core gives 2 boxes; high Physique can add more boxes and values. Here, treat filled boxes as the character having soaked recent physical hits."
     },
     {
-      "path": "status.mild_consequence",
+      "path": "resources.mental_stress",
+      "label": "Mental Stress",
+      "prefab": "RES_TRACK",
+      "category": "resources",
+      "config": {
+        "length": 3
+      },
+      "usage_hint": "Abstract track for fear, panic, and strain. Fate Core normally provides 2 boxes by default; high Will can add more. Treat filled boxes as representing soaked mental blows."
+    },
+    {
+      "path": "resources.consequence_mild",
       "label": "Mild Consequence",
-      "prefab": "CONT_TAGS",
-      "category": "status",
-      "config": {},
-      "usage_hint": "Absorbs 2 shifts. Clears at end of scene if addressed. Write the aspect here when taken."
+      "prefab": "VAL_TEXT",
+      "category": "resources",
+      "usage_hint": "An aspect describing a lingering but short-term problem (e.g. 'Bruised Ribs', 'Shaken Nerves'). Soaks 2 shifts of harm. Cleared relatively quickly via recovery scenes."
     },
     {
-      "path": "status.moderate_consequence",
+      "path": "resources.consequence_moderate",
       "label": "Moderate Consequence",
-      "prefab": "CONT_TAGS",
-      "category": "status",
-      "config": {},
-      "usage_hint": "Absorbs 4 shifts. Clears after one full session if addressed."
+      "prefab": "VAL_TEXT",
+      "category": "resources",
+      "usage_hint": "Aspect describing a serious injury or setback (e.g. 'Deep Cut to the Side'). Soaks 4 shifts of harm and takes longer to recover from."
     },
     {
-      "path": "status.severe_consequence",
+      "path": "resources.consequence_severe",
       "label": "Severe Consequence",
+      "prefab": "VAL_TEXT",
+      "category": "resources",
+      "usage_hint": "Aspect describing a major, campaign-defining trauma (e.g. 'Crushed Leg', 'Shattered Confidence'). Soaks 6 shifts and lingers for a long time."
+    },
+    {
+      "path": "resources.extra_consequence_physical",
+      "label": "Extra Physical Mild Consequence",
+      "prefab": "VAL_TEXT",
+      "category": "resources",
+      "usage_hint": "Optional extra mild consequence slot granted by very high Physique or appropriate stunts; only for physical harm."
+    },
+    {
+      "path": "resources.extra_consequence_mental",
+      "label": "Extra Mental Mild Consequence",
+      "prefab": "VAL_TEXT",
+      "category": "resources",
+      "usage_hint": "Optional extra mild consequence slot granted by very high Will or appropriate stunts; only for mental harm."
+    },
+    {
+      "path": "combat.initiative_note",
+      "label": "Initiative Notes",
+      "prefab": "VAL_TEXT",
+      "category": "combat",
+      "usage_hint": "How this character tends to act early or late in conflicts (e.g. 'Usually acts early due to high Notice' or 'Acts after faster foes'). Fate Core often uses skills or narrative for turn order rather than a fixed stat."
+    },
+    {
+      "path": "status.conditions",
+      "label": "Conditions / Temporary Tags",
       "prefab": "CONT_TAGS",
       "category": "status",
-      "config": {},
-      "usage_hint": "Absorbs 6 shifts. Clears after one scenario if addressed."
+      "usage_hint": "Short-lived tags like 'Pinned Down', 'On Fire', 'Cornered' that are not full consequences—often created as situation aspects."
     },
     {
-      "path": "status.extreme_consequence",
-      "label": "Extreme Consequence",
-      "prefab": "CONT_TAGS",
-      "category": "status",
-      "config": {},
-      "usage_hint": "Absorbs 8 shifts. Permanently replaces one of your aspects."
+      "path": "skills.athletics",
+      "label": "Athletics",
+      "prefab": "VAL_LADDER",
+      "category": "skills",
+      "config": {
+        "min": -2,
+        "max": 8,
+        "default": 0
+      },
+      "usage_hint": "Running, jumping, dodging, and physical stunts. Commonly used to Defend against some physical attacks or hazards."
     },
     {
-      "path": "narrative.high_concept",
-      "label": "High Concept",
-      "prefab": "CONT_TAGS",
-      "category": "narrative",
-      "config": {},
-      "usage_hint": "Who you are in a phrase. Can be invoked or compelled."
+      "path": "skills.burglary",
+      "label": "Burglary",
+      "prefab": "VAL_LADDER",
+      "category": "skills",
+      "config": {
+        "min": -2,
+        "max": 8,
+        "default": 0
+      },
+      "usage_hint": "Breaking and entering, locks, security systems, casing joints and planning heists."
     },
     {
-      "path": "narrative.trouble",
-      "label": "Trouble",
-      "prefab": "CONT_TAGS",
-      "category": "narrative",
-      "config": {},
-      "usage_hint": "Your recurring problem. Primary target for compels."
+      "path": "skills.contacts",
+      "label": "Contacts",
+      "prefab": "VAL_LADDER",
+      "category": "skills",
+      "config": {
+        "min": -2,
+        "max": 8,
+        "default": 0
+      },
+      "usage_hint": "Knowing people, calling in favors, and accessing networks of information or assistance."
     },
     {
-      "path": "narrative.aspects",
-      "label": "Other Aspects",
-      "prefab": "CONT_TAGS",
-      "category": "narrative",
-      "config": {},
-      "usage_hint": "3 additional aspects from your story. Can be invoked or compelled."
+      "path": "skills.crafts",
+      "label": "Crafts",
+      "prefab": "VAL_LADDER",
+      "category": "skills",
+      "config": {
+        "min": -2,
+        "max": 8,
+        "default": 0
+      },
+      "usage_hint": "Building, repairing, and modifying devices, vehicles, structures, or other physical projects."
+    },
+    {
+      "path": "skills.deceive",
+      "label": "Deceive",
+      "prefab": "VAL_LADDER",
+      "category": "skills",
+      "config": {
+        "min": -2,
+        "max": 8,
+        "default": 0
+      },
+      "usage_hint": "Lying, misdirection, disguises, and social manipulation based on falsehoods."
+    },
+    {
+      "path": "skills.drive",
+      "label": "Drive",
+      "prefab": "VAL_LADDER",
+      "category": "skills",
+      "config": {
+        "min": -2,
+        "max": 8,
+        "default": 0
+      },
+      "usage_hint": "Operating cars or similar ground vehicles, including chases and dangerous maneuvers."
+    },
+    {
+      "path": "skills.empathy",
+      "label": "Empathy",
+      "prefab": "VAL_LADDER",
+      "category": "skills",
+      "config": {
+        "min": -2,
+        "max": 8,
+        "default": 0
+      },
+      "usage_hint": "Reading emotions, motives, and lies; often used to Defend against some social attacks."
+    },
+    {
+      "path": "skills.fight",
+      "label": "Fight",
+      "prefab": "VAL_LADDER",
+      "category": "skills",
+      "config": {
+        "min": -2,
+        "max": 8,
+        "default": 0
+      },
+      "usage_hint": "Melee and close-quarters combat with fists, blades, or similar weapons."
+    },
+    {
+      "path": "skills.investigate",
+      "label": "Investigate",
+      "prefab": "VAL_LADDER",
+      "category": "skills",
+      "config": {
+        "min": -2,
+        "max": 8,
+        "default": 0
+      },
+      "usage_hint": "Detailed searches, forensics, research, and careful clue-gathering over time."
+    },
+    {
+      "path": "skills.lore",
+      "label": "Lore",
+      "prefab": "VAL_LADDER",
+      "category": "skills",
+      "config": {
+        "min": -2,
+        "max": 8,
+        "default": 0
+      },
+      "usage_hint": "Academic and occult knowledge; used to recall setting-specific knowledge."
+    },
+    {
+      "path": "skills.notice",
+      "label": "Notice",
+      "prefab": "VAL_LADDER",
+      "category": "skills",
+      "config": {
+        "min": -2,
+        "max": 8,
+        "default": 0
+      },
+      "usage_hint": "Spotting things in the moment (ambushes, details, threats) and general situational awareness."
+    },
+    {
+      "path": "skills.physique",
+      "label": "Physique",
+      "prefab": "VAL_LADDER",
+      "category": "skills",
+      "config": {
+        "min": -2,
+        "max": 8,
+        "default": 0
+      },
+      "usage_hint": "Raw physical power and endurance. In Fate Core, higher Physique adds physical stress boxes and may add a physical-only mild consequence slot."
+    },
+    {
+      "path": "skills.provoke",
+      "label": "Provoke",
+      "prefab": "VAL_LADDER",
+      "category": "skills",
+      "config": {
+        "min": -2,
+        "max": 8,
+        "default": 0
+      },
+      "usage_hint": "Intimidation, threats, and goading others into rash actions; often used for mental attacks."
+    },
+    {
+      "path": "skills.rapport",
+      "label": "Rapport",
+      "prefab": "VAL_LADDER",
+      "category": "skills",
+      "config": {
+        "min": -2,
+        "max": 8,
+        "default": 0
+      },
+      "usage_hint": "Friendly, honest social interaction to build trust or goodwill."
+    },
+    {
+      "path": "skills.resources",
+      "label": "Resources",
+      "prefab": "VAL_LADDER",
+      "category": "skills",
+      "config": {
+        "min": -2,
+        "max": 8,
+        "default": 0
+      },
+      "usage_hint": "Wealth and access to material assets, credit, and purchasing power."
+    },
+    {
+      "path": "skills.shoot",
+      "label": "Shoot",
+      "prefab": "VAL_LADDER",
+      "category": "skills",
+      "config": {
+        "min": -2,
+        "max": 8,
+        "default": 0
+      },
+      "usage_hint": "Ranged attacks with guns, bows, and thrown weapons."
+    },
+    {
+      "path": "skills.stealth",
+      "label": "Stealth",
+      "prefab": "VAL_LADDER",
+      "category": "skills",
+      "config": {
+        "min": -2,
+        "max": 8,
+        "default": 0
+      },
+      "usage_hint": "Hiding, sneaking, and avoiding notice."
+    },
+    {
+      "path": "skills.will",
+      "label": "Will",
+      "prefab": "VAL_LADDER",
+      "category": "skills",
+      "config": {
+        "min": -2,
+        "max": 8,
+        "default": 0
+      },
+      "usage_hint": "Mental fortitude and discipline. Higher Will adds mental stress boxes and may add a mental-only mild consequence slot."
+    },
+    {
+      "path": "inventory.gear",
+      "label": "Gear & Equipment",
+      "prefab": "CONT_LIST",
+      "category": "inventory",
+      "usage_hint": "List of significant personal gear. Fate usually assumes you have reasonable tools; only special items need explicit tracking."
+    },
+    {
+      "path": "inventory.wealth_notes",
+      "label": "Wealth Notes",
+      "prefab": "VAL_TEXT",
+      "category": "inventory",
+      "usage_hint": "Narrative description of lifestyle, major holdings, or debts, supporting the Resources skill."
     },
     {
       "path": "features.stunts",
       "label": "Stunts",
       "prefab": "CONT_LIST",
       "category": "features",
-      "config": {},
-      "usage_hint": "Special abilities that break normal rules. First 3 are free, additional cost 1 Refresh each."
+      "usage_hint": "Discrete mechanical tricks that change how skills work. Each item should at least have 'name' and 'effect' fields, and optionally 'cost' if it requires fate points."
     },
     {
       "path": "features.extras",
       "label": "Extras",
       "prefab": "CONT_LIST",
       "category": "features",
-      "config": {},
-      "usage_hint": "Special permissions, gear, powers, or resources beyond normal."
+      "usage_hint": "Special gear, powers, organizations, or other setting-specific extras modeled as rules packages."
+    },
+    {
+      "path": "connections.relationships",
+      "label": "Important Relationships",
+      "prefab": "CONT_LIST",
+      "category": "connections",
+      "usage_hint": "Key NPCs, allies, rivals, and organizations the character is tied to. Each entry can note the type and strength of the relationship."
+    },
+    {
+      "path": "progression.refresh",
+      "label": "Refresh",
+      "prefab": "VAL_INT",
+      "category": "progression",
+      "config": {
+        "min": 1,
+        "max": 10,
+        "default": 3
+      },
+      "usage_hint": "Number of fate points the character starts a new scenario with (and between sessions, if below this total). Can be reduced to buy extra stunts, but never below 1."
+    },
+    {
+      "path": "progression.milestone_log",
+      "label": "Milestones",
+      "prefab": "CONT_LIST",
+      "category": "progression",
+      "usage_hint": "Record of minor, significant, and major milestones the character has achieved, with notes about changes to aspects, skills, and stunts."
+    }
+  ],
+  "rules": [
+    {
+      "name": "The Fate Ladder and Target Numbers",
+      "content": "Fate uses a shared ladder for skill ratings, difficulties, and results: from Terrible (–2) and Poor (–1) up through Mediocre (+0), Average (+1), Fair (+2), Good (+3), Great (+4), Superb (+5), and higher. Roll 4dF, add your skill, and compare to a difficulty set on this ladder.",
+      "tags": [
+        "core",
+        "resolution"
+      ]
+    },
+    {
+      "name": "Four Actions",
+      "content": "Every roll is one of four actions: Overcome to clear obstacles or problems, Create an Advantage to discover or establish aspects and gain free invocations, Attack to inflict harm in conflicts, and Defend to avoid attacks or resist advantages created against you.",
+      "tags": [
+        "core",
+        "actions"
+      ]
+    },
+    {
+      "name": "Aspects and Invocations",
+      "content": "Aspects are true statements about characters, scenes, or the campaign. Spend a fate point (or use a free invocation) to invoke a relevant aspect and gain +2 to a roll, reroll the dice, add +2 to an ally’s roll, or increase passive opposition by +2.",
+      "tags": [
+        "core",
+        "aspects"
+      ]
+    },
+    {
+      "name": "Compels and Drama",
+      "content": "The GM or players may propose compels on aspects when they would naturally cause trouble. If accepted, the player gains a fate point and the complication happens; if refused, the player spends a fate point to avoid it. Compels drive drama and replenish fate points.",
+      "tags": [
+        "core",
+        "compels"
+      ]
+    },
+    {
+      "name": "Fate Points and Refresh",
+      "content": "Each character has a refresh rate (typically 3) that determines how many fate points they begin a new session or scenario with. Extra stunts can be bought by lowering refresh, but it can never go below 1. Fate points are spent to invoke aspects, power stunts, refuse compels, or declare story details.",
+      "tags": [
+        "economy",
+        "fate_points"
+      ]
+    },
+    {
+      "name": "Stress and Consequences",
+      "content": "Stress tracks (physical and mental) represent short-term harm and close calls; each checked box absorbs a hit. Consequences are longer-term injuries or traumas represented by aspects (mild, moderate, severe) that soak larger amounts of harm and can be invoked by opponents until recovered.",
+      "tags": [
+        "combat",
+        "harm"
+      ]
+    },
+    {
+      "name": "Physique, Will, and Resilience",
+      "content": "Physique can grant extra physical stress boxes and a physical-only mild consequence at very high ratings; Will does the same for mental stress and a mental-only mild consequence. Tough characters survive more hits before being taken out.",
+      "tags": [
+        "skills",
+        "resilience"
+      ]
+    },
+    {
+      "name": "Stunts and Niche Protection",
+      "content": "Stunts are custom tricks that give bonuses or new actions when specific conditions are met, usually tied to a single skill. Each character gets three stunts for free; up to two more can be bought by lowering refresh by one point each.",
+      "tags": [
+        "features",
+        "stunts"
+      ]
+    },
+    {
+      "name": "Milestones and Advancement",
+      "content": "Minor milestones (most sessions) allow small changes like swapping skill ranks or rewriting an aspect. Significant milestones (after scenarios) grant a skill point in addition to a minor milestone. Major milestones (major campaign shifts) grant a refresh increase and larger changes, letting characters grow more powerful over time.",
+      "tags": [
+        "progression",
+        "advancement"
+      ]
+    },
+    {
+      "name": "Teamwork, Boosts, and Free Invocations",
+      "content": "Succeeding at Create an Advantage attaches free invocations to an aspect; success with style usually grants two. Allies can pass free invocations between each other to set up big moves. Ties or some defenses create boosts—one-use, temporary aspects with a single free invocation that vanish once used.",
+      "tags": [
+        "teamwork",
+        "advantages"
+      ]
     }
   ]
 }

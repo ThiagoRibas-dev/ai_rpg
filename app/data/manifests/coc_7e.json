@@ -2,28 +2,86 @@
   "id": "coc_7e",
   "name": "Call of Cthulhu 7th Edition",
   "engine": {
-    "dice": "1d100",
-    "mechanic": "Roll d100 (percentile) against skill or characteristic value",
-    "success": "Roll equal or under skill = Regular success. Roll equal or under half skill = Hard success. Roll equal or under one-fifth skill = Extreme success.",
-    "crit": "Roll 01 = Critical success (maximum possible effect)",
-    "fumble": "Roll 96-100 = Fumble if skill is under 50. Roll 100 = Always fumble regardless of skill."
+    "dice": "1d100 (percentile)",
+    "mechanic": "Roll 1d100 equal to or below a skill or characteristic. Difficulty levels: Regular, Hard (1/2), Extreme (1/5). Lower rolls are better.",
+    "success": "Results are Fumble, Failure, Regular, Hard, Extreme, or Critical (01). Compare success levels for opposed rolls.",
+    "crit": "A roll of 01 is a critical success. Some Keeper options treat other very low rolls as especially favorable.",
+    "crit_rules": "01 is always a critical success; in opposed tests the higher success level wins.",
+    "fumble": "If the roll required for success is 50+ then 100 fumbles; if it is below 50 then 96–100 is a fumble."
   },
   "procedures": {
-    "combat": "Combat is deadly. Avoid when possible.\n1. Each round: Declare actions, then resolve by DEX order (highest first)\n2. Attack: Roll under Fighting (melee) or Firearms (ranged)\n3. Defense: Target may Dodge (roll under Dodge) or Fight Back (roll under Fighting)\n   - Compare successes: Higher success level wins\n   - Tie on same level: Attacker wins\n4. Damage: Roll weapon damage, subtract armor\n5. Major Wound: Lose half or more HP in one hit = CON roll or fall unconscious\n6. Dying: At 0 HP, dying. Each round lose 1 HP unless First Aid succeeds.",
-    "investigation": "Investigation is the core of the game.\n1. Describe the scene with sensory details - what they see, hear, smell\n2. Spot Hidden: Notice concealed items or hidden doors\n3. Library Use: Research in books, archives, newspapers\n4. Other skills as appropriate: Medicine (examine body), Occult (identify symbols), etc.\n5. Clues should be available - rolls determine HOW MUCH they learn, not IF\n6. Failed rolls may trigger delays, complications, or partial information\n7. Pushing rolls: Player may push a failed roll for one more try, but failure has consequences",
-    "sanity": "Sanity represents mental stability when facing the unnatural.\n1. Sanity Check: Roll under current Sanity when encountering Mythos/horror\n2. Success: Lose minimum Sanity (first number)\n3. Failure: Lose maximum Sanity (second number, e.g., 1/1d6 means 1 on success, 1d6 on failure)\n4. Temporary Insanity: Lose 5+ Sanity in one check = bout of madness (1d10 rounds)\n5. Indefinite Insanity: Lose 20%+ of current Sanity in one hour = underlying insanity\n6. Maximum Sanity: 99 minus Cthulhu Mythos skill (learning the truth costs sanity)"
+    "combat": "1) Determine DEX order (highest first). 2) Each round, every combatant gets one action on their DEX rank. 3) On their turn, an investigator may attack, fire a weapon, move, or perform another significant action. 4) When attacked in melee, a target may Dodge (avoid damage) or Fight Back (counterattack); compare success levels to resolve. 5) Major wound occurs if a single attack inflicts damage equal to or greater than half maximum HP; at 0 HP a CON roll may avoid death, otherwise the investigator dies or bleeds out.",
+    "exploration": "Use skill rolls (typically Regular difficulty) to search, research, climb, listen, navigate, and so on. The Keeper sets difficulty (Regular, Hard, Extreme) and states stakes before rolling. Failed rolls may sometimes be Pushed: the player describes a riskier attempt; if this second roll fails, the Keeper imposes severe consequences.",
+    "social": "Use interpersonal skills (Charm, Fast Talk, Intimidate, Persuade, Psychology) to influence NPCs. The Keeper decides whether a given scene is a single roll, an opposed roll against an NPC skill/characteristic, or a series of rolls. Consequences of failure often include lost trust, closed doors, or escalating danger.",
+    "downtime": "Between scenarios or during lulls, run an Investigator Development Phase: roll for checked skills to improve them, adjust Credit Rating and finances, attempt to recover Sanity through therapy or self-help tied to backstory connections, and update the investigator’s background. Long-term institutionalization or treatment can slowly restore Sanity but may impose constraints on play."
   },
   "aliases": {
-    "damage_bonus": "floor((attributes.str + attributes.siz) / 10) - 2",
     "hp_max": "floor((attributes.con + attributes.siz) / 10)",
     "mp_max": "floor(attributes.pow / 5)",
-    "san_max": "99 - skills.cthulhu_mythos",
-    "mov_base": "8"
+    "san_max": "attributes.pow",
+    "dodge_base": "floor(attributes.dex / 2)"
   },
   "fields": [
     {
+      "path": "meta.era",
+      "label": "Era",
+      "prefab": "VAL_TEXT",
+      "category": "meta",
+      "config": {
+        "default": "1920s"
+      },
+      "usage_hint": "Campaign era label (e.g. 1920s, Modern, Gaslight)."
+    },
+    {
+      "path": "meta.campaign_name",
+      "label": "Campaign Name",
+      "prefab": "VAL_TEXT",
+      "category": "meta",
+      "usage_hint": "Name of the current campaign or scenario arc."
+    },
+    {
+      "path": "identity.occupation",
+      "label": "Occupation",
+      "prefab": "VAL_TEXT",
+      "category": "identity",
+      "usage_hint": "Investigator’s job or role (e.g. Antiquarian, Detective). Used mainly for flavor and chargen, not rolls."
+    },
+    {
+      "path": "identity.age",
+      "label": "Age",
+      "prefab": "VAL_INT",
+      "category": "identity",
+      "config": {
+        "min": 10,
+        "max": 100,
+        "default": 30
+      },
+      "usage_hint": "Biological age of the investigator."
+    },
+    {
+      "path": "identity.gender",
+      "label": "Gender",
+      "prefab": "VAL_TEXT",
+      "category": "identity",
+      "usage_hint": "Gender identity / presentation; descriptive only."
+    },
+    {
+      "path": "identity.residence",
+      "label": "Home Residence",
+      "prefab": "VAL_TEXT",
+      "category": "identity",
+      "usage_hint": "Primary place of residence (city, country, neighborhood)."
+    },
+    {
+      "path": "identity.birthplace",
+      "label": "Birthplace",
+      "prefab": "VAL_TEXT",
+      "category": "identity",
+      "usage_hint": "Where the investigator was born."
+    },
+    {
       "path": "attributes.str",
-      "label": "STR",
+      "label": "Strength (STR)",
       "prefab": "VAL_INT",
       "category": "attributes",
       "config": {
@@ -31,11 +89,11 @@
         "max": 99,
         "default": 50
       },
-      "usage_hint": "Physical power. Melee damage, lifting, breaking things."
+      "usage_hint": "Physical power; used for lifting, melee feats, and some combat maneuvers."
     },
     {
       "path": "attributes.con",
-      "label": "CON",
+      "label": "Constitution (CON)",
       "prefab": "VAL_INT",
       "category": "attributes",
       "config": {
@@ -43,23 +101,23 @@
         "max": 99,
         "default": 50
       },
-      "usage_hint": "Health and hardiness. Contributes to HP, resisting poison/disease."
+      "usage_hint": "Health and resilience; contributes to HP and resistance to disease and shock."
     },
     {
       "path": "attributes.siz",
-      "label": "SIZ",
+      "label": "Size (SIZ)",
       "prefab": "VAL_INT",
       "category": "attributes",
       "config": {
         "min": 1,
         "max": 99,
-        "default": 60
+        "default": 50
       },
-      "usage_hint": "Physical size. Contributes to HP and damage bonus."
+      "usage_hint": "Overall body mass and height; used with STR and CON for HP, Build, damage bonus."
     },
     {
       "path": "attributes.dex",
-      "label": "DEX",
+      "label": "Dexterity (DEX)",
       "prefab": "VAL_INT",
       "category": "attributes",
       "config": {
@@ -67,11 +125,11 @@
         "max": 99,
         "default": 50
       },
-      "usage_hint": "Agility and speed. Determines action order in combat."
+      "usage_hint": "Agility and reflexes; sets combat order and underpins Dodge and many physical skills."
     },
     {
       "path": "attributes.app",
-      "label": "APP",
+      "label": "Appearance (APP)",
       "prefab": "VAL_INT",
       "category": "attributes",
       "config": {
@@ -79,11 +137,11 @@
         "max": 99,
         "default": 50
       },
-      "usage_hint": "Physical attractiveness and presence."
+      "usage_hint": "Looks, charm, first impressions; supports some interpersonal situations."
     },
     {
       "path": "attributes.int",
-      "label": "INT",
+      "label": "Intelligence (INT)",
       "prefab": "VAL_INT",
       "category": "attributes",
       "config": {
@@ -91,11 +149,11 @@
         "max": 99,
         "default": 50
       },
-      "usage_hint": "Intelligence and reasoning. Idea rolls."
+      "usage_hint": "Reasoning and insight; governs Idea-like checks and some knowledge skills."
     },
     {
       "path": "attributes.pow",
-      "label": "POW",
+      "label": "Power (POW)",
       "prefab": "VAL_INT",
       "category": "attributes",
       "config": {
@@ -103,11 +161,11 @@
         "max": 99,
         "default": 50
       },
-      "usage_hint": "Willpower and magical aptitude. Starting Sanity = POW. Determines Magic Points."
+      "usage_hint": "Willpower and spiritual resilience; defines Sanity, Magic Points and resistance to mental influence."
     },
     {
       "path": "attributes.edu",
-      "label": "EDU",
+      "label": "Education (EDU)",
       "prefab": "VAL_INT",
       "category": "attributes",
       "config": {
@@ -115,116 +173,263 @@
         "max": 99,
         "default": 60
       },
-      "usage_hint": "Education and knowledge. Determines occupation skill points."
+      "usage_hint": "Formal learning; used as Own Language base and many academic occupations."
     },
     {
       "path": "resources.hp",
-      "label": "Hit Points",
-      "prefab": "RES_POOL",
-      "category": "resources",
-      "config": {
-        "min": 0
-      },
-      "max_formula": "hp_max",
-      "threshold_hint": "At 0: dying (lose 1 HP/round without First Aid). Major wound: lose half+ HP in one hit, CON roll or unconscious."
-    },
-    {
-      "path": "resources.mp",
-      "label": "Magic Points",
-      "prefab": "RES_POOL",
-      "category": "resources",
-      "config": {
-        "min": 0
-      },
-      "max_formula": "mp_max",
-      "threshold_hint": "At 0: unconscious. Regenerate 1 per 2 hours or all after 24h rest. Spent to cast spells."
-    },
-    {
-      "path": "resources.sanity",
-      "label": "Sanity",
+      "label": "Hit Points (HP)",
       "prefab": "RES_POOL",
       "category": "resources",
       "config": {
         "min": 0,
-        "default_max": 50
+        "default_max": 10
+      },
+      "max_formula": "hp_max",
+      "usage_hint": "Physical health pool. Current HP drops from injury; at half Max HP a major wound is possible, at 0 HP the investigator may die."
+    },
+    {
+      "path": "resources.mp",
+      "label": "Magic Points (MP)",
+      "prefab": "RES_POOL",
+      "category": "resources",
+      "config": {
+        "min": 0,
+        "default_max": 10
+      },
+      "max_formula": "mp_max",
+      "usage_hint": "Pool used to fuel spells and psychic effects; usually equals POW/5."
+    },
+    {
+      "path": "resources.sanity",
+      "label": "Sanity (SAN)",
+      "prefab": "RES_POOL",
+      "category": "resources",
+      "config": {
+        "min": 0,
+        "default_max": 99
       },
       "max_formula": "san_max",
-      "threshold_hint": "Lose 5+ at once: temporary insanity. Lose 20%+ in hour: indefinite insanity. At 0: permanent insanity, become NPC."
+      "usage_hint": "Mental stability. Lose SAN to unnatural shocks; at 0 SAN the investigator is permanently insane."
     },
     {
       "path": "resources.luck",
       "label": "Luck",
-      "prefab": "RES_COUNTER",
+      "prefab": "RES_POOL",
       "category": "resources",
       "config": {
         "min": 0,
-        "default": 50
+        "default_max": 60
       },
-      "usage_hint": "Spend to reduce any roll by amount spent. Very rarely recovers. Starting Luck = 3d6 × 5."
+      "usage_hint": "Spendable pool to turn failures into successes or avoid misfortune; usually rolled as 3d6×5 at creation."
     },
     {
-      "path": "skills.spot_hidden",
-      "label": "Spot Hidden",
+      "path": "status.major_wound",
+      "label": "Major Wound",
+      "prefab": "VAL_BOOL",
+      "category": "status",
+      "usage_hint": "True if the investigator has suffered a major wound (≥ half max HP in one blow). Affects healing and death checks."
+    },
+    {
+      "path": "status.temporary_insanity",
+      "label": "Temporary Insanity",
+      "prefab": "VAL_BOOL",
+      "category": "status",
+      "usage_hint": "True if currently under effects of temporary insanity following a big SAN loss."
+    },
+    {
+      "path": "status.indefinite_insanity",
+      "label": "Indefinite Insanity",
+      "prefab": "VAL_BOOL",
+      "category": "status",
+      "usage_hint": "True if the investigator has suffered indefinite insanity and is mentally unstable for an extended period."
+    },
+    {
+      "path": "status.conditions",
+      "label": "Conditions",
+      "prefab": "CONT_TAGS",
+      "category": "status",
+      "usage_hint": "Ad hoc tags like 'prone', 'stunned', 'bleeding', 'restrained'."
+    },
+    {
+      "path": "combat.build",
+      "label": "Build",
       "prefab": "VAL_INT",
-      "category": "skills",
+      "category": "combat",
+      "config": {
+        "default": 0
+      },
+      "usage_hint": "Relative size for grappling and damage bonus; derived from STR+SIZ using the standard Build table."
+    },
+    {
+      "path": "combat.damage_bonus",
+      "label": "Damage Bonus",
+      "prefab": "VAL_TEXT",
+      "category": "combat",
+      "usage_hint": "Text like '-1d4', '0', '+1d4', '+1d6' based on STR+SIZ."
+    },
+    {
+      "path": "combat.move_rate",
+      "label": "Move Rate (MOV)",
+      "prefab": "VAL_INT",
+      "category": "combat",
+      "config": {
+        "min": 1,
+        "max": 12,
+        "default": 8
+      },
+      "usage_hint": "How far the investigator can move per round; used in chases and tactical positioning."
+    },
+    {
+      "path": "inventory.weapons",
+      "label": "Weapons",
+      "prefab": "CONT_LIST",
+      "category": "inventory",
+      "usage_hint": "List of weapons with fields like name, skill used, damage, range, ammo, malfunction."
+    },
+    {
+      "path": "inventory.gear",
+      "label": "Gear & Equipment",
+      "prefab": "CONT_LIST",
+      "category": "inventory",
+      "usage_hint": "General equipment, tools, clothing, and props the investigator carries."
+    },
+    {
+      "path": "inventory.cash_assets",
+      "label": "Cash & Assets",
+      "prefab": "RES_COUNTER",
+      "category": "inventory",
       "config": {
         "min": 0,
-        "max": 99,
-        "default": 25
+        "default": 0
       },
-      "usage_hint": "Notice hidden objects, secret doors, concealed clues."
+      "usage_hint": "Abstract pool for ready cash or liquid assets, often implied by Credit Rating."
     },
     {
-      "path": "skills.listen",
-      "label": "Listen",
-      "prefab": "VAL_INT",
-      "category": "skills",
+      "path": "features.traits",
+      "label": "Traits & Quirks",
+      "prefab": "CONT_LIST",
+      "category": "features",
+      "usage_hint": "Distinctive personality traits with mechanical teeth (e.g. Drive, Phobia triggers, story flaws)."
+    },
+    {
+      "path": "features.phobias_manias",
+      "label": "Phobias & Manias",
+      "prefab": "CONT_LIST",
+      "category": "features",
+      "usage_hint": "Long-term mental disorders gained from SAN loss; each item should name the fear/mania and its typical triggers."
+    },
+    {
+      "path": "features.spells",
+      "label": "Mythos Spells",
+      "prefab": "CONT_LIST",
+      "category": "features",
+      "usage_hint": "Known spells with notes on MP/SAN cost and casting requirements."
+    },
+    {
+      "path": "features.occupational_features",
+      "label": "Occupational Features",
+      "prefab": "CONT_LIST",
+      "category": "features",
+      "usage_hint": "Any special rules or advantages granted by the investigator’s occupation (licenses, contacts, institutional access)."
+    },
+    {
+      "path": "connections.allies",
+      "label": "Allies & Friends",
+      "prefab": "CONT_LIST",
+      "category": "connections",
+      "usage_hint": "Named allies, with optional notes (relation, usefulness, where they can be found)."
+    },
+    {
+      "path": "connections.contacts",
+      "label": "Contacts",
+      "prefab": "CONT_LIST",
+      "category": "connections",
+      "usage_hint": "Useful acquaintances like informants, librarians, or officials."
+    },
+    {
+      "path": "connections.enemies",
+      "label": "Enemies & Rivals",
+      "prefab": "CONT_LIST",
+      "category": "connections",
+      "usage_hint": "Those actively opposed to the investigator (cultists, criminal rivals, hostile officials)."
+    },
+    {
+      "path": "narrative.ideology_beliefs",
+      "label": "Ideology & Beliefs",
+      "prefab": "VAL_TEXT",
+      "category": "narrative",
+      "usage_hint": "Core worldview or philosophy; can act as a sanity anchor or roleplay driver."
+    },
+    {
+      "path": "narrative.significant_people",
+      "label": "Significant People",
+      "prefab": "VAL_TEXT",
+      "category": "narrative",
+      "usage_hint": "Named individuals important to the investigator; losing or saving them can affect SAN."
+    },
+    {
+      "path": "narrative.meaningful_locations",
+      "label": "Meaningful Locations",
+      "prefab": "VAL_TEXT",
+      "category": "narrative",
+      "usage_hint": "Places charged with emotional significance (childhood home, battlefield, library)."
+    },
+    {
+      "path": "narrative.treasured_possessions",
+      "label": "Treasured Possessions",
+      "prefab": "VAL_TEXT",
+      "category": "narrative",
+      "usage_hint": "Items that matter deeply to the investigator; good hooks for SAN recovery or loss."
+    },
+    {
+      "path": "narrative.traits",
+      "label": "Personality Traits",
+      "prefab": "VAL_TEXT",
+      "category": "narrative",
+      "usage_hint": "Short descriptive phrases for personality (e.g. 'Curious to a fault', 'Skeptical rationalist')."
+    },
+    {
+      "path": "narrative.backstory",
+      "label": "Backstory Summary",
+      "prefab": "VAL_TEXT",
+      "category": "narrative",
+      "usage_hint": "Freeform summary of the investigator’s history, key events, and personal arc."
+    },
+    {
+      "path": "narrative.key_connection",
+      "label": "Key Connection",
+      "prefab": "VAL_TEXT",
+      "category": "narrative",
+      "usage_hint": "Single especially important relationship or element used for SAN recovery scenes."
+    },
+    {
+      "path": "progression.development_checks",
+      "label": "Development Checks",
+      "prefab": "CONT_TAGS",
+      "category": "progression",
+      "usage_hint": "Names of skills that have been used successfully and are eligible for improvement at the end of a scenario."
+    },
+    {
+      "path": "progression.xp",
+      "label": "Experience / Story Awards",
+      "prefab": "RES_COUNTER",
+      "category": "progression",
       "config": {
         "min": 0,
-        "max": 99,
-        "default": 20
+        "default": 0
       },
-      "usage_hint": "Hear sounds, eavesdrop, detect approaching danger."
+      "usage_hint": "Optional abstract progression currency if you want to track XP-like rewards."
     },
     {
-      "path": "skills.library_use",
-      "label": "Library Use",
-      "prefab": "VAL_INT",
-      "category": "skills",
-      "config": {
-        "min": 0,
-        "max": 99,
-        "default": 20
-      },
-      "usage_hint": "Research in libraries, archives, find information in documents."
+      "path": "progression.mythos_tomes",
+      "label": "Mythos Tomes Studied",
+      "prefab": "CONT_LIST",
+      "category": "progression",
+      "usage_hint": "Books and sources that granted Cthulhu Mythos skill and SAN cost over long-term study."
     },
     {
-      "path": "skills.psychology",
-      "label": "Psychology",
-      "prefab": "VAL_INT",
-      "category": "skills",
-      "config": {
-        "min": 0,
-        "max": 99,
-        "default": 10
-      },
-      "usage_hint": "Read people, detect lies, understand motivations."
-    },
-    {
-      "path": "skills.persuade",
-      "label": "Persuade",
-      "prefab": "VAL_INT",
-      "category": "skills",
-      "config": {
-        "min": 0,
-        "max": 99,
-        "default": 10
-      },
-      "usage_hint": "Convince others through charm, logic, or debate."
-    },
-    {
-      "path": "skills.fast_talk",
-      "label": "Fast Talk",
+      "path": "skills.accounting",
+      "label": "Accounting",
       "prefab": "VAL_INT",
       "category": "skills",
       "config": {
@@ -232,72 +437,11 @@
         "max": 99,
         "default": 5
       },
-      "usage_hint": "Quick deception, short-term cons, verbal distraction."
+      "usage_hint": "Knowledge of bookkeeping and financial records; used to spot fraud or track money."
     },
     {
-      "path": "skills.intimidate",
-      "label": "Intimidate",
-      "prefab": "VAL_INT",
-      "category": "skills",
-      "config": {
-        "min": 0,
-        "max": 99,
-        "default": 15
-      },
-      "usage_hint": "Coerce through threats, physical presence, or menace."
-    },
-    {
-      "path": "skills.fighting_brawl",
-      "label": "Fighting (Brawl)",
-      "prefab": "VAL_INT",
-      "category": "skills",
-      "config": {
-        "min": 0,
-        "max": 99,
-        "default": 25
-      },
-      "usage_hint": "Unarmed combat, improvised weapons, melee fighting."
-    },
-    {
-      "path": "skills.firearms_handgun",
-      "label": "Firearms (Handgun)",
-      "prefab": "VAL_INT",
-      "category": "skills",
-      "config": {
-        "min": 0,
-        "max": 99,
-        "default": 20
-      },
-      "usage_hint": "Pistols and revolvers."
-    },
-    {
-      "path": "skills.dodge",
-      "label": "Dodge",
-      "prefab": "VAL_INT",
-      "category": "skills",
-      "config": {
-        "min": 0,
-        "max": 99,
-        "default": 0
-      },
-      "default_formula": "floor(attributes.dex / 2)",
-      "usage_hint": "Evade attacks. Can be used once per round freely, then at penalty."
-    },
-    {
-      "path": "skills.first_aid",
-      "label": "First Aid",
-      "prefab": "VAL_INT",
-      "category": "skills",
-      "config": {
-        "min": 0,
-        "max": 99,
-        "default": 30
-      },
-      "usage_hint": "Emergency medical treatment. Stabilize dying, heal 1 HP."
-    },
-    {
-      "path": "skills.medicine",
-      "label": "Medicine",
+      "path": "skills.anthropology",
+      "label": "Anthropology",
       "prefab": "VAL_INT",
       "category": "skills",
       "config": {
@@ -305,11 +449,11 @@
         "max": 99,
         "default": 1
       },
-      "usage_hint": "Professional medical knowledge. Diagnose illness, surgery, long-term treatment."
+      "usage_hint": "Study of human cultures and customs; useful for interpreting rituals and social practices."
     },
     {
-      "path": "skills.occult",
-      "label": "Occult",
+      "path": "skills.appraise",
+      "label": "Appraise",
       "prefab": "VAL_INT",
       "category": "skills",
       "config": {
@@ -317,7 +461,67 @@
         "max": 99,
         "default": 5
       },
-      "usage_hint": "Knowledge of mystical traditions, cults, folklore (not Mythos)."
+      "usage_hint": "Estimate value and authenticity of objects, antiques, art, and artifacts."
+    },
+    {
+      "path": "skills.archaeology",
+      "label": "Archaeology",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 1
+      },
+      "usage_hint": "Excavation and interpretation of ancient sites and artifacts."
+    },
+    {
+      "path": "skills.art_craft",
+      "label": "Art/Craft (Any)",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 5
+      },
+      "usage_hint": "Any artistic or craft skill; note specialization in the item (e.g. 'Art/Craft (Singing)')."
+    },
+    {
+      "path": "skills.charm",
+      "label": "Charm",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 15
+      },
+      "usage_hint": "Friendly persuasion by likability, flirtation, or warmth."
+    },
+    {
+      "path": "skills.climb",
+      "label": "Climb",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 20
+      },
+      "usage_hint": "Scaling walls, cliffs, and obstacles."
+    },
+    {
+      "path": "skills.credit_rating",
+      "label": "Credit Rating",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 0
+      },
+      "usage_hint": "Social and financial standing; sets lifestyle and access to resources."
     },
     {
       "path": "skills.cthulhu_mythos",
@@ -329,19 +533,31 @@
         "max": 99,
         "default": 0
       },
-      "usage_hint": "Knowledge of cosmic horrors. Cannot be improved by experience. Reduces maximum Sanity."
+      "usage_hint": "Understanding of Mythos truths; usually gained only through play, never at creation."
     },
     {
-      "path": "skills.stealth",
-      "label": "Stealth",
+      "path": "skills.disguise",
+      "label": "Disguise",
       "prefab": "VAL_INT",
       "category": "skills",
       "config": {
         "min": 0,
         "max": 99,
-        "default": 20
+        "default": 5
       },
-      "usage_hint": "Move silently, hide, avoid detection."
+      "usage_hint": "Altering appearance, clothing, or mannerisms to pass as someone else."
+    },
+    {
+      "path": "skills.dodge",
+      "label": "Dodge",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 0
+      },
+      "usage_hint": "Avoid incoming attacks; base is usually half DEX, but can be improved with points."
     },
     {
       "path": "skills.drive_auto",
@@ -353,45 +569,425 @@
         "max": 99,
         "default": 20
       },
-      "usage_hint": "Operate automobiles, trucks, motorcycles."
+      "usage_hint": "Operating cars and trucks under stress, including chases."
     },
     {
-      "path": "features.phobias",
-      "label": "Phobias & Manias",
-      "prefab": "CONT_TAGS",
-      "category": "features",
-      "config": {},
-      "usage_hint": "Mental disorders acquired from Sanity loss."
+      "path": "skills.electrical_repair",
+      "label": "Electrical Repair",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 10
+      },
+      "usage_hint": "Diagnosing and fixing electrical devices, wiring, radios, etc."
     },
     {
-      "path": "features.spells",
-      "label": "Spells Known",
-      "prefab": "CONT_LIST",
-      "category": "features",
-      "config": {},
-      "usage_hint": "Mythos spells learned. Each has MP cost and Sanity cost."
+      "path": "skills.fast_talk",
+      "label": "Fast Talk",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 5
+      },
+      "usage_hint": "Rapid patter and bluffing to win short-term cooperation."
     },
     {
-      "path": "inventory.equipment",
-      "label": "Equipment",
-      "prefab": "CONT_LIST",
-      "category": "inventory",
-      "config": {}
+      "path": "skills.fighting_brawl",
+      "label": "Fighting (Brawl)",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 25
+      },
+      "usage_hint": "Unarmed combat and simple hand weapons like clubs."
     },
     {
-      "path": "inventory.weapons",
-      "label": "Weapons",
-      "prefab": "CONT_LIST",
-      "category": "inventory",
-      "config": {}
+      "path": "skills.firearms_handgun",
+      "label": "Firearms (Handgun)",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 20
+      },
+      "usage_hint": "Using pistols and revolvers."
     },
     {
-      "path": "narrative.backstory",
-      "label": "Backstory",
-      "prefab": "CONT_TAGS",
-      "category": "narrative",
-      "config": {},
-      "usage_hint": "Key background elements, significant events, personality traits."
+      "path": "skills.firearms_rifle_shotgun",
+      "label": "Firearms (Rifle/Shotgun)",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 20
+      },
+      "usage_hint": "Using rifles and shotguns."
+    },
+    {
+      "path": "skills.first_aid",
+      "label": "First Aid",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 30
+      },
+      "usage_hint": "Immediate treatment of wounds; can restore a small amount of HP after injury."
+    },
+    {
+      "path": "skills.history",
+      "label": "History",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 5
+      },
+      "usage_hint": "Knowledge of the past, historical figures, and events."
+    },
+    {
+      "path": "skills.intimidate",
+      "label": "Intimidate",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 15
+      },
+      "usage_hint": "Coercion through threat, physical presence, or menace."
+    },
+    {
+      "path": "skills.jump",
+      "label": "Jump",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 20
+      },
+      "usage_hint": "Leaping over gaps, down from heights safely, etc."
+    },
+    {
+      "path": "skills.language_own",
+      "label": "Language (Own)",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 1,
+        "max": 99,
+        "default": 0
+      },
+      "usage_hint": "Native language; usually equals EDU, but can vary with Keeper approval."
+    },
+    {
+      "path": "skills.language_other",
+      "label": "Language (Other)",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 1
+      },
+      "usage_hint": "Any non-native language; specify which (e.g. French, Latin)."
+    },
+    {
+      "path": "skills.library_use",
+      "label": "Library Use",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 20
+      },
+      "usage_hint": "Finding information in libraries, archives, and databases."
+    },
+    {
+      "path": "skills.listen",
+      "label": "Listen",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 20
+      },
+      "usage_hint": "Perceiving faint sounds, eavesdropping, and general auditory awareness."
+    },
+    {
+      "path": "skills.locksmith",
+      "label": "Locksmith",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 1
+      },
+      "usage_hint": "Picking locks and opening safes."
+    },
+    {
+      "path": "skills.mechanical_repair",
+      "label": "Mechanical Repair",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 10
+      },
+      "usage_hint": "Fixing mechanical devices, engines, and machinery."
+    },
+    {
+      "path": "skills.medicine",
+      "label": "Medicine",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 1
+      },
+      "usage_hint": "Professional, long-term medical care and diagnosis."
+    },
+    {
+      "path": "skills.natural_world",
+      "label": "Natural World",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 10
+      },
+      "usage_hint": "Knowledge of flora, fauna, weather, and wilderness signs."
+    },
+    {
+      "path": "skills.navigate",
+      "label": "Navigate",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 10
+      },
+      "usage_hint": "Finding one’s way by maps, stars, or landmarks."
+    },
+    {
+      "path": "skills.occult",
+      "label": "Occult",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 5
+      },
+      "usage_hint": "Knowledge of folklore, esoteric traditions, and non-Mythos occultism."
+    },
+    {
+      "path": "skills.persuade",
+      "label": "Persuade",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 10
+      },
+      "usage_hint": "Sustained, reasoned argument to change minds over time."
+    },
+    {
+      "path": "skills.psychology",
+      "label": "Psychology",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 10
+      },
+      "usage_hint": "Reading motives and emotional states; spotting lies or instability."
+    },
+    {
+      "path": "skills.sleight_of_hand",
+      "label": "Sleight of Hand",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 10
+      },
+      "usage_hint": "Palming objects, pickpocketing, and stage tricks."
+    },
+    {
+      "path": "skills.spot_hidden",
+      "label": "Spot Hidden",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 25
+      },
+      "usage_hint": "Noticing concealed details, hidden doors, or small clues."
+    },
+    {
+      "path": "skills.stealth",
+      "label": "Stealth",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 20
+      },
+      "usage_hint": "Moving quietly, hiding, and avoiding detection."
+    },
+    {
+      "path": "skills.survival",
+      "label": "Survival (Any)",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 10
+      },
+      "usage_hint": "Living off the land in a specific environment; specify terrain (desert, arctic, etc.)."
+    },
+    {
+      "path": "skills.swim",
+      "label": "Swim",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 20
+      },
+      "usage_hint": "Swimming and staying afloat in water or other liquids."
+    },
+    {
+      "path": "skills.throw",
+      "label": "Throw",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 20
+      },
+      "usage_hint": "Accurately throwing objects or grenades."
+    },
+    {
+      "path": "skills.track",
+      "label": "Track",
+      "prefab": "VAL_INT",
+      "category": "skills",
+      "config": {
+        "min": 0,
+        "max": 99,
+        "default": 10
+      },
+      "usage_hint": "Following footprints, spoor, or other signs left by creatures."
+    }
+  ],
+  "rules": [
+    {
+      "name": "Skill Rolls and Difficulty",
+      "content": "Roll 1d100 and succeed if the result is equal to or under the relevant skill or characteristic. Hard rolls require ≤ half value; Extreme rolls require ≤ one-fifth.",
+      "tags": [
+        "core",
+        "resolution"
+      ]
+    },
+    {
+      "name": "Success Levels and Opposed Rolls",
+      "content": "Results are Fumble, Failure, Regular, Hard, Extreme, or Critical (01). In opposed tests, the highest success level wins; ties usually favor the defender or higher skill.",
+      "tags": [
+        "core",
+        "opposed"
+      ]
+    },
+    {
+      "name": "Bonus and Penalty Dice",
+      "content": "In favorable conditions add one or more bonus dice; in poor conditions add penalty dice. Roll extra tens dice and take the best (bonus) or worst (penalty) tens result.",
+      "tags": [
+        "core",
+        "modifiers"
+      ]
+    },
+    {
+      "name": "Pushing Rolls",
+      "content": "A failed roll may be pushed once if the player describes a riskier attempt. If the pushed roll also fails, the Keeper inflicts a serious narrative or mechanical consequence.",
+      "tags": [
+        "core",
+        "risk"
+      ]
+    },
+    {
+      "name": "Sanity Loss and Insanity",
+      "content": "On witnessing shocks, roll Sanity; failure costs SAN in a range set by the Keeper. Losing too much at once can cause temporary or indefinite insanity; at 0 SAN the investigator is permanently insane.",
+      "tags": [
+        "sanity",
+        "horror"
+      ]
+    },
+    {
+      "name": "Hit Points, Major Wounds, and Death",
+      "content": "HP measure physical health. A single blow dealing ≥ half max HP causes a major wound. At 0 HP, a failed CON roll usually means death; successful medical care and time restore HP.",
+      "tags": [
+        "combat",
+        "damage"
+      ]
+    },
+    {
+      "name": "Magic Points and Spells",
+      "content": "Magic Points equal POW/5 and fuel spells. Casting costs MP (and often SAN); if MP reach 0, the investigator is exhausted and may risk unconsciousness or worse.",
+      "tags": [
+        "magic",
+        "resources"
+      ]
+    },
+    {
+      "name": "Luck Rolls and Spending",
+      "content": "Luck is rolled as 3d6×5 at creation. The Keeper may call for Luck rolls to test random fortune. Investigators may spend current Luck points to turn failures into successes, but spent points rarely return quickly.",
+      "tags": [
+        "luck",
+        "resources"
+      ]
+    },
+    {
+      "name": "Combat Rounds and Options",
+      "content": "Combat proceeds in DEX order. In melee, the defender may Dodge or Fight Back; compare success levels. Ranged attacks often cannot be fought back, only dodged. Penalty dice apply when outnumbered or impaired.",
+      "tags": [
+        "combat",
+        "tactical"
+      ]
+    },
+    {
+      "name": "Investigator Development Phase",
+      "content": "After a scenario, roll 1d100 for each checked skill; if the roll exceeds the skill, add 1d10 points. High skills can grant SAN awards. This is also when SAN recovery and background changes are handled.",
+      "tags": [
+        "progression",
+        "development"
+      ]
     }
   ]
 }

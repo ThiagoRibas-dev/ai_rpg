@@ -1,0 +1,1037 @@
+{
+    "id": "dnd_3_5e",
+    "name": "Dungeons & Dragons 3.5e",
+    "engine": {
+        "dice": "d20 + modifiers vs DC or opposed roll",
+        "mechanic": "When a character attempts something uncertain, roll 1d20, add all relevant modifiers (ability, skill ranks, base attack bonus, feats, etc.) and compare the total to a Difficulty Class (DC) or an opponent's roll.",
+        "success": "If the result equals or exceeds the DC or opposing check, the attempt succeeds. If it falls short, the attempt fails, often with narrative consequences.",
+        "crit": "On a natural 20, an attack automatically hits and usually threatens a critical; if the confirmation roll also hits, damage is multiplied by the weapon's critical multiplier. Some weapons expand the threat range.",
+        "fumble": "On an attack roll, a natural 1 is always a miss. Saving throws also treat a natural 1 as an automatic failure and a natural 20 as an automatic success."
+    },
+    "procedures": {
+        "combat": "Combat occurs in rounds of about six seconds. 1) Determine surprise: if some combatants are unaware, a surprise round occurs where only aware creatures act. 2) Everyone rolls initiative (1d20 + Dexterity modifier); act in descending order. 3) On your turn you may take a standard action and a move action (or a full‑round action), plus free/swift actions as allowed. 4) Attacks are d20 + base attack bonus + relevant modifiers vs the target’s Armor Class; damage reduces hit points. 5) Special maneuvers (grapples, trips, bull rushes, etc.) use touch attacks plus opposed checks. Rounds repeat until the fight ends.",
+        "exploration": "Outside combat, characters explore using movement, skills, and abilities. The DM sets DCs for tasks like climbing, sneaking, tracking, searching, or deciphering. Skill checks are d20 + ranks + ability modifier + miscellaneous modifiers. Time is measured in minutes, hours, or days; hazards such as falling, suffocation, traps, and environmental effects are resolved with checks, saving throws, or fixed damage.",
+        "social": "Interaction uses skills such as Bluff, Diplomacy, Intimidate, Gather Information, and Sense Motive. Diplomacy can shift a creature’s attitude along a scale from Hostile to Helpful given enough time; Bluff opposes Sense Motive; Intimidate can demoralize foes or extract cooperation. The DM sets DCs or opposed checks and interprets results in terms of attitude, information, or concessions.",
+        "downtime": "Between adventures, characters rest, craft items, research, train, or manage organizations. Natural healing restores hit points per day of rest; ability damage heals over time or via magic. Spellcasters prepare spells, crafters spend XP and gold to make magic items, and characters level up when they reach XP thresholds: choose a class, update hit points, base attack bonus, saving throws, skill ranks, feats, and class features as per level progression."
+    },
+    "aliases": {
+        "str_mod": "(attributes.str.score - 10) / 2",
+        "dex_mod": "(attributes.dex.score - 10) / 2",
+        "con_mod": "(attributes.con.score - 10) / 2",
+        "int_mod": "(attributes.int.score - 10) / 2",
+        "wis_mod": "(attributes.wis.score - 10) / 2",
+        "cha_mod": "(attributes.cha.score - 10) / 2"
+    },
+    "fields": [
+        {
+            "path": "meta.campaign_name",
+            "label": "Campaign Name",
+            "prefab": "VAL_TEXT",
+            "category": "meta",
+            "usage_hint": "Name of the campaign or adventure path this character belongs to."
+        },
+        {
+            "path": "meta.source",
+            "label": "Rules Source",
+            "prefab": "VAL_TEXT",
+            "category": "meta",
+            "config": {
+                "default": "D&D 3.5e Core Rules"
+            },
+            "usage_hint": "Primary rulebooks in use (e.g. PHB/DMG/MM only, or including supplements)."
+        },
+        {
+            "path": "identity.race",
+            "label": "Race",
+            "prefab": "VAL_TEXT",
+            "category": "identity",
+            "usage_hint": "Character race (e.g. Human, Elf, Dwarf, Half‑Orc, Halfling, Gnome, Half‑Elf). Influences ability adjustments, size, speed, and racial traits."
+        },
+        {
+            "path": "identity.primary_class",
+            "label": "Primary Class",
+            "prefab": "VAL_TEXT",
+            "category": "identity",
+            "usage_hint": "Main class at the current level (e.g. Fighter, Wizard, Cleric, Rogue). For multiclass characters, this is descriptive; actual levels tracked separately."
+        },
+        {
+            "path": "identity.other_classes",
+            "label": "Other Classes / Prestige",
+            "prefab": "CONT_LIST",
+            "category": "identity",
+            "usage_hint": "Additional base or prestige classes with brief level notes (e.g. 'Rogue 3', 'Shadowdancer 2')."
+        },
+        {
+            "path": "identity.alignment",
+            "label": "Alignment",
+            "prefab": "VAL_TEXT",
+            "category": "identity",
+            "usage_hint": "Moral and ethical alignment (e.g. LG, CN, CE). Used for certain spells, class features, and items."
+        },
+        {
+            "path": "identity.deity",
+            "label": "Deity / Patron",
+            "prefab": "VAL_TEXT",
+            "category": "identity",
+            "usage_hint": "Deity, pantheon, or guiding philosophy (important for clerics, paladins, etc.)."
+        },
+        {
+            "path": "identity.background",
+            "label": "Background",
+            "prefab": "VAL_TEXT",
+            "category": "identity",
+            "usage_hint": "Short summary of origin, occupation, or notable history prior to adventuring."
+        },
+        {
+            "path": "attributes.str",
+            "label": "Strength",
+            "prefab": "VAL_COMPOUND",
+            "category": "attributes",
+            "config": {
+                "min": 1,
+                "max": 30,
+                "default": 10
+            },
+            "usage_hint": "Physical power. Use the score for checks like breaking doors; the modifier applies to melee attacks, melee and thrown damage, and Strength‑based skills."
+        },
+        {
+            "path": "attributes.dex",
+            "label": "Dexterity",
+            "prefab": "VAL_COMPOUND",
+            "category": "attributes",
+            "config": {
+                "min": 1,
+                "max": 30,
+                "default": 10
+            },
+            "usage_hint": "Agility and reflexes. Modifier affects ranged attacks, Armor Class (when not denied Dex), Reflex saves, and many skills involving balance or stealth."
+        },
+        {
+            "path": "attributes.con",
+            "label": "Constitution",
+            "prefab": "VAL_COMPOUND",
+            "category": "attributes",
+            "config": {
+                "min": 1,
+                "max": 30,
+                "default": 10
+            },
+            "usage_hint": "Health and stamina. Modifier adjusts hit points per level and Fortitude saves, and resists fatigue, poison, and similar effects."
+        },
+        {
+            "path": "attributes.int",
+            "label": "Intelligence",
+            "prefab": "VAL_COMPOUND",
+            "category": "attributes",
+            "config": {
+                "min": 1,
+                "max": 30,
+                "default": 10
+            },
+            "usage_hint": "Reasoning and knowledge. Modifier determines bonus skill points per level and affects many Intelligence‑based skills; wizards use it for bonus spells and save DCs."
+        },
+        {
+            "path": "attributes.wis",
+            "label": "Wisdom",
+            "prefab": "VAL_COMPOUND",
+            "category": "attributes",
+            "config": {
+                "min": 1,
+                "max": 30,
+                "default": 10
+            },
+            "usage_hint": "Perception, intuition, and willpower. Modifier applies to Will saves and many sensory or survival skills; clerics and druids use it for spells and DCs."
+        },
+        {
+            "path": "attributes.cha",
+            "label": "Charisma",
+            "prefab": "VAL_COMPOUND",
+            "category": "attributes",
+            "config": {
+                "min": 1,
+                "max": 30,
+                "default": 10
+            },
+            "usage_hint": "Force of personality. Modifier affects Charisma‑based skills, turning/rebuking undead, and spells for sorcerers and bards."
+        },
+        {
+            "path": "resources.hp",
+            "label": "Hit Points",
+            "prefab": "RES_POOL",
+            "category": "resources",
+            "config": {
+                "min": 0,
+                "default_max": 10
+            },
+            "usage_hint": "Total health pool. Max HP is based on class hit dice and Constitution; current HP is reduced by damage and restored by healing. At 0 HP you are disabled; at negative HP you are dying; at –10 HP you die."
+        },
+        {
+            "path": "resources.nonlethal",
+            "label": "Nonlethal Damage",
+            "prefab": "RES_COUNTER",
+            "category": "resources",
+            "config": {
+                "min": 0,
+                "default": 0
+            },
+            "usage_hint": "Accumulated nonlethal damage. When nonlethal damage exceeds current HP, the character falls unconscious rather than dying."
+        },
+        {
+            "path": "resources.spell_slots",
+            "label": "Spell Slots / Prepared Spells",
+            "prefab": "CONT_LIST",
+            "category": "resources",
+            "usage_hint": "Per‑class, per‑level spell slots or prepared spells. Each entry can track class, spell level, current slots, max slots, or prepared spell names."
+        },
+        {
+            "path": "resources.gold",
+            "label": "Wealth (Gold Pieces)",
+            "prefab": "RES_COUNTER",
+            "category": "resources",
+            "config": {
+                "min": 0,
+                "default": 0
+            },
+            "usage_hint": "Abstract measure of coins and liquid wealth available for purchases and costs like spell components or item crafting."
+        },
+        {
+            "path": "combat.ac",
+            "label": "Armor Class (AC)",
+            "prefab": "VAL_INT",
+            "category": "combat",
+            "config": {
+                "min": 1,
+                "max": 50,
+                "default": 10
+            },
+            "usage_hint": "Total AC, normally 10 + armor + shield + Dex modifier + size + other bonuses. Attacks must meet or exceed this number to hit."
+        },
+        {
+            "path": "combat.ac_touch",
+            "label": "Touch AC",
+            "prefab": "VAL_INT",
+            "category": "combat",
+            "config": {
+                "min": 1,
+                "max": 50,
+                "default": 10
+            },
+            "usage_hint": "AC against touch attacks that ignore armor, shield, and natural armor; usually 10 + Dex modifier + deflection + size + misc."
+        },
+        {
+            "path": "combat.ac_flat_footed",
+            "label": "Flat‑Footed AC",
+            "prefab": "VAL_INT",
+            "category": "combat",
+            "config": {
+                "min": 1,
+                "max": 50,
+                "default": 10
+            },
+            "usage_hint": "AC when denied Dex bonus to AC (such as during surprise); does not include Dex or dodge bonuses."
+        },
+        {
+            "path": "combat.initiative_bonus",
+            "label": "Initiative Bonus",
+            "prefab": "VAL_INT",
+            "category": "combat",
+            "config": {
+                "min": -10,
+                "max": 20,
+                "default": 0
+            },
+            "usage_hint": "Modifier added to 1d20 to determine initiative order, typically Dexterity modifier plus any feats or effects."
+        },
+        {
+            "path": "combat.base_attack_bonus",
+            "label": "Base Attack Bonus (BAB)",
+            "prefab": "VAL_INT",
+            "category": "combat",
+            "config": {
+                "min": 0,
+                "max": 20,
+                "default": 0
+            },
+            "usage_hint": "Total base attack bonus from class levels. Determines attack progression and number of attacks on a full attack."
+        },
+        {
+            "path": "combat.melee_attack_bonus",
+            "label": "Melee Attack Bonus",
+            "prefab": "VAL_INT",
+            "category": "combat",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Typical primary melee attack bonus (BAB + Strength modifier + size + misc) with a favored weapon."
+        },
+        {
+            "path": "combat.ranged_attack_bonus",
+            "label": "Ranged Attack Bonus",
+            "prefab": "VAL_INT",
+            "category": "combat",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Typical primary ranged attack bonus (BAB + Dexterity modifier + size + range penalties + misc)."
+        },
+        {
+            "path": "combat.save_fortitude",
+            "label": "Fortitude Save",
+            "prefab": "VAL_INT",
+            "category": "combat",
+            "config": {
+                "min": -5,
+                "max": 30,
+                "default": 0
+            },
+            "usage_hint": "Saving throw bonus vs effects that attack health and stamina (e.g. poison, disease). Usually base Fort save + Constitution modifier + misc."
+        },
+        {
+            "path": "combat.save_reflex",
+            "label": "Reflex Save",
+            "prefab": "VAL_INT",
+            "category": "combat",
+            "config": {
+                "min": -5,
+                "max": 30,
+                "default": 0
+            },
+            "usage_hint": "Saving throw bonus vs effects that can be dodged (e.g. fireball, traps). Usually base Reflex save + Dexterity modifier + misc."
+        },
+        {
+            "path": "combat.save_will",
+            "label": "Will Save",
+            "prefab": "VAL_INT",
+            "category": "combat",
+            "config": {
+                "min": -5,
+                "max": 30,
+                "default": 0
+            },
+            "usage_hint": "Saving throw bonus vs mental influence and many magical effects (e.g. charm, fear). Usually base Will save + Wisdom modifier + misc."
+        },
+        {
+            "path": "status.conditions",
+            "label": "Conditions",
+            "prefab": "CONT_TAGS",
+            "category": "status",
+            "usage_hint": "Active conditions such as fatigued, exhausted, blinded, stunned, prone, entangled, or frightened."
+        },
+        {
+            "path": "skills.appraise",
+            "label": "Appraise",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Total modifier for estimating item value and identifying fake or unusual goods (Int‑based)."
+        },
+        {
+            "path": "skills.balance",
+            "label": "Balance",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Moving safely on narrow or unstable surfaces; often affected by armor check penalty (Dex‑based)."
+        },
+        {
+            "path": "skills.bluff",
+            "label": "Bluff",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Lies, feints, and secret messages; opposed by Sense Motive (Cha‑based)."
+        },
+        {
+            "path": "skills.climb",
+            "label": "Climb",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Scaling walls and cliffs; armor check penalty applies (Str‑based)."
+        },
+        {
+            "path": "skills.concentration",
+            "label": "Concentration",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Maintaining spells or focus under duress (wounds, distractions, vigorous motion) (Con‑based)."
+        },
+        {
+            "path": "skills.craft",
+            "label": "Craft",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Generic craft modifier; specify specialty (e.g. Craft (Weaponsmithing)); used for making and repairing items (Int‑based)."
+        },
+        {
+            "path": "skills.diplomacy",
+            "label": "Diplomacy",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Negotiating and improving attitudes along the Hostile‑Helpful scale (Cha‑based)."
+        },
+        {
+            "path": "skills.disable_device",
+            "label": "Disable Device",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Disarming traps and sabotaging mechanisms (trained only; Int‑based)."
+        },
+        {
+            "path": "skills.disguise",
+            "label": "Disguise",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Altering appearance, voice, or mannerisms to pass as someone else (Cha‑based)."
+        },
+        {
+            "path": "skills.escape_artist",
+            "label": "Escape Artist",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Slipping bonds, squeezing through tight spaces, escaping grapples; ACP may apply (Dex‑based)."
+        },
+        {
+            "path": "skills.gather_information",
+            "label": "Gather Information",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Working taverns and streets for rumors and news over hours (Cha‑based)."
+        },
+        {
+            "path": "skills.handle_animal",
+            "label": "Handle Animal",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Handling, training, and directing animals; many uses are trained only (Cha‑based)."
+        },
+        {
+            "path": "skills.heal",
+            "label": "Heal",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "First aid, stabilizing the dying, treating poison and disease (Wis‑based)."
+        },
+        {
+            "path": "skills.hide",
+            "label": "Hide",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Staying out of sight; opposed by Spot; armor check penalty applies (Dex‑based)."
+        },
+        {
+            "path": "skills.intimidate",
+            "label": "Intimidate",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Threatening or bullying to influence others; can demoralize foes in combat (Cha‑based)."
+        },
+        {
+            "path": "skills.jump",
+            "label": "Jump",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Horizontal and vertical leaps; armor check penalty applies (Str‑based)."
+        },
+        {
+            "path": "skills.knowledge",
+            "label": "Knowledge (Any)",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Breadth of lore; specify field such as Arcana, Religion, Nature, Local, Nobility, Planes, etc. (trained only; Int‑based)."
+        },
+        {
+            "path": "skills.listen",
+            "label": "Listen",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Hearing noises or detecting hidden creatures (Wis‑based)."
+        },
+        {
+            "path": "skills.move_silently",
+            "label": "Move Silently",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Moving quietly, opposed by Listen; armor check penalty applies (Dex‑based)."
+        },
+        {
+            "path": "skills.open_lock",
+            "label": "Open Lock",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Picking mechanical locks (trained only; Dex‑based)."
+        },
+        {
+            "path": "skills.perform",
+            "label": "Perform",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Entertaining with music, acting, storytelling, etc.; specify form (Cha‑based)."
+        },
+        {
+            "path": "skills.ride",
+            "label": "Ride",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Controlling mounts in and out of combat (Dex‑based)."
+        },
+        {
+            "path": "skills.search",
+            "label": "Search",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Actively looking for hidden objects, traps, or details (Int‑based)."
+        },
+        {
+            "path": "skills.sense_motive",
+            "label": "Sense Motive",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Reading intentions and detecting lies; opposes Bluff (Wis‑based)."
+        },
+        {
+            "path": "skills.sleight_of_hand",
+            "label": "Sleight of Hand",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Pickpocketing, palming objects, and subtle manual tricks (trained only; Dex‑based; ACP applies)."
+        },
+        {
+            "path": "skills.spellcraft",
+            "label": "Spellcraft",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Identifying spells and magical effects, and understanding magical writings (trained only; Int‑based)."
+        },
+        {
+            "path": "skills.spot",
+            "label": "Spot",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Noticing creatures or objects at a distance; complements Listen (Wis‑based)."
+        },
+        {
+            "path": "skills.survival",
+            "label": "Survival",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Tracking, foraging, navigating wilderness, and enduring harsh environments (Wis‑based)."
+        },
+        {
+            "path": "skills.swim",
+            "label": "Swim",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Moving through water; armor check penalty applies (Str‑based)."
+        },
+        {
+            "path": "skills.tumble",
+            "label": "Tumble",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Dodging past foes and avoiding attacks of opportunity; trained only and ACP applies (Dex‑based)."
+        },
+        {
+            "path": "skills.use_magic_device",
+            "label": "Use Magic Device",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Activating magic items without meeting normal requirements (trained only; Cha‑based)."
+        },
+        {
+            "path": "skills.use_rope",
+            "label": "Use Rope",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Tying secure knots, binding, and managing ropes or grapples (Dex‑based)."
+        },
+        {
+            "path": "inventory.weapons",
+            "label": "Weapons",
+            "prefab": "CONT_LIST",
+            "category": "inventory",
+            "usage_hint": "Carried weapons with details such as name, type, damage dice, critical range/multiplier, and properties."
+        },
+        {
+            "path": "inventory.armor",
+            "label": "Armor & Shields",
+            "prefab": "CONT_LIST",
+            "category": "inventory",
+            "usage_hint": "Worn armor and shields with armor bonus, maximum Dex, armor check penalty, and arcane spell failure chance."
+        },
+        {
+            "path": "inventory.gear",
+            "label": "Adventuring Gear",
+            "prefab": "CONT_LIST",
+            "category": "inventory",
+            "usage_hint": "Packs, tools, consumables, and miscellaneous equipment the character carries."
+        },
+        {
+            "path": "inventory.carried_weight",
+            "label": "Carried Items (Weighted)",
+            "prefab": "CONT_WEIGHTED",
+            "category": "inventory",
+            "usage_hint": "Items with weight for tracking encumbrance; each entry should include name and weight in pounds."
+        },
+        {
+            "path": "features.feats",
+            "label": "Feats",
+            "prefab": "CONT_LIST",
+            "category": "features",
+            "usage_hint": "Feats the character has taken (combat, metamagic, item creation, etc.). Each entry should contain name and short mechanical benefit."
+        },
+        {
+            "path": "features.class_features",
+            "label": "Class Features",
+            "prefab": "CONT_LIST",
+            "category": "features",
+            "usage_hint": "Core abilities from class levels (e.g. Rage, Sneak Attack, Turn Undead, Wild Shape)."
+        },
+        {
+            "path": "features.spellcasting",
+            "label": "Spellcasting Notes",
+            "prefab": "VAL_TEXT",
+            "category": "features",
+            "usage_hint": "High‑level summary of how this character casts spells (arcane or divine, prepared or spontaneous, key ability, schools or domains)."
+        },
+        {
+            "path": "connections.allies",
+            "label": "Allies & Companions",
+            "prefab": "CONT_LIST",
+            "category": "connections",
+            "usage_hint": "Important friendly NPCs, cohorts, animal companions, or familiars, with short notes."
+        },
+        {
+            "path": "connections.enemies",
+            "label": "Enemies & Rivals",
+            "prefab": "CONT_LIST",
+            "category": "connections",
+            "usage_hint": "Named foes, rival groups, or antagonistic organizations relevant to the character."
+        },
+        {
+            "path": "connections.organizations",
+            "label": "Organizations & Factions",
+            "prefab": "CONT_LIST",
+            "category": "connections",
+            "usage_hint": "Guilds, orders, churches, or factions the character is connected to, including standing or rank."
+        },
+        {
+            "path": "narrative.personality",
+            "label": "Personality & Mannerisms",
+            "prefab": "VAL_TEXT",
+            "category": "narrative",
+            "usage_hint": "Summary of how the character behaves, reacts, and presents themselves socially."
+        },
+        {
+            "path": "narrative.goals",
+            "label": "Goals & Motivations",
+            "prefab": "VAL_TEXT",
+            "category": "narrative",
+            "usage_hint": "Short‑ and long‑term objectives and personal motives that drive the character."
+        },
+        {
+            "path": "narrative.backstory",
+            "label": "Backstory Summary",
+            "prefab": "VAL_TEXT",
+            "category": "narrative",
+            "usage_hint": "Key events in the character’s past, important relationships, and formative experiences."
+        },
+        {
+            "path": "progression.level",
+            "label": "Character Level",
+            "prefab": "VAL_INT",
+            "category": "progression",
+            "config": {
+                "min": 1,
+                "max": 20,
+                "default": 1
+            },
+            "usage_hint": "Total character level across all classes (used for XP tables, skill rank caps, and some effects)."
+        },
+        {
+            "path": "progression.xp",
+            "label": "Experience Points (XP)",
+            "prefab": "RES_COUNTER",
+            "category": "progression",
+            "config": {
+                "min": 0,
+                "default": 0
+            },
+            "usage_hint": "Accumulated XP from overcoming challenges. When thresholds are reached, the character gains a level."
+        },
+        {
+            "path": "progression.next_level_xp",
+            "label": "XP Needed for Next Level",
+            "prefab": "RES_COUNTER",
+            "category": "progression",
+            "config": {
+                "min": 0,
+                "default": 1000
+            },
+            "usage_hint": "Reference threshold for advancing to the next character level using the standard XP table."
+        },
+        {
+            "path": "progression.feat_count",
+            "label": "Total Feats Taken",
+            "prefab": "VAL_INT",
+            "category": "progression",
+            "config": {
+                "min": 0,
+                "max": 30,
+                "default": 1
+            },
+            "usage_hint": "Number of feats currently chosen, including level‑based, racial, and bonus feats."
+        }
+    ],
+    "rules": [
+        {
+            "name": "Core d20 Check Mechanic",
+            "content": "For attacks, skill checks, and many special actions, roll 1d20, add all relevant modifiers, and compare the total to a Difficulty Class (DC) or an opposing roll. If the result meets or exceeds the target number, the attempt succeeds; otherwise it fails.",
+            "tags": [
+                "core",
+                "resolution"
+            ]
+        },
+        {
+            "name": "Ability Scores and Modifiers",
+            "content": "The six abilities—Strength, Dexterity, Constitution, Intelligence, Wisdom, and Charisma—usually range from 3 to 18 for adventurers. Each ability has a modifier equal to (score − 10) ÷ 2, rounded down. That modifier applies to many rolls and derived statistics.",
+            "tags": [
+                "core",
+                "abilities"
+            ]
+        },
+        {
+            "name": "Attack Rolls and Armor Class",
+            "content": "To hit in combat, roll 1d20 and add your attack bonus. For melee attacks this is typically base attack bonus + Strength modifier + size and other modifiers; for ranged attacks use base attack bonus + Dexterity modifier + size and range modifiers. If the total is at least the target’s Armor Class, the attack hits.",
+            "tags": [
+                "combat",
+                "attack"
+            ]
+        },
+        {
+            "name": "Critical Hits and Automatic Misses",
+            "content": "On an attack roll, a natural 20 always hits and usually threatens a critical hit; roll again with the same modifiers to confirm. If that roll would also hit, multiply the damage by the weapon’s critical multiplier. A natural 1 on an attack roll is always a miss. Extra damage dice, such as from sneak attack, are not multiplied.",
+            "tags": [
+                "combat",
+                "critical"
+            ]
+        },
+        {
+            "name": "Saving Throws",
+            "content": "Fortitude, Reflex, and Will saves protect against unusual or magical effects. Each save is a d20 + a save bonus based on class and level plus a key ability modifier (Constitution for Fortitude, Dexterity for Reflex, Wisdom for Will). A natural 1 is always a failed save; a natural 20 is always a successful save.",
+            "tags": [
+                "defense",
+                "saving_throws"
+            ]
+        },
+        {
+            "name": "Hit Points, Dying, and Death",
+            "content": "Hit points measure how much injury a character can sustain. At 0 HP, a character is disabled and can take only a move or standard action per round, losing 1 HP if they act. From –1 to –9 HP the character is dying, losing 1 HP each round until stabilized. At –10 HP, the character is dead.",
+            "tags": [
+                "combat",
+                "hp"
+            ]
+        },
+        {
+            "name": "Skills, Ranks, and Synergy",
+            "content": "Skill checks are d20 + total skill bonus, which includes ranks, ability modifier, and modifiers like synergy or circumstance. Class skills cost 1 point per rank with a maximum of level + 3; cross‑class skills cost 2 points per rank with half the maximum. Having 5 ranks in certain skills grants +2 synergy bonuses on related skills.",
+            "tags": [
+                "skills",
+                "advancement"
+            ]
+        },
+        {
+            "name": "Feats and Prerequisites",
+            "content": "Feats are binary talents that allow special actions or bonuses. All characters gain feats at 1st level and every three levels thereafter (3rd, 6th, 9th, etc.), with additional bonus feats from certain classes or races. Many feats require prerequisites such as minimum ability scores, base attack bonus, or other feats.",
+            "tags": [
+                "feats",
+                "builds"
+            ]
+        },
+        {
+            "name": "Levels, XP, and Ability Increases",
+            "content": "Characters earn experience points for defeating monsters and overcoming challenges. Upon reaching certain XP totals, they gain levels, improving hit points, base attack bonus, saving throws, skills, and class features. Every four levels (4th, 8th, 12th, 16th, and 20th), a character also gains +1 to any one ability score.",
+            "tags": [
+                "progression",
+                "xp"
+            ]
+        },
+        {
+            "name": "Spellcasting and Spell DCs",
+            "content": "Spellcasting uses limited daily spell slots by class and level. Prepared casters (clerics, druids, wizards) choose specific spells each day; spontaneous casters (sorcerers, bards) know a fixed list but cast flexibly. The saving throw DC against a spell is 10 + spell level + the caster’s relevant ability modifier.",
+            "tags": [
+                "magic",
+                "spells"
+            ]
+        },
+        {
+            "name": "Initiative, Surprise, and the Surprise Round",
+            "content": "At the start of combat, each creature rolls initiative (1d20 + initiative bonus). Creatures that are unaware of their opponents are surprised and do not act in the surprise round. In the surprise round, only those who are not surprised may take a single standard or move action (plus free actions). After the surprise round, all creatures act in initiative order each full round.",
+            "tags": [
+                "combat",
+                "initiative",
+                "surprise"
+            ]
+        },
+        {
+            "name": "Attacks of Opportunity",
+            "content": "Certain actions in melee provoke attacks of opportunity from threatening enemies, such as moving out of a threatened square, making a ranged attack in melee, or casting a spell without casting defensively. An attack of opportunity is a single melee attack made at your normal attack bonus. A creature normally gets one attack of opportunity per round, though the Combat Reflexes feat allows more.",
+            "tags": [
+                "combat",
+                "attacks_of_opportunity"
+            ]
+        },
+        {
+            "name": "5-Foot Steps and Movement in Combat",
+            "content": "In combat, a creature that does not otherwise move during its turn can take a 5-foot step as a free action. This 5-foot step does not provoke attacks of opportunity. Any additional movement beyond that uses your move action and may provoke attacks of opportunity when leaving threatened squares.",
+            "tags": [
+                "combat",
+                "movement"
+            ]
+        },
+        {
+            "name": "Flanking and Flat-Footed",
+            "content": "Two allies flank a foe when they threaten it from opposite sides in melee. Each flanking attacker gains a +2 bonus on attack rolls against that foe. A creature is flat-footed before it has acted in combat or when otherwise denied its Dexterity bonus to AC; attackers gain their usual benefits from the target’s loss of Dex bonus, and some abilities (such as sneak attack) apply.",
+            "tags": [
+                "combat",
+                "flanking"
+            ]
+        },
+        {
+            "name": "Common Combat Maneuvers",
+            "content": "Special combat maneuvers like bull rush, disarm, grapple, overrun, sunder, and trip follow specific procedures and often provoke attacks of opportunity unless special feats are used. They typically require a melee touch attack followed by opposed checks such as Strength checks, opposed attack rolls, or grapple checks. Success inflicts control effects (knocking prone, moving foes, seizing weapons, etc.) instead of or in addition to damage.",
+            "tags": [
+                "combat",
+                "maneuvers"
+            ]
+        },
+        {
+            "name": "Cover, Concealment, and Ranged Attacks",
+            "content": "Obstacles and terrain between attacker and target can provide cover or concealment. Cover grants a bonus to AC and Reflex saves, while concealment (such as fog or shadows) grants a miss chance. Total cover blocks line of effect entirely; total concealment blocks line of sight and imposes a 50% miss chance. Ranged and area attacks must account for these modifiers when resolving hits.",
+            "tags": [
+                "combat",
+                "ranged",
+                "cover"
+            ]
+        },
+        {
+            "name": "Casting Spells in Combat and Concentration",
+            "content": "Casting a spell usually provokes attacks of opportunity from adjacent foes unless you cast defensively. If damaged or otherwise distracted while casting, you must make a Concentration check or lose the spell. Casting defensively (avoiding attacks of opportunity) raises the Concentration DC but lets you cast without provoking if you succeed.",
+            "tags": [
+                "magic",
+                "concentration",
+                "combat"
+            ]
+        },
+        {
+            "name": "Damage Reduction, Energy Resistance, and Immunities",
+            "content": "Some creatures reduce or ignore certain forms of damage. Damage reduction (DR) subtracts a fixed amount from physical attacks unless they are of a specific type (such as magic, silver, or adamantine). Energy resistance reduces damage from specific energy types (acid, cold, electricity, fire, sonic) by a stated amount. Immunities make a creature unaffected by particular damage types, effects, or conditions unless specified otherwise.",
+            "tags": [
+                "defense",
+                "damage_reduction"
+            ]
+        },
+        {
+            "name": "Conditions and Status Effects",
+            "content": "Many spells and abilities inflict conditions like blinded, deafened, dazzled, fatigued, exhausted, frightened, shaken, stunned, paralyzed, prone, or entangled. Conditions stack with normal damage and often modify a creature’s AC, movement, attack rolls, saving throws, or skill checks until they are removed or the effect ends.",
+            "tags": [
+                "status",
+                "conditions"
+            ]
+        },
+        {
+            "name": "Natural Healing and Rest",
+            "content": "Without magic, characters regain hit points through rest. A full night’s rest (8 hours) restores 1 hit point per character level. Complete bed rest over a full day can restore additional hit points. Ability damage heals more slowly and usually requires magic or extended rest to recover fully.",
+            "tags": [
+                "healing",
+                "downtime"
+            ]
+        },
+        {
+            "name": "Turn or Rebuke Undead",
+            "content": "Certain divine classes (such as clerics and paladins) can turn or rebuke undead. Turning forces undead within range to flee, cower, or be destroyed based on the turning check and turning damage rolled; rebuking instead forces them to cower or come under the caster’s control. The power and number of undead affected depend on class level and Charisma modifier.",
+            "tags": [
+                "magic",
+                "divine",
+                "undead"
+            ]
+        },
+        {
+            "name": "Magic Item Creation and XP Costs",
+            "content": "Crafting magic items requires specific item creation feats, sufficient caster level, access to required spells, and time and gold. Most permanent magic items cost XP and gold to craft; the creator must spend XP equal to 1/25 of the item’s market price, plus raw materials costing half that price. Failing creation rolls can waste time and resources.",
+            "tags": [
+                "magic_items",
+                "crafting"
+            ]
+        },
+        {
+            "name": "Armor Check Penalty and Arcane Spell Failure",
+            "content": "Medium and heavy armors and shields impose an armor check penalty on many physical skills such as Balance, Climb, Hide, Jump, Move Silently, Sleight of Hand, and Tumble. Arcane spellcasters wearing armor also risk arcane spell failure: whenever they cast an arcane spell with somatic components, they must roll; failure causes the spell to be lost without effect.",
+            "tags": [
+                "armor",
+                "skills",
+                "magic"
+            ]
+        }
+    ]
+}

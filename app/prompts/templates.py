@@ -199,3 +199,13 @@ Extract the step-by-step **Procedures** for the following game modes:
 
 Provide clear, numbered steps for the AI Game Master to follow.
 """
+
+EXTRACT_RULES_PROMPT = """
+Extract specific **Game Mechanics & Rules** from the text.
+Look for granular rules like "Falling Damage", "Grappling", "Resting", "Spellcasting Costs", "Condition Effects".
+
+Return a list of rule objects with:
+- Name (e.g. "Grappling")
+- Content (The summary of the rule)
+- Tags (e.g. ["combat", "action"])
+"""
