@@ -101,20 +101,17 @@ class ChatComponent:
 
         with self.container:
             for index, msg in enumerate(session.history):
-                if "role" in msg:
-                    role = msg.role
-
-                if role == "tool":
+                if msg.role == "tool":
                     continue
 
-                if role == "user":
+                if msg.role == "user":
                     name = "Player"
-                elif role == "assistant":
+                elif msg.role == "assistant":
                     name = "Game Master"
-                elif role == "system":
+                elif msg.role == "system":
                     name = "System"
                 else:
-                    name = role.capitalize()
+                    name = msg.role.capitalize()
 
                 self._render_interactive_message(index, msg, name)
 
@@ -385,10 +382,10 @@ class ChatComponent:
             return
 
         self.input_area.value = ""
-        
+
         # FIX: Do NOT add message here. The Orchestrator adds it to the queue via plan_and_execute.
-        # self.add_message("You", text, "user") 
-        
+        # self.add_message("You", text, "user")
+
         self.bridge._last_input = text
 
         self.set_generating(True)

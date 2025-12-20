@@ -39,10 +39,11 @@ class SheetGenerator:
         # 3. Build Prompt
         prompt = f"""
 ### TASK: CREATE CHARACTER DATA
-You are populating a character sheet for the system: {manifest.name}.
+You are populating a character sheet for the system:
+{manifest}.
 
 **Rules Context:**
-{rules_text[:3000] if rules_text else "Refer to system knowledge."}
+{rules_text if rules_text else "Refer to system knowledge."}
 
 **Character Concept:**
 {character_concept}
