@@ -1,13 +1,13 @@
 from nicegui import ui
 import asyncio
 import logging
-import json
 import time
 from app.setup.world_gen_service import WorldGenService
 from app.setup.sheet_generator import SheetGenerator
 from app.services.game_setup_service import GameSetupService
-from app.setup.schemas import LoreData  # CHANGED: Use LoreData instead of MemoryUpsert
-from app.models.vocabulary import GameVocabulary
+from app.setup.schemas import LoreData
+from app.prefabs.manifest import SystemManifest
+from app.models.sheet_schema import CharacterSheetSpec
 
 logger = logging.getLogger(__name__)
 
@@ -189,40 +189,31 @@ class SetupWizard:
             world_service = WorldGenService(connector)
             self.extracted_world = world_service.extract_world_data(self.input_world)
 
-            # 2. Check for Vocabulary
-            vocabulary = None
+            # 2. Load System Manifest from the prompt, if present
+            manifest = None
             if self.prompt.template_manifest:
                 try:
-                    data = json.loads(self.prompt.template_manifest)
-                    if "vocabulary" in data:
-                        vocabulary = GameVocabulary(**data["vocabulary"])
+                    manifest = SystemManifest.from_json(self.prompt.template_manifest)
                 except Exception as e:
-                    logger.warning(f"Failed to load vocabulary from manifest: {e}")
+                    logger.warning(f"Failed to load SystemManifest from prompt: {e}")
 
-            # 3. Character Gen
+            # 3. Character Gen (Manifest-aware)
             self._update_status("[Step 2/4] Generating Character...")
-            if vocabulary:
-                # STRATEGY 2: VOCABULARY-AWARE
-                self._update_status("[Step 2/4] Generating from Vocabulary...")
+            if manifest:
+                # New manifest-aware path
                 self.generated_spec, self.generated_values = (
-                    sheet_gen.generate_from_vocabulary(
-                        vocabulary,
+                    sheet_gen.generate_from_manifest(
+                        manifest,
                         self.input_char,
                         rules_text=self.prompt.rules_document,
                     )
                 )
             else:
-                # STRATEGY 1: LEGACY
-                self._update_status("[Step 2/4] Architecting Sheet...")
-                self.generated_spec = sheet_gen.generate_structure(
-                    self.prompt.rules_document, self.input_char
-                )
-                self._update_status("[Step 3/4] Populating Data...")
-                self.generated_values = sheet_gen.populate_sheet(
-                    self.generated_spec,
-                    self.input_char,
-                    rules_text=self.prompt.rules_document,
-                )
+                # Fallback: no manifest found, very minimal stub
+                self.generated_spec = CharacterSheetSpec()
+                self.generated_values = {
+                    "identity": {"name": "Player"},
+                }
 
             # 4. Opening Crawl
             self._update_status("[Step 4/4] Writing Intro...")

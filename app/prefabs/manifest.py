@@ -200,3 +200,97 @@ class SystemManifest:
     def from_file(cls, path: Path) -> "SystemManifest":
         with open(path, "r", encoding="utf-8") as f:
             return cls.from_dict(json.load(f))
+
+
+# ---------------------------------------------------------------------------
+# Manifest utility functions
+# ---------------------------------------------------------------------------
+
+
+def create_empty_manifest(system_id: str, name: str) -> "SystemManifest":
+    """
+    Create a very simple, empty SystemManifest with a generic d20 engine.
+    Used as a safe fallback when no manifest is configured.
+    """
+    engine = EngineConfig(
+        dice="d20",
+        mechanic="Roll d20 + modifiers vs DC.",
+        success="Result >= DC is success.",
+        crit="Natural 20 is a critical hit; natural 1 is an automatic miss.",
+        fumble="",
+    )
+    return SystemManifest(
+        id=system_id,
+        name=name,
+        engine=engine,
+        procedures={},
+        fields=[],
+        aliases={},
+        rules=[],
+    )
+
+
+def validate_manifest(manifest: "SystemManifest") -> list[str]:
+    """
+    Basic structural validation of a manifest.
+    Returns a list of warning or error strings; empty list means 'looks OK'.
+    """
+    problems: list[str] = []
+
+    if not manifest.id:
+        problems.append("Manifest is missing an id.")
+    if not manifest.name:
+        problems.append("Manifest is missing a name.")
+
+    # Validate categories
+    for f in manifest.fields:
+        if f.category not in VALID_CATEGORIES:
+            problems.append(f"Field '{f.path}' uses unknown category '{f.category}'.")
+
+    # Engine sanity check
+    if not manifest.engine.dice:
+        problems.append("Engine is missing dice description.")
+
+    return problems
+
+
+def merge_manifests(
+    base: "SystemManifest", override: "SystemManifest"
+) -> "SystemManifest":
+    """
+    Merge two manifests in a simple, predictable way:
+    - Override basic metadata (name, engine, aliases, procedures) from 'override'
+    - Combine fields and rules, preferring override entries by path/name when duplicated.
+    """
+    # Engine & metadata from override
+    engine = override.engine or base.engine
+    name = override.name or base.name
+    system_id = override.id or base.id
+
+    # Merge aliases (override wins)
+    merged_aliases = {**base.aliases, **override.aliases}
+
+    # Merge procedures (override wins by key)
+    merged_procs = {**base.procedures, **override.procedures}
+
+    # Merge fields keyed by path (override wins)
+    field_by_path: dict[str, FieldDef] = {f.path: f for f in base.fields}
+    for f in override.fields:
+        field_by_path[f.path] = f
+    merged_fields = list(field_by_path.values())
+
+    # Merge rules keyed by name (override wins)
+    rule_by_name: dict[str, RuleDef] = {r.name: r for r in base.rules}
+    for r in override.rules:
+        rule_by_name[r.name] = r
+    merged_rules = list(rule_by_name.values())
+
+    return SystemManifest(
+        id=system_id,
+        name=name,
+        engine=engine,
+        procedures=merged_procs,
+        fields=merged_fields,
+        aliases=merged_aliases,
+        rules=merged_rules,
+    )
