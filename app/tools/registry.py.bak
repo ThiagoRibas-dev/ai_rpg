@@ -140,21 +140,6 @@ class ToolRegistry:
         properties.pop("name", None)
         properties = _resolve_refs(properties, defs)
         _clean_schema(properties)
-
-        # Ensure all parameters have a JSON Schema "type" where possible.
-        # Some fields (like 'Any') produce schemas with only a description/title,
-        # which llama.cpp's JSON-schema-to-BNF converter does not accept.
-        for prop_name, prop_schema in properties.items():
-            if not isinstance(prop_schema, dict):
-                continue
-            # Skip schemas that already declare a type or use combinators/refs/enums
-            if "type" in prop_schema:
-                continue
-            if any(key in prop_schema for key in ("oneOf", "anyOf", "allOf", "enum", "$ref")):
-                continue
-            # Fallback: treat as string for schema purposes
-            prop_schema["type"] = "string"
-
         required = [r for r in schema.get("required", []) if r != "name"]
 
         parameters_schema = {"type": "object"}
@@ -170,6 +155,8 @@ class ToolRegistry:
                 "parameters": parameters_schema,
             }
         )
+
+    @staticmethod
     def _get_tool_name(schema_type: Type[BaseModel]) -> str:
         return schema_type.model_fields["name"].default
 

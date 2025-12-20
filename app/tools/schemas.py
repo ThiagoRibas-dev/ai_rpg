@@ -1,4 +1,5 @@
-from typing import Any, Literal, Optional, Union
+from typing import Literal, Optional, Union
+
 from pydantic import BaseModel, Field
 
 # --- ATOMIC GAMEPLAY TOOLS ---
@@ -20,7 +21,7 @@ class Set(BaseModel):
     """
     name: Literal["set"] = "set"
     path: str = Field(..., description="Full path to the field (e.g. 'status.is_hiding', 'inventory.weapon').")
-    value: Any = Field(..., description="The new value to set.")
+    value: Union[int, float, bool, str, dict, list] = Field(..., description="The new value to set.")
     reason: str = Field("Update", description="Brief reason for the change.")
 
 class Mark(BaseModel):

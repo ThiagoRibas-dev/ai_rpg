@@ -308,8 +308,14 @@ class ReActTurnManager:
                 suggestion_history = working_history + [
                     Message(role="assistant", content=full_response)
                 ]
+                suggestion_history.append(
+                    Message(
+                        role="user",
+                        content="Out-of-character: Based on the current game state and recent events, suggest 3-5 concise, actionable options for the player based on the narrative. JSON only.",
+                    )
+                )
                 suggestions = self.llm_connector.get_structured_response(
-                    system_prompt="Suggest 3-5 concise, actionable options for the player based on the narrative. JSON only.",
+                    system_prompt=turn_system_prompt,
                     chat_history=suggestion_history,
                     output_schema=ActionChoices,
                     temperature=0.7
