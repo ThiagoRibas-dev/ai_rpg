@@ -1,12 +1,10 @@
 from typing import List, Optional, Any
+import json
 from .base_repository import BaseRepository
-from app.models.sheet_schema import CharacterSheetSpec
 
 
 class StatTemplateRepository(BaseRepository):
-    """
-    Handles database operations for CharacterSheetSpec.
-    """
+    """Handles database operations for stat_templates."""
 
     def create_table(self):
         cursor = self.conn.cursor()
@@ -41,15 +39,14 @@ class StatTemplateRepository(BaseRepository):
             return cursor.lastrowid
         raise ValueError("Failed to create stat template")
 
-    def get_by_id(self, template_id: int) -> Optional[CharacterSheetSpec]:
+    def get_by_id(self, template_id: int) -> Optional[dict]:
         row = self._fetchone(
             "SELECT data_json FROM stat_templates WHERE id = ?", (template_id,)
         )
         if row:
             try:
-                return CharacterSheetSpec.model_validate_json(row["data_json"])
+                return json.loads(row["data_json"])
             except Exception:
-                # If migration failed or old data exists, return None or handle gracefully
                 return None
         return None
 

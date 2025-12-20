@@ -97,7 +97,17 @@ class NiceGUIBridge:
                 role = "assistant" if msg_type == "message_bubble" else "thought"
                 if "role" in msg:
                     role = msg["role"]
-                self.chat_component.add_message("AI", msg.get("content", ""), role)
+
+                if role == "user":
+                    name = "Player"
+                elif role == "assistant":
+                    name = "Game Master"
+                elif role == "system":
+                    name = "System"
+                else:
+                    name = role.capitalize()
+
+                self.chat_component.add_message(name, msg.get("content", ""), role)
 
         elif msg_type == "tool_call":
             if self.chat_component:

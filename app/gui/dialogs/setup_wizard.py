@@ -1,13 +1,14 @@
 from nicegui import ui
 import asyncio
 import logging
+import json
 import time
+from app.prefabs.validation import validate_entity
 from app.setup.world_gen_service import WorldGenService
 from app.setup.sheet_generator import SheetGenerator
 from app.services.game_setup_service import GameSetupService
 from app.setup.schemas import LoreData
 from app.prefabs.manifest import SystemManifest
-from app.models.sheet_schema import CharacterSheetSpec
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,8 @@ class SetupWizard:
         self.generated_values = None
         self.extracted_world = None
         self.generated_opening = ""
+        self.preview_entity = None
+        self.manifest = None
 
         self.is_generating = False
 
@@ -191,6 +194,7 @@ class SetupWizard:
 
             # 2. Load System Manifest from the prompt, if present
             manifest = None
+            self._update_status("[Step 2/4] Loading manifest from prompt...")
             if self.prompt.template_manifest:
                 try:
                     manifest = SystemManifest.from_json(self.prompt.template_manifest)
@@ -198,28 +202,25 @@ class SetupWizard:
                     logger.warning(f"Failed to load SystemManifest from prompt: {e}")
 
             # 3. Character Gen (Manifest-aware)
-            self._update_status("[Step 2/4] Generating Character...")
+            self._update_status("[Step 3/4] Generating Character...")
             if manifest:
-                # New manifest-aware path
-                self.generated_spec, self.generated_values = (
-                    sheet_gen.generate_from_manifest(
-                        manifest,
-                        self.input_char,
-                        rules_text=self.prompt.rules_document,
-                    )
+                raw_values = sheet_gen.generate_from_manifest(
+                    manifest,
+                    self.input_char,
+                    rules_text=self.prompt.rules_document,
                 )
+                validated_entity, _ = validate_entity(raw_values or {}, manifest)
+                self.preview_entity = validated_entity
+                self.manifest = manifest
             else:
-                # Fallback: no manifest found, very minimal stub
-                self.generated_spec = CharacterSheetSpec()
-                self.generated_values = {
-                    "identity": {"name": "Player"},
-                }
+                self.preview_entity = {"identity": {"name": "Player"}}
+                self.manifest = None
 
             # 4. Opening Crawl
             self._update_status("[Step 4/4] Writing Intro...")
 
             class DummyChar:
-                name = self.generated_values.get("identity", {}).get("name", "Player")
+                name = (self.preview_entity.get("identity") or {}).get("name", "Player")
 
             self.generated_opening = world_service.generate_opening_crawl(
                 DummyChar(), self.extracted_world, self.input_world
@@ -254,7 +255,7 @@ class SetupWizard:
                 "w-full flex-grow bg-slate-800 p-2 rounded scroll-y"
             ):
                 with ui.tab_panel(t_char):
-                    self._render_dynamic_sheet_form()
+                    self._render_manifest_character_sheet()
 
                 with ui.tab_panel(t_world):
                     with ui.scroll_area().classes("h-full pr-4"):
@@ -445,3 +446,23 @@ class SetupWizard:
         except Exception as e:
             ui.notify(f"Creation Failed: {str(e)}", type="negative")
             logger.error(f"Creation failed: {e}", exc_info=True)
+
+    def _render_manifest_character_sheet(self):
+        """
+        Simple preview of the generated character entity during the New Game wizard.
+        This renders the exact data that will be stored in game_state.
+        For now, it uses a pretty-printed JSON block.
+        """
+        if not getattr(self, "preview_entity", None):
+            ui.label("No character data generated yet.").classes("text-gray-500 italic")
+            return
+
+        # Pretty-print the entity as JSON
+        try:
+            pretty = json.dumps(self.preview_entity, indent=2, ensure_ascii=False)
+        except TypeError:
+            pretty = str(self.preview_entity)
+
+        self.json_editor = ui.json_editor({"content": {"json": pretty}}).classes(
+            "w-full flex-grow"
+        )

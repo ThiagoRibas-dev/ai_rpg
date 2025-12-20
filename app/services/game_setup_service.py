@@ -107,7 +107,7 @@ class GameSetupService:
         manifest_db_id = None
         existing_m = self.db.manifests.get_by_system_id(manifest.id)
         if existing_m:
-            manifest_db_id = existing_m.id
+            manifest_db_id = existing_m["id"]
         else:
             manifest_db_id = self.db.manifests.create(manifest)
 

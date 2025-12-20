@@ -134,6 +134,5 @@ class InventoryInspector:
 
         if self.orchestrator.bridge.chat_component:
             self.orchestrator.bridge.chat_component.set_generating(True)
-            self.orchestrator.bridge.chat_component.add_message("You", command, "user")
 
         self.orchestrator.plan_and_execute(game_session)

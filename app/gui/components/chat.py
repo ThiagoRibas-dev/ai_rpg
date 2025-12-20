@@ -101,14 +101,20 @@ class ChatComponent:
 
         with self.container:
             for index, msg in enumerate(session.history):
-                if msg.role == "tool":
+                if "role" in msg:
+                    role = msg.role
+
+                if role == "tool":
                     continue
 
-                name = "AI"
-                if msg.role == "user":
-                    name = "You"
-                elif msg.role == "system":
+                if role == "user":
+                    name = "Player"
+                elif role == "assistant":
+                    name = "Game Master"
+                elif role == "system":
                     name = "System"
+                else:
+                    name = role.capitalize()
 
                 self._render_interactive_message(index, msg, name)
 
@@ -219,16 +225,28 @@ class ChatComponent:
                 game_session.session_data = session.to_json()
                 self.session_manager.db.sessions.update(game_session)
 
+                # Reset stop flag and set new turn ID
                 self.set_generating(True)
                 import threading
+                import uuid
 
-                thread = threading.Thread(
-                    target=self.orchestrator._background_execute,
-                    args=(game_session, ""),
-                    daemon=True,
-                )
-                thread.start()
-                self.load_history()
+                new_turn_id = uuid.uuid4().hex
+                self.orchestrator.active_turn_id = new_turn_id
+                self.orchestrator.bridge.set_active_turn(new_turn_id)
+
+                last_user_msg = ""
+                if session.history and session.history[-1].role == "user":
+                    last_user_msg = session.history[-1].content
+
+                if last_user_msg:
+                    thread = threading.Thread(
+                        target=self.orchestrator._background_execute,
+                        args=(game_session, last_user_msg, new_turn_id),
+                        daemon=True,
+                    )
+                    thread.start()
+
+            self.load_history()
 
     def add_message(self, name: str, text: str, role: str):
         if not self.container:

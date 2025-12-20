@@ -82,14 +82,18 @@ class ManifestRepository(BaseRepository):
                 return None
         return None
 
-    def get_by_system_id(self, system_id: str) -> Optional[SystemManifest]:
-        """Retrieve a Manifest by string ID (e.g. 'dnd_5e')."""
+    def get_by_system_id(self, system_id: str) -> Optional[dict]:
+        """
+        Retrieve a Manifest row by string system_id.
+        Returns {'id': int, 'manifest': SystemManifest} or None.
+        """
         row = self._fetchone(
-            "SELECT data_json FROM manifests WHERE system_id = ?", (system_id,)
+            "SELECT id, data_json FROM manifests WHERE system_id = ?", (system_id,)
         )
         if row:
             try:
-                return SystemManifest.from_json(row["data_json"])
+                man = SystemManifest.from_json(row["data_json"])
+                return {"id": row["id"], "manifest": man}
             except Exception:
                 return None
         return None

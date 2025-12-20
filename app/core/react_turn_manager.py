@@ -69,7 +69,9 @@ class ReActTurnManager:
         # Fallback: If no manifest linked (Legacy Session), default to D&D 5e
         # In a production migration, we would map setup_data["ruleset_id"] to a manifest here.
         if not manifest:
-            manifest = thread_db_manager.manifests.get_by_system_id("dnd_5e")
+            manifest_data = thread_db_manager.manifests.get_by_system_id("dnd_5e")
+            if manifest_data:
+                manifest = manifest_data["manifest"]
 
         # --- 2. SETUP SERVICES ---
         state_builder = StateContextBuilder(
