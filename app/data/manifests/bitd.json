@@ -12,7 +12,7 @@
     "score": "A score is a focused operation (heist, assault, occult ritual, etc.). 1) Choose a target and approach; answer engagement questions to set the starting position. 2) Play through the score using action rolls, position, and effect; use flashbacks to handle prep. 3) When the operation resolves, cut to payoff, heat, and entanglements in downtime.",
     "downtime": "Between scores, each PC gets downtime actions such as indulging vice to relieve stress, working on long-term projects, training for XP, acquiring assets, reducing heat, or healing. Downtime is more structured and less immediately dangerous than scores, but still uses rolls and can create new problems.",
     "resistance": "A PC can resist a consequence by rolling a number of d6 equal to the relevant attribute rating (Insight, Prowess, or Resolve). Take the highest die; the stress cost is 6 minus that result (0–5 stress). The consequence is reduced or avoided as described by the GM.",
-    "teamwork": "PCs can assist an ally (take 1 stress to give them +1d), lead a group action (everyone rolls; best result counts, leader takes 1 stress per 1–3 result), protect a teammate (suffer their consequence instead, possibly resisting it), or set up others (improve their position or effect on follow‑up actions)."
+    "teamwork": "PCs can assist an ally (take 1 stress to give them +1d), lead a group action (everyone rolls; best result counts, leader takes 1 stress per 1–3 result), protect a teammate (suffer their consequence instead, possibly resisting it), or set up others (improve their position or effect on follow-up actions)."
   },
   "aliases": {},
   "fields": [
@@ -49,7 +49,7 @@
       "label": "Heritage",
       "prefab": "VAL_TEXT",
       "category": "identity",
-      "usage_hint": "Cultural origin (e.g. Akoros, Skovlan, Iruvia, Severos, Tycheros). Can be invoked for heritage‑related actions or XP triggers."
+      "usage_hint": "Cultural origin (e.g. Akoros, Skovlan, Iruvia, Severos, Tycheros). Can be invoked for heritage-related actions or XP triggers."
     },
     {
       "path": "identity.background",
@@ -111,7 +111,7 @@
         "max": 4,
         "default": 0
       },
-      "usage_hint": "Tracking targets, laying ambushes, and long‑range marksmanship (Insight)."
+      "usage_hint": "Tracking targets, laying ambushes, and long-range marksmanship (Insight)."
     },
     {
       "path": "skills.study",
@@ -147,7 +147,7 @@
         "max": 4,
         "default": 0
       },
-      "usage_hint": "Building, repairing, modifying, or sabotaging mechanical / spark‑craft devices (Insight)."
+      "usage_hint": "Building, repairing, modifying, or sabotaging mechanical / spark-craft devices (Insight)."
     },
     {
       "path": "skills.finesse",
@@ -253,7 +253,7 @@
       "config": {
         "length": 9
       },
-      "usage_hint": "Nine‑box track representing reserves of grit and strain. Spend stress to push yourself, assist, resist consequences, or activate some abilities. When you fill the last box, you take trauma and clear all stress."
+      "usage_hint": "Nine-box track representing reserves of grit and strain. Spend stress to push yourself, assist, resist consequences, or activate some abilities. When you fill the last box, you take trauma and clear all stress."
     },
     {
       "path": "resources.trauma",
@@ -364,7 +364,7 @@
       "config": {
         "length": 6
       },
-      "usage_hint": "Attribute XP track for Insight. Mark XP when rolling desperate Insight actions or from end‑of‑session awards; at 6 XP, clear the track and add a dot to a linked action."
+      "usage_hint": "Attribute XP track for Insight. Mark XP when rolling desperate Insight actions or from end-of-session awards; at 6 XP, clear the track and add a dot to a linked action."
     },
     {
       "path": "progression.xp_prowess",
@@ -394,7 +394,7 @@
       "config": {
         "length": 8
       },
-      "usage_hint": "Playbook XP track. End‑of‑session triggers and training can fill this; at 8 XP, clear the track and choose a new special ability (including Veteran options)."
+      "usage_hint": "Playbook XP track. End-of-session triggers and training can fill this; at 8 XP, clear the track and choose a new special ability (including Veteran options)."
     },
     {
       "path": "progression.coin",
@@ -416,7 +416,7 @@
         "min": 0,
         "default": 0
       },
-      "usage_hint": "Long‑term savings that determine the character’s retirement quality when they leave play."
+      "usage_hint": "Long-term savings that determine the character’s retirement quality when they leave play."
     }
   ],
   "rules": [
@@ -479,7 +479,7 @@
     },
     {
       "name": "Scores, Downtime, and Free Play",
-      "content": "Play cycles through free play (roleplay and setup), scores (focused operations resolved in a few rolls with flashbacks for prep), and downtime (vice, healing, projects, training, and crew management). Scores generate coin and heat; downtime reduces stress and advances long‑term goals.",
+      "content": "Play cycles through free play (roleplay and setup), scores (focused operations resolved in a few rolls with flashbacks for prep), and downtime (vice, healing, projects, training, and crew management). Scores generate coin and heat; downtime reduces stress and advances long-term goals.",
       "tags": [
         "structure",
         "scores",

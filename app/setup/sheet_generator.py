@@ -39,17 +39,14 @@ class SheetGenerator:
         # 3. Build Prompt
         prompt = f"""
 ### TASK: CREATE CHARACTER DATA
-You are populating a character sheet for the system:
-{manifest}.
-
-**Rules Context:**
-{rules_text if rules_text else "Refer to system knowledge."}
+You are populating a character with this format :
+{CreationModel.schema_json(indent=2)}
+{"\n**Rules Context:**\n"+rules_text+"\n" if rules_text else ""}
+**Field Constraints & Types:**
+{hints}
 
 **Character Concept:**
 {character_concept}
-
-**Field Constraints & Types:**
-{hints}
 
 **Instructions:**
 - Fill in values that fit the concept and rules.
@@ -98,4 +95,4 @@ You are populating a character sheet for the system:
 
         except Exception as e:
             logger.error(f"Manifest-based generation failed: {e}", exc_info=True)
-            return {}
+            raise

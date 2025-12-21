@@ -19,6 +19,13 @@ class SessionListComponent:
         # Sub-components
         self.context_editor = ContextEditor(db_manager)
 
+        # Game tab integration (set from main.py)
+        self.game_session_label = None
+        self.game_location_label = None
+        self.tabs = None
+        self.game_tab = None
+        self.chats_tab = None
+
     def set_chat_component(self, chat):
         self.chat_component = chat
 
@@ -76,7 +83,7 @@ class SessionListComponent:
                         .props("flat dense round size=sm")
                         .classes("text-gray-400 opacity-0 group-hover:opacity-100")
                     ):
-                        with ui.menu():
+                        with ui.menu() as menu:
                             ui.menu_item(
                                 "Load", on_click=lambda s=sess: self.load_session(s)
                             )
@@ -88,7 +95,10 @@ class SessionListComponent:
                             )
                             ui.separator()
                             ui.menu_item(
-                                "Delete", on_click=lambda s=sess: self.confirm_delete(s)
+                                "Delete",
+                                on_click=lambda s=sess, m=menu: self.confirm_delete(
+                                    s, m
+                                ),
                             ).classes("text-red-400")
 
     def load_session(self, session):
@@ -105,9 +115,35 @@ class SessionListComponent:
             self.map_component.set_session(session.id)
         self.context_editor.set_session(session.id)
 
-        # Notify BEFORE refresh to avoid losing context
+        # Update Game tab labels if available
+        if getattr(self, "game_session_label", None):
+            self.game_session_label.set_text(session.name)
+
+        if getattr(self, "game_location_label", None):
+            loc_name = "Unknown"
+            try:
+                scene = self.db.game_state.get_entity(
+                    session.id, "scene", "active_scene"
+                )
+                if scene and "location_key" in scene:
+                    loc_key = scene["location_key"]
+                    loc = self.db.game_state.get_entity(session.id, "location", loc_key)
+                    if loc:
+                        loc_name = loc.get("name", loc_key)
+                    else:
+                        loc_name = loc_key
+            except Exception as e:
+                logger.error(f"Failed to load location for session {session.id}: {e}")
+            self.game_location_label.set_text(f"Location: {loc_name}")
+
+        # Switch to Game tab in the right drawer if wired
+        if (
+            getattr(self, "tabs", None) is not None
+            and getattr(self, "game_tab", None) is not None
+        ):
+            self.tabs.set_value(self.game_tab)
+
         ui.notify(f"Loaded: {session.name}")
-        self.refresh()
 
     def rename_session(self, session):
         with ui.dialog() as dialog, ui.card():
@@ -208,7 +244,8 @@ class SessionListComponent:
             ui.notify(f"Clone failed: {e}", type="negative")
             logger.error(f"Clone failed: {e}", exc_info=True)
 
-    def confirm_delete(self, session):
+    def confirm_delete(self, session, menu):
+        menu.close()
         with ui.dialog() as dialog, ui.card():
             ui.label(f"Delete '{session.name}'?")
             with ui.row():

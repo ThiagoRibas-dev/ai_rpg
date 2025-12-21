@@ -37,9 +37,17 @@ class MemoryInspector:
         counts = stats.get("by_kind", {})
 
         # 2. Fetch Data (Filtered)
-        kind_filter = None if self.active_tab == "All" else self.active_tab.lower()
-        if kind_filter == "facts":
-            kind_filter = "semantic"  # Alias handle
+        if self.active_tab == "All":
+            kind_filter = None
+        elif self.active_tab == "Facts":
+            kind_filter = "semantic"
+        elif self.active_tab == "Preferences":
+            kind_filter = "user_pref"
+        elif self.active_tab == "Rules":
+            kind_filter = "rule"
+        else:
+            # Episodic, Lore, or any future tab where label == kind title-cased
+            kind_filter = self.active_tab.lower()
 
         memories = self.db.memories.query(
             self.session_id,
@@ -54,9 +62,10 @@ class MemoryInspector:
                 "w-full justify-between px-2 py-1 bg-slate-900 rounded mb-2 text-xs"
             ):
                 ui.label(f"📖 {counts.get('episodic', 0)}").tooltip("Episodic Events")
-                ui.label(f"💡 {counts.get('semantic', 0)}").tooltip("Facts/Knowledge")
+                ui.label(f"💡 {counts.get('semantic', 0)}").tooltip("Facts / Knowledge")
                 ui.label(f"📜 {counts.get('lore', 0)}").tooltip("World Lore")
                 ui.label(f"⚙️ {counts.get('user_pref', 0)}").tooltip("Preferences")
+                ui.label(f"⚖️ {counts.get('rule', 0)}").tooltip("System Rules")
 
             # --- Controls ---
             # Search Input
@@ -69,7 +78,7 @@ class MemoryInspector:
             )
 
             # Tabs
-            # Fix: Initialize with value to avoid triggering on_change immediately
+            # Initialize with current active_tab to avoid spurious refresh
             with (
                 ui.tabs(value=self.active_tab)
                 .classes("w-full text-xs")
@@ -77,8 +86,10 @@ class MemoryInspector:
             ):
                 ui.tab("All")
                 ui.tab("Episodic")
-                ui.tab("Facts")
-                ui.tab("Lore")
+                ui.tab("Facts")  # semantic
+                ui.tab("Lore")  # lore
+                ui.tab("Preferences")  # user_pref
+                ui.tab("Rules")  # rule
 
             # --- List ---
             with ui.scroll_area().classes("h-[500px] w-full pr-2"):
@@ -108,6 +119,7 @@ class MemoryInspector:
             "semantic": "green-900",
             "lore": "purple-900",
             "user_pref": "orange-900",
+            "rule": "red-900",
         }
         bg = kind_colors.get(mem.kind, "slate-800")
 

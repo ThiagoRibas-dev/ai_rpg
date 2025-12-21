@@ -107,9 +107,10 @@ class SchemaBuilder:
             if not model_fields:
                 continue
 
+            # 2.1 Category Model: not strict internally to allow future expansion
             CatModel = create_model(
                 f"{cat.title()}Creation",
-                __config__=ConfigDict(extra="forbid"),
+                __config__=ConfigDict(),
                 **model_fields,
             )
             category_models[cat] = (CatModel, Field(default_factory=CatModel))

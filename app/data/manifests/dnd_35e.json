@@ -9,7 +9,7 @@
         "fumble": "On an attack roll, a natural 1 is always a miss. Saving throws also treat a natural 1 as an automatic failure and a natural 20 as an automatic success."
     },
     "procedures": {
-        "combat": "Combat occurs in rounds of about six seconds. 1) Determine surprise: if some combatants are unaware, a surprise round occurs where only aware creatures act. 2) Everyone rolls initiative (1d20 + Dexterity modifier); act in descending order. 3) On your turn you may take a standard action and a move action (or a full‑round action), plus free/swift actions as allowed. 4) Attacks are d20 + base attack bonus + relevant modifiers vs the target’s Armor Class; damage reduces hit points. 5) Special maneuvers (grapples, trips, bull rushes, etc.) use touch attacks plus opposed checks. Rounds repeat until the fight ends.",
+        "combat": "Combat occurs in rounds of about six seconds. 1) Determine surprise: if some combatants are unaware, a surprise round occurs where only aware creatures act. 2) Everyone rolls initiative (1d20 + Dexterity modifier); act in descending order. 3) On your turn you may take a standard action and a move action (or a full-round action), plus free/swift actions as allowed. 4) Attacks are d20 + base attack bonus + relevant modifiers vs the target’s Armor Class; damage reduces hit points. 5) Special maneuvers (grapples, trips, bull rushes, etc.) use touch attacks plus opposed checks. Rounds repeat until the fight ends.",
         "exploration": "Outside combat, characters explore using movement, skills, and abilities. The DM sets DCs for tasks like climbing, sneaking, tracking, searching, or deciphering. Skill checks are d20 + ranks + ability modifier + miscellaneous modifiers. Time is measured in minutes, hours, or days; hazards such as falling, suffocation, traps, and environmental effects are resolved with checks, saving throws, or fixed damage.",
         "social": "Interaction uses skills such as Bluff, Diplomacy, Intimidate, Gather Information, and Sense Motive. Diplomacy can shift a creature’s attitude along a scale from Hostile to Helpful given enough time; Bluff opposes Sense Motive; Intimidate can demoralize foes or extract cooperation. The DM sets DCs or opposed checks and interprets results in terms of attitude, information, or concessions.",
         "downtime": "Between adventures, characters rest, craft items, research, train, or manage organizations. Natural healing restores hit points per day of rest; ability damage heals over time or via magic. Spellcasters prepare spells, crafters spend XP and gold to make magic items, and characters level up when they reach XP thresholds: choose a class, update hit points, base attack bonus, saving throws, skill ranks, feats, and class features as per level progression."
@@ -45,7 +45,7 @@
             "label": "Race",
             "prefab": "VAL_TEXT",
             "category": "identity",
-            "usage_hint": "Character race (e.g. Human, Elf, Dwarf, Half‑Orc, Halfling, Gnome, Half‑Elf). Influences ability adjustments, size, speed, and racial traits."
+            "usage_hint": "Character race (e.g. Human, Elf, Dwarf, Half-Orc, Halfling, Gnome, Half-Elf). Influences ability adjustments, size, speed, and racial traits."
         },
         {
             "path": "identity.primary_class",
@@ -92,7 +92,7 @@
                 "max": 30,
                 "default": 10
             },
-            "usage_hint": "Physical power. Use the score for checks like breaking doors; the modifier applies to melee attacks, melee and thrown damage, and Strength‑based skills."
+            "usage_hint": "Physical power. Use the score for checks like breaking doors; the modifier applies to melee attacks, melee and thrown damage, and Strength-based skills."
         },
         {
             "path": "attributes.dex",
@@ -128,7 +128,7 @@
                 "max": 30,
                 "default": 10
             },
-            "usage_hint": "Reasoning and knowledge. Modifier determines bonus skill points per level and affects many Intelligence‑based skills; wizards use it for bonus spells and save DCs."
+            "usage_hint": "Reasoning and knowledge. Modifier determines bonus skill points per level and affects many Intelligence-based skills; wizards use it for bonus spells and save DCs."
         },
         {
             "path": "attributes.wis",
@@ -152,7 +152,7 @@
                 "max": 30,
                 "default": 10
             },
-            "usage_hint": "Force of personality. Modifier affects Charisma‑based skills, turning/rebuking undead, and spells for sorcerers and bards."
+            "usage_hint": "Force of personality. Modifier affects Charisma-based skills, turning/rebuking undead, and spells for sorcerers and bards."
         },
         {
             "path": "resources.hp",
@@ -181,7 +181,7 @@
             "label": "Spell Slots / Prepared Spells",
             "prefab": "CONT_LIST",
             "category": "resources",
-            "usage_hint": "Per‑class, per‑level spell slots or prepared spells. Each entry can track class, spell level, current slots, max slots, or prepared spell names."
+            "usage_hint": "Per-class, per-level spell slots or prepared spells. Each entry can track class, spell level, current slots, max slots, or prepared spell names."
         },
         {
             "path": "resources.gold",
@@ -220,7 +220,7 @@
         },
         {
             "path": "combat.ac_flat_footed",
-            "label": "Flat‑Footed AC",
+            "label": "Flat-Footed AC",
             "prefab": "VAL_INT",
             "category": "combat",
             "config": {
@@ -331,7 +331,7 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "Total modifier for estimating item value and identifying fake or unusual goods (Int‑based)."
+            "usage_hint": "Total modifier for estimating item value and identifying fake or unusual goods (Int-based)."
         },
         {
             "path": "skills.balance",
@@ -343,7 +343,7 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "Moving safely on narrow or unstable surfaces; often affected by armor check penalty (Dex‑based)."
+            "usage_hint": "Moving safely on narrow or unstable surfaces; often affected by armor check penalty (Dex-based)."
         },
         {
             "path": "skills.bluff",
@@ -355,7 +355,7 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "Lies, feints, and secret messages; opposed by Sense Motive (Cha‑based)."
+            "usage_hint": "Lies, feints, and secret messages; opposed by Sense Motive (Cha-based)."
         },
         {
             "path": "skills.climb",
@@ -367,7 +367,7 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "Scaling walls and cliffs; armor check penalty applies (Str‑based)."
+            "usage_hint": "Scaling walls and cliffs; armor check penalty applies (Str-based)."
         },
         {
             "path": "skills.concentration",
@@ -379,7 +379,7 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "Maintaining spells or focus under duress (wounds, distractions, vigorous motion) (Con‑based)."
+            "usage_hint": "Maintaining spells or focus under duress (wounds, distractions, vigorous motion) (Con-based)."
         },
         {
             "path": "skills.craft",
@@ -391,7 +391,7 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "Generic craft modifier; specify specialty (e.g. Craft (Weaponsmithing)); used for making and repairing items (Int‑based)."
+            "usage_hint": "Generic craft modifier; specify specialty (e.g. Craft (Weaponsmithing)); used for making and repairing items (Int-based)."
         },
         {
             "path": "skills.diplomacy",
@@ -403,7 +403,7 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "Negotiating and improving attitudes along the Hostile‑Helpful scale (Cha‑based)."
+            "usage_hint": "Negotiating and improving attitudes along the Hostile-Helpful scale (Cha-based)."
         },
         {
             "path": "skills.disable_device",
@@ -415,7 +415,7 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "Disarming traps and sabotaging mechanisms (trained only; Int‑based)."
+            "usage_hint": "Disarming traps and sabotaging mechanisms (trained only; Int-based)."
         },
         {
             "path": "skills.disguise",
@@ -427,7 +427,7 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "Altering appearance, voice, or mannerisms to pass as someone else (Cha‑based)."
+            "usage_hint": "Altering appearance, voice, or mannerisms to pass as someone else (Cha-based)."
         },
         {
             "path": "skills.escape_artist",
@@ -439,7 +439,7 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "Slipping bonds, squeezing through tight spaces, escaping grapples; ACP may apply (Dex‑based)."
+            "usage_hint": "Slipping bonds, squeezing through tight spaces, escaping grapples; ACP may apply (Dex-based)."
         },
         {
             "path": "skills.gather_information",
@@ -451,7 +451,7 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "Working taverns and streets for rumors and news over hours (Cha‑based)."
+            "usage_hint": "Working taverns and streets for rumors and news over hours (Cha-based)."
         },
         {
             "path": "skills.handle_animal",
@@ -463,7 +463,7 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "Handling, training, and directing animals; many uses are trained only (Cha‑based)."
+            "usage_hint": "Handling, training, and directing animals; many uses are trained only (Cha-based)."
         },
         {
             "path": "skills.heal",
@@ -475,7 +475,7 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "First aid, stabilizing the dying, treating poison and disease (Wis‑based)."
+            "usage_hint": "First aid, stabilizing the dying, treating poison and disease (Wis-based)."
         },
         {
             "path": "skills.hide",
@@ -487,7 +487,7 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "Staying out of sight; opposed by Spot; armor check penalty applies (Dex‑based)."
+            "usage_hint": "Staying out of sight; opposed by Spot; armor check penalty applies (Dex-based)."
         },
         {
             "path": "skills.intimidate",
@@ -499,7 +499,7 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "Threatening or bullying to influence others; can demoralize foes in combat (Cha‑based)."
+            "usage_hint": "Threatening or bullying to influence others; can demoralize foes in combat (Cha-based)."
         },
         {
             "path": "skills.jump",
@@ -511,11 +511,11 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "Horizontal and vertical leaps; armor check penalty applies (Str‑based)."
+            "usage_hint": "Horizontal and vertical leaps; armor check penalty applies (Str-based)."
         },
         {
-            "path": "skills.knowledge",
-            "label": "Knowledge (Any)",
+            "path": "skills.knowledge_arcana",
+            "label": "Knowledge (Arcana)",
             "prefab": "VAL_INT",
             "category": "skills",
             "config": {
@@ -523,7 +523,127 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "Breadth of lore; specify field such as Arcana, Religion, Nature, Local, Nobility, Planes, etc. (trained only; Int‑based)."
+            "usage_hint": "Arcane magic theory, symbols, magical traditions, constructs, dragons, and magical beasts. (trained only; Int-based)"
+        },
+        {
+            "path": "skills.knowledge_architecture_engineering",
+            "label": "Knowledge (Architecture and Engineering)",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Buildings, bridges, fortifications, aqueducts, structural design, and engineering principles. (trained only; Int-based)"
+        },
+        {
+            "path": "skills.knowledge_dungeoneering",
+            "label": "Knowledge (Dungeoneering)",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Underground terrain, caverns, spelunking hazards, aberrations, and oozes. (trained only; Int-based)"
+        },
+        {
+            "path": "skills.knowledge_geography",
+            "label": "Knowledge (Geography)",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Lands, terrain, climate, regional features, and peoples of various areas. (trained only; Int-based)"
+        },
+        {
+            "path": "skills.knowledge_history",
+            "label": "Knowledge (History)",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Wars, empires, colonies, migrations, founding of cities, and major historical events. (trained only; Int-based)"
+        },
+        {
+            "path": "skills.knowledge_local",
+            "label": "Knowledge (Local)",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Local laws, customs, legends, personalities, and humanoid groups in a specific region. (trained only; Int-based)"
+        },
+        {
+            "path": "skills.knowledge_nature",
+            "label": "Knowledge (Nature)",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Natural environments, animals, plants, seasons and weather, fey, giants, and monstrous humanoids. (trained only; Int-based)"
+        },
+        {
+            "path": "skills.knowledge_nobility_royalty",
+            "label": "Knowledge (Nobility and Royalty)",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Lineages, heraldry, noble and royal titles, family trees, courts, and high-society customs. (trained only; Int-based)"
+        },
+        {
+            "path": "skills.knowledge_psionics",
+            "label": "Knowledge (Psionics)",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Psionic traditions, disciplines, monsters, symbols, races, and psionic constructs/items. (trained only; Int-based)"
+        },
+        {
+            "path": "skills.knowledge_religion",
+            "label": "Knowledge (Religion)",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Gods, religious dogma, mythic history, church traditions, holy symbols, and undead lore. (trained only; Int-based)"
+        },
+        {
+            "path": "skills.knowledge_planes",
+            "label": "Knowledge (The Planes)",
+            "prefab": "VAL_INT",
+            "category": "skills",
+            "config": {
+                "min": -10,
+                "max": 40,
+                "default": 0
+            },
+            "usage_hint": "Planar cosmology (Inner, Outer, Astral, Ethereal), planar traits, outsiders, elementals, and planar magic. (trained only; Int-based)"
         },
         {
             "path": "skills.listen",
@@ -535,7 +655,7 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "Hearing noises or detecting hidden creatures (Wis‑based)."
+            "usage_hint": "Hearing noises or detecting hidden creatures (Wis-based)."
         },
         {
             "path": "skills.move_silently",
@@ -547,7 +667,7 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "Moving quietly, opposed by Listen; armor check penalty applies (Dex‑based)."
+            "usage_hint": "Moving quietly, opposed by Listen; armor check penalty applies (Dex-based)."
         },
         {
             "path": "skills.open_lock",
@@ -559,7 +679,7 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "Picking mechanical locks (trained only; Dex‑based)."
+            "usage_hint": "Picking mechanical locks (trained only; Dex-based)."
         },
         {
             "path": "skills.perform",
@@ -571,7 +691,7 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "Entertaining with music, acting, storytelling, etc.; specify form (Cha‑based)."
+            "usage_hint": "Entertaining with music, acting, storytelling, etc.; specify form (Cha-based)."
         },
         {
             "path": "skills.ride",
@@ -583,7 +703,7 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "Controlling mounts in and out of combat (Dex‑based)."
+            "usage_hint": "Controlling mounts in and out of combat (Dex-based)."
         },
         {
             "path": "skills.search",
@@ -595,7 +715,7 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "Actively looking for hidden objects, traps, or details (Int‑based)."
+            "usage_hint": "Actively looking for hidden objects, traps, or details (Int-based)."
         },
         {
             "path": "skills.sense_motive",
@@ -607,7 +727,7 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "Reading intentions and detecting lies; opposes Bluff (Wis‑based)."
+            "usage_hint": "Reading intentions and detecting lies; opposes Bluff (Wis-based)."
         },
         {
             "path": "skills.sleight_of_hand",
@@ -619,7 +739,7 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "Pickpocketing, palming objects, and subtle manual tricks (trained only; Dex‑based; ACP applies)."
+            "usage_hint": "Pickpocketing, palming objects, and subtle manual tricks (trained only; Dex-based; ACP applies)."
         },
         {
             "path": "skills.spellcraft",
@@ -631,7 +751,7 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "Identifying spells and magical effects, and understanding magical writings (trained only; Int‑based)."
+            "usage_hint": "Identifying spells and magical effects, and understanding magical writings (trained only; Int-based)."
         },
         {
             "path": "skills.spot",
@@ -643,7 +763,7 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "Noticing creatures or objects at a distance; complements Listen (Wis‑based)."
+            "usage_hint": "Noticing creatures or objects at a distance; complements Listen (Wis-based)."
         },
         {
             "path": "skills.survival",
@@ -655,7 +775,7 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "Tracking, foraging, navigating wilderness, and enduring harsh environments (Wis‑based)."
+            "usage_hint": "Tracking, foraging, navigating wilderness, and enduring harsh environments (Wis-based)."
         },
         {
             "path": "skills.swim",
@@ -667,7 +787,7 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "Moving through water; armor check penalty applies (Str‑based)."
+            "usage_hint": "Moving through water; armor check penalty applies (Str-based)."
         },
         {
             "path": "skills.tumble",
@@ -679,7 +799,7 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "Dodging past foes and avoiding attacks of opportunity; trained only and ACP applies (Dex‑based)."
+            "usage_hint": "Dodging past foes and avoiding attacks of opportunity; trained only and ACP applies (Dex-based)."
         },
         {
             "path": "skills.use_magic_device",
@@ -691,7 +811,7 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "Activating magic items without meeting normal requirements (trained only; Cha‑based)."
+            "usage_hint": "Activating magic items without meeting normal requirements (trained only; Cha-based)."
         },
         {
             "path": "skills.use_rope",
@@ -703,7 +823,7 @@
                 "max": 40,
                 "default": 0
             },
-            "usage_hint": "Tying secure knots, binding, and managing ropes or grapples (Dex‑based)."
+            "usage_hint": "Tying secure knots, binding, and managing ropes or grapples (Dex-based)."
         },
         {
             "path": "inventory.weapons",
@@ -752,7 +872,7 @@
             "label": "Spellcasting Notes",
             "prefab": "VAL_TEXT",
             "category": "features",
-            "usage_hint": "High‑level summary of how this character casts spells (arcane or divine, prepared or spontaneous, key ability, schools or domains)."
+            "usage_hint": "High-level summary of how this character casts spells (arcane or divine, prepared or spontaneous, key ability, schools or domains)."
         },
         {
             "path": "connections.allies",
@@ -787,7 +907,7 @@
             "label": "Goals & Motivations",
             "prefab": "VAL_TEXT",
             "category": "narrative",
-            "usage_hint": "Short‑ and long‑term objectives and personal motives that drive the character."
+            "usage_hint": "Short- and long-term objectives and personal motives that drive the character."
         },
         {
             "path": "narrative.backstory",
@@ -840,7 +960,7 @@
                 "max": 30,
                 "default": 1
             },
-            "usage_hint": "Number of feats currently chosen, including level‑based, racial, and bonus feats."
+            "usage_hint": "Number of feats currently chosen, including level-based, racial, and bonus feats."
         }
     ],
     "rules": [
@@ -894,7 +1014,7 @@
         },
         {
             "name": "Skills, Ranks, and Synergy",
-            "content": "Skill checks are d20 + total skill bonus, which includes ranks, ability modifier, and modifiers like synergy or circumstance. Class skills cost 1 point per rank with a maximum of level + 3; cross‑class skills cost 2 points per rank with half the maximum. Having 5 ranks in certain skills grants +2 synergy bonuses on related skills.",
+            "content": "Skill checks are d20 + total skill bonus, which includes ranks, ability modifier, and modifiers like synergy or circumstance. Class skills cost 1 point per rank with a maximum of level + 3; cross-class skills cost 2 points per rank with half the maximum. Having 5 ranks in certain skills grants +2 synergy bonuses on related skills.",
             "tags": [
                 "skills",
                 "advancement"

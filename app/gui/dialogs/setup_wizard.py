@@ -187,22 +187,16 @@ class SetupWizard:
             connector = self.orchestrator._get_llm_connector()
             sheet_gen = SheetGenerator(connector)
 
-            # 1. World Gen
-            self._update_status("[Step 1/4] Building World...")
-            world_service = WorldGenService(connector)
-            self.extracted_world = world_service.extract_world_data(self.input_world)
-
-            # 2. Load System Manifest from the prompt, if present
+            # 1. Load System Manifest from the prompt, if present
             manifest = None
-            self._update_status("[Step 2/4] Loading manifest from prompt...")
+            self._update_status("[Step 1/3] Generating Character...")
             if self.prompt.template_manifest:
                 try:
                     manifest = SystemManifest.from_json(self.prompt.template_manifest)
                 except Exception as e:
                     logger.warning(f"Failed to load SystemManifest from prompt: {e}")
 
-            # 3. Character Gen (Manifest-aware)
-            self._update_status("[Step 3/4] Generating Character...")
+            # 1.1. Character Gen (Manifest-aware)
             if manifest:
                 raw_values = sheet_gen.generate_from_manifest(
                     manifest,
@@ -216,8 +210,13 @@ class SetupWizard:
                 self.preview_entity = {"identity": {"name": "Player"}}
                 self.manifest = None
 
-            # 4. Opening Crawl
-            self._update_status("[Step 4/4] Writing Intro...")
+            # 2. World Gen
+            self._update_status("[Step 2/3] Building World...")
+            world_service = WorldGenService(connector)
+            self.extracted_world = world_service.extract_world_data(self.input_world)
+
+            # 3. Opening Crawl
+            self._update_status("[Step 3/3] Writing Intro...")
 
             class DummyChar:
                 name = (self.preview_entity.get("identity") or {}).get("name", "Player")

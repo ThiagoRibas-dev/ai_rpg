@@ -150,7 +150,10 @@ class ToolRegistry:
             # Skip schemas that already declare a type or use combinators/refs/enums
             if "type" in prop_schema:
                 continue
-            if any(key in prop_schema for key in ("oneOf", "anyOf", "allOf", "enum", "$ref")):
+            if any(
+                key in prop_schema
+                for key in ("oneOf", "anyOf", "allOf", "enum", "$ref")
+            ):
                 continue
             # Fallback: treat as string for schema purposes
             prop_schema["type"] = "string"
@@ -165,13 +168,11 @@ class ToolRegistry:
 
         self.tool_schemas.append(
             {
-                "name": self._get_tool_name(schema_type),
+                "name": schema_type.model_fields["name"].default,
                 "description": schema_type.__doc__ or "",
                 "parameters": parameters_schema,
             }
         )
-    def _get_tool_name(schema_type: Type[BaseModel]) -> str:
-        return schema_type.model_fields["name"].default
 
     def get_all_schemas(self) -> List[Dict[str, Any]]:
         return self.tool_schemas

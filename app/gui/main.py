@@ -19,11 +19,7 @@ logger = logging.getLogger(__name__)
 def init_gui(db_path: str):
     # 1. Initialize DB & Seed Manifests
     app.db_manager = DBManager(db_path)
-
-    # EXPLICITLY OPEN CONNECTION for the lifecycle of the app
-    # This prevents create_tables() from opening/closing it via context manager
     app.db_manager.__enter__()
-
     app.db_manager.create_tables()
     seed_builtin_manifests(db_path)
 
@@ -51,6 +47,41 @@ def init_gui(db_path: str):
         session_list.set_map_component(map_comp)
         session_list.set_chat_component(chat_comp)
 
+        # --- Large Map Dialog (centered overlay) ---
+        map_dialog = ui.dialog()
+
+        def open_large_map():
+            """Open the big map dialog, refreshing map data if a game is active."""
+            try:
+                active_session = session_list.get_active_session()
+                if active_session:
+                    map_comp.set_session(active_session.id)
+                elif app.orchestrator.session and app.orchestrator.session.id:
+                    map_comp.set_session(app.orchestrator.session.id)
+                else:
+                    # fallback: just let MapComponent pull whatever it can
+                    map_comp.refresh_from_db()
+            except Exception as e:
+                logger.warning(f"Failed to refresh map before opening: {e}")
+            map_dialog.open()
+
+        with (
+            map_dialog,
+            ui.card().classes(
+                "w-[90%] h-[90%] bg-slate-950 border border-slate-700 p-0"
+            ),
+        ):
+            with ui.row().classes(
+                "w-full items-center justify-between px-4 py-2 border-b border-slate-800 bg-slate-900"
+            ):
+                ui.label("Map").classes("text-sm font-bold text-gray-300")
+                ui.button(icon="close", on_click=map_dialog.close).props(
+                    "flat dense round"
+                )
+            with ui.column().classes("w-full h-full"):
+                # Reuse existing MapComponent UI for the large view
+                map_comp.render()
+
         # --- Layout ---
 
         # Header
@@ -60,7 +91,7 @@ def init_gui(db_path: str):
             )
             ui.space()
 
-            # Header Labels
+            # Header Labels (session, time, mode)
             with ui.row().classes("gap-4 text-xs text-gray-400"):
                 sess_lbl = ui.label("No Session")
                 time_lbl = ui.label("")
@@ -69,7 +100,7 @@ def init_gui(db_path: str):
 
             ui.space()
 
-            # Zen Mode Button
+            # Zen Mode Button (toggle_zen defined below)
             ui.button(icon="fullscreen", on_click=lambda: toggle_zen()).props(
                 "flat round dense"
             )
@@ -85,38 +116,81 @@ def init_gui(db_path: str):
         right_drawer = Theme.drawer_right()
         with right_drawer:
             with ui.tabs().classes("w-full text-gray-400") as tabs:
-                t_sessions = ui.tab("Sessions")
-                t_prompts = ui.tab("New Game")
+                t_game = ui.tab("Game")
+                t_chats = ui.tab("Chats")
 
-            with ui.tab_panels(tabs, value=t_sessions).classes(
+            # Default to Chats when the app starts; we'll switch to Game on load
+            with ui.tab_panels(tabs, value=t_chats).classes(
                 "w-full bg-transparent p-0"
             ):
-                with ui.tab_panel(t_sessions):
-                    session_list.render()
-                with ui.tab_panel(t_prompts):
+                # --- GAME TAB: mini scene, notes, lorebook, debug ---
+                with ui.tab_panel(t_game):
+                    with ui.column().classes("w-full p-2 gap-3"):
+                        # Scene / mini-map section (textual overview + Open Map)
+                        with ui.card().classes(
+                            "w-full bg-slate-900 border border-slate-800 rounded"
+                        ):
+                            with ui.row().classes(
+                                "w-full items-center justify-between mb-1"
+                            ):
+                                with ui.row().classes("items-center gap-2"):
+                                    ui.icon("map").classes("text-gray-400")
+                                    ui.label("Scene Overview").classes(
+                                        "text-xs font-bold text-gray-300 uppercase"
+                                    )
+                                ui.button(
+                                    "Open Map",
+                                    icon="map",
+                                    on_click=open_large_map,
+                                ).props("flat dense").classes(
+                                    "text-amber-400 hover:text-amber-300"
+                                )
+
+                            # Labels updated when a session is loaded
+                            mini_session_lbl = ui.label("No game loaded").classes(
+                                "text-sm text-gray-300"
+                            )
+                            mini_location_lbl = ui.label("Location: -").classes(
+                                "text-xs text-gray-500"
+                            )
+
+                        # Author's Note editor (existing component)
+                        session_list.context_editor.render()
+
+                        # Lorebook & Debug tools
+                        with ui.row().classes(
+                            "w-full mt-2 items-center justify-between"
+                        ):
+                            ui.button(
+                                "Manage Lorebook",
+                                icon="book",
+                                on_click=session_list.open_lorebook,
+                            ).classes(
+                                "flex-grow bg-purple-900/50 border border-purple-700 "
+                                "hover:bg-purple-900 text-xs"
+                            )
+
+                # --- CHATS TAB: systems & saves management ---
+                with ui.tab_panel(t_chats):
                     prompt_list.render()
 
-        # Zen Mode Logic
+            # Wire Game tab labels & tab control into SessionListComponent
+            session_list.game_session_label = mini_session_lbl
+            session_list.game_location_label = mini_location_lbl
+            session_list.tabs = tabs
+            session_list.game_tab = t_game
+            session_list.chats_tab = t_chats
+
+        # Zen Mode Logic (used by header button)
         def toggle_zen():
             current = left_drawer.value
             left_drawer.set_value(not current)
             right_drawer.set_value(not current)
 
-        # Center Column
+        # Center Column: chat is primary; big map is via dialog only
         with ui.column().classes("w-full h-[calc(100vh-4rem)] p-0 gap-0 relative"):
-            # Splitter: value=30 means map takes 30% height by default
-            with ui.splitter(value=30, horizontal=True).classes(
-                "w-full h-full"
-            ) as splitter:
-                # Top Pane: Map
-                with splitter.before:
-                    with ui.column().classes("w-full h-full bg-slate-950 p-0 gap-0"):
-                        map_comp.render()
-
-                # Bottom Pane: Chat
-                with splitter.after:
-                    with ui.column().classes("w-full h-full bg-slate-900 p-0 gap-0"):
-                        chat_comp.render()
+            with ui.column().classes("w-full h-full bg-slate-900 p-0 gap-0"):
+                chat_comp.render()
 
         # Polling Loop
         ui.timer(0.1, app.bridge.process_queue)
