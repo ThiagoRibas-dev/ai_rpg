@@ -101,7 +101,7 @@ class SchemaBuilder:
                 if "concept" not in model_fields:
                     model_fields["concept"] = (
                         str,
-                        Field("", description="High Concept / Class / Archetype"),
+                        Field("", description="High Concept / Elevator Pitch"),
                     )
 
             if not model_fields:
