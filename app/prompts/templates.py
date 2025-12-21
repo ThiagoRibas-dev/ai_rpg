@@ -191,11 +191,12 @@ You may use these Aliases in your formulas: {aliases}
 """
 
 EXTRACT_PROCEDURES_PROMPT = """
-Extract the step-by-step **Procedures** for the following game modes:
-1. Combat (Initiative, Turns, Actions)
-2. Exploration (Checks, Movement, Resting)
-3. Social (Interaction, Influence)
-4. Downtime (if applicable)
+Extract the step-by-step **Procedures** for the following categories, if applicable:
+1. Combat (Initiative, Turns, Actions, etc)
+2. Exploration (Checks, Movement, Resting, etc)
+3. Social (Interaction, Influence, etc)
+4. Downtime (Crafting, Researching, Training, etc)
+5. Character Creation (how to build a new character: starting attributes, choices, starting equipment, etc)
 
 Provide clear, numbered steps for the AI Game Master to follow.
 """

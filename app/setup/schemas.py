@@ -75,6 +75,7 @@ class ProceduresExtraction(BaseModel):
     exploration: str = ""
     social: str = ""
     downtime: str = ""
+    character_creation: str = ""
 
 
 class ExtractedRule(BaseModel):

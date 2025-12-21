@@ -37,11 +37,25 @@ class SheetGenerator:
         hints = builder.get_creation_prompt_hints()
 
         # 3. Build Prompt
+        # Prefer a dedicated character_creation procedure from the manifest if available.
+        try:
+            creation_proc = manifest.get_procedure("character_creation")
+        except Exception:
+            creation_proc = None
+
+        if creation_proc:
+            rules_section = f"**Character Creation Procedure:**\n{creation_proc}"
+            if rules_text:
+                rules_section += f"\n\n**Additional Rules Context:**\n{rules_text}"
+        else:
+            # Fallback to the raw rules text or a generic hint
+            rules_section = rules_text if rules_text else ""
+
         prompt = f"""
 ### TASK: CREATE CHARACTER DATA
 You are populating a character with this format :
 {CreationModel.schema_json(indent=2)}
-{"\n**Rules Context:**\n"+rules_text+"\n" if rules_text else ""}
+{rules_section}
 **Field Constraints & Types:**
 {hints}
 
@@ -51,7 +65,6 @@ You are populating a character with this format :
 **Instructions:**
 - Fill in values that fit the concept and rules.
 - Respect the type hints (e.g., if range 1-20, don't put 25).
-- For Lists, provide 3-5 items.
 """
 
         # 4. Call LLM
