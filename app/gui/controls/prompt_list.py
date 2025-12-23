@@ -10,8 +10,23 @@ class PromptListComponent:
         self.session_list = session_list_ref
         self.container = None
 
+        # Reusable session delete dialog state
+        self.delete_dialog = None
+        self.delete_dialog_label = None
+        self._session_to_delete = None
+
     def render(self):
         self.container = ui.column().classes("w-full gap-2")
+
+        # Persistent delete-session dialog
+        with ui.dialog() as self.delete_dialog, ui.card():
+            self.delete_dialog_label = ui.label("Delete session?").classes("font-bold")
+            with ui.row().classes("w-full justify-end mt-2"):
+                ui.button("Cancel", on_click=self.delete_dialog.close).props("flat")
+                ui.button("Delete", on_click=self._execute_delete_session).classes(
+                    "bg-red-600"
+                )
+
         self.refresh()
 
     def refresh(self):
@@ -175,8 +190,25 @@ class PromptListComponent:
     def start_wizard(self, prompt):
         # Load full prompt to get template manifest
         full_prompt = self.db.prompts.get_by_id(prompt.id)
+
+        def _on_complete():
+            # 1) Refresh the Systems & Saves list so the new session appears
+            self.refresh()
+
+            # 2) Auto-load the newly created session into the UI
+            #    SetupWizard.finish() already called orchestrator.load_game(new_id),
+            #    so orchestrator.session.id should be the new GameSession ID.
+            sess_model = self.orchestrator.session
+            if sess_model and sess_model.id:
+                new_game_session = self.db.sessions.get_by_id(sess_model.id)
+                if new_game_session:
+                    self.session_list.load_session(new_game_session)
+
         wizard = SetupWizard(
-            self.db, self.orchestrator, full_prompt, on_complete=self.refresh
+            self.db,
+            self.orchestrator,
+            full_prompt,
+            on_complete=_on_complete,
         )
         wizard.open()
 
@@ -278,19 +310,24 @@ class PromptListComponent:
             logger.error(f"Clone failed: {e}", exc_info=True)
 
     def confirm_delete(self, session):
-        with ui.dialog() as dialog, ui.card():
-            ui.label(f"Delete '{session.name}'?")
-            with ui.row():
-                ui.button("Cancel", on_click=dialog.close).props("flat")
-                ui.button(
-                    "Delete", on_click=lambda: self._delete_session(session, dialog)
-                ).classes("bg-red-600")
-        dialog.open()
+        """Prepare and open the persistent delete dialog for this session."""
+        self._session_to_delete = session
+        if self.delete_dialog_label:
+            self.delete_dialog_label.set_text(f"Delete '{session.name}'?")
+        if self.delete_dialog:
+            self.delete_dialog.open()
 
-    def _delete_session(self, session, dialog):
+    def _execute_delete_session(self):
+        """Called when the user confirms deletion in the dialog."""
         import logging
 
         logger = logging.getLogger(__name__)
+
+        session = self._session_to_delete
+        if not session:
+            if self.delete_dialog:
+                self.delete_dialog.close()
+            return
 
         # 1. Delete SQL Data
         self.db.sessions.delete(session.id)
@@ -312,6 +349,10 @@ class PromptListComponent:
             if self.session_list.chat_component:
                 self.session_list.chat_component.container.clear()
 
-        dialog.close()
+        # Reset state and close dialog
+        self._session_to_delete = None
+        if self.delete_dialog:
+            self.delete_dialog.close()
+
         self.refresh()
         ui.notify(f"Deleted {session.name}")

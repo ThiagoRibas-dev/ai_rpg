@@ -62,30 +62,75 @@ class ExtractedFieldList(BaseModel):
 
 
 class MechanicsExtraction(BaseModel):
-    dice_notation: str
-    resolution_mechanic: str
-    success_condition: str
-    crit_rules: str
-    fumble_rules: str = ""
-    aliases: Dict[str, str] = Field(default_factory=dict)
+    dice_notation: str = Field(
+        ...,
+        description="Primary dice expression used by the system (e.g. '1d20', '2d6').",
+    )
+    resolution_mechanic: str = Field(
+        ...,
+        description="How actions are resolved (e.g. 'Roll + Stat vs DC').",
+    )
+    success_condition: str = Field(
+        ...,
+        description="What counts as success (e.g. 'Result >= Target').",
+    )
+    crit_rules: str = Field(
+        ...,
+        description="How critical successes and failures work.",
+    )
+    fumble_rules: str = Field(
+        "",
+        description="Rules for fumbles or critical failures, if any.",
+    )
+    aliases: Dict[str, str] = Field(
+        default_factory=dict,
+        description="Global derived stats and formulas (e.g. 'str_mod').",
+    )
 
 
 class ProceduresExtraction(BaseModel):
-    combat: str = ""
-    exploration: str = ""
-    social: str = ""
-    downtime: str = ""
-    character_creation: str = ""
+    combat: str = Field(
+        "",
+        description="Step-by-step procedure text for resolving combat.",
+    )
+    exploration: str = Field(
+        "",
+        description="Procedure text for exploration scenes (movement, checks, rest).",
+    )
+    social: str = Field(
+        "",
+        description="Procedure text for social interactions and influence scenes.",
+    )
+    downtime: str = Field(
+        "",
+        description="Procedure text for downtime (healing, training, projects, etc.).",
+    )
+    character_creation: str = Field(
+        "",
+        description="Step-by-step procedure text for building a new character.",
+    )
 
 
 class ExtractedRule(BaseModel):
-    name: str
-    content: str
-    tags: List[str]
+    name: str = Field(
+        ...,
+        description="Short name for the rule or mechanic (e.g. 'Falling Damage').",
+    )
+    content: str = Field(
+        ...,
+        description="Human-readable summary of the rule or mechanic.",
+    )
+    tags: List[str] = Field(
+        default_factory=list,
+        description="Category tags (e.g. ['combat', 'movement']).",
+    )
 
 
 class RuleListExtraction(BaseModel):
-    rules: List[ExtractedRule]
+    rules: List[ExtractedRule] = Field(
+        default_factory=list,
+        description="List of extracted rules/mechanics.",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -95,12 +140,17 @@ class RuleListExtraction(BaseModel):
 
 class NpcData(BaseModel):
     name: str = Field(..., description="Name of the NPC.")
-    visual_description: str = Field("", description="Physical / narrative description.")
+    visual_description: str = Field(
+        ..., description="Physical / narrative description."
+    )
     stat_template: str = Field(
         "default",
         description="Archetype (e.g. 'Guard', 'Civilian', 'Boss'). If unknown, use 'default'.",
     )
-    initial_disposition: Literal["hostile", "neutral", "friendly"] = "neutral"
+    initial_disposition: Literal["hostile", "neutral", "friendly"] = Field(
+        "neutral",
+        description="The NPC's initial attitude toward the player accounting for eprsonal history (or lack thereof), faction affiliation, place of origin, and other such factors.",
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -141,23 +191,23 @@ class NpcData(BaseModel):
 
 class LocationData(BaseModel):
     key: str = Field(
-        "",
+        ...,
         description="Unique snake_case ID (e.g. 'loc_market'). Will be auto-generated from name if omitted.",
     )
     name: str = Field(
-        "",
+        ...,
         description="Display name (e.g. 'The Market').",
     )
     description_visual: str = Field(
-        "",
+        ...,
         description="What the location looks like at a glance.",
     )
     description_sensory: str = Field(
-        "",
+        ...,
         description="Other sensory details (sounds, smells, atmosphere).",
     )
     type: str = Field(
-        "unspecified",
+        ...,
         description="indoor, outdoor, structure, district, etc.",
     )
 
@@ -206,8 +256,14 @@ class LocationData(BaseModel):
 
 
 class LoreData(BaseModel):
-    content: str
-    tags: List[str]
+    content: str = Field(
+        ...,
+        description="The content/fact/detail about the world.",
+    )
+    tags: List[str] = Field(
+        ...,
+        description="Categories or keywords associated with this lore item.",
+    )
     priority: int = 3
     kind: str = "lore"
 

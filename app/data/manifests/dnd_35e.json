@@ -182,7 +182,15 @@
             "label": "Spell Slots / Prepared Spells",
             "prefab": "CONT_LIST",
             "category": "resources",
-            "usage_hint": "Per-class, per-level spell slots or prepared spells. Each entry can track class, spell level, current slots, max slots, or prepared spell names."
+            "config": {
+                "item_shape": {
+                    "class_name": "str",
+                    "spell_level": "int",
+                    "slots_max": "int",
+                    "slots_current": "int"
+                }
+            },
+            "usage_hint": "Each entry is one class+spell-level row: {class_name, spell_level, slots_current, slots_max}."
         },
         {
             "path": "resources.gold",

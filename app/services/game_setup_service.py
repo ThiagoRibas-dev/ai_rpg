@@ -111,7 +111,9 @@ class GameSetupService:
         else:
             manifest_db_id = self.db.manifests.create(manifest)
 
-        SetupManifestService(self.db).update_manifest(
+        # Use a local service instance so we can reuse its return value
+        setup_service = SetupManifestService(self.db)
+        new_setup = setup_service.update_manifest(
             game_session.id,
             {
                 "manifest_id": manifest_db_id,
@@ -120,6 +122,9 @@ class GameSetupService:
                 "tone": world_data.tone,
             },
         )
+
+        # Keep the in-memory GameSession in sync with what's now in the DB
+        game_session.setup_phase_data = json.dumps(new_setup)
 
         # 4. Index Rules (RAG) - THE RESTORED LOGIC
         if manifest.rules:

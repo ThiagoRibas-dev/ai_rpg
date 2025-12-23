@@ -203,9 +203,12 @@ class SetupWizard:
                     self.input_char,
                     rules_text=self.prompt.rules_document,
                 )
-                validated_entity, _ = validate_entity(raw_values or {}, manifest)
+                validated_entity, _ = validate_entity(raw_values, manifest)
                 self.preview_entity = validated_entity
                 self.manifest = manifest
+
+                # store this for create_game()
+                self.generated_values = validated_entity
             else:
                 self.preview_entity = {"identity": {"name": "Player"}}
                 self.manifest = None

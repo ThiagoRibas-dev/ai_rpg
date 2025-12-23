@@ -1,22 +1,25 @@
-from typing import Optional, List, Dict, Any
-from pydantic import BaseModel
+from typing import Any, Dict, List, Optional
+from pydantic import BaseModel, Field
+
 
 class Message(BaseModel):
-    """
-    A class to represent a single message in the chat history.
-    Supports standard roles (user, assistant, system) and LLM-specific tool protocols.
-    """
-    role: str
-    content: Optional[str] = None  # Content is optional for pure tool calls
-    
-    # For Assistant messages that call tools (OpenAI/Llama format)
-    # Format: [{'id': 'call_123', 'function': {'name': 'x', 'arguments': '{}'}}]
-    # We store normalized dicts here: [{'name': 'x', 'arguments': {...}, 'id': '...'}]
-    tool_calls: Optional[List[Dict[str, Any]]] = None
-    
-    # For Tool Result messages (The Answer)
-    # OpenAI requires 'tool_call_id' to link result to request.
-    tool_call_id: Optional[str] = None
-    
-    # Some local models or Gemini use 'name' to link function results
-    name: Optional[str] = None
+    role: str = Field(
+        ...,
+        description="Message role: 'user', 'assistant', 'system', or 'tool'.",
+    )
+    content: Optional[str] = Field(
+        None,
+        description="Text content of the message; may be None for pure tool calls.",
+    )
+    tool_calls: Optional[List[Dict[str, Any]]] = Field(
+        None,
+        description="List of tool calls produced by the assistant for this turn (normalized format).",
+    )
+    tool_call_id: Optional[str] = Field(
+        None,
+        description="For tool messages: ID of the tool call this result relates to.",
+    )
+    name: Optional[str] = Field(
+        None,
+        description="For tool messages: name of the tool that produced this result.",
+    )

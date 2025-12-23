@@ -117,7 +117,14 @@ class SessionListComponent:
 
         # Update Game tab labels if available
         if getattr(self, "game_session_label", None):
-            self.game_session_label.set_text(session.name)
+            # Update global header labels via the bridge
+            if getattr(self.orchestrator, "bridge", None):
+                bridge = self.orchestrator.bridge
+                bridge.session_label.set_text(session.name or "Unnamed Session")
+                if session.game_time:
+                    bridge.time_label.set_text(session.game_time)
+                if session.game_mode:
+                    bridge.mode_label.set_text(session.game_mode)
 
         if getattr(self, "game_location_label", None):
             loc_name = "Unknown"

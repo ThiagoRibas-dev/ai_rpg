@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 class InventoryItem(BaseModel):
-    name: str = ""
-    qty: int = 1
+    name: str = Field("", description="Item name.")
+    qty: int = Field(1, description="Quantity of this item.")
     model_config = ConfigDict(extra="allow")
 
 
@@ -190,7 +190,13 @@ class SchemaBuilder:
 
         # CONTAINERS
         if p in ["CONT_LIST", "CONT_WEIGHTED", "CONT_TAGS"]:
-            # List of item names or tags
+            # SPECIAL CASE: structured list items (e.g. spell_slots)
+            item_shape = field_def.config.get("item_shape")
+            if p == "CONT_LIST" and item_shape:
+                ItemModel = self._build_item_model(field_def)
+                return list[ItemModel], []  # default empty list
+
+            # Default behaviour: list of simple names/tags
             return list[str], []
 
         # Fallback: treat as free-form text
@@ -243,3 +249,37 @@ class SchemaBuilder:
     def get_creation_prompt_hints(self) -> str:
         """Returns text explaining the fields to the AI."""
         return self.manifest.get_path_hints()
+
+    def _build_item_model(self, field_def: FieldDef) -> Type[BaseModel]:
+        """
+        Build (and cache) a Pydantic model for a CONT_LIST item when
+        field_def.config['item_shape'] is present.
+        Example shape:
+            {"class_name": "str", "spell_level": "int", "slots_max": "int", "slots_current": "int"}
+        """
+        cache_key = f"item_model:{field_def.path}"
+        if cache_key in self._cache:
+            return self._cache[cache_key]  # type: ignore[return-value]
+
+        item_shape: Dict[str, str] = field_def.config.get("item_shape", {})
+        model_fields: Dict[str, tuple[type, Field]] = {}
+
+        for name, type_name in item_shape.items():
+            if type_name == "int":
+                py_type: type = int
+                default: Any = 0
+            else:
+                # default to string for unknowns
+                py_type = str
+                default = ""
+
+            desc = f"{field_def.label} - {name.replace('_', ' ').title()}"
+            model_fields[name] = (py_type, Field(default, description=desc))
+
+        ItemModel = create_model(
+            f"{field_def.path.replace('.', '_').title()}Item",
+            __config__=ConfigDict(extra="forbid"),
+            **model_fields,
+        )
+        self._cache[cache_key] = ItemModel
+        return ItemModel
