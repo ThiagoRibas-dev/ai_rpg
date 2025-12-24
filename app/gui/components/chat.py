@@ -1,5 +1,7 @@
+import json
 from nicegui import ui
 from app.gui.theme import Theme
+from nicegui.events import KeyEventArguments
 
 
 class ChatComponent:
@@ -53,10 +55,10 @@ class ChatComponent:
                         )
 
                 self.input_area = (
-                    ui.textarea(placeholder="What do you do?")
-                    .props('autogrow rows=1 rounded outlined input-class="text-white"')
+                    ui.textarea(placeholder="What do you do? Ctrl+Enter to send...")
+                    .props('autogrow rows=2 rounded outlined input-class="text-white"')
                     .classes("flex-grow text-lg")
-                    .on("keydown.enter.prevent", self.handle_enter)
+                    .on("keydown", self._on_input_key)
                 )
 
                 # Send Button
@@ -73,6 +75,12 @@ class ChatComponent:
                     .classes("text-red-500")
                 )
                 self.stop_btn.set_visibility(False)
+
+    def _on_input_key(self, e: KeyEventArguments):
+        # Ctrl+Enter submits; plain Enter inserts newline
+        if e.key == "Enter" and e.ctrl:
+            e.prevent_default()
+            self.handle_enter()
 
     def set_generating(self, is_generating: bool):
         """Toggles the input state based on generation status."""
@@ -326,7 +334,8 @@ class ChatComponent:
                 with ui.expansion(f"🛠 {name}", icon="code").classes(
                     "w-full max-w-lg bg-slate-900 border border-slate-800 rounded text-xs"
                 ):
-                    ui.json(args).classes("text-xs text-green-400 p-2")
+                    # Adds the tool args to the chat as a read only JSON for better readability:
+                    ui.code(json.dumps(args, indent=2)).classes("text-xs text-gray-400")
         self._scroll_down()
 
     def add_dice_roll(self, spec: str, total: int, rolls: list):

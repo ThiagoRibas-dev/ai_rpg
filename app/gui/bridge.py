@@ -51,12 +51,14 @@ class NiceGUIBridge:
 
     def set_active_turn(self, turn_id: str | None):
         """
-        Sets the current valid turn ID. 
+        Sets the current valid turn ID.
         Any UI messages arriving with a different (old) turn_id will be dropped.
         """
         self.active_turn_id = turn_id
         if turn_id is None:
-            logger.info("Bridge: Active turn cleared. UI will ignore pending turn events.")
+            logger.info(
+                "Bridge: Active turn cleared. UI will ignore pending turn events."
+            )
         else:
             logger.debug(f"Bridge: Active turn set to {turn_id}")
 
@@ -84,7 +86,7 @@ class NiceGUIBridge:
         # If the message is tagged with a turn_id, check if it matches the active one.
         # Messages without a turn_id (system events) are allowed through.
         msg_turn_id = msg.get("turn_id")
-        
+
         if msg_turn_id and self.active_turn_id and msg_turn_id != self.active_turn_id:
             # Drop zombie message from previous turn/thread
             return
@@ -160,6 +162,12 @@ class NiceGUIBridge:
 
         elif msg_type == "planning_started":
             if self.chat_component:
+                # show a generic thinking stub immediately
+                self.chat_component.add_message(
+                    name="Game Master",
+                    text=msg.get("content", "Thinking..."),
+                    role="thought",
+                )
                 self.chat_component.set_generating(True)
 
         elif msg_type == "history_changed":
