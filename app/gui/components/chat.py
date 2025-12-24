@@ -1,7 +1,6 @@
 import json
 from nicegui import ui
 from app.gui.theme import Theme
-from nicegui.events import KeyEventArguments
 
 
 class ChatComponent:
@@ -55,10 +54,11 @@ class ChatComponent:
                         )
 
                 self.input_area = (
-                    ui.textarea(placeholder="What do you do? Ctrl+Enter to send...")
-                    .props('autogrow rows=2 rounded outlined input-class="text-white"')
+                    ui.textarea(placeholder="What do you do?")
+                    .props('autogrow rows=1 rounded outlined input-class="text-white"')
                     .classes("flex-grow text-lg")
-                    .on("keydown", self._on_input_key)
+                    # Ctrl+Enter submits, prevents newline
+                    .on("keydown.ctrl.enter.prevent", self.handle_enter)
                 )
 
                 # Send Button
@@ -75,12 +75,6 @@ class ChatComponent:
                     .classes("text-red-500")
                 )
                 self.stop_btn.set_visibility(False)
-
-    def _on_input_key(self, e: KeyEventArguments):
-        # Ctrl+Enter submits; plain Enter inserts newline
-        if e.key == "Enter" and e.ctrl:
-            e.prevent_default()
-            self.handle_enter()
 
     def set_generating(self, is_generating: bool):
         """Toggles the input state based on generation status."""
