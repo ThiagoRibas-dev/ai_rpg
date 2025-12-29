@@ -89,9 +89,6 @@ class ChatComponent:
                 self.input_area.enable()
                 self.input_area.run_method("focus")
 
-        if not is_generating:
-            self.load_history()
-
     def load_history(self):
         if not self.container:
             return

@@ -1,7 +1,10 @@
 from typing import List, Literal, Optional, Union, Any
+
 from pydantic import BaseModel, Field
 
+
 # A reusable JSON type to avoid recursion errors with Pydantic's schema generator.
+
 JSONValue = Union[str, int, float, bool, dict, List]
 
 
@@ -13,6 +16,7 @@ class ToolCall(BaseModel):
         description="The name of the tool to call.",
         example="state_query",
     )
+
     arguments: Any = Field(
         default_factory=dict,
         description="The JSON-formatted string arguments for the tool.",
@@ -27,10 +31,12 @@ class PatchOp(BaseModel):
         description="The operation to perform.",
         example="replace",
     )
+
     path: str = Field(
         description="A JSON Pointer path to the value to be operated on.",
         example="/stats/hp",
     )
+
     value: Optional[JSONValue] = Field(
         default=None,
         description="The value to be used for 'add' or 'replace' operations.",
@@ -45,13 +51,17 @@ class Patch(BaseModel):
         description="The type of the entity to patch (e.g., 'character', 'location').",
         example="character",
     )
+
     key: str = Field(
         description="The unique key identifying the specific entity instance.",
         example="player",
     )
+
     ops: List[PatchOp] = Field(
         description="A list of patch operations to apply to the entity."
     )
+
+
 class WorldTickOutcome(BaseModel):
     """The simulated outcome of an NPC's off-screen actions during a time skip."""
 
@@ -60,11 +70,13 @@ class WorldTickOutcome(BaseModel):
         description="A brief, one-sentence summary of what happened as a result of the NPC's directive. This will become a memory if significant.",
         example="The town guard captain, while patrolling, discovered tracks leading to a hidden goblin den.",
     )
+
     is_significant: bool = Field(
         ...,
         description="Whether this outcome is significant enough to create a persistent memory for the player to potentially discover.",
         example=True,
     )
+
     proposed_patches: List[Patch] = Field(
         default_factory=list,
         description="A list of state changes to apply to the world as a result of this outcome. E.g., updating an NPC's inventory, location, or a relationship.",
@@ -75,13 +87,32 @@ class ActionChoices(BaseModel):
     """A set of suggested actions for the player to choose from."""
 
     choices: List[str] = Field(
+        ...,
         description="A list of 3-5 concise action options for the user.",
-        example=[
-            "Go to the blacksmith.",
-            "Enter the tavern.",
-            "Check out the general store.",
-            "Ask a passerby for directions.",
-        ],
+        example="Go to the blacksmith. Enter the tavern. Check out the general store. Ask a passerby for directions.",
         min_length=3,
         max_length=5,
+    )
+
+
+class TurnSummaryOutput(BaseModel):
+    """Turn metadata for retrieval & performance."""
+
+    summary: str = Field(
+        ...,
+        description="Concise 1-3 sentence summary of what happened this turn.",
+        max_length=320,
+    )
+
+    tags: List[str] = Field(
+        default_factory=list,
+        description="Short retrieval tags, ideally snake_case.",
+        max_length=12,
+    )
+
+    importance: int = Field(
+        3,
+        description="1-5 importance rating for retrieval (5 = major).",
+        ge=1,
+        le=5,
     )

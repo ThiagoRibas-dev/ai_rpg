@@ -79,16 +79,7 @@ class ContextBuilder:
                 sections.append(f"# ACTIVE PROCEDURE: {current_mode.upper()}\n{proc_text}")
 
         # 3. Narrative Context (RAG)
-        session = Session.from_json(game_session.session_data)
-        session.id = game_session.id
-        
-        narrative_mems = self.mem_retriever.get_relevant(
-            session, chat_history, kinds=["episodic", "lore", "semantic"], limit=8
-        )
-        if narrative_mems:
-            sections.append(
-                self.mem_retriever.format_for_prompt(narrative_mems, "STORY CONTEXT")
-            )
+        # Moved to react_turn_manager _prepend_rolling_summary + _inject_rag_as_tool_result
 
         # 4. Spatial Context
         spatial_context = self._build_spatial_context(game_session.id)

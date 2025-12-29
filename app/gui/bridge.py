@@ -157,7 +157,9 @@ class NiceGUIBridge:
                 self.inspector_component.refresh()
             if self.map_component:
                 self.map_component.refresh_from_db()
-            if self.chat_component:
+
+            # Only stop "generating" when the turn is actually complete
+            if msg_type == "turn_complete" and self.chat_component:
                 self.chat_component.set_generating(False)
 
         elif msg_type == "planning_started":
