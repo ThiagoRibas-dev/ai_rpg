@@ -245,7 +245,7 @@ class ReActTurnManager:
                 Message(
                     role="user",
                     content=(
-                        "Out-of-character: write between 3 and 5 suggestions of actions the Player could take next, written from the player's perspective."
+                        "Out-of-character: write between 3 and 5 suggestions of actions the Player could take next. Example: \"do X\", \"go to Y\", \"inspect A\", etc."
                     ),
                 )
             )
