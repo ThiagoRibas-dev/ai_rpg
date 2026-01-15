@@ -217,3 +217,5 @@ docs/assistant prompt.txt
 ai_rpg.db-wal
 ai_rpg.db-shm
 apply_rules_update.py
+
+references/

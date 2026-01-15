@@ -153,14 +153,17 @@ class ReActTurnManager:
                 tool_calls=response.tool_calls,
             )
             working_history.append(assistant_msg)
-            self.ui_queue.put(
-                {
-                    "type": "message_bubble",
-                    "role": "assistant",
-                    "content": response.content,
-                    "turn_id": turn_id,
-                }
-            )
+            
+            if response.content and not response.tool_calls:
+                self.ui_queue.put(
+                    {
+                        "type": "message_bubble",
+                        "role": "assistant",
+                        "content": response.content,
+                        "turn_id": turn_id,
+                    }
+                )
+
             if response.tool_calls:
                 self.logger.info(
                     f"ReAct Loop {loop_count}: Model called {len(response.tool_calls)} tools."
@@ -245,7 +248,7 @@ class ReActTurnManager:
                 Message(
                     role="user",
                     content=(
-                        "Out-of-character: write between 3 and 5 suggestions of actions the Player could take next. Example: \"do X\", \"go to Y\", \"inspect A\", etc."
+                        "Out-of-character: Based on the current context, write between 3 and 5 suggestions of actions the Player could take next. Example: do X, go to Y, inspect A, approach B, etc."
                     ),
                 )
             )
