@@ -63,8 +63,8 @@ class MemoryRetriever:
             )
             if last_ai and last_ai.content:
                 query_parts.append(
-                    last_ai.content[-300:]
-                )  # Limit AI noise to last 300 chars
+                    last_ai.content[-3000:]
+                )  # Limit AI noise to last 3000 chars
 
         # Always add User message
         if recent_messages and recent_messages[-1].role == "user":

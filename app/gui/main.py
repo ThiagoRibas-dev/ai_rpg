@@ -188,8 +188,8 @@ def init_gui(db_path: str):
             right_drawer.set_value(not current)
 
         # Center Column: chat is primary; big map is via dialog only
-        with ui.column().classes("w-full h-[calc(100vh-4rem)] p-0 gap-0 relative"):
-            with ui.column().classes("w-full h-full bg-slate-900 p-0 gap-0"):
+        with ui.column().classes("w-full h-[calc(100vh-4rem)] p-0 gap-0 relative overflow-hidden"):
+            with ui.column().classes("w-full h-full bg-slate-900 p-0 gap-0 overflow-hidden"):
                 chat_comp.render()
 
         # Polling Loop

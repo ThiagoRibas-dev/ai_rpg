@@ -21,8 +21,8 @@ class ChatComponent:
 
     def render(self):
         # Message Area
-        with ui.scroll_area().classes("w-full flex-grow p-4 gap-4") as area:
-            self.container = ui.column().classes("w-full gap-4")
+        with ui.scroll_area().classes("w-full flex-grow p-4 gap-4 overflow-x-hidden") as area:
+            self.container = ui.column().classes("w-full gap-4 max-w-full")
             self.scroll_area = area
 
             with self.container:
@@ -134,40 +134,50 @@ class ChatComponent:
             self.add_system_message(msg.content)
             return
 
-        chat_msg = ui.chat_message(name=name, sent=sent)
+        # Custom Chat Bubble Implementation
+        row_classes = "w-full justify-end" if sent else "w-full justify-start"
+        
+        with ui.row().classes(row_classes + " gap-2 group"):
+            # Avatar area
+            if not sent:
+                ui.label(name).classes("text-xs font-bold text-gray-400 mt-1 self-start")
 
-        with chat_msg:
-            with ui.context_menu():
-                ui.menu_item(
-                    "Edit",
-                    on_click=lambda: self._toggle_edit_mode(
-                        content_container, index, msg
-                    ),
-                )
-                ui.menu_item(
-                    "Delete", on_click=lambda: self._delete_message(index)
-                ).classes("text-red-400")
-                if not sent:
-                    ui.separator()
-                    ui.menu_item(
-                        "Regenerate from here",
-                        on_click=lambda: self._regenerate_from(index),
-                    )
+            with ui.column().classes("max-w-[80%] items-end" if sent else "max-w-[80%] items-start"):
+                # Using a DIV as the bubble
+                bubble = ui.element('div').classes("p-3 rounded-2xl relative shadow-sm")
+                
+                # Apply styles via classes
+                if sent:
+                    # User: Green
+                    bubble.classes(Theme.chat_bubble_sent + " rounded-tr-none")
+                else:
+                    # AI: Dark Grey
+                    bubble.classes(Theme.chat_bubble_received + " rounded-tl-none")
+                
+                with bubble:
+                    # Context Menu attached to the bubble
+                    with ui.context_menu():
+                        ui.menu_item("Edit", on_click=lambda: self._toggle_edit_mode(content_container, index, msg))
+                        ui.menu_item("Delete", on_click=lambda: self._delete_message(index)).classes("text-red-400")
+                        if not sent:
+                            ui.separator()
+                            ui.menu_item("Regenerate from here", on_click=lambda: self._regenerate_from(index))
 
-            content_container = ui.column().classes(
-                "w-full p-0 m-0 gap-2 min-w-[200px]"
-            )
-            with content_container:
-                ui.markdown(msg.content).classes("text-base leading-relaxed")
-                with ui.row().classes(
-                    "opacity-0 hover:opacity-100 transition-opacity absolute -right-2 -top-2 bg-slate-800 rounded-full shadow-sm"
-                ):
-                    ui.button(
-                        icon="edit",
-                        on_click=lambda: self._toggle_edit_mode(
-                            content_container, index, msg
-                        ),
-                    ).props("flat dense round size=xs")
+                    content_container = ui.column().classes("w-full p-0 m-0 gap-1")
+                    with content_container:
+                        # Removed prose-invert colors to allow inheritance, kept prose structure
+                        ui.markdown(msg.content).classes(
+                            "w-full min-w-0 break-words break-all whitespace-pre-wrap prose prose-invert max-w-none [&_p]:m-0 text-sm [&_*]:text-inherit"
+                        )
+
+                    # Edit Button (visible on hover)
+                    with ui.row().classes(
+                        "opacity-0 group-hover:opacity-100 transition-opacity absolute -right-2 -top-2 bg-slate-900 rounded-full shadow-sm z-10"
+                    ):
+                        ui.button(
+                            icon="edit",
+                            on_click=lambda: self._toggle_edit_mode(content_container, index, msg),
+                        ).props("flat dense round size=xs")
 
     def _toggle_edit_mode(self, container, index, msg):
         container.clear()
@@ -259,8 +269,24 @@ class ChatComponent:
                         )
                         ui.markdown(text).classes("text-sm text-yellow-200 italic")
             else:
-                with ui.chat_message(name=name, sent=sent):
-                    ui.markdown(text).classes("text-base leading-relaxed")
+                # Custom Bubble for added messages
+                row_classes = "w-full justify-end" if sent else "w-full justify-start"
+
+                with ui.row().classes(row_classes + " gap-2"):
+                     if not sent:
+                        ui.label(name).classes("text-xs font-bold text-gray-400 mt-1 self-start")
+                        
+                     with ui.column().classes("max-w-[80%] items-end" if sent else "max-w-[80%] items-start"):
+                        bubble = ui.element('div').classes("p-3 rounded-2xl shadow-sm")
+                        if sent:
+                            bubble.style("background-color: #37474F; color: #eceff1; border-top-right-radius: 0;")
+                        else:
+                            bubble.style("background-color: #0f121a; color: #d1d5db; border: 1px solid #334155; border-top-left-radius: 0;")
+
+                        with bubble:
+                            ui.markdown(text).classes(
+                                "w-full min-w-0 break-words break-all whitespace-pre-wrap prose prose-invert max-w-none [&_p]:m-0 text-sm [&_*]:text-inherit"
+                            )
         self._scroll_down()
 
     def add_system_message(self, text):

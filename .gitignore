@@ -205,8 +205,6 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
-run-codium.bat
-ai_rpg.db
 
 # Output of the script that exports the codebase as a single text file
 list_dirs_and_files.txt
@@ -218,4 +216,7 @@ ai_rpg.db-wal
 ai_rpg.db-shm
 apply_rules_update.py
 
+# Misc
 references/
+*.bat
+ai_rpg.db

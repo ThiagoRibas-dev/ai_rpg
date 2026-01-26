@@ -61,16 +61,21 @@ class Orchestrator:
 
     def plan_and_execute(self, session: GameSession):
         logger.debug("Starting plan_and_execute (non-blocking)")
+
+        # 1. Cancel any running turn first to prevent race conditions
+        if self.active_turn_id:
+            self.stop_generation()
+
         user_input = self.bridge.get_input()
 
         if not user_input or not self.session:
             return
 
-        # 1. Generate Turn ID
+        # 2. Generate Turn ID
         self.active_turn_id = uuid.uuid4().hex
         self.bridge.set_active_turn(self.active_turn_id)
 
-        # 2. Optimistic UI update (tagged with turn_id)
+        # 3. Optimistic UI update (tagged with turn_id)
         self.session.add_message("user", user_input)
         self.ui_queue.put(
             {

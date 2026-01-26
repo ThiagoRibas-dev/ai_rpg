@@ -60,6 +60,7 @@ class ContextBuilder:
         self,
         game_session: GameSession,
         chat_history: List[Message],
+        rag_memories: Optional[List] = None,
     ) -> str:
         """
         Builds the context that changes every turn (State, Narrative, Procedure).
@@ -79,7 +80,9 @@ class ContextBuilder:
                 sections.append(f"# ACTIVE PROCEDURE: {current_mode.upper()}\n{proc_text}")
 
         # 3. Narrative Context (RAG)
-        # Moved to react_turn_manager _prepend_rolling_summary + _inject_rag_as_tool_result
+        if rag_memories:
+            rag_text = self.mem_retriever.format_for_prompt(rag_memories, title="RETRIEVED KNOWLEDGE")
+            sections.append(rag_text)
 
         # 4. Spatial Context
         spatial_context = self._build_spatial_context(game_session.id)

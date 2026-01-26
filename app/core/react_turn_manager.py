@@ -53,9 +53,18 @@ class ReActTurnManager:
         manifest = None
         if manifest_id:
             manifest = thread_db_manager.manifests.get_by_id(manifest_id)
-        # If manifest is not loaded/valid, raises error
+        # If manifest is not loaded/valid, show error to the user
         if not manifest:
-            raise ValueError(f"Manifest not found for session {game_session.id}")
+            error_msg = (
+                "⚠️ Game system not configured. "
+                "Please select a game system in the Session Setup before playing."
+            )
+            self.ui_queue.put({
+                "type": "error",
+                "message": error_msg,
+                "turn_id": turn_id,
+            })
+            return
         # --- 2. SETUP SERVICES ---
         state_builder = StateContextBuilder(
             self.tool_registry, thread_db_manager, self.logger
@@ -90,23 +99,44 @@ class ReActTurnManager:
         chat_history = context_builder.get_truncated_history(
             session_in_thread, MAX_HISTORY_MESSAGES
         )
-        dynamic_context = context_builder.build_dynamic_context(
-            game_session, chat_history
-        )
-        turn_system_prompt = f"{static_instruction}\n\n{dynamic_context}"
         working_history = list(chat_history)
-        # Prepend rolling summary as one message (role chosen to preserve alternation)
         working_history = self._prepend_rolling_summary(game_session, working_history)
-        # Injects RAG as tool result messages (protocol-correct)
-        working_history = self._inject_rag_as_tool_result(
-            game_session=game_session,
-            session_in_thread=session_in_thread,
-            mem_retriever=mem_retriever,
-            history=working_history,
-            turn_id=turn_id,
-            kinds=["episodic", "lore", "semantic", "rule"],
+        
+        kinds = ["episodic", "lore", "semantic", "rule"]
+        mems = mem_retriever.get_relevant(
+            session_in_thread,
+            recent_messages=working_history,
+            kinds=kinds,
             limit=8,
         )
+
+        dynamic_context = context_builder.build_dynamic_context(
+            game_session, chat_history, rag_memories=mems
+        )
+        turn_system_prompt = f"{static_instruction}\n\n{dynamic_context}"
+        
+        if mems:
+            # Emit UI event for debug visibility
+            # We recreate the formatted text just for the UI payload, or we can trust the ContextBuilder included it.
+            # Ideally we'd use the same formatter, but for now we re-format for the UI or just send the raw text if needed.
+            rag_text_for_ui = mem_retriever.format_for_prompt(mems, title="RETRIEVED KNOWLEDGE")
+            
+            payload = {
+                "ui": "rag_context",
+                "text": rag_text_for_ui,
+                "memory_ids": [m.id for m in mems],
+                "kinds": kinds,
+            }
+            # We emit a synthetic "tool_result" event just so the UI displays the RAG bubble,
+            # even though we aren't using a tool message anymore.
+            self.ui_queue.put(
+                {
+                    "type": "tool_result",
+                    "result": json.dumps(payload),
+                    "is_error": False,
+                    "turn_id": turn_id,
+                }
+            )
         # --- 4. TOOL INJECTION ---
         active_tool_names = [
             Adjust.model_fields["name"].default,
@@ -130,6 +160,7 @@ class ReActTurnManager:
                     tool["function"]["description"] = desc
         # --- 5. ACTION LOOP ---
         loop_count = 0
+        narrative_text = ""
         while loop_count < MAX_REACT_LOOPS:
             if self.orchestrator.stop_event.is_set():
                 self.ui_queue.put(
@@ -163,6 +194,7 @@ class ReActTurnManager:
                         "turn_id": turn_id,
                     }
                 )
+                narrative_text = response.content
 
             if response.tool_calls:
                 self.logger.info(
@@ -240,7 +272,6 @@ class ReActTurnManager:
         # --- 6. FINAL OUTPUT (STRUCTURED: narrative + choices) ---
         if self.orchestrator.stop_event.is_set():
             return
-        narrative_text = ""
         choices = []
         try:
             final_history = list(working_history)
@@ -342,72 +373,4 @@ class ReActTurnManager:
         )
         return [prefix] + history
 
-    def _inject_rag_as_tool_result(
-        self,
-        game_session: GameSession,
-        session_in_thread: Session,
-        mem_retriever: MemoryRetriever,
-        history: list[Message],
-        turn_id: str,
-        kinds: list[str] | None = None,
-        limit: int = 8,
-    ) -> list[Message]:
-        """
-        Represents retrieval as a tool call + tool result in the message stream.
-        We DO NOT persist these messages; they exist only for the LLM call.
-        """
-        if not history:
-            return history
-        # Find last user message (usually the current turn input)
-        last_user = None
-        for m in reversed(history):
-            if m.role == "user" and (m.content or "").strip():
-                last_user = m
-                break
-        if not last_user:
-            return history
-        # Run retrieval in Python (using your existing retriever)
-        # IMPORTANT: do this BEFORE we append tool messages (so retriever still sees last message as user if it expects that)
-        kinds = kinds or ["episodic", "semantic", "lore", "rule"]
-        mems = mem_retriever.get_relevant(
-            session_in_thread,
-            recent_messages=history,  # uses last AI + last user to form query
-            kinds=kinds,
-            limit=limit,
-        )
-        if not mems:
-            return history
-        rag_text = mem_retriever.format_for_prompt(mems, title="RETRIEVED CONTEXT")
-        payload = {
-            "ui": "rag_context",
-            "text": rag_text,
-            "memory_ids": [m.id for m in mems],
-            "kinds": kinds,
-        }
-        call_id = "call_rag_" + uuid.uuid4().hex
-        # Synthetic assistant tool-call message
-        synthetic_toolcall = Message(
-            role="assistant",
-            content="",  # keep empty; avoid leaking into narrative
-            tool_calls=[
-                {
-                    "id": call_id,
-                    "name": "context.retrieve",
-                    "arguments": {
-                        "query": last_user.content[-500:],  # just for traceability
-                        "kinds": kinds,
-                        "limit": limit,
-                    },
-                }
-            ],
-        )
-        # Synthetic tool result message
-        synthetic_toolresult = Message(
-            role="tool",
-            tool_call_id=call_id,
-            name="context.retrieve",
-            content=json.dumps(payload),
-        )
-        # Insert them at the end (right after last user, since last user is usually the last message here)
-        # If you want to be stricter: insert immediately after the located last_user index.
-        return history + [synthetic_toolcall, synthetic_toolresult]
+
