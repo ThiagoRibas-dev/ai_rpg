@@ -77,29 +77,16 @@ class SessionListComponent:
                             ui.label(sess.name).classes("font-bold text-sm")
                             ui.label(sess.game_time).classes("text-xs text-gray-400")
 
-                    # Context Menu for Actions
-                    with (
-                        ui.button(icon="more_vert")
-                        .props("flat dense round size=sm")
-                        .classes("text-gray-400 opacity-0 group-hover:opacity-100")
-                    ):
-                        with ui.menu() as menu:
-                            ui.menu_item(
-                                "Load", on_click=lambda s=sess: self.load_session(s)
-                            )
-                            ui.menu_item(
-                                "Rename", on_click=lambda s=sess: self.rename_session(s)
-                            )
-                            ui.menu_item(
-                                "Clone", on_click=lambda s=sess: self.clone_session(s)
-                            )
-                            ui.separator()
-                            ui.menu_item(
-                                "Delete",
-                                on_click=lambda s=sess, m=menu: self.confirm_delete(
-                                    s, m
-                                ),
-                            ).classes("text-red-400")
+                    # Hover Action Buttons
+                    with ui.row().classes("opacity-0 group-hover:opacity-100 transition-opacity gap-1"):
+                        ui.button(icon="play_arrow", on_click=lambda s=sess: self.load_session(s)) \
+                            .props("flat dense round size=xs color=green").tooltip("Load")
+                        ui.button(icon="edit", on_click=lambda s=sess: self.rename_session(s)) \
+                            .props("flat dense round size=xs color=grey").tooltip("Rename")
+                        ui.button(icon="content_copy", on_click=lambda s=sess: self.clone_session(s)) \
+                            .props("flat dense round size=xs color=blue").tooltip("Clone")
+                        ui.button(icon="delete", on_click=lambda s=sess: self.confirm_delete(s, None)) \
+                            .props("flat dense round size=xs color=red").tooltip("Delete")
 
     def load_session(self, session):
         self._active_session = session
@@ -251,8 +238,9 @@ class SessionListComponent:
             ui.notify(f"Clone failed: {e}", type="negative")
             logger.error(f"Clone failed: {e}", exc_info=True)
 
-    def confirm_delete(self, session, menu):
-        menu.close()
+    def confirm_delete(self, session, menu=None):
+        if menu:
+            menu.close()
         with ui.dialog() as dialog, ui.card():
             ui.label(f"Delete '{session.name}'?")
             with ui.row():

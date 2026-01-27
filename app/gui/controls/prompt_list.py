@@ -120,40 +120,16 @@ class PromptListComponent:
                                             "text-xs text-gray-400"
                                         )
 
-                                # Per-session actions menu
-                                with (
-                                    ui.button(icon="more_vert")
-                                    .props("flat dense round size=sm")
-                                    .classes(
-                                        "text-gray-400 opacity-0 group-hover:opacity-100"
-                                    )
-                                ):
-                                    with ui.menu():
-                                        ui.menu_item(
-                                            "Load",
-                                            on_click=lambda s=sess: self.session_list.load_session(
-                                                s
-                                            ),
-                                        )
-                                        ui.menu_item(
-                                            "Rename",
-                                            on_click=lambda s=sess: self.rename_session(
-                                                s
-                                            ),
-                                        )
-                                        ui.menu_item(
-                                            "Clone",
-                                            on_click=lambda s=sess: self.clone_session(
-                                                s
-                                            ),
-                                        )
-                                        ui.separator()
-                                        ui.menu_item(
-                                            "Delete",
-                                            on_click=lambda s=sess: self.confirm_delete(
-                                                s
-                                            ),
-                                        ).classes("text-red-400")
+                                # Hover Action Buttons
+                                with ui.row().classes("opacity-0 group-hover:opacity-100 transition-opacity gap-1"):
+                                    ui.button(icon="play_arrow", on_click=lambda s=sess: self.session_list.load_session(s)) \
+                                        .props("flat dense round size=xs color=green").tooltip("Load")
+                                    ui.button(icon="edit", on_click=lambda s=sess: self.rename_session(s)) \
+                                        .props("flat dense round size=xs color=grey").tooltip("Rename")
+                                    ui.button(icon="content_copy", on_click=lambda s=sess: self.clone_session(s)) \
+                                        .props("flat dense round size=xs color=blue").tooltip("Clone")
+                                    ui.button(icon="delete", on_click=lambda s=sess: self.confirm_delete(s)) \
+                                        .props("flat dense round size=xs color=red").tooltip("Delete")
 
     def create_prompt(self):
         dialog = PromptEditorDialog(self.db, self.orchestrator, on_save=self.refresh)

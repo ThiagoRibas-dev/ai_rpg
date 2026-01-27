@@ -11,10 +11,9 @@ class Theme:
     text_secondary = "text-gray-300"
     text_accent = "text-amber-400"  # Gold
 
-    # Chat Specific Colors
-    # consistent with the dark slate theme but keeping the distinct 'sent' color
-    chat_bubble_sent = "bg-emerald-700 text-white" 
-    chat_bubble_received = "bg-gray-200 text-black border border-gray-200"
+    # Chat Specific Colors - consistent with dark slate theme
+    chat_bubble_sent = "bg-emerald-700 text-white"
+    chat_bubble_received = "bg-slate-800 text-gray-200 border border-slate-700"
 
     # Standard Spacing
     padding = "p-4"

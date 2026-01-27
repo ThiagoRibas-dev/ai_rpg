@@ -262,26 +262,28 @@ class ChatComponent:
             if role == "thought":
                 with ui.row().classes("w-full justify-start"):
                     with ui.card().classes(
-                        "bg-yellow-900/20 border border-yellow-700/50 p-2"
+                        "bg-yellow-900/20 border border-yellow-700/50 p-2 w-full max-w-3xl"
                     ):
                         ui.label("💭 Thinking...").classes(
                             "text-xs text-yellow-500 font-bold mb-1"
                         )
                         ui.markdown(text).classes("text-sm text-yellow-200 italic")
             else:
-                # Custom Bubble for added messages
+                # Use same bubble styling as _render_interactive_message
                 row_classes = "w-full justify-end" if sent else "w-full justify-start"
 
                 with ui.row().classes(row_classes + " gap-2"):
-                     if not sent:
+                    if not sent:
                         ui.label(name).classes("text-xs font-bold text-gray-400 mt-1 self-start")
                         
-                     with ui.column().classes("max-w-[80%] items-end" if sent else "max-w-[80%] items-start"):
+                    with ui.column().classes("max-w-[80%] items-end" if sent else "max-w-[80%] items-start"):
                         bubble = ui.element('div').classes("p-3 rounded-2xl shadow-sm")
+                        
+                        # Apply Theme classes (same as history rendering)
                         if sent:
-                            bubble.style("background-color: #37474F; color: #eceff1; border-top-right-radius: 0;")
+                            bubble.classes(Theme.chat_bubble_sent + " rounded-tr-none")
                         else:
-                            bubble.style("background-color: #0f121a; color: #d1d5db; border: 1px solid #334155; border-top-left-radius: 0;")
+                            bubble.classes(Theme.chat_bubble_received + " rounded-tl-none")
 
                         with bubble:
                             ui.markdown(text).classes(
@@ -379,6 +381,30 @@ class ChatComponent:
                     ui.label(str(total)).classes(f"text-4xl font-black {text_col}")
                     if len(rolls) > 1:
                         ui.label(f"Results: {rolls}").classes("text-xs text-gray-500")
+        self._scroll_down()
+
+    def add_rag_context(self, text: str, memory_ids: list):
+        if not self.container or not text:
+            return
+        
+        # Count memories by counting lines starting with emojis or symbols
+        # (Assuming the format from MemoryRetriever.format_for_prompt)
+        m_count = len([line for line in text.split('\n') if line.strip() and not line.startswith('#')])
+        
+        with self.container:
+            with ui.row().classes("w-full justify-start"):
+                with ui.expansion(
+                    f"🧠 Recalled {m_count} context items...", 
+                    icon="psychology"
+                ).classes(
+                    "w-full max-w-lg bg-slate-900/40 border border-blue-900/30 rounded-lg text-xs"
+                ) as exp:
+                    exp.classes("text-blue-400 font-medium")
+                    with ui.column().classes("p-2 gap-1"):
+                        ui.markdown(text).classes("text-xs text-gray-400 prose prose-invert max-w-none")
+                        if memory_ids:
+                             ui.label(f"IDs: {memory_ids}").classes("text-[10px] text-gray-600 font-mono mt-1")
+
         self._scroll_down()
 
     def add_choices(self, choices: list):

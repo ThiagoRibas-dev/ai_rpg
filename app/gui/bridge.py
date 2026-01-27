@@ -135,6 +135,12 @@ class NiceGUIBridge:
             if self.chat_component:
                 self.chat_component.add_choices(msg.get("choices", []))
 
+        elif msg_type == "rag_context":
+            if self.chat_component:
+                self.chat_component.add_rag_context(
+                    msg.get("text", ""), msg.get("memory_ids", [])
+                )
+
         elif msg_type == "update_nav":
             if self.chat_component:
                 self.chat_component.update_navigation(msg.get("exits", []))

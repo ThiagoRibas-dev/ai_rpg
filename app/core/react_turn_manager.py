@@ -1,4 +1,3 @@
-import uuid
 import json
 import logging
 from typing import Dict, Type
@@ -117,23 +116,13 @@ class ReActTurnManager:
         
         if mems:
             # Emit UI event for debug visibility
-            # We recreate the formatted text just for the UI payload, or we can trust the ContextBuilder included it.
-            # Ideally we'd use the same formatter, but for now we re-format for the UI or just send the raw text if needed.
             rag_text_for_ui = mem_retriever.format_for_prompt(mems, title="RETRIEVED KNOWLEDGE")
             
-            payload = {
-                "ui": "rag_context",
-                "text": rag_text_for_ui,
-                "memory_ids": [m.id for m in mems],
-                "kinds": kinds,
-            }
-            # We emit a synthetic "tool_result" event just so the UI displays the RAG bubble,
-            # even though we aren't using a tool message anymore.
             self.ui_queue.put(
                 {
-                    "type": "tool_result",
-                    "result": json.dumps(payload),
-                    "is_error": False,
+                    "type": "rag_context",
+                    "text": rag_text_for_ui,
+                    "memory_ids": [m.id for m in mems],
                     "turn_id": turn_id,
                 }
             )

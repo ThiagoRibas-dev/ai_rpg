@@ -18,7 +18,7 @@ class InspectorManager:
         self.active_session_id = None
         
         # Instantiate sub-components
-        self.char_view = CharacterInspector(db_manager)
+        self.char_view = CharacterInspector(db_manager, orchestrator)
         self.inv_view = InventoryInspector(db_manager, orchestrator) # Pass Orchestrator
         self.quest_view = QuestInspector(db_manager)
         self.mem_view = MemoryInspector(db_manager)
