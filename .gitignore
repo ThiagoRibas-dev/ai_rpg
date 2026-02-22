@@ -217,6 +217,6 @@ ai_rpg.db-shm
 apply_rules_update.py
 
 # Misc
-references/
+docs/references/
 *.bat
 ai_rpg.db

@@ -1,4 +1,4 @@
-# Migrations
+# Database Schema
 
 Add tables (suggested)
 ```sql

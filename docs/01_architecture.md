@@ -50,10 +50,19 @@ The system uses a fast path vs. full pipeline approach to minimize latency.
 - Query with filters; timebox ≤200 ms.
 
 ## Project structure
-- app/gui: tkinter views
-- app/core: orchestrator and prompts
-- app/llm: provider adapters
-- app/tools: deterministic tools and registry
+- app/context: Context and prompt building structures
+- app/core: Orchestrator and turn management
+- app/data: Static game data and constants
+- app/database: SQLite helpers and DB managers
+- app/gui: NiceGUI components, views, and inspectors
 - app/io: Pydantic schemas (single source of truth)
-- app/database: SQLite helpers
-- docs: design and operations
+- app/llm: LLM provider adapters
+- app/memory: RAG memory storage and retrieval
+- app/models: Pydantic domain models
+- app/prefabs: Pre-built game objects and structures
+- app/prompts: Prompt building strategies
+- app/services: Business logic services
+- app/setup: Application initialization logic
+- app/tools: Deterministic tools and registry
+- app/utils: General helper functions
+- docs: Design and operations

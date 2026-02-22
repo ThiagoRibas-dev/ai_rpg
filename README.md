@@ -7,6 +7,23 @@ An AI-driven, tool-using text RPG engine designed for performance, accuracy, and
 -   **Context Caching:** Optimized prompt engineering to leverage API-side caching for massive context windows at low cost.
 -   **NiceGUI Interface:** A modern, reactive web-based UI with real-time state inspectors.
 
+## High-level goals
+
+-   Generic Text-adventure and roleplay frontend where the LLM is an orchestrator, not just a chat bot.
+-   Pluggable LLM backends: Google Gemini and any OpenAI-compatible API (including llama.cpp server).
+-   State-first: the model proposes what to persist; deterministic systems validate/apply patches.
+-   Schema-first orchestration: all model I/O uses structured outputs (JSON Schema) with strict validation.
+-   RAG for lore/world memory and long-term continuity.
+
+## Core user stories
+
+-   Start a new adventure by creating a prompt.
+-   Type commands or roleplay; watch the scene evolve with streamed narrative.
+-   Inspect and edit world state (inventory, locations, NPCs, quest flags).
+-   See dice rolls and actions outcomes (deterministic tools).
+-   Switch model providers on the fly; resume the same session and state.
+-   Undo/redo last turn; view the action log of tool calls and patches.
+
 ## Features
 
 -   **Manifest-Driven Gameplay:** The engine doesn't just "guess" rules. It loads a JSON Manifest (e.g., D&D 5e, Call of Cthulhu) and enforces stats, dice mechanics, and resource pools via code.

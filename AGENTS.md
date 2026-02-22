@@ -34,6 +34,7 @@ The application is orchestrated by key components:
 ## The Turn Lifecycle (ReAct Pattern)
 
 A turn is executed by `ReActTurnManager.execute_turn` in a background thread.
+*(For the full data-flow pipeline, see [Architecture](docs/01_architecture.md#turn-workflow-data-flow)).*
 
 1.  **Context Assembly:**
     *   **Static:** System Prompt + Manifest Rules (Engine config, Dice rules).
@@ -55,22 +56,16 @@ A turn is executed by `ReActTurnManager.execute_turn` in a background thread.
 
 ## Data Model
 
--   **Manifests (`manifests` table):** JSON definitions of game systems (D&D 5e, CoC, etc.).
--   **Game State (`game_state` table):** A Key-Value store where every entity (Player, NPC, Location) is a JSON blob.
--   **Memories (`memories` table):** Stores Lore, Facts, and Events. Vector-indexed for RAG.
+*(See [Database Schema](docs/03_database_schema.md) for full table definitions).*
+
+-   **Manifests:** JSON definitions of game systems (D&D 5e, CoC, etc.).
+-   **Game State:** A Key-Value store where every entity (Player, NPC, Location) is a JSON blob.
+-   **Memories:** Stores Lore, Facts, and Events. Vector-indexed for RAG.
 -   **Turn Metadata:** Stores summaries of past turns to allow the AI to "remember" long-term history via semantic search.
 
 ## Prefabs & Validation
 
-Instead of generic JSON, data follows strict patterns defined in `app/prefabs/`:
-
-| Prefab ID | Data Shape | Usage |
-|:---|:---|:---|
-| `VAL_INT` | `int` | Attributes (Str: 18) |
-| `RES_POOL` | `{current, max}` | HP, Mana |
-| `RES_TRACK` | `[bool, bool...]` | Stress, Wounds |
-| `VAL_STEP_DIE` | `string` | "d6", "d8" (Savage Worlds) |
-| `CONT_LIST` | `[{name, qty}...]` | Inventory |
+Instead of generic JSON, data follows strict patterns defined in `app/prefabs/registry.py`:
 
 **Logic:**
 1.  **Formulas:** Defined in Manifest (`AC = 10 + dex_mod`). Calculated automatically.
@@ -78,7 +73,14 @@ Instead of generic JSON, data follows strict patterns defined in `app/prefabs/`:
 
 ## Documentation Map
 
+### Source Code
 - **`app/prefabs/`**: The core logic for the "Lego Protocol" (Manifests/Validation).
 - **`app/tools/handlers/`**: The atomic tool implementations.
 - **`app/gui/`**: NiceGUI frontend components.
 - **`app/setup/`**: Logic for the "Session Zero" wizard and rule extraction.
+
+### Documentation Files
+- **[Architecture](docs/01_architecture.md)**: Turn workflow, RAG service, project structure.
+- **[LLM Connectors](docs/02_llm_connectors.md)**: Provider adapters and structured output strategies.
+- **[Database Schema](docs/03_database_schema.md)**: Core SQL table definitions.
+- **[GUI](docs/04_gui.md)**: NiceGUI layout and threading execution model.
