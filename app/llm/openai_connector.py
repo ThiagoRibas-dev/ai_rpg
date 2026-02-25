@@ -82,10 +82,19 @@ class OpenAIConnector(LLMConnector):
         messages = [{"role": "system", "content": system_prompt}]
         messages.extend(self._convert_chat_history_to_messages(chat_history))
 
+        extra_params={
+                "chat_template_kwargs": {"enable_thinking": False},
+                "thinking": { "type": "disabled", "budget_tokens": 0 },
+                "top_k": 50,
+                "stop": ["<|im_end|>", "<|im_end|"]
+            }
+
         stream = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
             stream=True,
+            stop=["<|im_end|>"],
+            extra_body=extra_params,
         )
         for chunk in stream:
             if (
@@ -110,6 +119,18 @@ class OpenAIConnector(LLMConnector):
         json_schema = output_schema.model_json_schema()
         self._clean_schema(json_schema)
 
+        extra_params={
+                "chat_template_kwargs": {"enable_thinking": False},
+                "thinking": { "type": "disabled", "budget_tokens": 0 },
+                "top_k": 50,
+                "json_schema": json_schema,
+                "response_format": {
+                    "type": "json_object",
+                    "schema": json_schema,
+                },
+                "stop": ["<|im_end|>", "<|im_end|"]
+            }
+
         resp = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
@@ -117,17 +138,11 @@ class OpenAIConnector(LLMConnector):
             temperature=temperature,
             top_p=top_p,
             response_format={
-                "type": "json_object",
+                "type": "json_schema",
                 "schema": json_schema,
             },
-            extra_body={
-                "chat_template_kwargs": {"enable_thinking": False},
-                "top_k": 40,
-                "response_format": {
-                    "type": "json_object",
-                    "schema": json_schema,
-                },
-            },
+            stop=["<|im_end|>"],
+            extra_body=extra_params,
         )
 
         content = resp.choices[0].message.content
@@ -183,12 +198,20 @@ class OpenAIConnector(LLMConnector):
         messages = [{"role": "system", "content": system_prompt}]
         messages.extend(self._convert_chat_history_to_messages(chat_history))
 
+        extra_params={
+                "chat_template_kwargs": {"enable_thinking": False},
+                "thinking": { "type": "disabled", "budget_tokens": 0 },
+                "top_k": 50,
+                "stop": ["<|im_end|>", "<|im_end|"]
+            }
+
         response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
             tools=tools,
             tool_choice="auto" if tools else None,
-            temperature=0.7,
+            temperature=0.,
+            extra_body=extra_params,
         )
 
         message = response.choices[0].message

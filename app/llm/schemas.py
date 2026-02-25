@@ -82,37 +82,33 @@ class WorldTickOutcome(BaseModel):
         description="A list of state changes to apply to the world as a result of this outcome. E.g., updating an NPC's inventory, location, or a relationship.",
     )
 
-
-class ActionChoices(BaseModel):
-    """A set of suggested actions for the player to choose from."""
+class TurnFinalOutput(BaseModel):
+    """Combined output for final turn processing (actions + metadata) to save an LLM round-trip."""
 
     choices: List[str] = Field(
         ...,
-        description="A list of 3-5 concise action options for the user.",
-        example="Go to the blacksmith. Enter the tavern. Check out the general store. Ask a passerby for directions.",
+        description="A list of 3-5 concise action options the player could take next.",
+        example=["Go to the blacksmith.", "Enter the tavern.", "Roll a check to jump the chasm."],
         min_length=3,
         max_length=5,
     )
-
-
-class TurnSummaryOutput(BaseModel):
-    """Turn metadata for retrieval & performance."""
-
+    
     summary: str = Field(
         ...,
-        description="Concise 1-3 sentence summary of what happened this turn.",
-        max_length=320,
+        description="Concise 1-3 sentence summary of what happened this scene.",
+        max_length=512,
     )
 
     tags: List[str] = Field(
         default_factory=list,
-        description="Short retrieval tags, ideally snake_case.",
+        description="Tags in snake_case that describe the scene.",
         max_length=12,
     )
 
     importance: int = Field(
         3,
-        description="1-5 importance rating for retrieval (5 = major).",
+        description="1-5 importance rating for retrieval (1 = unimportant, 5 = major).",
         ge=1,
         le=5,
     )
+
