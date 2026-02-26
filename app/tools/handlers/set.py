@@ -6,7 +6,7 @@ from app.prefabs.manifest import SystemManifest
 
 logger = logging.getLogger(__name__)
 
-def handler(path: str, value: Any, reason: str = "", **context: Any) -> dict:
+def handler(path: str, value: Any, target: str = "player", reason: str = "", **context: Any) -> dict:
     """
     Handler for 'set' tool.
     Sets value directly, then runs full validation pipeline.
@@ -26,7 +26,7 @@ def handler(path: str, value: Any, reason: str = "", **context: Any) -> dict:
     else:
         # Legacy/Default behavior
         entity_type = "character"
-        entity_key = "player"
+        entity_key = target
         relative_path = path
 
     entity = get_entity(session_id, db, entity_type, entity_key)

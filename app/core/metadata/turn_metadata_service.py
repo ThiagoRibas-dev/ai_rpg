@@ -1,3 +1,7 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
 class TurnMetadataService:
     """Persists and retrieves turn metadata; also writes to vector store."""
 
@@ -18,14 +22,14 @@ class TurnMetadataService:
             self.db.turn_metadata.create(
                 session_id, prompt_id, round_number, summary, tags, importance
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Failed to persist turn metadata {session_id}:{prompt_id} to database: {e}")
         try:
             self.vs.add_turn(
                 session_id, prompt_id, round_number, summary, tags, importance
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Failed to vector-index turn metadata {session_id}:{prompt_id}: {e}")
 
     def search_relevant_turns(
         self, session_id: int, query_text: str, top_k: int = 5, min_importance: int = 3
@@ -34,5 +38,6 @@ class TurnMetadataService:
             return self.vs.search_relevant_turns(
                 session_id, query_text, top_k=top_k, min_importance=min_importance
             )
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to search relevant turns for session {session_id}: {e}")
             return []

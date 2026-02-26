@@ -6,7 +6,7 @@ from app.prefabs.manifest import SystemManifest
 
 logger = logging.getLogger(__name__)
 
-def handler(path: str, delta: int | float, reason: str = "", **context: Any) -> dict:
+def handler(path: str, delta: int | float, target: str = "player", reason: str = "", **context: Any) -> dict:
     """
     Handler for 'adjust' tool.
     Applies delta to a numeric field, then runs full validation pipeline.
@@ -17,7 +17,7 @@ def handler(path: str, delta: int | float, reason: str = "", **context: Any) -> 
     manifest: Optional[SystemManifest] = context.get("manifest")
 
     entity_type = "character"
-    entity_key = "player"
+    entity_key = target
     target_path = path
 
     # 1. Get Entity

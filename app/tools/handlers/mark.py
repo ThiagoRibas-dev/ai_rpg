@@ -6,7 +6,7 @@ from app.prefabs.manifest import SystemManifest
 
 logger = logging.getLogger(__name__)
 
-def handler(path: str, count: int = 1, **context: Any) -> dict:
+def handler(path: str, count: int = 1, target: str = "player", **context: Any) -> dict:
     """
     Handler for 'mark' tool.
     Manipulates tracks, then runs validation.
@@ -16,7 +16,7 @@ def handler(path: str, count: int = 1, **context: Any) -> dict:
     manifest: Optional[SystemManifest] = context.get("manifest")
 
     entity_type = "character"
-    entity_key = "player"
+    entity_key = target
 
     entity = get_entity(session_id, db, entity_type, entity_key)
     track = get_path(entity, path)

@@ -11,6 +11,9 @@ class Adjust(BaseModel):
     """
 
     name: Literal["adjust"] = "adjust"
+    target: str = Field(
+        "player", description="Entity key (e.g. 'player', 'goblin_1', 'npc_bartender')."
+    )
     path: str = Field(
         ...,
         description="Full path to the field (e.g. 'resources.hp.current', 'attributes.str').",
@@ -31,6 +34,9 @@ class Set(BaseModel):
     """
 
     name: Literal["set"] = "set"
+    target: str = Field(
+        "player", description="Entity key (e.g. 'player', 'goblin_1', 'npc_bartender')."
+    )
     path: str = Field(
         ...,
         description="Full path to the field (e.g. 'status.is_hiding', 'inventory.weapon').",
@@ -47,6 +53,9 @@ class Mark(BaseModel):
     """
 
     name: Literal["mark"] = "mark"
+    target: str = Field(
+        "player", description="Entity key (e.g. 'player', 'goblin_1', 'npc_bartender')."
+    )
     path: str = Field(
         ...,
         description="Path to the track field (e.g. 'resources.stress', 'status.harm').",

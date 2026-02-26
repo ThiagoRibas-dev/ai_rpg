@@ -42,26 +42,48 @@ class SetupManifest:
         return new_manifest
 
     def validate(self, session_id: int) -> SetupValidation:
+        from app.services.state_service import get_entity
+        from app.prefabs.validation import validate_entity
+        from app.prefabs.manifest import SystemManifest
+
         manifest = self.get_manifest(session_id)
         missing = []
         warnings = []
 
         # 1. System Manifest (Mechanics)
-        if not manifest.get("manifest_id"):
-            missing.append("Game System (Manifest)")
+        manifest_id = manifest.get("manifest_id")
+        sys_manifest_obj = None
+        if not manifest_id:
+            missing.append("Game System (Manifest ID missing)")
+        else:
+            sys_manifest_data = self.db.manifests.get_by_id(manifest_id)
+            if not sys_manifest_data:
+                missing.append("Game System (Manifest not found in DB)")
+            else:
+                sys_manifest_obj = SystemManifest(**sys_manifest_data) if isinstance(sys_manifest_data, dict) else sys_manifest_data
 
         # 2. World Data
         if not manifest.get("genre"):
             missing.append("Genre")
         if not manifest.get("tone"):
             missing.append("Tone")
-        if not manifest.get("starting_location"):
+            
+        start_loc = manifest.get("starting_location")
+        if not start_loc:
             missing.append("Starting Location")
+        else:
+            loc_entity = get_entity(session_id, self.db, "location", start_loc)
+            if not loc_entity:
+                missing.append("Starting Location (Entity not found in DB)")
 
         # 3. Character
-        if not manifest.get("player_character"):
-            # It's okay if not explicitly in setup manifest, provided entity exists
-            pass
+        char_entity = get_entity(session_id, self.db, "character", "player")
+        if not char_entity:
+            missing.append("Player Character (Entity not found in DB)")
+        elif sys_manifest_obj:
+            _, corrections = validate_entity(char_entity, sys_manifest_obj)
+            if corrections:
+                warnings.append(f"Player character validation needed {len(corrections)} corrections")
 
         is_complete = len(missing) == 0
 

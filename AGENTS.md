@@ -10,6 +10,8 @@ This document provides a technical overview of the Solo Text AI-RPG framework, o
 
 **Code Quality:** Run `ruff check . --fix` after batches of changes. Ensure type hints are used everywhere.
 
+**Error Handling:** Never use silent exceptions (`try/except: pass`). Always log errors with the appropriate level (`logger.error` for critical failures, `logger.warning` for degradations) and provide an informative message to help with debugging.
+
 ## Core Concepts
 
 -   **Manifest-Driven Architecture:** The game system is defined by a JSON `SystemManifest`. This defines the stats (`VAL_INT`), resources (`RES_POOL`), and mechanics. The AI does not hallucinate rules; it follows the Manifest.

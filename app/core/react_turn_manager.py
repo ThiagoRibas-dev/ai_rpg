@@ -185,6 +185,7 @@ class ReActTurnManager:
                     }
                 )
                 narrative_text = response.content
+                break
 
             if response.tool_calls:
                 self.logger.info(
@@ -307,7 +308,7 @@ class ReActTurnManager:
                         "1. Provide a concise 1-3 sentence summary of what happened.\n"
                         "2. Provide short retrieval tags.\n"
                         "3. Rate importance 1-5.\n"
-                        "4. Write 3-5 suggestions of actions the Player could take next. (e.g., do X, go to Y)\n"
+                        "4. Write 3-5 actions the Player could take next in first person. (e.g., I do X, I go to Y)\n"
                         "Return strictly as JSON."
                     ),
                 )
