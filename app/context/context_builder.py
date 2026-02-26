@@ -60,7 +60,7 @@ class ContextBuilder:
         self,
         game_session: GameSession,
         chat_history: List[Message],
-        rag_memories: Optional[List] = None,
+        rag_memories: Optional[dict] = None,
     ) -> str:
         """
         Builds the context that changes every turn (State, Narrative, Procedure).

@@ -101,12 +101,9 @@ class ReActTurnManager:
         working_history = list(chat_history)
         working_history = self._prepend_rolling_summary(game_session, working_history)
         
-        kinds = ["episodic", "lore", "semantic", "rule"]
         mems = mem_retriever.get_relevant(
             session_in_thread,
             recent_messages=working_history,
-            kinds=kinds,
-            limit=8,
         )
 
         dynamic_context = context_builder.build_dynamic_context(
@@ -118,11 +115,14 @@ class ReActTurnManager:
             # Emit UI event for debug visibility
             rag_text_for_ui = mem_retriever.format_for_prompt(mems, title="RETRIEVED KNOWLEDGE")
             
+            # Flatten memory IDs for the UI queue
+            flat_mem_ids = [m.id for cat_mems in mems.values() for m in cat_mems]
+
             self.ui_queue.put(
                 {
                     "type": "rag_context",
                     "text": rag_text_for_ui,
-                    "memory_ids": [m.id for m in mems],
+                    "memory_ids": flat_mem_ids,
                     "turn_id": turn_id,
                 }
             )
@@ -306,8 +306,8 @@ class ReActTurnManager:
                     content=(
                         "Out-of-character: summarize this turn and suggest next actions.\n"
                         "1. Provide a concise 1-3 sentence summary of what happened.\n"
-                        "2. Provide short retrieval tags.\n"
-                        "3. Rate importance 1-5.\n"
+                        "2. Provide short tags that summarize the turn, for later retrieval.\n"
+                        "3. Rate importance 1-5 rating of the turn.\n"
                         "4. Write 3-5 actions the Player could take next in first person. (e.g., I do X, I go to Y)\n"
                         "Return strictly as JSON."
                     ),
