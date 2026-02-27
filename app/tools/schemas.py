@@ -103,10 +103,13 @@ class Note(BaseModel):
     )
 
 
-# --- UTILITY / SETUP TOOLS (Kept for compatibility/setup) ---
-
+# --- UTILITY / SETUP TOOLS
 
 class StateQuery(BaseModel):
+    """
+    Query the low-level game state directly using JSON paths. 
+    Use this for complex data retrieval that isn't covered by standard tools.
+    """
     name: Literal["state.query"] = "state.query"
     entity_type: str = Field(...)
     key: str = Field(...)
@@ -114,6 +117,9 @@ class StateQuery(BaseModel):
 
 
 class NpcSpawn(BaseModel):
+    """
+    Spawn a new NPC into the game world at a specific location.
+    """
     name: Literal["npc.spawn"] = "npc.spawn"
     key: str = Field(...)
     name_display: str = Field(...)
@@ -124,6 +130,9 @@ class NpcSpawn(BaseModel):
 
 
 class LocationCreate(BaseModel):
+    """
+    Create a new location and define its visual/sensory details and neighbors (connection to other locations).
+    """
     name: Literal["location.create"] = "location.create"
     key: str = Field(...)
     name_display: str = Field(...)
@@ -135,7 +144,7 @@ class LocationCreate(BaseModel):
 
 class ContextRetrieve(BaseModel):
     """
-    Retrieve relevant story/lore/rules memories for the current moment.
+    Retrieve relevant piece of information (story/lore/rules memories) based on the query text.
     """
 
     name: Literal["context.retrieve"] = "context.retrieve"

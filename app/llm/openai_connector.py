@@ -80,11 +80,14 @@ class OpenAIConnector(LLMConnector):
         self, system_prompt: str, chat_history: List[Message]
     ) -> Generator[str, None, None]:
         messages = [{"role": "system", "content": system_prompt}]
-        messages.extend(self._convert_chat_history_to_messages(chat_history))
+        converted_history = self._convert_chat_history_to_messages(chat_history)
+        if not converted_history:
+            converted_history.append({"role": "user", "content": "Please proceed."})
+        messages.extend(converted_history)
 
         extra_params={
-                "chat_template_kwargs": {"enable_thinking": False},
-                "thinking": { "type": "disabled", "budget_tokens": 0 },
+                # "chat_template_kwargs": {"enable_thinking": False},
+                # "thinking": { "type": "disabled", "budget_tokens": 0 },
                 "top_k": 50,
                 "stop": ["<|im_end|>", "<|im_end|"]
             }
@@ -113,15 +116,18 @@ class OpenAIConnector(LLMConnector):
         top_p: float = 0.9,
     ) -> BaseModel:
         messages = [{"role": "system", "content": system_prompt}]
-        messages.extend(self._convert_chat_history_to_messages(chat_history))
+        converted_history = self._convert_chat_history_to_messages(chat_history)
+        if not converted_history:
+            converted_history.append({"role": "user", "content": "Please proceed."})
+        messages.extend(converted_history)
 
         # Generate and clean the schema to satisfy strict backends
         json_schema = output_schema.model_json_schema()
         self._clean_schema(json_schema)
 
         extra_params={
-                "chat_template_kwargs": {"enable_thinking": False},
-                "thinking": { "type": "disabled", "budget_tokens": 0 },
+                # "chat_template_kwargs": {"enable_thinking": False},
+                # "thinking": { "type": "disabled", "budget_tokens": 0 },
                 "top_k": 50,
                 "json_schema": json_schema,
                 "response_format": {
@@ -178,16 +184,56 @@ class OpenAIConnector(LLMConnector):
 
     def _clean_schema(self, schema: Dict[str, Any]):
         """
-        Recursively remove 'title' and 'default' fields from JSON schema.
+        Recursively remove 'title' and 'default' fields from JSON schema,
+        and flatten $ref fields by inlining their definitions from $defs.
+        """
+        # 1. Resolve and Inline references first (dereference)
+        if "$defs" in schema:
+            defs = schema.pop("$defs")
+            self._resolve_references(schema, defs)
+
+        # 2. Recursively clean remaining metadata
+        self._recursive_clean(schema)
+
+    def _resolve_references(self, schema: Any, defs: Dict[str, Any]):
+        """
+        Recursively replaces "$ref" with the actual definition from defs.
+        """
+        if isinstance(schema, dict):
+            if "$ref" in schema:
+                ref_path = schema["$ref"]
+                # Assumes local refs like "#/$defs/LocationData"
+                ref_key = ref_path.split("/")[-1]
+                if ref_key in defs:
+                    # Replace the entire dict content with the definition
+                    # We use update() to keep the same object reference if possible
+                    definition = defs[ref_key].copy()
+                    schema.clear()
+                    schema.update(definition)
+                    # Recursively resolve inside the newly inlined definition
+                    self._resolve_references(schema, defs)
+            else:
+                for value in schema.values():
+                    self._resolve_references(value, defs)
+        elif isinstance(schema, list):
+            for item in schema:
+                self._resolve_references(item, defs)
+
+    def _recursive_clean(self, schema: Any):
+        """
+        Recursively removes 'title' and 'default' from the schema.
         """
         if isinstance(schema, dict):
             schema.pop("title", None)
             schema.pop("default", None)
+            # Some backends also dislike 'additionalProperties' if it's true,
+            # but llama.cpp likes it if it's false. Pydantic 2.x often omits it
+            # unless Config.extra is set.
             for value in schema.values():
-                self._clean_schema(value)
+                self._recursive_clean(value)
         elif isinstance(schema, list):
             for item in schema:
-                self._clean_schema(item)
+                self._recursive_clean(item)
 
     def chat_with_tools(
         self,
@@ -196,11 +242,14 @@ class OpenAIConnector(LLMConnector):
         tools: List[Dict[str, Any]],
     ) -> LLMResponse:
         messages = [{"role": "system", "content": system_prompt}]
-        messages.extend(self._convert_chat_history_to_messages(chat_history))
+        converted_history = self._convert_chat_history_to_messages(chat_history)
+        if not converted_history:
+            converted_history.append({"role": "user", "content": "Please proceed."})
+        messages.extend(converted_history)
 
         extra_params={
-                "chat_template_kwargs": {"enable_thinking": False},
-                "thinking": { "type": "disabled", "budget_tokens": 0 },
+                # "chat_template_kwargs": {"enable_thinking": False},
+                # "thinking": { "type": "disabled", "budget_tokens": 0 },
                 "top_k": 50,
                 "stop": ["<|im_end|>", "<|im_end|"]
             }

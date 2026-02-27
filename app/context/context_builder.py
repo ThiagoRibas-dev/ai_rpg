@@ -18,6 +18,7 @@ class ContextBuilder:
         state_builder,
         mem_retriever,
         simulation_service,
+        tool_registry = None,
         logger: logging.Logger | None = None,
         manifest: Optional[SystemManifest] = None
     ):
@@ -26,6 +27,7 @@ class ContextBuilder:
         self.state_builder = state_builder
         self.mem_retriever = mem_retriever
         self.simulation_service = simulation_service
+        self.tool_registry = tool_registry
         self.logger = logger or logging.getLogger(__name__)
         self.manifest = manifest
 
@@ -47,12 +49,13 @@ class ContextBuilder:
             # Fallback for legacy/setup
             sections.append(self._build_legacy_rules(game_session))
 
-        # 3. Tool Examples (Critical for atomic tools)
-        sections.append(self._build_tool_examples())
-
-        # 4. Author's Note
+        # 3. Tool Definitions (The Catalog)
+        if self.tool_registry:
+            sections.append(self._build_tool_definitions())
+        
+        # 4. Author's Note. Assumes the formatting will be done by the Player/User
         if game_session.authors_note:
-            sections.append(f"# AUTHOR'S NOTE\n{game_session.authors_note}")
+            sections.append(game_session.authors_note)
 
         return "\n\n".join(sections)
 
@@ -73,18 +76,14 @@ class ContextBuilder:
             sections.append(f"# CURRENT STATE #\n{state_text}")
 
         # 2. Active Procedure (Combat/Exploration)
-        if self.manifest:
-            current_mode = game_session.game_mode.lower()
-            proc_text = self.manifest.get_procedure(current_mode)
-            if proc_text:
-                sections.append(f"# ACTIVE PROCEDURE: {current_mode.upper()}\n{proc_text}")
+        # We haven't reimplemented the mode switching logic yet.
+        # if self.manifest:
+        #     current_mode = game_session.game_mode.lower()
+        #     proc_text = self.manifest.get_procedure(current_mode)
+        #     if proc_text:
+        #         sections.append(f"# ACTIVE PROCEDURE: {current_mode.upper()}\n{proc_text}")
 
-        # 3. Narrative Context (RAG)
-        if rag_memories:
-            rag_text = self.mem_retriever.format_for_prompt(rag_memories, title="RETRIEVED KNOWLEDGE")
-            sections.append(rag_text)
-
-        # 4. Spatial Context
+        # 3. Spatial Context
         spatial_context = self._build_spatial_context(game_session.id)
         if spatial_context:
             sections.append(spatial_context)
@@ -102,31 +101,21 @@ class ContextBuilder:
         lines.append(self.manifest.get_path_hints())
         
         return "\n".join(lines)
-
-    def _build_tool_examples(self) -> str:
-        """Examples of how to use the 6 Atomic Tools."""
-        return """# TOOL USAGE EXAMPLES
-
-1. **Modify Stats/HP (adjust):**
-   `{"name": "adjust", "path": "resources.hp.current", "delta": -5, "reason": "Goblin ambush"}`
-
-2. **Set Specific Values (set):**
-   `{"name": "set", "path": "status.is_hiding", "value": true}`
-   `{"name": "set", "path": "inventory.weapon", "value": "Longsword"}`
-
-3. **Roll Dice (roll):**
-   `{"name": "roll", "formula": "1d20+5", "reason": "Attack vs AC 15"}`
-
-4. **Mark Tracks/Conditions (mark):**
-   `{"name": "mark", "path": "resources.stress", "count": 1}` (Fill 1 box)
-   `{"name": "mark", "path": "resources.ammo", "count": -1}` (Clear 1 box)
-
-5. **Move Location (move):**
-   `{"name": "move", "destination": "loc_tavern"}`
-
-6. **Record Memory (note):**
-   `{"name": "note", "content": "The Baron is secretly a vampire.", "kind": "fact"}`
-"""
+        
+    def _build_tool_definitions(self) -> str:
+        """Extracts tool names and descriptions from the registry."""
+        if not self.tool_registry:
+            return ""
+        
+        lines = ["# AVAILABLE TOOLS"]
+        for schema in self.tool_registry.get_all_schemas():
+            name = schema["name"]
+            desc = schema["description"].strip()
+            # Clean up docstring formatting
+            desc = " ".join(desc.split())
+            lines.append(f"- **{name}**: {desc}")
+            
+        return "\n".join(lines)
 
     def _build_legacy_rules(self, game_session) -> str:
         """Fallback for setup phase or missing manifest."""

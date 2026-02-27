@@ -11,6 +11,14 @@ class Message(BaseModel):
         None,
         description="Text content of the message; may be None for pure tool calls.",
     )
+    thought: Optional[str] = Field(
+        None,
+        description="Thinking process or reasoning behind the response (e.g. for Gemini thinking models).",
+    )
+    thought_signature: Optional[str] = Field(
+        None,
+        description="Internal signature for thinking parts required by some Gemini models.",
+    )
     tool_calls: Optional[List[Dict[str, Any]]] = Field(
         None,
         description="List of tool calls produced by the assistant for this turn (normalized format).",

@@ -8,6 +8,8 @@ from dataclasses import dataclass
 class LLMResponse:
     content: Optional[str]
     tool_calls: Optional[List[Dict[str, Any]]]
+    thought: Optional[str] = None
+    thought_signature: Optional[str] = None
 
 
 

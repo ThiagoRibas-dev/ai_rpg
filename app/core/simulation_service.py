@@ -5,6 +5,7 @@ import logging
 from app.llm.llm_connector import LLMConnector
 from app.models.npc_profile import NpcProfile
 from app.llm.schemas import WorldTickOutcome
+from app.models.message import Message
 from app.prompts.templates import JIT_SIMULATION_TEMPLATE
 
 class SimulationService:
@@ -36,8 +37,8 @@ class SimulationService:
             self.logger.info(f"Running JIT simulation for {npc_name} from {profile.last_updated_time} to {current_time}...")
             
             outcome = self.llm.get_structured_response(
-                system_prompt=prompt,
-                chat_history=[],
+                system_prompt="You are a World Simulation Engine.",
+                chat_history=[Message(role="user", content=prompt)],
                 output_schema=WorldTickOutcome,
             )
             return outcome

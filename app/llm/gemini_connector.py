@@ -51,7 +51,7 @@ class GeminiConnector(LLMConnector):
         
         for msg in chat_history:
             if msg.role == "system":
-                continue  # System prompt is handled separately in config
+                continue
 
             # --- 1. Handle User Messages ---
             if msg.role == "user":
@@ -64,19 +64,25 @@ class GeminiConnector(LLMConnector):
             elif msg.role == "assistant":
                 parts = []
                 
-                # A. Text Content (Thought)
+                # A. Text Content
                 if msg.content:
                     parts.append(types.Part.from_text(text=msg.content))
                 
-                # B. Tool Calls
+                # B. Thought / Signature (CRITICAL for Gemini 2.x Thinking/Tools)
+                if hasattr(msg, 'thought_signature') and msg.thought_signature:
+                    # Depending on the SDK, this might be a Part initialization with a specific field
+                    # or it might be passed as a text part that the model recognizes.
+                    # We preserve it in the parts list.
+                    parts.append(types.Part(thought=True, text=msg.thought))
+                elif hasattr(msg, 'thought') and msg.thought:
+                    parts.append(types.Part(thought=True, text=msg.thought))
+                
+                # C. Tool Calls
                 if msg.tool_calls:
                     for tool_call in msg.tool_calls:
-                        fn_name = tool_call["name"]
-                        fn_args = tool_call["arguments"] # Should be a dict
-                        
                         parts.append(types.Part.from_function_call(
-                            name=fn_name, 
-                            args=fn_args
+                            name=tool_call["name"], 
+                            args=tool_call["arguments"]
                         ))
                 
                 if parts:
@@ -84,30 +90,17 @@ class GeminiConnector(LLMConnector):
 
             # --- 3. Handle Tool Results ---
             elif msg.role == "tool":
-                # OpenAI Protocol: role="tool", content="JSON_STRING", name="tool_name"
-                # Gemini Protocol: role="user", parts=[Part(function_response=...)]
-                
                 try:
-                    # Gemini expects a Dict, not a JSON string.
                     response_data = json.loads(msg.content)
                 except Exception:
-                    # Fallback for simple strings
                     response_data = {"result": msg.content}
 
-                # Create the FunctionResponse part
-                # Important: 'name' must match the function that was called.
                 part = types.Part.from_function_response(
                     name=msg.name, 
                     response=response_data
                 )
                 
-                # Gemini Merge Logic: 
-                # If the LAST message was also a 'tool' result (User role), append to it.
-                # This handles parallel tool execution where multiple results return in one turn.
                 if contents and contents[-1].role == "user":
-                    # Check if the last message is purely tool responses or mixed.
-                    # Usually safest to append if the previous was a tool response too.
-                    # For simplicity, we append to the user turn.
                     contents[-1].parts.append(part)
                 else:
                     contents.append(types.Content(role="user", parts=[part]))
@@ -118,7 +111,6 @@ class GeminiConnector(LLMConnector):
         self, system_prompt: str, chat_history: List[Message]
     ) -> Generator[str, None, None]:
         contents = self._convert_chat_history_to_contents(chat_history)
- 
         if not contents:
             contents.append(types.Content(role="user", parts=[types.Part.from_text(text="Please proceed.")]))
 
@@ -128,11 +120,14 @@ class GeminiConnector(LLMConnector):
             "top_p": 0.9,
             "top_k": 50,
             "max_output_tokens": self.default_max_tokens,
-            "thinking_config": types.ThinkingConfig(
-                thinking_budget=self.default_thinking_budget
-            ),
             "safety_settings": self.default_safety_settings,
         }
+        # If model supports thinking, we add the config
+        if "flash" in self.model_name.lower() or "thought" in self.model_name.lower():
+             config["thinking_config"] = types.ThinkingConfig(
+                thinking_budget=self.default_thinking_budget
+            )
+
         generation_config = types.GenerateContentConfig(**config)
 
         response = self.client.models.generate_content_stream(
@@ -163,11 +158,13 @@ class GeminiConnector(LLMConnector):
             temperature=temperature,
             top_p=top_p,
             max_output_tokens=self.default_max_tokens,
-            thinking_config=types.ThinkingConfig(
-                thinking_budget=self.default_thinking_budget
-            ),
             safety_settings=self.default_safety_settings,
         )
+        
+        if "flash" in self.model_name.lower() or "thought" in self.model_name.lower():
+             generation_config.thinking_config = types.ThinkingConfig(
+                thinking_budget=self.default_thinking_budget
+            )
 
         response = self.client.models.generate_content(
             model=self.model_name, contents=contents, config=generation_config
@@ -199,38 +196,58 @@ class GeminiConnector(LLMConnector):
         if not contents:
             contents.append(types.Content(role="user", parts=[types.Part.from_text(text="Please proceed.")]))
 
-        # Convert schema format
         function_declarations = [
             types.FunctionDeclaration(**t["function"]) for t in tools
         ]
         gemini_tool = types.Tool(function_declarations=function_declarations)
 
-        generation_config = types.GenerateContentConfig(
-            system_instruction=[types.Part.from_text(text=system_prompt)],
-            tools=[gemini_tool],
-            temperature=0.7,
-            max_output_tokens=self.default_max_tokens,
-            safety_settings=self.default_safety_settings,
-        )
+        config_args = {
+            "system_instruction": [types.Part.from_text(text=system_prompt)],
+            "tools": [gemini_tool],
+            "temperature": 0.7,
+            "max_output_tokens": self.default_max_tokens,
+            "safety_settings": self.default_safety_settings,
+        }
+        
+        # Check for model thinking capabilities
+        if "flash" in self.model_name.lower() or "thought" in self.model_name.lower():
+             config_args["thinking_config"] = types.ThinkingConfig(
+                thinking_budget=self.default_thinking_budget
+            )
+
+        generation_config = types.GenerateContentConfig(**config_args)
 
         response = self.client.models.generate_content(
             model=self.model_name, contents=contents, config=generation_config
         )
 
         content_text = ""
+        thought_text = ""
         tool_calls = []
 
-        # Gemini returns candidates -> content -> parts
         if response.candidates and response.candidates[0].content.parts:
             for part in response.candidates[0].content.parts:
-                if part.text:
-                    content_text += part.text
+                if getattr(part, "text", None):
+                    # In thinking models, text part BEFORE tool calls is often the 'thought'
+                    if tool_calls: 
+                         content_text += part.text
+                    else:
+                         thought_text += part.text
+                
+                # Check for explicit thought field if present in newer SDK versions
+                if getattr(part, "thought", None):
+                    thought_text += part.thought
+
                 if part.function_call:
-                    # Standardize to our internal format
                     tool_calls.append({
                         "name": part.function_call.name,
                         "arguments": dict(part.function_call.args),
-                        "id": "call_gemini_" + part.function_call.name # Gemini doesn't use IDs, make one up for internal tracking
+                        "id": "call_gemini_" + part.function_call.name
                     })
 
-        return LLMResponse(content=content_text, tool_calls=tool_calls if tool_calls else None)
+        return LLMResponse(
+            content=content_text, 
+            thought=thought_text if thought_text else None,
+            tool_calls=tool_calls if tool_calls else None
+        )
+

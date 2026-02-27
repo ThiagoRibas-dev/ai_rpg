@@ -93,30 +93,56 @@ Constraint types: `>=` , `<=`, `==`, `in_range`.
 Violation actions: `clamp` (auto-fix), `flag` (warn), `reject`.
 """
 
-# --- WORLD GENERATION (Legacy) ---
+# --- WORLD GENERATION ---
+EXTRACT_WORLD_GENRE_TONE_PROMPT = """
+Analyze the user's concept and determine:
+1. **Sub-genre** (be specific)
+2. **Atmospheric Tone** (keywords)
 
-ANALYZE_WORLD_INSTRUCTION = """
-You are an expert World Builder and Game Master.
-Analyze the user's concept for a new RPG campaign.
-
-**Input:** "{description}"
-
-**Your Task:**
-1.  **Genre & Tone:** Determine the specific sub-genre and atmospheric tone.
-2.  **Starting Location:** Visualize the immediate starting scene location/zone. What does it look/smell/sound like?
-3.  **Adjacency:** After defining the starting location, define all other locations that are directly adjacent to the starting zone.
-4.  **Lore:** Extract or infer the key facts about the world (factions, history, technology, etc).
-5.  **NPCs:** Identify who is immediately present in the scene.
-
-Output your analysis as a structured thought process.
+### WORLD INFO
+{description}
 """
 
-GENERATE_WORLD_INSTRUCTION = """
-Based on your analysis, extract the World Data into JSON.
+EXTRACT_WORLD_LORE_PROMPT = """
+### TASK: EXHAUSTIVE LORE EXTRACTION
+Review the provided context and extract EVERYTHING related to the world's lore.
+Identify all:
+- Major and Minor Factions and their goals.
+- Key Historical events and cataclysms.
+- Unique technologies, magic rules, cultural traditions, etc.
+- Secrets, rumors, obscure facts, etc.
+
+Return a list of LoreData objects.
+
+### WORLD INFO
+{description}
+"""
+
+EXTRACT_WORLD_LOCATIONS_PROMPT = """
+### TASK: EXHAUSTIVE LOCATION EXTRACTION
+Identify all distinct locations mentioned or implied.
+Start with the **Immediate Starting Scene**, then list all other relevant zones, cities, or points of interest.
+
+**Constraint:** Provide vivid visual and sensory descriptions for each.
+Return a list of LocationData objects.
+
+### WORLD INFO
+{description}
+"""
+
+EXTRACT_WORLD_NPCS_PROMPT = """
+### TASK: EXHAUSTIVE NPC EXTRACTION
+Identify all characters, creatures, and entities mentioned or implied.
+
+**Constraint:** Include their initial disposition and a visual description.
+Return a list of NpcData objects.
+
+### WORLD INFO
+{description}
 """
 
 OPENING_CRAWL_PROMPT = """
-Write a short, compelling, 2nd-person opening scene that situates the Player's character.
+Write a short, compelling, 2nd-person opening scene that situates the Player's character according to the provided context.
 Set the scene and end with a request for the Player's action.
 
 **Context:**

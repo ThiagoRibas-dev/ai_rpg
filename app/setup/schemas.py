@@ -139,6 +139,7 @@ class RuleListExtraction(BaseModel):
 
 
 class NpcData(BaseModel):
+    model_config = {"extra": "forbid"}
     name: str = Field(..., description="Name of the NPC.")
     visual_description: str = Field(
         ..., description="Physical / narrative description."
@@ -190,6 +191,7 @@ class NpcData(BaseModel):
 
 
 class LocationData(BaseModel):
+    model_config = {"extra": "forbid"}
     key: str = Field(
         ...,
         description="Unique snake_case ID (e.g. 'loc_market'). Will be auto-generated from name if omitted.",
@@ -229,11 +231,27 @@ class LocationData(BaseModel):
         if not isinstance(data, dict):
             return data
 
+        # Map synonyms and shortcuts
+        if not isinstance(data, dict):
+             return data
+
+        # Specific llama.cpp hallucinations
+        if "meta" in data and not data.get("description_visual"):
+            data["description_visual"] = data.pop("meta")
+        if "sensory" in data and not data.get("description_sensory"):
+            data["description_sensory"] = data.pop("sensory")
+        if "threats" in data and not data.get("starting_threats"):
+            data["starting_threats"] = data.pop("threats")
+        elif "threat" in data and not data.get("starting_threats"):
+            data["starting_threats"] = data.pop("threat")
+
         # Map single 'description' field into both visual & sensory if specific ones missing
         desc = data.get("description")
         if isinstance(desc, str) and desc.strip():
-            data.setdefault("description_visual", desc)
-            data.setdefault("description_sensory", desc)
+            if not data.get("description_visual"):
+                data["description_visual"] = desc
+            if not data.get("description_sensory"):
+                data["description_sensory"] = desc
 
         # Ensure we have a name
         if not data.get("name"):
@@ -256,6 +274,7 @@ class LocationData(BaseModel):
 
 
 class LoreData(BaseModel):
+    model_config = {"extra": "forbid"}
     content: str = Field(
         ...,
         description="The content/fact/detail about the world.",
@@ -307,7 +326,38 @@ class LoreData(BaseModel):
         return data
 
 
+
+# --- WRAPPERS FOR MULTI-STAGE WORLD GEN ---
+
+class GenreToneExtraction(BaseModel):
+    genre: str = Field(
+        ...,
+        description="The specific sub-genre inferred from the text (e.g. 'Gothic Horror', 'Sword & Sorcery').",
+    )
+    tone: str = Field(
+        ..., description="The atmospheric tone (e.g. 'grim', 'whimsical', 'noir')."
+    )
+
+class LoreListExtraction(BaseModel):
+    lore: List[LoreData] = Field(
+        default_factory=list,
+        description="Key facts, secrets, world details, lore, etc.",
+    )
+
+class LocationListExtraction(BaseModel):
+    locations: List[LocationData] = Field(
+        default_factory=list,
+        description="Locations directly mentioned or implied and their connections to one another.",
+    )
+
+class NpcListExtraction(BaseModel):
+    npcs: List[NpcData] = Field(
+        default_factory=list,
+        description="All NPCs (characters, creatures, entities, etc.) mentioned or implied in the text.",
+    )
+
 class WorldExtraction(BaseModel):
+    model_config = {"extra": "forbid"}
     """
     Structure for extracting world details from raw text.
     Used by WorldGenService to build starting locations, NPCs, and lore.
@@ -326,7 +376,7 @@ class WorldExtraction(BaseModel):
     )
     adjacent_locations: List[LocationData] = Field(
         default_factory=list,
-        description="2–3 locations directly connected to the starting location.",
+        description="Locations directly connected to the starting location.",
     )
     lore: List[LoreData] = Field(
         default_factory=list,

@@ -3,11 +3,20 @@ from typing import Callable, Optional, Any
 from app.llm.llm_connector import LLMConnector
 from app.models.message import Message
 from app.prompts.templates import (
-    ANALYZE_WORLD_INSTRUCTION,
-    GENERATE_WORLD_INSTRUCTION,
+    EXTRACT_WORLD_GENRE_TONE_PROMPT,
+    EXTRACT_WORLD_LORE_PROMPT,
+    EXTRACT_WORLD_LOCATIONS_PROMPT,
+    EXTRACT_WORLD_NPCS_PROMPT,
     OPENING_CRAWL_PROMPT,
 )
-from app.setup.schemas import WorldExtraction
+from app.setup.schemas import (
+    WorldExtraction,
+    GenreToneExtraction,
+    LoreListExtraction,
+    LocationListExtraction,
+    NpcListExtraction,
+    LocationData,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -28,39 +37,65 @@ class WorldGenService:
             self.status_callback(msg)
         logger.info(f"[WorldGen] {msg}")
 
-    def extract_world_data(self, desc: str) -> WorldExtraction:
-        if not desc.strip():
-            desc = "A generic fantasy tavern."
+    def extract_world_data(self, world_info: str) -> WorldExtraction:
+        if not world_info.strip():
+            world_info = "A generic fantasy tavern."
 
-        # --- STEP 1: ANALYSIS ---
-        self._update_status("Analyzing World Concept...")
-
-        prompt_analysis = ANALYZE_WORLD_INSTRUCTION.format(description=desc)
-
-        analysis_stream = self.llm.get_streaming_response(
-            "You are a World Builder.", [Message(role="user", content=prompt_analysis)]
+        # --- STEP 1: GENRE & TONE ---
+        self._update_status("Determining Genre & Tone...")
+        genre_tone = self.llm.get_structured_response(
+            "You are a World Builder.",
+            [Message(role="user", content=EXTRACT_WORLD_GENRE_TONE_PROMPT.format(description=world_info))],
+            GenreToneExtraction,
         )
 
-        analysis_text = "".join(analysis_stream)
+        # --- STEP 2: EXHAUSTIVE LORE ---
+        self._update_status("Extracting World Lore...")
+        lore_data = self.llm.get_structured_response(
+            "You are a World Builder.",
+            [Message(role="user", content=EXTRACT_WORLD_LORE_PROMPT.format(description=world_info))],
+            LoreListExtraction,
+        )
 
-        # --- STEP 2: EXTRACTION ---
-        self._update_status("Defining World Data...")
+        # --- STEP 3: EXHAUSTIVE LOCATIONS ---
+        self._update_status("Identifying Locations...")
+        loc_data = self.llm.get_structured_response(
+            "You are a World Builder.",
+            [Message(role="user", content=EXTRACT_WORLD_LOCATIONS_PROMPT.format(description=world_info))],
+            LocationListExtraction,
+        )
 
-        try:
-            return self.llm.get_structured_response(
-                "You are a World Builder.",
-                [
-                    Message(role="user", content=prompt_analysis),
-                    Message(role="assistant", content=analysis_text),
-                    Message(role="user", content=GENERATE_WORLD_INSTRUCTION),
-                ],
-                WorldExtraction,
-                0.5,
-                0.9,
+        # --- STEP 4: EXHAUSTIVE NPCs ---
+        self._update_status("Finding NPCs...")
+        npc_data = self.llm.get_structured_response(
+            "You are a World Builder.",
+            [Message(role="user", content=EXTRACT_WORLD_NPCS_PROMPT.format(description=world_info))],
+            NpcListExtraction,
+        )
+
+        # --- ASSEMBLY ---
+        # Identify starting vs adjacent locations
+        # Traditionally we assume the first location returned is the starting one
+        start_loc = loc_data.locations[0] if loc_data.locations else None
+        adj_locs = loc_data.locations[1:] if len(loc_data.locations) > 1 else []
+
+        if not start_loc:
+            start_loc = LocationData(
+                key="loc_start",
+                name="Starting Location",
+                description_visual="A blank slate.",
+                description_sensory="Silence.",
+                type="void"
             )
-        except Exception as e:
-            logger.error(f"World extraction failed: {e}")
-            raise
+
+        return WorldExtraction(
+            genre=genre_tone.genre,
+            tone=genre_tone.tone,
+            starting_location=start_loc,
+            adjacent_locations=adj_locs,
+            lore=lore_data.lore,
+            initial_npcs=npc_data.npcs
+        )
 
     def generate_opening_crawl(
         self, char: Any, world: WorldExtraction, guidance: str = ""
@@ -74,7 +109,6 @@ class WorldGenService:
             char_name = char.get("name", "Player")
 
         try:
-            # world.starting_location.name (was name_display)
             loc_name = world.starting_location.name
 
             prompt = OPENING_CRAWL_PROMPT.format(
@@ -82,9 +116,9 @@ class WorldGenService:
                 tone=world.tone,
                 name=char_name,
                 location=loc_name,
-                guidance=guidance or "Start adventure.",
+                guidance=guidance,
             )
-            gen = self.llm.get_streaming_response(prompt, [])
+            gen = self.llm.get_streaming_response("You are a World Builder.", [Message(role="user", content=prompt)])
             return "".join(gen)
         except Exception:
             return "You stand ready. What do you do?"

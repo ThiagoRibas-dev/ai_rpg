@@ -12,7 +12,7 @@ from app.models.message import Message
 from app.models.session import Session
 from app.setup.setup_manifest import SetupManifest
 from app.tools.executor import ToolExecutor
-from app.tools.schemas import Adjust, Set, Mark, Roll, Move, Note
+from app.tools.schemas import Adjust, Set, Mark, Roll, Move, Note, ContextRetrieve, NpcSpawn, LocationCreate
 from app.llm.schemas import TurnFinalOutput
 
 logger = logging.getLogger(__name__)
@@ -79,7 +79,8 @@ class ReActTurnManager:
             state_builder,
             mem_retriever,
             sim_service,
-            self.logger,
+            tool_registry=self.tool_registry,
+            logger=self.logger,
             manifest=manifest,
         )
         executor = ToolExecutor(
@@ -113,7 +114,16 @@ class ReActTurnManager:
         
         if mems:
             # Emit UI event for debug visibility
-            rag_text_for_ui = mem_retriever.format_for_prompt(mems, title="RETRIEVED KNOWLEDGE")
+            rag_text_for_ui = mem_retriever.format_for_prompt(mems)
+
+            # Append the rag context as a tool return message
+            tool_return_message = Message(
+                role="tool",
+                name="rag_context",
+                content=rag_text_for_ui,
+                turn_id=turn_id,
+            )
+            working_history.append(tool_return_message)
             
             # Flatten memory IDs for the UI queue
             flat_mem_ids = [m.id for cat_mems in mems.values() for m in cat_mems]
@@ -128,12 +138,19 @@ class ReActTurnManager:
             )
         # --- 4. TOOL INJECTION ---
         active_tool_names = [
+            Roll.model_fields["name"].default,
+
             Adjust.model_fields["name"].default,
             Set.model_fields["name"].default,
             Mark.model_fields["name"].default,
-            Roll.model_fields["name"].default,
+
             Move.model_fields["name"].default,
+
             Note.model_fields["name"].default,
+            ContextRetrieve.model_fields["name"].default,
+
+            NpcSpawn.model_fields["name"].default,
+            LocationCreate.model_fields["name"].default,
         ]
         llm_tools = self.tool_registry.get_llm_tool_schemas(active_tool_names)
         # Inject Dice Rules into Roll Tool
@@ -147,6 +164,16 @@ class ReActTurnManager:
                         f"Crit='{eng.crit}'."
                     )
                     tool["function"]["description"] = desc
+
+        # Appends the list of available tools to the working history
+        tool_message = Message(
+            role="tool",
+            name="available_tools",
+            content=json.dumps(llm_tools),
+            turn_id=turn_id,
+        )
+        working_history.append(tool_message)
+        
         # --- 5. ACTION LOOP ---
         loop_count = 0
         narrative_text = ""
@@ -171,6 +198,7 @@ class ReActTurnManager:
             assistant_msg = Message(
                 role="assistant",
                 content=response.content,
+                thought=response.thought,
                 tool_calls=response.tool_calls,
             )
             working_history.append(assistant_msg)
