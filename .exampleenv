@@ -1,6 +1,9 @@
 
-# Port where the UI will be served
+# Port where the UI will be served. Default 17523
 UI_PORT=17523
+
+# Controls if the app will open in a native window or just be acessible via the browser. Default True
+LAUNCH_NATIVE_WINDOW=True
 
 # Can be GEMINI or OPENAI
 LLM_PROVIDER=GEMINI

@@ -206,7 +206,8 @@ def init_gui(db_path: str):
 
 def run(db_path: str):
     init_gui(db_path)
-    env_port = int(os.getenv("UI_PORT"))
+    env_port = int(os.getenv("UI_PORT") or 17523)
+    env_launch_native_window = bool(os.getenv("LAUNCH_NATIVE_WINDOW") or False)
     ui.run(
-        title="AI RPG", port=env_port, dark=True, reload=False, native=True, window_size=(1600, 900)
+        title="AI RPG", port=env_port, dark=True, reload=False, native=env_launch_native_window, window_size=(1600, 900)
     )
