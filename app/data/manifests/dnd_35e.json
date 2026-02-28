@@ -193,6 +193,21 @@
             "usage_hint": "Each entry is one class+spell-level row: {class_name, spell_level, slots_current, slots_max}."
         },
         {
+            "path": "resources.limited_uses",
+            "label": "Limited Use Features",
+            "prefab": "CONT_LIST",
+            "category": "resources",
+            "config": {
+                "item_shape": {
+                    "feature_name": "str",
+                    "uses_max": "int",
+                    "uses_current": "int",
+                    "refresh_rate": "str"
+                }
+            },
+            "usage_hint": "Each entry is one feature with uses, such as Turn Undead, Rage, or daily feat uses."
+        },
+        {
             "path": "resources.gold",
             "label": "Wealth (Gold Pieces)",
             "prefab": "RES_COUNTER",

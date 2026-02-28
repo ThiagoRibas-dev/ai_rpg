@@ -212,7 +212,7 @@ You may use these Aliases in your formulas: {aliases}
 1. Find every stat, resource, or container in the requested categories.
 2. Map it to the **Best Fit Prefab** from the menu.
 3. If a mechanic is unique, use the closest generic prefab and explain it in `usage_hint`.
-4. Extract strict bounds (min/max) into `config`.
+4. Extract strict bounds (min/max, daily uses, etc) into the `config` property.
 5. Return a list of field definitions.
 """
 
