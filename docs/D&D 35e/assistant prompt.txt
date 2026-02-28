@@ -186,7 +186,7 @@ After you confirm that you are satisfied with the system/framework, I'll finaliz
 
 ## Initial Scenario
 
-Instead of writing a normal opening crawl, let's start the game with a blank slate.
+Instead of deciding a starting location and writing a normal opening crawl, let's start the game with a blank slate.
 The Initial Location should be a blank void where the player and the Dungeon Master can discuss the game., and your initial message should be something like : 
 ```
 Welcome to Session Zero of this Dungeons and Dragons 3.5e Play-by-Post game!

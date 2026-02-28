@@ -12,10 +12,15 @@ This document provides a technical overview of the Solo Text AI-RPG framework, o
 
 **Error Handling:** Never use silent exceptions (`try/except: pass`). Always log errors with the appropriate level (`logger.error` for critical failures, `logger.warning` for degradations) and provide an informative message to help with debugging.
 
+**Deterministic Rendering:** UI components must not "guess" how to render data. Always prioritize the `SystemManifest` (via `item_shape`) over heuristics. Use the 3-layer detection algorithm (Schema → Shape → Heuristics) to ensure accuracy.
+
+**Magic Strings:** Never use hardcoded strings for Prefab IDs or internal field keys. Always use `PrefabID` enums and `FieldKey` constants from `app/models/vocabulary.py`.
+
 ## Core Concepts
 
 -   **Manifest-Driven Architecture:** The game system is defined by a JSON `SystemManifest`. This defines the stats (`VAL_INT`), resources (`RES_POOL`), and mechanics. The AI does not hallucinate rules; it follows the Manifest.
--   **Prefab Protocol:** Character sheet fields are built from atomic "Prefabs" (e.g., `RES_TRACK` for stress boxes, `VAL_STEP_DIE` for polyhedral dice). Each Prefab bundles data structure, validation logic, and UI rendering hints.
+-   **Prefab Protocol:** Character sheet fields are built from atomic "Prefabs". Each Prefab bundles data structure, validation logic, and UI rendering hints. UI rendering must be **Manifest-Aware**, meaning it uses manifest metadata to decide how to display complex list items (e.g., using `item_shape` to identify resource pools).
+-   **Context Propagation:** Rendering logic must propagate manifest metadata (`FieldDef.config`) alongside the raw data. Avoid "pure" data components that don't know their own schema.
 -   **ReAct Loop:** The game turn is an iterative **Reason + Act** loop. The AI thinks, calls atomic tools, observes results, and loops until the turn is resolved.
 -   **State Invariants:** Game rules (e.g., "HP cannot exceed Max HP") are enforced by code via the `ValidationPipeline`, not by the LLM.
 
@@ -78,7 +83,8 @@ Instead of generic JSON, data follows strict patterns defined in `app/prefabs/re
 ### Source Code
 - **`app/prefabs/`**: The core logic for the "Lego Protocol" (Manifests/Validation).
 - **`app/tools/handlers/`**: The atomic tool implementations.
-- **`app/gui/`**: NiceGUI frontend components.
+- **`app/gui/inspectors/`**: Inspector components. Uses `RenderingMixin` for deterministic, manifest-aware rendering logic.
+- **`app/gui/`**: General NiceGUI frontend components.
 - **`app/setup/`**: Logic for the "Session Zero" wizard and rule extraction.
 
 ### Documentation Files

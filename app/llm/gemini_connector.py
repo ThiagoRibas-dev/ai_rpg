@@ -95,8 +95,11 @@ class GeminiConnector(LLMConnector):
                 except Exception:
                     response_data = {"result": msg.content}
 
+                if not isinstance(response_data, dict):
+                    response_data = {"result": response_data}
+
                 part = types.Part.from_function_response(
-                    name=msg.name, 
+                    name=msg.name,
                     response=response_data
                 )
                 
@@ -228,13 +231,8 @@ class GeminiConnector(LLMConnector):
         if response.candidates and response.candidates[0].content.parts:
             for part in response.candidates[0].content.parts:
                 if getattr(part, "text", None):
-                    # In thinking models, text part BEFORE tool calls is often the 'thought'
-                    if tool_calls: 
-                         content_text += part.text
-                    else:
-                         thought_text += part.text
+                    content_text += part.text
                 
-                # Check for explicit thought field if present in newer SDK versions
                 if getattr(part, "thought", None):
                     thought_text += part.thought
 

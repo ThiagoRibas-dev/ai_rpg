@@ -1,15 +1,16 @@
 from nicegui import ui
+import logging
 from app.services.state_service import get_entity
 from app.setup.setup_manifest import SetupManifest
 from app.prefabs.validation import get_path
-from app.gui.controls.field_editor import FieldEditorDialog
 from typing import Any
-import logging
+from app.models.vocabulary import PrefabID
+from .rendering_mixin import RenderingMixin
 
 logger = logging.getLogger(__name__)
 
 
-class CharacterInspector:
+class CharacterInspector(RenderingMixin):
     """
     Universal Character Sheet Renderer.
     Adapts to SystemManifest (Lego Protocol).
@@ -24,7 +25,8 @@ class CharacterInspector:
 
     def set_session(self, session_id: int):
         self.session_id = session_id
-        self.refresh()
+        if self.container:
+            self.refresh()
 
     def refresh(self):
         if not self.container:
@@ -115,112 +117,17 @@ class CharacterInspector:
         prefab = field_def.prefab
         label = field_def.label
         path = field_def.path
-        is_derived = bool(field_def.formula)
+        config = field_def.config
 
-        # Base item class with hover and cursor
-        row_classes = "w-full justify-between items-center mb-1 rounded p-1 transition-colors "
-        if not is_derived:
-            row_classes += "cursor-pointer hover:bg-slate-700/40 group"
-        else:
-            row_classes += "opacity-80"
-
-        # Editor trigger
-        def on_click():
-            if not is_derived:
-                FieldEditorDialog(
-                    label=label,
-                    path=path,
-                    prefab=prefab,
-                    current_value=val,
-                    on_save=self._handle_field_save,
-                ).open()
-            else:
-                ui.notify(f"{label} is calculated automatically.", type="info")
-
-        # --- VAL FAMILY ---
-        if prefab.startswith("VAL_"):
-            with ui.row().classes(row_classes).on("click", on_click):
-                ui.label(label).classes("text-sm text-gray-300")
-                
-                with ui.row().classes("items-center gap-2"):
-                    if is_derived:
-                        ui.icon("functions", size="12px").classes("text-slate-500")
-
-                    if prefab == "VAL_TEXT":
-                        ui.label(str(val)).classes("text-sm text-white font-serif italic")
-                    elif prefab == "VAL_INT":
-                        ui.label(str(val)).classes("font-mono font-bold text-blue-300")
-                    elif prefab == "VAL_COMPOUND":
-                        if isinstance(val, dict):
-                            score = val.get("score", 0)
-                            mod = val.get("mod", 0)
-                            sign = "+" if mod >= 0 else ""
-                            ui.label(f"{score} ({sign}{mod})").classes("font-mono text-amber-300")
-                        else:
-                            ui.label(str(val))
-                    elif prefab == "VAL_STEP_DIE":
-                        ui.badge(str(val), color="purple").props("text-color=white")
-                    elif prefab == "VAL_BOOL":
-                        icon = "check_box" if val else "check_box_outline_blank"
-                        color = "text-green-400" if val else "text-gray-600"
-                        ui.icon(icon).classes(color)
-                    elif prefab == "VAL_LADDER":
-                        if isinstance(val, dict):
-                            v = val.get("value", 0)
-                            lbl = val.get("label", "")
-                            sign = "+" if v >= 0 else ""
-                            ui.label(f"{sign}{v} {lbl}").classes("text-sm text-cyan-300")
-                        else:
-                            ui.label(str(val))
-
-                    if not is_derived:
-                        ui.icon("edit", size="12px").classes("text-slate-600 opacity-0 group-hover:opacity-100")
-
-        # --- RES FAMILY ---
-        elif prefab == "RES_POOL":
-            if not isinstance(val, dict):
-                val = {"current": 0, "max": 0}
-            curr = val.get("current", 0)
-            mx = val.get("max", 0)
-            pct = max(0, min(1, curr / mx)) if mx > 0 else 0
-
-            with ui.column().classes("w-full mb-2"):
-                with ui.row().classes("w-full justify-between items-center text-xs mb-1"):
-                    with ui.row().classes("items-center gap-1 cursor-pointer").on("click", on_click):
-                        ui.label(label).classes("font-bold text-gray-300")
-                        if field_def.max_formula:
-                            ui.icon("functions", size="10px").classes("text-slate-500")
-                        ui.icon("edit", size="10px").classes("text-slate-600 opacity-0 group-hover:opacity-100")
-
-                    # Quick +/- Buttons
-                    with ui.row().classes("items-center gap-1 bg-slate-800/50 rounded px-1"):
-                        ui.button("-", on_click=lambda p=path: self._quick_adjust(p, -1)).props("flat dense round size=xs color=red")
-                        ui.label(f"{curr} / {mx}").classes("min-w-[40px] text-center font-mono")
-                        ui.button("+", on_click=lambda p=path: self._quick_adjust(p, 1)).props("flat dense round size=xs color=green")
-
-                ui.linear_progress(value=pct, size="6px", show_value=False).classes("rounded bg-slate-700")
-
-        elif prefab == "RES_TRACK":
-            if not isinstance(val, list):
-                val = []
-            with ui.row().classes(row_classes).on("click", on_click):
-                ui.label(label).classes("text-sm text-gray-300")
-                with ui.row().classes("gap-1"):
-                    for state in val:
-                        color = "text-red-500" if state else "text-slate-700"
-                        ui.icon("circle").classes(f"text-[10px] {color}")
-
-        elif prefab == "RES_COUNTER":
-            with ui.row().classes(row_classes).on("click", on_click):
-                ui.label(label).classes("text-sm text-gray-300")
-                with ui.row().classes("items-center gap-2"):
-                    # Quick adjust for counters too
-                    ui.button("-", on_click=lambda p=path: self._quick_adjust(p, -1)).props("flat dense round size=xs")
-                    ui.label(str(val)).classes("font-mono font-bold text-green-400 min-w-[20px] text-center")
-                    ui.button("+", on_click=lambda p=path: self._quick_adjust(p, 1)).props("flat dense round size=xs")
-
-        # --- CONT FAMILY ---
-        elif prefab in ["CONT_LIST", "CONT_TAGS", "CONT_WEIGHTED"]:
+        if prefab == PrefabID.RES_POOL:
+            self._render_pool_widget(label, path, val, config)
+        elif prefab == PrefabID.RES_COUNTER:
+            self._render_counter_widget(label, path, val, config)
+        elif prefab == PrefabID.RES_TRACK:
+            self._render_track_widget(label, path, val, config)
+        elif prefab.startswith("VAL_"):
+            self._render_simple_val_widget(label, path, val, prefab, config)
+        elif prefab in [PrefabID.CONT_LIST, PrefabID.CONT_TAGS, PrefabID.CONT_WEIGHTED]:
             count = len(val) if isinstance(val, list) else 0
             with ui.expansion(f"{label} ({count})", icon="list").classes(
                 "w-full bg-slate-900 rounded mb-1"
@@ -234,26 +141,39 @@ class CharacterInspector:
                 else:
                     with ui.column().classes("w-full gap-1 p-2"):
                         for idx, item in enumerate(val):
-                            self._render_list_item(path, idx, item)
+                            self._render_list_item(path, idx, item, field_def.config)
 
-    def _render_list_item(self, path, idx, item):
-        txt = ""
-        if isinstance(item, dict):
-            txt = f"{item.get('name', '???')}"
-            if item.get("qty", 1) > 1:
-                txt += f" (x{item['qty']})"
-        else:
-            txt = str(item)
 
+    def _render_list_item(self, path, idx, item, config=None):
+        item_path = f"{path}.{idx}"
+        
+        # 3-Layer Agnostic Prefab Detection for List Items
+        detected_prefab, key_map = self._detect_item_prefab(item, config)
+        
         with ui.row().classes(
             "w-full justify-between items-center group hover:bg-slate-800 rounded px-1 transition-colors relative"
         ):
-            ui.label(txt).classes("text-xs text-gray-300 py-1")
+            with ui.column().classes("w-full"):
+                if detected_prefab == PrefabID.RES_POOL:
+                    label = self._get_item_label(item, config)
+                    pool_keys = (key_map.get("curr_key"), key_map.get("max_key"))
+                    self._render_pool_widget(label, item_path, item, config, mini=True, keys=pool_keys)
+                elif detected_prefab == PrefabID.VAL_COMPOUND:
+                    label = self._get_item_label(item, config)
+                    self._render_simple_val_widget(label, item_path, item, PrefabID.VAL_COMPOUND, config, mini=True)
+                elif detected_prefab == PrefabID.VAL_LADDER:
+                    label = self._get_item_label(item, config)
+                    self._render_simple_val_widget(label, item_path, item, PrefabID.VAL_LADDER, config, mini=True)
+                else:
+                    # Fallback to agnostic text summary
+                    txt = self._format_item_agnostic(item, config)
+                    ui.label(txt).classes("text-xs text-slate-300 py-1 font-mono")
             
-            # Hover Actions (Edit/Delete) - Absolute positioned to the right or just flex-end
-            with ui.row().classes("opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 rounded px-1 gap-1"):
-                ui.button(icon="edit", on_click=lambda: self._edit_list_item(path, idx, item)).props("flat dense round size=xs color=grey")
+            # Hover Actions (Edit/Delete)
+            with ui.row().classes("absolute right-1 top-1 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800/90 rounded px-1 gap-1 z-10"):
+                ui.button(icon="edit", on_click=lambda: self._open_editor(self._get_item_label(item, config), item_path, "VAL_JSON", item)).props("flat dense round size=xs color=grey")
                 ui.button(icon="delete", on_click=lambda: self._delete_list_item(path, idx)).props("flat dense round size=xs color=red")
+
 
     def _handle_field_save(self, path: str, new_value: Any):
         """Callback when a field is saved via the editor."""
@@ -284,98 +204,16 @@ class CharacterInspector:
         else:
             ui.notify(f"✗ {result.get('error')}", type="negative")
 
-    def _quick_adjust(self, path: str, delta: int):
-        """Quickly adjust a resource current value."""
-        if not self.session_id:
-            return
-
-        # Fetch current entity stats
-        entity = get_entity(self.session_id, self.db, "character", self.entity_key)
-        if not entity:
-            return
-
-        full_val = get_path(entity, path)
-        if isinstance(full_val, dict) and "current" in full_val:
-            # It's a pool, adjust the current value
-            new_val = full_val.get("current", 0) + delta
-            self._handle_field_save(f"{path}.current", new_val)
-        else:
-            # It's a simple int or counter
-            new_val = int(full_val or 0) + delta
-            self._handle_field_save(path, new_val)
 
     def _prompt_add_item(self, path):
         """Show dialog to add a new item/tag."""
         try:
             logger.debug(f"Prompting add item for path: {path}")
-            new_val = {"name": "New Item", "description": ""} 
-            
-            FieldEditorDialog(
-                label="Add New Item",
-                path=path,
-                prefab="VAL_JSON",
-                current_value=new_val,
-                on_save=lambda p, v: self._handle_list_add(p, v)
-            ).open()
+            # Use mixin's prompt which calls _handle_list_add
+            super()._prompt_add_item(path)
         except Exception as e:
             logger.error(f"Error in _prompt_add_item: {e}", exc_info=True)
             ui.notify(f"Error: {e}", type="negative")
-
-    def _edit_list_item(self, path, index, current_val):
-        try:
-            logger.debug(f"Editing list item: {path}[{index}]")
-            # ui.notify("Opening editor...", type="info", timeout=1000) # Optional debug
-            FieldEditorDialog(
-                label="Edit Item",
-                path=f"{path}[{index}]",
-                prefab="VAL_JSON",
-                current_value=current_val,
-                on_save=lambda p, v: self._handle_list_update(path, index, v)
-            ).open()
-        except Exception as e:
-            logger.error(f"Error in _edit_list_item: {e}", exc_info=True)
-            ui.notify(f"Error: {e}", type="negative")
-
-    def _handle_list_add(self, path, new_item):
-        try:
-            if not self.session_id:
-                return
-            entity = get_entity(self.session_id, self.db, "character", self.entity_key)
-            items = get_path(entity, path)
-            if items is None:
-                items = []
-            if isinstance(items, list):
-                items.append(new_item)
-                self._handle_field_save(path, items)
-        except Exception as e:
-            logger.error(f"Error in _handle_list_add: {e}", exc_info=True)
-            ui.notify(f"Save Error: {e}", type="negative")
-
-    def _handle_list_update(self, path, index, new_item):
-        try:
-            if not self.session_id:
-                return
-            entity = get_entity(self.session_id, self.db, "character", self.entity_key)
-            items = get_path(entity, path)
-            if isinstance(items, list) and 0 <= index < len(items):
-                items[index] = new_item
-                self._handle_field_save(path, items)
-        except Exception as e:
-            logger.error(f"Error in _handle_list_update: {e}", exc_info=True)
-            ui.notify(f"Save Error: {e}", type="negative")
-
-    def _delete_list_item(self, path, index):
-        try:
-            if not self.session_id:
-                return
-            entity = get_entity(self.session_id, self.db, "character", self.entity_key)
-            items = get_path(entity, path)
-            if isinstance(items, list) and 0 <= index < len(items):
-                items.pop(index)
-                self._handle_field_save(path, items)
-        except Exception as e:
-            logger.error(f"Error in _delete_list_item: {e}", exc_info=True)
-            ui.notify(f"Delete Error: {e}", type="negative")
 
     def render(self):
         self.container = ui.column().classes("w-full p-2")

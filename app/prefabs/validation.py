@@ -30,14 +30,22 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 def get_path(data: Dict, path: str) -> Any:
-    """Safely get nested dictionary value."""
+    """Safely get nested dictionary or list value using dot notation."""
     if not path:
         return None
     current = data
     try:
+        if not path: 
+            return data
         for key in path.split("."):
             if isinstance(current, dict) and key in current:
                 current = current[key]
+            elif isinstance(current, list) and key.isdigit():
+                idx = int(key)
+                if 0 <= idx < len(current):
+                    current = current[idx]
+                else:
+                    return None
             else:
                 return None
         return current
@@ -45,19 +53,41 @@ def get_path(data: Dict, path: str) -> Any:
         return None
 
 def set_path(data: Dict, path: str, value: Any) -> bool:
-    """Safely set nested dictionary value, creating path if needed."""
+    """Safely set nested dictionary or list value, creating path if needed."""
     if not path:
         return False
     keys = path.split(".")
     current = data
-    for key in keys[:-1]:
-        if key not in current:
-            current[key] = {}
-        current = current[key]
-        if not isinstance(current, dict):
-            return False # Path blocked by non-dict
-    current[keys[-1]] = value
-    return True
+    for i, key in enumerate(keys[:-1]):
+        next_key = keys[i+1]
+        
+        # Handle current node as Dict
+        if isinstance(current, dict):
+            if key not in current:
+                # Peek ahead to see if next node should be list or dict
+                current[key] = [] if next_key.isdigit() else {}
+            current = current[key]
+        # Handle current node as List
+        elif isinstance(current, list) and key.isdigit():
+            idx = int(key)
+            if 0 <= idx < len(current):
+                current = current[idx]
+            else:
+                return False
+        else:
+            return False
+            
+    # Set final value
+    last_key = keys[-1]
+    if isinstance(current, dict):
+        current[last_key] = value
+        return True
+    elif isinstance(current, list) and last_key.isdigit():
+        idx = int(last_key)
+        if 0 <= idx < len(current):
+            current[idx] = value
+            return True
+    return False
 
 # =============================================================================
 # MAIN PIPELINE
