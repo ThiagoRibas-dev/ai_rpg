@@ -11,23 +11,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from app.prefabs.registry import PREFABS
+from app.models.vocabulary import CategoryName, PrefabID
 
 logger = logging.getLogger(__name__)
 
-VALID_CATEGORIES = {
-    "identity",
-    "attributes",
-    "skills",
-    "resources",
-    "features",
-    "inventory",
-    "progression",
-    "status",
-    "combat",
-    "connections",
-    "narrative",
-    "meta",
-}
+VALID_CATEGORIES = {c.value for c in CategoryName}
 
 
 @dataclass
@@ -156,7 +144,7 @@ class SystemManifest:
             for f in fields:
                 prefab = PREFABS.get(f.prefab)
                 hint = prefab.ai_hint if prefab else ""
-                suffix = ".current" if f.prefab == "RES_POOL" else ""
+                suffix = ".current" if f.prefab == PrefabID.RES_POOL else ""
                 lines.append(f"  `{f.path}{suffix}` - {f.label} ({hint})")
         return "\n".join(lines)
 

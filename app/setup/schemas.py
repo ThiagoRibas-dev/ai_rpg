@@ -1,45 +1,17 @@
 from typing import Literal, Dict, Any, List, Optional
 from pydantic import BaseModel, Field, field_validator, model_validator
 import re
+from app.models.vocabulary import PrefabID, CategoryName
 
 # ---------------------------------------------------------------------------
 # PREFAB / MANIFEST EXTRACTION SCHEMAS
 # ---------------------------------------------------------------------------
 
-ValidPrefabType = Literal[
-    "VAL_INT",
-    "VAL_COMPOUND",
-    "VAL_STEP_DIE",
-    "VAL_LADDER",
-    "VAL_BOOL",
-    "RES_POOL",
-    "RES_COUNTER",
-    "RES_TRACK",
-    "CONT_LIST",
-    "CONT_TAGS",
-    "CONT_WEIGHTED",
-]
-
-CategoryType = Literal[
-    "attributes",
-    "resources",
-    "skills",
-    "inventory",
-    "features",
-    "progression",
-    "combat",
-    "status",
-    "meta",
-    "identity",
-    "narrative",
-]
-
-
 class ExtractedField(BaseModel):
     label: str
     path: str = Field(..., description="snake_case.path")
-    prefab: ValidPrefabType
-    category: CategoryType
+    prefab: PrefabID
+    category: CategoryName
     config: Dict[str, Any] = Field(default_factory=dict)
     formula: Optional[str] = None
     usage_hint: str = Field(..., description="Short explanation for the AI")
@@ -49,10 +21,10 @@ class ExtractedField(BaseModel):
     def sanitize(cls, v):
         # Map some looser LLM outputs to real prefab IDs
         mapping = {
-            "VAL_NUMBER": "VAL_INT",
-            "RES_BAR": "RES_POOL",
-            "VAL_DIE": "VAL_STEP_DIE",
-            "CONT_ARRAY": "CONT_LIST",
+            "VAL_NUMBER": PrefabID.VAL_INT,
+            "RES_BAR": PrefabID.RES_POOL,
+            "VAL_DIE": PrefabID.VAL_STEP_DIE,
+            "CONT_ARRAY": PrefabID.CONT_LIST,
         }
         return mapping.get(v, v)
 

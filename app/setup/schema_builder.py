@@ -2,8 +2,8 @@ import logging
 from typing import Any, Dict, List, Type
 
 from pydantic import BaseModel, Field, create_model, ConfigDict
-
 from app.prefabs.manifest import SystemManifest, FieldDef
+from app.models.vocabulary import PrefabID, CategoryName, FieldKey, ConfigKey
 
 logger = logging.getLogger(__name__)
 
@@ -58,8 +58,8 @@ class SchemaBuilder:
             fields_by_cat.setdefault(field_def.category, []).append(field_def)
 
         # Ensure identity exists even if not defined explicitly in manifest
-        if "identity" not in fields_by_cat:
-            fields_by_cat["identity"] = []
+        if CategoryName.IDENTITY not in fields_by_cat:
+            fields_by_cat[CategoryName.IDENTITY] = []
 
         # 2. Build strict sub-models per category
         category_models: Dict[str, Any] = {}
@@ -87,7 +87,7 @@ class SchemaBuilder:
                     )
 
             # Identity: ensure core text fields even if manifest doesn't define them
-            if cat == "identity":
+            if cat == CategoryName.IDENTITY:
                 if "name" not in model_fields:
                     model_fields["name"] = (
                         str,
@@ -166,33 +166,33 @@ class SchemaBuilder:
         p = field_def.prefab
 
         # VALUE FIELDS
-        if p == "VAL_INT":
-            return int, field_def.config.get("default", 0)
-        if p == "VAL_COMPOUND":
+        if p == PrefabID.VAL_INT:
+            return int, field_def.config.get(ConfigKey.DEFAULT, 0)
+        if p == PrefabID.VAL_COMPOUND:
             # Ask the LLM for the score; modifier will be derived by validate_entity
-            return int, field_def.config.get("default", 10)
-        if p == "VAL_LADDER":
-            return int, field_def.config.get("default", 0)
-        if p == "VAL_BOOL":
-            return bool, field_def.config.get("default", False)
-        if p == "VAL_TEXT":
-            return str, field_def.config.get("default", "")
+            return int, field_def.config.get(ConfigKey.DEFAULT, 10)
+        if p == PrefabID.VAL_LADDER:
+            return int, field_def.config.get(ConfigKey.DEFAULT, 0)
+        if p == PrefabID.VAL_BOOL:
+            return bool, field_def.config.get(ConfigKey.DEFAULT, False)
+        if p == PrefabID.VAL_TEXT:
+            return str, field_def.config.get(ConfigKey.DEFAULT, "")
 
         # RESOURCES
-        if p == "RES_POOL":
+        if p == PrefabID.RES_POOL:
             # Ask for Max only; current will start at Max on creation
-            return int, field_def.config.get("default_max", 10)
-        if p == "RES_COUNTER":
-            return int, field_def.config.get("default", 0)
-        if p == "RES_TRACK":
+            return int, field_def.config.get(ConfigKey.DEFAULT_MAX, 10)
+        if p == PrefabID.RES_COUNTER:
+            return int, field_def.config.get(ConfigKey.DEFAULT, 0)
+        if p == PrefabID.RES_TRACK:
             # Number of filled boxes
             return int, 0
 
         # CONTAINERS
-        if p in ["CONT_LIST", "CONT_WEIGHTED", "CONT_TAGS"]:
+        if p in [PrefabID.CONT_LIST, PrefabID.CONT_WEIGHTED, PrefabID.CONT_TAGS]:
             # SPECIAL CASE: structured list items (e.g. spell_slots)
-            item_shape = field_def.config.get("item_shape")
-            if p == "CONT_LIST" and item_shape:
+            item_shape = field_def.config.get(ConfigKey.ITEM_SHAPE)
+            if p == PrefabID.CONT_LIST and item_shape:
                 ItemModel = self._build_item_model(field_def)
                 return list[ItemModel], []  # default empty list
 
@@ -208,39 +208,39 @@ class SchemaBuilder:
             return None
 
         # RES_POOL: int -> {current, max}
-        if prefab == "RES_POOL":
+        if prefab == PrefabID.RES_POOL:
             try:
                 val = int(value)
-                return {"current": val, "max": val}
+                return {FieldKey.CURRENT: val, FieldKey.MAX: val}
             except Exception as e:
                 logger.warning(f"Failed to expand RES_POOL value '{value}': {e}")
-                return {"current": 10, "max": 10}
+                return {FieldKey.CURRENT: 10, FieldKey.MAX: 10}
 
         # VAL_COMPOUND: int -> {score: int, mod: 0} (Mod calc happens in validation pipeline)
-        if prefab == "VAL_COMPOUND":
+        if prefab == PrefabID.VAL_COMPOUND:
             try:
-                return {"score": int(value), "mod": 0}
+                return {FieldKey.SCORE: int(value), FieldKey.MOD: 0}
             except Exception as e:
                 logger.warning(f"Failed to expand VAL_COMPOUND value '{value}': {e}")
-                return {"score": 10, "mod": 0}
+                return {FieldKey.SCORE: 10, FieldKey.MOD: 0}
 
         # VAL_LADDER: int -> {value: int, label: ""}
-        if prefab == "VAL_LADDER":
+        if prefab == PrefabID.VAL_LADDER:
             try:
-                return {"value": int(value), "label": ""}
+                return {FieldKey.VALUE: int(value), FieldKey.LABEL: ""}
             except Exception as e:
                 logger.warning(f"Failed to expand VAL_LADDER value '{value}': {e}")
-                return {"value": 0, "label": ""}
+                return {FieldKey.VALUE: 0, FieldKey.LABEL: ""}
 
         # VAL_TEXT
-        if prefab == "VAL_TEXT":
+        if prefab == PrefabID.VAL_TEXT:
             return str(value) if value else ""
 
         # CONT_LIST / WEIGHTED: List[str] -> List[{name: str, ...}]
-        if prefab in ["CONT_LIST", "CONT_WEIGHTED"]:
+        if prefab in [PrefabID.CONT_LIST, PrefabID.CONT_WEIGHTED]:
             if isinstance(value, list):
                 return [
-                    {"name": str(x), "qty": 1} if isinstance(x, str) else x
+                    {FieldKey.NAME: str(x), FieldKey.QTY: 1} if isinstance(x, str) else x
                     for x in value
                 ]
 
@@ -261,7 +261,7 @@ class SchemaBuilder:
         if cache_key in self._cache:
             return self._cache[cache_key]  # type: ignore[return-value]
 
-        item_shape: Dict[str, str] = field_def.config.get("item_shape", {})
+        item_shape: Dict[str, str] = field_def.config.get(ConfigKey.ITEM_SHAPE, {})
         model_fields: Dict[str, tuple[type, Field]] = {}
 
         for name, type_name in item_shape.items():

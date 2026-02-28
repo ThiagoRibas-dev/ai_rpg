@@ -13,6 +13,7 @@ from app.prompts.templates import (
     SHARED_RULES_SYSTEM_PROMPT, EXTRACT_MECHANICS_PROMPT,
     EXTRACT_FIELDS_PROMPT, EXTRACT_PROCEDURES_PROMPT, EXTRACT_RULES_PROMPT
 )
+from app.models.vocabulary import CategoryName
 
 logger = logging.getLogger(__name__)
 
@@ -40,13 +41,13 @@ class ManifestExtractor:
         # Phase 2: Fields
         all_fields = []
         self._update_status(3, "Extracting Core Stats...")
-        all_fields.extend(self._extract_field_group(system_prompt, menu_text, mechanics.aliases, ["attributes", "resources", "progression"]))
+        all_fields.extend(self._extract_field_group(system_prompt, menu_text, mechanics.aliases, [CategoryName.ATTRIBUTES, CategoryName.RESOURCES, CategoryName.PROGRESSION]))
         
         self._update_status(4, "Extracting Capabilities...")
-        all_fields.extend(self._extract_field_group(system_prompt, menu_text, mechanics.aliases, ["skills", "combat", "status"]))
+        all_fields.extend(self._extract_field_group(system_prompt, menu_text, mechanics.aliases, [CategoryName.SKILLS, CategoryName.COMBAT, CategoryName.STATUS]))
         
         self._update_status(5, "Extracting Assets...")
-        all_fields.extend(self._extract_field_group(system_prompt, menu_text, mechanics.aliases, ["inventory", "features", "meta", "identity", "narrative"]))
+        all_fields.extend(self._extract_field_group(system_prompt, menu_text, mechanics.aliases, [CategoryName.INVENTORY, CategoryName.FEATURES, CategoryName.META, CategoryName.IDENTITY, CategoryName.NARRATIVE]))
 
         # Phase 3: Procedures
         self._update_status(6, "Extracting Procedures...")
