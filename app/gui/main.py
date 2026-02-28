@@ -1,4 +1,5 @@
 from nicegui import ui, app
+import os
 import logging
 from app.gui.theme import Theme
 from app.database.db_manager import DBManager
