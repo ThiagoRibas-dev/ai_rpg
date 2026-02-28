@@ -1,4 +1,8 @@
- # Can be GEMINI or OPENAI
+
+# Port where the UI will be served
+UI_PORT=17523
+
+# Can be GEMINI or OPENAI
 LLM_PROVIDER=GEMINI
 
 GEMINI_API_KEY=gemini-api-key
