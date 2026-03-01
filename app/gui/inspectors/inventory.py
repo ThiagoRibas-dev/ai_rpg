@@ -104,6 +104,10 @@ class InventoryInspector(RenderingMixin):
             with ui.column().classes("flex-grow gap-0"):
                 if detected_prefab == PrefabID.RES_POOL and item_path:
                     self._render_pool_widget(name, item_path, item, config, mini=True, keys=pool_keys)
+                elif detected_prefab == PrefabID.RES_TRACK and item_path:
+                    self._render_track_widget(name, item_path, item, config, mini=True)
+                elif detected_prefab == PrefabID.RES_COUNTER and item_path:
+                    self._render_counter_widget(name, item_path, item, config, mini=True)
                 else:
                     ui.label(name).classes("font-bold text-gray-200 text-sm")
                     # Fallback text summary for other keys

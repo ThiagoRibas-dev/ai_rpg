@@ -3,6 +3,8 @@ from typing import Any, Dict, Optional, Tuple
 from app.models.vocabulary import FieldKey, ConfigKey, PrefabID
 from app.prefabs.validation import get_path
 from app.services.state_service import get_entity
+import re
+
 class RenderingMixin:
     """
     Shared rendering logic for inspectors (Lego Protocol).
@@ -47,6 +49,15 @@ class RenderingMixin:
         3. Heuristic: Suffix matching & agnostic fallback
         """
         if not isinstance(item, dict):
+            # --- Non-dict type detection ---
+            if isinstance(item, list) and item and all(isinstance(x, bool) for x in item):
+                return PrefabID.RES_TRACK, {}
+            if isinstance(item, bool):
+                return PrefabID.VAL_BOOL, {}
+            if isinstance(item, (int, float)):
+                return PrefabID.RES_COUNTER, {}
+            if isinstance(item, str) and re.match(r'^\d*d\d+', item):
+                return PrefabID.VAL_STEP_DIE, {}
             return None, {}
 
         # --- Layer 1: Schema-driven (item_shape from manifest) ---

@@ -1,6 +1,7 @@
 from nicegui import ui
 from typing import Any, Callable
 import logging
+from app.models.vocabulary import PrefabID, FieldKey
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,7 @@ class FieldEditorDialog:
         prefab: str,
         current_value: Any,
         constraints: dict | None = None,  # e.g., {"min": 0, "max": 20}
+        key_map: dict | None = None,
         on_save: Callable[[str, Any], None] = None,
     ):
         self.label = label
@@ -24,6 +26,7 @@ class FieldEditorDialog:
         self.prefab = prefab
         self.current_value = current_value
         self.constraints = constraints or {}
+        self.key_map = key_map or {}
         self.on_save = on_save
         self.dialog = None
         self.input_ref = None
@@ -54,7 +57,7 @@ class FieldEditorDialog:
     def _render_input(self):
         """Renders the appropriate input widget based on Prefab type."""
 
-        if self.prefab == "VAL_INT":
+        if self.prefab == PrefabID.VAL_INT:
             self.input_ref = ui.number(
                 label="Value",
                 value=self.current_value if self.current_value is not None else 0,
@@ -63,19 +66,19 @@ class FieldEditorDialog:
                 precision=0,
             ).classes("w-full").props('dark standout')
 
-        elif self.prefab == "VAL_BOOL":
+        elif self.prefab == PrefabID.VAL_BOOL:
             self.input_ref = ui.switch(
                 text="Active",
                 value=bool(self.current_value),
             ).classes("text-gray-300")
 
-        elif self.prefab == "VAL_TEXT":
+        elif self.prefab == PrefabID.VAL_TEXT:
             self.input_ref = ui.textarea(
                 label="Value",
                 value=str(self.current_value or ""),
             ).classes("w-full").props('dark standout autogrow')
 
-        elif self.prefab == "VAL_STEP_DIE":
+        elif self.prefab == PrefabID.VAL_STEP_DIE:
             # Dropdown for die types
             options = ["d4", "d6", "d8", "d10", "d12", "d20"]
             self.input_ref = ui.select(
@@ -84,17 +87,19 @@ class FieldEditorDialog:
                 label="Die Type",
             ).classes("w-full").props('dark standout')
 
-        elif self.prefab == "VAL_COMPOUND":
+        elif self.prefab == PrefabID.VAL_COMPOUND:
             # Two fields: score and mod
+            score_key = self.key_map.get("score_key", FieldKey.SCORE)
+            mod_key = self.key_map.get("mod_key", FieldKey.MOD)
             with ui.column().classes("w-full gap-2"):
                 self.input_ref = {}
                 score_val = (
-                    self.current_value.get("score")
+                    self.current_value.get(score_key)
                     if isinstance(self.current_value, dict)
                     else 10
                 )
                 mod_val = (
-                    self.current_value.get("mod")
+                    self.current_value.get(mod_key)
                     if isinstance(self.current_value, dict)
                     else 0
                 )
@@ -111,23 +116,25 @@ class FieldEditorDialog:
                     precision=0,
                 ).classes("w-full").props('dark standout')
 
-        elif self.prefab == "RES_POOL":
+        elif self.prefab == PrefabID.RES_POOL:
             # Two fields: current and max
+            curr_key = self.key_map.get("curr_key", FieldKey.CURRENT)
+            max_key = self.key_map.get("max_key", FieldKey.MAX)
             with ui.column().classes("w-full gap-2"):
                 self.input_ref = {}
-                val = self.current_value if isinstance(self.current_value, dict) else {"current": 0, "max": 0}
+                val = self.current_value if isinstance(self.current_value, dict) else {curr_key: 0, max_key: 0}
                 self.input_ref["current"] = ui.number(
                     label="Current",
-                    value=val.get("current", 0),
+                    value=val.get(curr_key, 0),
                     precision=0,
                 ).classes("w-full").props('dark standout')
                 self.input_ref["max"] = ui.number(
                     label="Maximum",
-                    value=val.get("max", 0),
+                    value=val.get(max_key, 0),
                     precision=0,
                 ).classes("w-full").props('dark standout')
 
-        elif self.prefab == "RES_TRACK":
+        elif self.prefab == PrefabID.RES_TRACK:
             # Render as a row of toggleable boxes
             track = self.current_value if isinstance(self.current_value, list) else []
             with ui.row().classes("gap-2 items-center"):
@@ -137,7 +144,7 @@ class FieldEditorDialog:
                     cb = ui.checkbox(value=state)
                     self.input_ref.append(cb)
 
-        elif self.prefab == "RES_COUNTER":
+        elif self.prefab == PrefabID.RES_COUNTER:
             self.input_ref = ui.number(
                 label="Count",
                 value=self.current_value or 0,
@@ -179,22 +186,26 @@ class FieldEditorDialog:
     def _extract_value(self) -> Any:
         """Extracts the value from the input widget(s)."""
 
-        if self.prefab in ["VAL_INT", "VAL_BOOL", "VAL_TEXT", "VAL_STEP_DIE", "RES_COUNTER"]:
+        if self.prefab in [PrefabID.VAL_INT, PrefabID.VAL_BOOL, PrefabID.VAL_TEXT, PrefabID.VAL_STEP_DIE, PrefabID.RES_COUNTER]:
             return self.input_ref.value
 
-        elif self.prefab == "VAL_COMPOUND":
+        elif self.prefab == PrefabID.VAL_COMPOUND:
+            score_key = self.key_map.get("score_key", FieldKey.SCORE)
+            mod_key = self.key_map.get("mod_key", FieldKey.MOD)
             return {
-                "score": int(self.input_ref["score"].value or 0),
-                "mod": int(self.input_ref["mod"].value or 0),
+                score_key: int(self.input_ref["score"].value or 0),
+                mod_key: int(self.input_ref["mod"].value or 0),
             }
 
-        elif self.prefab == "RES_POOL":
+        elif self.prefab == PrefabID.RES_POOL:
+            curr_key = self.key_map.get("curr_key", FieldKey.CURRENT)
+            max_key = self.key_map.get("max_key", FieldKey.MAX)
             return {
-                "current": int(self.input_ref["current"].value or 0),
-                "max": int(self.input_ref["max"].value or 0),
+                curr_key: int(self.input_ref["current"].value or 0),
+                max_key: int(self.input_ref["max"].value or 0),
             }
 
-        elif self.prefab == "RES_TRACK":
+        elif self.prefab == PrefabID.RES_TRACK:
             return [cb.value for cb in self.input_ref]
 
         elif self.prefab == "VAL_JSON":

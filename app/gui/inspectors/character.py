@@ -164,6 +164,15 @@ class CharacterInspector(RenderingMixin):
                 elif detected_prefab == PrefabID.VAL_LADDER:
                     label = self._get_item_label(item, config)
                     self._render_simple_val_widget(label, item_path, item, PrefabID.VAL_LADDER, config, mini=True)
+                elif detected_prefab == PrefabID.RES_TRACK:
+                    self._render_track_widget(str(idx), item_path, item, config, mini=True)
+                elif detected_prefab == PrefabID.RES_COUNTER:
+                    label = self._get_item_label(item, config)
+                    self._render_counter_widget(label, item_path, item, config, mini=True)
+                elif detected_prefab == PrefabID.VAL_STEP_DIE:
+                    self._render_simple_val_widget(str(item), item_path, item, PrefabID.VAL_STEP_DIE, config, mini=True)
+                elif detected_prefab == PrefabID.VAL_BOOL:
+                    self._render_simple_val_widget(str(idx), item_path, item, PrefabID.VAL_BOOL, config, mini=True)
                 else:
                     # Fallback to agnostic text summary
                     txt = self._format_item_agnostic(item, config)
