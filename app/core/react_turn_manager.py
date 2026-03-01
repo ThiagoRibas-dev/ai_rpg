@@ -199,6 +199,7 @@ class ReActTurnManager:
                 role="assistant",
                 content=response.content,
                 thought=response.thought,
+                thought_signature=response.thought_signature,
                 tool_calls=response.tool_calls,
             )
             working_history.append(assistant_msg)

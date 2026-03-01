@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import base64
 from google import genai
 from google.genai import types
 from pydantic import BaseModel
@@ -64,26 +65,39 @@ class GeminiConnector(LLMConnector):
             elif msg.role == "assistant":
                 parts = []
                 
-                # A. Text Content
+                # B. Text Content
                 if msg.content:
                     parts.append(types.Part.from_text(text=msg.content))
                 
-                # B. Thought / Signature (CRITICAL for Gemini 2.x Thinking/Tools)
-                if hasattr(msg, 'thought_signature') and msg.thought_signature:
-                    # Depending on the SDK, this might be a Part initialization with a specific field
-                    # or it might be passed as a text part that the model recognizes.
-                    # We preserve it in the parts list.
-                    parts.append(types.Part(thought=True, text=msg.thought))
-                elif hasattr(msg, 'thought') and msg.thought:
-                    parts.append(types.Part(thought=True, text=msg.thought))
-                
-                # C. Tool Calls
+                # C. Thought Content
+                if getattr(msg, 'thought', None):
+                    parts.append(types.Part(
+                        thought=True,
+                        text=msg.thought,
+                    ))
+
+                # D. Tool Calls + Thought Signature
                 if msg.tool_calls:
-                    for tool_call in msg.tool_calls:
-                        parts.append(types.Part.from_function_call(
-                            name=tool_call["name"], 
-                            args=tool_call["arguments"]
-                        ))
+                    # Decode the stored base64 thought_signature back to bytes.
+                    sig_bytes = None
+                    if getattr(msg, 'thought_signature', None):
+                        try:
+                            sig_bytes = base64.b64decode(msg.thought_signature)
+                        except Exception:
+                            sig_bytes = None
+
+                    # Gemini API requires the signature ONLY on the first function call
+                    for idx, tool_call in enumerate(msg.tool_calls):
+                        part_args = {
+                            "function_call": types.FunctionCall(
+                                name=tool_call["name"],
+                                args=tool_call["arguments"]
+                            )
+                        }
+                        if idx == 0 and sig_bytes:
+                            part_args["thought_signature"] = sig_bytes
+                            
+                        parts.append(types.Part(**part_args))
                 
                 if parts:
                     contents.append(types.Content(role="model", parts=parts))
@@ -226,15 +240,19 @@ class GeminiConnector(LLMConnector):
 
         content_text = ""
         thought_text = ""
+        thought_sig = None
         tool_calls = []
 
         if response.candidates and response.candidates[0].content.parts:
             for part in response.candidates[0].content.parts:
-                if getattr(part, "text", None):
+                if getattr(part, "thought", None) and getattr(part, "text", None):
+                    thought_text += part.text
+                elif getattr(part, "text", None):
                     content_text += part.text
                 
-                if getattr(part, "thought", None):
-                    thought_text += part.thought
+                # Capture thought_signature (bytes) from any part that has it
+                if getattr(part, "thought_signature", None) and thought_sig is None:
+                    thought_sig = base64.b64encode(part.thought_signature).decode("ascii")
 
                 if part.function_call:
                     tool_calls.append({
@@ -246,6 +264,7 @@ class GeminiConnector(LLMConnector):
         return LLMResponse(
             content=content_text, 
             thought=thought_text if thought_text else None,
+            thought_signature=thought_sig,
             tool_calls=tool_calls if tool_calls else None
         )
 
