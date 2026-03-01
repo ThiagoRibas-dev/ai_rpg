@@ -102,6 +102,9 @@ class Note(BaseModel):
     kind: MemoryKind = Field(
         MemoryKind.EPISODIC, description="Type of memory. Use 'episodic' for events, 'semantic' for general facts."
     )
+    tags: List[str] = Field(
+        ..., description="Tags, keywords, or categories to help retrieve this memory later."
+    )
 
 
 # --- UTILITY / SETUP TOOLS
