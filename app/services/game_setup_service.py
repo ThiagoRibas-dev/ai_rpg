@@ -10,6 +10,7 @@ from app.prefabs.validation import validate_entity
 from app.services.state_service import set_entity
 from app.tools.builtin.location_create import handler as location_create_handler
 from app.setup.setup_manifest import SetupManifest as SetupManifestService
+from app.models.vocabulary import MemoryKind
 
 logger = logging.getLogger(__name__)
 
@@ -132,7 +133,7 @@ class GameSetupService:
             for rule in manifest.rules:
                 mem = self.db.memories.create(
                     session_id=game_session.id,
-                    kind="rule",
+                    kind=MemoryKind.RULE,
                     content=f"{rule.name}: {rule.content}",
                     tags=rule.tags + ["system_rule"],
                     priority=3,

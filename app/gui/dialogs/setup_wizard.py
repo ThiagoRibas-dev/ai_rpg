@@ -9,6 +9,7 @@ from app.setup.sheet_generator import SheetGenerator
 from app.services.game_setup_service import GameSetupService
 from app.setup.schemas import LoreData
 from app.prefabs.manifest import SystemManifest
+from app.models.vocabulary import MemoryKind
 
 logger = logging.getLogger(__name__)
 
@@ -422,7 +423,7 @@ class SetupWizard:
                 tags.append("world_gen")
             # CHANGED: Use LoreData to match expected structure
             final_lore.append(
-                LoreData(kind="lore", content=content, priority=3, tags=tags)
+                LoreData(kind=MemoryKind.LORE, content=content, priority=3, tags=tags)
             )
 
         self.extracted_world.lore = final_lore

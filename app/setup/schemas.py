@@ -1,7 +1,7 @@
 from typing import Literal, Dict, Any, List, Optional
 from pydantic import BaseModel, Field, field_validator, model_validator
 import re
-from app.models.vocabulary import PrefabID, CategoryName
+from app.models.vocabulary import PrefabID, CategoryName, MemoryKind
 
 # ---------------------------------------------------------------------------
 # PREFAB / MANIFEST EXTRACTION SCHEMAS
@@ -256,7 +256,7 @@ class LoreData(BaseModel):
         description="Categories or keywords associated with this lore item.",
     )
     priority: int = 3
-    kind: str = "lore"
+    kind: str = MemoryKind.LORE
 
     @model_validator(mode="before")
     @classmethod
@@ -272,7 +272,7 @@ class LoreData(BaseModel):
             # Ensure tags list exists
             data.setdefault("tags", [])
             data.setdefault("priority", 3)
-            data.setdefault("kind", "lore")
+            data.setdefault("kind", MemoryKind.LORE)
             return data
 
         # Backend shape: {"category": "...", "details": "..."}
@@ -283,7 +283,7 @@ class LoreData(BaseModel):
                 "content": details,
                 "tags": [category, "world_gen"],
                 "priority": 3,
-                "kind": "lore",
+                "kind": MemoryKind.LORE,
             }
 
         # Plain string fallback
@@ -292,7 +292,7 @@ class LoreData(BaseModel):
                 "content": data,
                 "tags": ["world_gen"],
                 "priority": 3,
-                "kind": "lore",
+                "kind": MemoryKind.LORE,
             }
 
         return data

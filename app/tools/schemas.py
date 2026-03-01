@@ -1,5 +1,6 @@
 from typing import Literal, Optional, Union, List
 from pydantic import BaseModel, Field
+from app.models.vocabulary import MemoryKind
 
 # --- ATOMIC GAMEPLAY TOOLS ---
 
@@ -93,13 +94,13 @@ class Move(BaseModel):
 
 class Note(BaseModel):
     """
-    Save a note (a memory, fact, or event) in the game history log for future reference.
+    Save a note (a memory, fact, event, or preference) in the game history log for future reference.
     """
 
     name: Literal["note"] = "note"
     content: str = Field(..., description="The text to remember.")
-    kind: Literal["event", "fact", "lore"] = Field(
-        "event", description="Type of memory."
+    kind: MemoryKind = Field(
+        MemoryKind.EPISODIC, description="Type of memory. Use 'episodic' for events, 'semantic' for general facts."
     )
 
 
@@ -152,6 +153,6 @@ class ContextRetrieve(BaseModel):
         ..., description="Query text (usually derived from last user action)."
     )
     kinds: List[str] = Field(
-        default_factory=lambda: ["episodic", "semantic", "lore", "rule"]
+        default_factory=lambda: [MemoryKind.EPISODIC, MemoryKind.SEMANTIC, MemoryKind.LORE, MemoryKind.RULE]
     )
     limit: int = Field(8, ge=1, le=20)

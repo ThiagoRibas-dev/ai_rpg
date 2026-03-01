@@ -1,5 +1,6 @@
 from nicegui import ui
 from app.models.memory import Memory
+from app.models.vocabulary import MemoryKind
 
 
 class MemoryEditorDialog:
@@ -27,7 +28,7 @@ class MemoryEditorDialog:
             # Form
             with ui.grid(columns=2).classes("w-full gap-4"):
                 ui.select(
-                    ["episodic", "semantic", "lore", "user_pref"], label="Kind"
+                    [MemoryKind.EPISODIC, MemoryKind.SEMANTIC, MemoryKind.LORE, MemoryKind.USER_PREF, MemoryKind.RULE], label="Kind"
                 ).bind_value(self, "kind").classes("w-full")
 
                 ui.number(

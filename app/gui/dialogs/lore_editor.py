@@ -1,4 +1,5 @@
 from nicegui import ui
+from app.models.vocabulary import MemoryKind
 
 
 class LoreEditorDialog:
@@ -70,7 +71,7 @@ class LoreEditorDialog:
             return
         self.list_container.clear()
 
-        memories = self.db.memories.query(self.session_id, kind="lore", limit=100)
+        memories = self.db.memories.query(self.session_id, kind=MemoryKind.LORE, limit=100)
 
         with self.list_container:
             for mem in memories:
@@ -99,7 +100,7 @@ class LoreEditorDialog:
     def create_new(self):
         new_mem = self.db.memories.create(
             session_id=self.session_id,
-            kind="lore",
+            kind=MemoryKind.LORE,
             content="New Entry",
             priority=3,
             tags=["new"],

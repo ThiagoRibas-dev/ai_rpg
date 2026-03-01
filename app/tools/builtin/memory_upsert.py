@@ -1,4 +1,5 @@
 import logging
+from app.models.vocabulary import MemoryKind
 
 schema = {
     "name": "memory.upsert",
@@ -8,7 +9,7 @@ schema = {
         "properties": {
             "kind": {
                 "type": "string",
-                "enum": ["episodic", "semantic", "lore", "user_pref"],
+                "enum": [MemoryKind.EPISODIC, MemoryKind.SEMANTIC, MemoryKind.LORE, MemoryKind.USER_PREF],
             },
             "content": {"type": "string"},
             "priority": {"type": "integer", "minimum": 1, "maximum": 5},
@@ -21,7 +22,7 @@ schema = {
 logger = logging.getLogger(__name__)
 
 def handler(
-    kind: str, content: str, priority: int = 3, tags: list[str] | None = None, **context
+    kind: MemoryKind, content: str, priority: int = 3, tags: list[str] | None = None, **context
 ) -> dict:
     """
     Create a memory. Context should contain session_id and db_manager.

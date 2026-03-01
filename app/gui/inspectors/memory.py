@@ -1,5 +1,6 @@
 from nicegui import ui
 from app.gui.dialogs.memory_editor import MemoryEditorDialog
+from app.models.vocabulary import MemoryKind
 
 
 class MemoryInspector:
@@ -40,14 +41,20 @@ class MemoryInspector:
         if self.active_tab == "All":
             kind_filter = None
         elif self.active_tab == "Facts":
-            kind_filter = "semantic"
+            kind_filter = MemoryKind.SEMANTIC
         elif self.active_tab == "Preferences":
-            kind_filter = "user_pref"
+            kind_filter = MemoryKind.USER_PREF
         elif self.active_tab == "Rules":
-            kind_filter = "rule"
+            kind_filter = MemoryKind.RULE
         else:
             # Episodic, Lore, or any future tab where label == kind title-cased
-            kind_filter = self.active_tab.lower()
+            # Enums don't have .lower() on the class, only instances, so handle matching text
+            if self.active_tab == "Episodic":
+                kind_filter = MemoryKind.EPISODIC
+            elif self.active_tab == "Lore":
+                kind_filter = MemoryKind.LORE
+            else:
+                kind_filter = self.active_tab.lower()
 
         memories = self.db.memories.query(
             self.session_id,
@@ -61,11 +68,11 @@ class MemoryInspector:
             with ui.row().classes(
                 "w-full justify-between px-2 py-1 bg-slate-900 rounded mb-2 text-xs"
             ):
-                ui.label(f"📖 {counts.get('episodic', 0)}").tooltip("Episodic Events")
-                ui.label(f"💡 {counts.get('semantic', 0)}").tooltip("Facts / Knowledge")
-                ui.label(f"📜 {counts.get('lore', 0)}").tooltip("World Lore")
-                ui.label(f"⚙️ {counts.get('user_pref', 0)}").tooltip("Preferences")
-                ui.label(f"⚖️ {counts.get('rule', 0)}").tooltip("System Rules")
+                ui.label(f"📖 {counts.get(MemoryKind.EPISODIC, 0)}").tooltip("Episodic Events")
+                ui.label(f"💡 {counts.get(MemoryKind.SEMANTIC, 0)}").tooltip("Facts / Knowledge")
+                ui.label(f"📜 {counts.get(MemoryKind.LORE, 0)}").tooltip("World Lore")
+                ui.label(f"⚙️ {counts.get(MemoryKind.USER_PREF, 0)}").tooltip("Preferences")
+                ui.label(f"⚖️ {counts.get(MemoryKind.RULE, 0)}").tooltip("System Rules")
 
             # --- Controls ---
             # Search Input
@@ -115,11 +122,11 @@ class MemoryInspector:
 
     def _render_memory_card(self, mem):
         kind_colors = {
-            "episodic": "blue-900",
-            "semantic": "green-900",
-            "lore": "purple-900",
-            "user_pref": "orange-900",
-            "rule": "red-900",
+            MemoryKind.EPISODIC: "blue-900",
+            MemoryKind.SEMANTIC: "green-900",
+            MemoryKind.LORE: "purple-900",
+            MemoryKind.USER_PREF: "orange-900",
+            MemoryKind.RULE: "red-900",
         }
         bg = kind_colors.get(mem.kind, "slate-800")
 

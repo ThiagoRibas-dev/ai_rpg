@@ -3,6 +3,7 @@ import re
 from typing import List, Any, Optional
 from datetime import datetime
 from app.models.message import Message
+from app.models.vocabulary import MemoryKind
 
 
 class MemoryRetriever:
@@ -92,7 +93,7 @@ class MemoryRetriever:
         self.logger.info(f"Active retrieval tags: {active_tags}")
 
         # 3. CODEX RETRIEVAL (Rules, Lore, User Preferences)
-        codex_kinds = ["rule", "lore", "user_pref"]
+        codex_kinds = [MemoryKind.RULE, MemoryKind.LORE, MemoryKind.USER_PREF]
         
         # Fetch candidates based on tags OR high priority
         candidates_codex = self.db.memories.query(
@@ -123,7 +124,7 @@ class MemoryRetriever:
 
         # 4. CHRONICLE RETRIEVAL (Episodic)
         # Fetch candidate episodic memories
-        episodic_mems = self.db.memories.query(session.id, kind="episodic", limit=50)
+        episodic_mems = self.db.memories.query(session.id, kind=MemoryKind.EPISODIC, limit=50)
         candidate_ids_ep = {m.id for m in episodic_mems}
         hit_ids_ep = {h["memory_id"] for h in sem_hits if h["memory_id"] in candidate_ids_ep}
         
@@ -163,8 +164,8 @@ class MemoryRetriever:
         final_episodic = [m for s, m in scored_episodic[:3]]
 
         # 5. ORGANIZE AND BUDGET
-        result_dict = {"rule": [], "lore": [], "user_pref": [], "episodic": final_episodic}
-        budgets = {"rule": 5, "lore": 5, "user_pref": 2}
+        result_dict = {MemoryKind.RULE: [], MemoryKind.LORE: [], MemoryKind.USER_PREF: [], MemoryKind.EPISODIC: final_episodic}
+        budgets = {MemoryKind.RULE: 5, MemoryKind.LORE: 5, MemoryKind.USER_PREF: 2}
         for mem in final_codex:
             if len(result_dict[mem.kind]) < budgets.get(mem.kind, 2):
                 result_dict[mem.kind].append(mem)
@@ -179,25 +180,25 @@ class MemoryRetriever:
             return ""
             
         lines = []
-        if categorized_memories.get('rule') or categorized_memories.get('user_pref'):
+        if categorized_memories.get(MemoryKind.RULE) or categorized_memories.get(MemoryKind.USER_PREF):
             lines.append("## GAME RULES REMINDER\n")
-            for m in categorized_memories.get('rule', []):
+            for m in categorized_memories.get(MemoryKind.RULE, []):
                 tags = f" [{', '.join(m.tags_list())}]" if m.tags_list() else ""
                 lines.append(f"⚖️ {m.content}{tags}")
-            for m in categorized_memories.get('user_pref', []):
+            for m in categorized_memories.get(MemoryKind.USER_PREF, []):
                 lines.append(f"⚙️ {m.content}")
             lines.append("")
                 
-        if categorized_memories.get('lore'):
+        if categorized_memories.get(MemoryKind.LORE):
             lines.append("## WORLD LORE\n")
-            for m in categorized_memories.get('lore', []):
+            for m in categorized_memories.get(MemoryKind.LORE, []):
                 tags = f" [{', '.join(m.tags_list())}]" if m.tags_list() else ""
                 lines.append(f"📜 {m.content}{tags}")
             lines.append("")
                 
-        if categorized_memories.get('episodic'):
+        if categorized_memories.get(MemoryKind.EPISODIC):
             lines.append("## RECALLED PAST EVENTS\n")
-            for m in categorized_memories.get('episodic', []):
+            for m in categorized_memories.get(MemoryKind.EPISODIC, []):
                 lines.append(f"📖 {m.content}")
                 
         return "\n".join(lines).strip()
