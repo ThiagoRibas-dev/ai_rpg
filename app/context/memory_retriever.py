@@ -39,6 +39,8 @@ class MemoryRetriever:
         session,
         recent_messages: List[Message],
         extra_tags: Optional[List[str]] = None,
+        kinds: Optional[List[MemoryKind]] = None,
+        limit: Optional[int] = None,
     ) -> dict[str, List[Any]]:
         """
         Retrieve relevant memories using Tag Funnel and Dual-System Retrieval.
@@ -94,81 +96,122 @@ class MemoryRetriever:
 
         # 3. CODEX RETRIEVAL (Rules, Lore, User Preferences)
         codex_kinds = [MemoryKind.RULE, MemoryKind.LORE, MemoryKind.USER_PREF]
-        
-        # Fetch candidates based on tags OR high priority
-        candidates_codex = self.db.memories.query(
-            session.id, kind=codex_kinds, tags=list(active_tags), limit=100
-        )
-        high_pri_codex = self.db.memories.query(session.id, kind=codex_kinds, limit=100)
-        
-        # Merge and score
-        candidates_codex_dict = {m.id: m for m in candidates_codex + high_pri_codex}
-        scored_codex = []
-        for mem in candidates_codex_dict.values():
-            score = mem.priority * 100
-            mem_tags = {t.lower() for t in mem.tags_list()}
+        if kinds is not None:
+             codex_kinds = [k for k in codex_kinds if k in kinds]
+
+        final_codex = []
+        if codex_kinds:
+            # Fetch candidates based on tags OR high priority
+            candidates_codex = self.db.memories.query(
+                session.id, kind=codex_kinds, tags=list(active_tags), limit=100
+            )
+            high_pri_codex = self.db.memories.query(session.id, kind=codex_kinds, limit=100)
             
-            score += len(active_tags & mem_tags) * 50
+            # Merge and score
+            candidates_codex_dict = {m.id: m for m in candidates_codex + high_pri_codex}
+            scored_codex = []
+            for mem in candidates_codex_dict.values():
+                score = mem.priority * 100
+                mem_tags = {t.lower() for t in mem.tags_list()}
+                
+                score += len(active_tags & mem_tags) * 50
+                
+                if any(kw in mem.content.lower() for kw in keywords):
+                    score += 30
+                
+                if any(h["memory_id"] == mem.id for h in sem_hits):
+                    score += 100
+                
+                if score > 50: # Minimum filter
+                    scored_codex.append((score, mem))
             
-            if any(kw in mem.content.lower() for kw in keywords):
-                score += 30
-            
-            if any(h["memory_id"] == mem.id for h in sem_hits):
-                score += 100
-            
-            if score > 50: # Minimum filter
-                scored_codex.append((score, mem))
-        
-        scored_codex.sort(key=lambda x: x[0], reverse=True)
-        final_codex = [m for s, m in scored_codex]
+            scored_codex.sort(key=lambda x: x[0], reverse=True)
+            final_codex = [m for s, m in scored_codex]
 
         # 4. CHRONICLE RETRIEVAL (Episodic)
-        # Fetch candidate episodic memories
-        episodic_mems = self.db.memories.query(session.id, kind=MemoryKind.EPISODIC, limit=50)
-        candidate_ids_ep = {m.id for m in episodic_mems}
-        hit_ids_ep = {h["memory_id"] for h in sem_hits if h["memory_id"] in candidate_ids_ep}
-        
-        # Create history fingerprint for deduplication
-        history_words = set(self.extract_keywords(" ".join(m.content for m in history[-10:] if m.content)))
-        
-        scored_episodic = []
-        for mem in episodic_mems:
-            score = 0
-            if mem.id in hit_ids_ep: 
-                score += 100
-            if mem.priority >= 4: 
-                score += 50
+        final_episodic = []
+        if kinds is None or MemoryKind.EPISODIC in kinds:
+            # Fetch candidate episodic memories
+            episodic_mems = self.db.memories.query(session.id, kind=MemoryKind.EPISODIC, limit=50)
+            candidate_ids_ep = {m.id for m in episodic_mems}
+            hit_ids_ep = {h["memory_id"] for h in sem_hits if h["memory_id"] in candidate_ids_ep}
             
-            # Keyword overlap boost
-            mem_words = set(self.extract_keywords(mem.content))
-            score += len(mem_words & set(keywords)) * 15
-        
-            # Recency inversion
-            try:
-                created = datetime.fromisoformat(mem.created_at)
-                age_days = (datetime.now() - created).days
-                if age_days >= 1:
-                    score += min(age_days * 2, 30)
-            except Exception:
-                pass
-        
-            # Deduplication: Penalize if already clearly in recent history
-            overlap_ratio = len(mem_words & history_words) / max(len(mem_words), 1)
-            if overlap_ratio > 0.6:
-                score -= 200
+            # Create history fingerprint for deduplication
+            history_words = set(self.extract_keywords(" ".join(m.content for m in history[-10:] if m.content)))
+            
+            scored_episodic = []
+            for mem in episodic_mems:
+                score = 0
+                if mem.id in hit_ids_ep: 
+                    score += 100
+                if mem.priority >= 4: 
+                    score += 50
                 
-            if score > 0:
-                scored_episodic.append((score, mem))
+                # Keyword overlap boost
+                mem_words = set(self.extract_keywords(mem.content))
+                score += len(mem_words & set(keywords)) * 15
+            
+                # Recency inversion
+                try:
+                    created = datetime.fromisoformat(mem.created_at)
+                    age_days = (datetime.now() - created).days
+                    if age_days >= 1:
+                        score += min(age_days * 2, 30)
+                except Exception:
+                    pass
+            
+                # Deduplication: Penalize if already clearly in recent history
+                overlap_ratio = len(mem_words & history_words) / max(len(mem_words), 1)
+                if overlap_ratio > 0.6:
+                    score -= 200
+                    
+                if score > 0:
+                    scored_episodic.append((score, mem))
 
-        scored_episodic.sort(key=lambda x: x[0], reverse=True)
-        final_episodic = [m for s, m in scored_episodic[:3]]
+            scored_episodic.sort(key=lambda x: x[0], reverse=True)
+            final_episodic = [m for s, m in scored_episodic[:3]]
 
         # 5. ORGANIZE AND BUDGET
-        result_dict = {MemoryKind.RULE: [], MemoryKind.LORE: [], MemoryKind.USER_PREF: [], MemoryKind.EPISODIC: final_episodic}
-        budgets = {MemoryKind.RULE: 5, MemoryKind.LORE: 5, MemoryKind.USER_PREF: 2}
+        result_dict = {
+            MemoryKind.RULE: [],
+            MemoryKind.LORE: [],
+            MemoryKind.USER_PREF: [],
+            MemoryKind.EPISODIC: final_episodic
+        }
+        
+        # Override default budgets if explicit limit is provided
+        if limit is not None:
+             default_limit = max(1, limit // len(codex_kinds)) if codex_kinds else limit
+             budgets = {k: default_limit for k in codex_kinds}
+             # Episodic already limited to 3 above, let's respect the limit for it too if it was requested
+             if MemoryKind.EPISODIC in result_dict:
+                  result_dict[MemoryKind.EPISODIC] = final_episodic[:limit]
+        else:
+             budgets = {MemoryKind.RULE: 5, MemoryKind.LORE: 5, MemoryKind.USER_PREF: 2}
+
         for mem in final_codex:
             if len(result_dict[mem.kind]) < budgets.get(mem.kind, 2):
                 result_dict[mem.kind].append(mem)
+
+        # Final pass if limit was global (sum of all results)
+        if limit is not None:
+            # Flatten, sort by priority if needed (but they are already sorted within kinds)
+            # For now, let's just ensure we don't exceed global limit
+            all_mems = []
+            for k in [MemoryKind.RULE, MemoryKind.LORE, MemoryKind.USER_PREF, MemoryKind.EPISODIC]:
+                all_mems.extend(result_dict.get(k, []))
+            
+            if len(all_mems) > limit:
+                 # Truncate result_dict to meet limit
+                 current_total = 0
+                 new_result = {}
+                 for k in [MemoryKind.RULE, MemoryKind.LORE, MemoryKind.USER_PREF, MemoryKind.EPISODIC]:
+                      available = result_dict.get(k, [])
+                      take = min(len(available), limit - current_total)
+                      if take > 0:
+                           new_result[k] = available[:take]
+                           current_total += take
+                 result_dict = new_result
 
         return {k: v for k, v in result_dict.items() if v}
 

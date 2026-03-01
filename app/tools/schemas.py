@@ -155,7 +155,7 @@ class ContextRetrieve(BaseModel):
     query: str = Field(
         ..., description="Query text (usually derived from last user action)."
     )
-    kinds: List[str] = Field(
+    kinds: List[MemoryKind] = Field(
         default_factory=lambda: [MemoryKind.EPISODIC, MemoryKind.SEMANTIC, MemoryKind.LORE, MemoryKind.RULE]
     )
     limit: int = Field(8, ge=1, le=20)
