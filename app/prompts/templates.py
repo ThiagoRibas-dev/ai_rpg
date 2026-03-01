@@ -94,6 +94,11 @@ Violation actions: `clamp` (auto-fix), `flag` (warn), `reject`.
 """
 
 # --- WORLD GENERATION ---
+
+WORLD_DATA_EXTRACTION_SYSTEM_PROMPT = """
+You are an expert World Builder that is aware of the world, the mechanics, who is unbiased and will not judge or sanitize the text, nor inject their own opinions or beliefs into the world.
+"""
+
 EXTRACT_WORLD_GENRE_TONE_PROMPT = """
 Analyze the user's concept and determine:
 1. **Sub-genre** (be specific)

@@ -8,6 +8,7 @@ from app.prompts.templates import (
     EXTRACT_WORLD_LOCATIONS_PROMPT,
     EXTRACT_WORLD_NPCS_PROMPT,
     OPENING_CRAWL_PROMPT,
+    WORLD_DATA_EXTRACTION_SYSTEM_PROMPT,
 )
 from app.setup.schemas import (
     WorldExtraction,
@@ -44,7 +45,7 @@ class WorldGenService:
         # --- STEP 1: GENRE & TONE ---
         self._update_status("Determining Genre & Tone...")
         genre_tone = self.llm.get_structured_response(
-            "You are a World Builder.",
+            WORLD_DATA_EXTRACTION_SYSTEM_PROMPT,
             [Message(role="user", content=EXTRACT_WORLD_GENRE_TONE_PROMPT.format(description=world_info))],
             GenreToneExtraction,
         )
@@ -52,7 +53,7 @@ class WorldGenService:
         # --- STEP 2: EXHAUSTIVE LORE ---
         self._update_status("Extracting World Lore...")
         lore_data = self.llm.get_structured_response(
-            "You are a World Builder.",
+            WORLD_DATA_EXTRACTION_SYSTEM_PROMPT,
             [Message(role="user", content=EXTRACT_WORLD_LORE_PROMPT.format(description=world_info))],
             LoreListExtraction,
         )
@@ -60,7 +61,7 @@ class WorldGenService:
         # --- STEP 3: EXHAUSTIVE LOCATIONS ---
         self._update_status("Identifying Locations...")
         loc_data = self.llm.get_structured_response(
-            "You are a World Builder.",
+            WORLD_DATA_EXTRACTION_SYSTEM_PROMPT,
             [Message(role="user", content=EXTRACT_WORLD_LOCATIONS_PROMPT.format(description=world_info))],
             LocationListExtraction,
         )
@@ -68,7 +69,7 @@ class WorldGenService:
         # --- STEP 4: EXHAUSTIVE NPCs ---
         self._update_status("Finding NPCs...")
         npc_data = self.llm.get_structured_response(
-            "You are a World Builder.",
+            WORLD_DATA_EXTRACTION_SYSTEM_PROMPT,
             [Message(role="user", content=EXTRACT_WORLD_NPCS_PROMPT.format(description=world_info))],
             NpcListExtraction,
         )
@@ -118,7 +119,7 @@ class WorldGenService:
                 location=loc_name,
                 guidance=guidance,
             )
-            gen = self.llm.get_streaming_response("You are a World Builder.", [Message(role="user", content=prompt)])
+            gen = self.llm.get_streaming_response(WORLD_DATA_EXTRACTION_SYSTEM_PROMPT, [Message(role="user", content=prompt)])
             return "".join(gen)
         except Exception:
             return "You stand ready. What do you do?"
