@@ -113,7 +113,7 @@ class SchemaBuilder:
                 __config__=ConfigDict(),
                 **model_fields,
             )
-            category_models[cat] = (CatModel, Field(default_factory=CatModel))
+            category_models[cat] = (CatModel, Field(..., description=f"{cat.title()} category"))
 
         # 3. Root Model: strict, no extra top-level categories
         CreationModel = create_model(
