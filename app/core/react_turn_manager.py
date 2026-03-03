@@ -18,7 +18,7 @@ from app.llm.schemas import TurnFinalOutput
 logger = logging.getLogger(__name__)
 
 MAX_HISTORY_MESSAGES = 50
-MAX_REACT_LOOPS = 5
+MAX_REACT_LOOPS = 15
 
 
 class ReActTurnManager:
@@ -79,7 +79,6 @@ class ReActTurnManager:
             state_builder,
             mem_retriever,
             sim_service,
-            tool_registry=self.tool_registry,
             logger=self.logger,
             manifest=manifest,
         )
@@ -166,10 +165,18 @@ class ReActTurnManager:
                     tool["function"]["description"] = desc
 
         # Appends the list of available tools to the working history
+        tools_defs = ""
+        for tool in llm_tools:
+            name = tool["function"]["name"]
+            desc = tool["function"]["description"].strip()
+            # Clean up docstring formatting
+            desc = " ".join(desc.split())
+            tools_defs += f"- **{name}**: {desc}\n"
+
         tool_message = Message(
             role="tool",
             name="available_tools",
-            content=json.dumps(llm_tools),
+            content=tools_defs,
             turn_id=turn_id,
         )
         working_history.append(tool_message)
@@ -231,6 +238,7 @@ class ReActTurnManager:
                 for call_data in response.tool_calls:
                     if self.orchestrator.stop_event.is_set():
                         return
+
                     call_id = call_data.get("id", "call_default")
                     name = call_data["name"]
                     args = call_data["arguments"]
@@ -259,7 +267,7 @@ class ReActTurnManager:
                                 role="tool",
                                 tool_call_id=call_id,
                                 name=name,
-                                content=json.dumps(res_data),
+                                content=json.dumps(res_data, indent=2),
                             )
                             working_history.append(tool_msg)
                         except Exception as e:
@@ -267,7 +275,7 @@ class ReActTurnManager:
                                 role="tool",
                                 tool_call_id=call_id,
                                 name=name,
-                                content=json.dumps({"error": str(e)}),
+                                content=json.dumps({"error": str(e)}, indent=2),
                             )
                             working_history.append(error_msg)
                             self.ui_queue.put(
@@ -283,24 +291,24 @@ class ReActTurnManager:
                             role="tool",
                             tool_call_id=call_id,
                             name=name,
-                            content=json.dumps({"error": f"Tool '{name}' not found."}),
+                            content=json.dumps({"error": f"Tool '{name}' not found."}, indent=2),
                         )
                         working_history.append(error_msg)
                 continue
-        else:
-            # --- 5B. LOOP EXHAUSTION GUARD ---
+
+        # --- 5B. LOOP EXHAUSTION GUARD ---
+        if not narrative_text:
             self.logger.warning(
                 f"ReAct loop exhausted without narrative. Forcing narrative generation. Turn ID: {turn_id}"
             )
-            # Make one final call without tools to force a text response
+            # Make one final streaming response call to force a text response
             try:
-                fallback_response = self.llm_connector.chat_with_tools(
+                fallback_response = self.llm_connector.stream_response(
                     system_prompt=turn_system_prompt,
                     chat_history=working_history,
-                    tools=[],  # Empty tools list forces text
                 )
-                if fallback_response.content:
-                    narrative_text = fallback_response.content
+                narrative_text = "".join(fallback_response)
+                if narrative_text:
                     self.ui_queue.put(
                         {
                             "type": "message_bubble",
@@ -312,7 +320,7 @@ class ReActTurnManager:
             except Exception as fallback_e:
                 self.logger.error(f"Fallback narrative generation failed: {fallback_e}")
                 
-        # --- 6-7. FINAL OUTPUT & METADATA (MERGED) ---
+        # --- 6. FINAL OUTPUT & METADATA (MERGED) ---
         if self.orchestrator.stop_event.is_set() or not narrative_text:
             return
             
@@ -337,7 +345,7 @@ class ReActTurnManager:
                         "1. Provide a concise 1-3 sentence summary of what happened.\n"
                         "2. Provide short tags that summarize the turn, for later retrieval.\n"
                         "3. Rate importance 1-5 rating of the turn.\n"
-                        "4. Write 3-5 actions the Player could take next in first person. (e.g., I do X, I go to Y)\n"
+                        "4. Write 3-5 actions the Player could take next in first person. (In the format: \"I do X\", \"I go to Y\", etc.)\n"
                         "Return strictly as JSON."
                     ),
                 )
@@ -371,7 +379,7 @@ class ReActTurnManager:
                     "turn_id": turn_id,
                 }
             )
-        # --- 8. PERSISTENCE ---
+        # --- 7. PERSISTENCE ---
         if narrative_text.strip():
             session_in_thread.add_message("assistant", narrative_text)
         self.orchestrator._update_game_in_thread(

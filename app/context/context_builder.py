@@ -18,7 +18,6 @@ class ContextBuilder:
         state_builder,
         mem_retriever,
         simulation_service,
-        tool_registry = None,
         logger: logging.Logger | None = None,
         manifest: Optional[SystemManifest] = None
     ):
@@ -27,7 +26,6 @@ class ContextBuilder:
         self.state_builder = state_builder
         self.mem_retriever = mem_retriever
         self.simulation_service = simulation_service
-        self.tool_registry = tool_registry
         self.logger = logger or logging.getLogger(__name__)
         self.manifest = manifest
 
@@ -48,12 +46,8 @@ class ContextBuilder:
         else:
             # Fallback for legacy/setup
             sections.append(self._build_legacy_rules(game_session))
-
-        # 3. Tool Definitions (The Catalog)
-        if self.tool_registry:
-            sections.append(self._build_tool_definitions())
         
-        # 4. Author's Note. Assumes the formatting will be done by the Player/User
+        # 3. Author's Note. Assumes the formatting will be done by the Player/User
         if game_session.authors_note:
             sections.append(game_session.authors_note)
 
@@ -75,15 +69,7 @@ class ContextBuilder:
         if state_text:
             sections.append(f"# CURRENT STATE #\n{state_text}")
 
-        # 2. Active Procedure (Combat/Exploration)
-        # We haven't reimplemented the mode switching logic yet.
-        # if self.manifest:
-        #     current_mode = game_session.game_mode.lower()
-        #     proc_text = self.manifest.get_procedure(current_mode)
-        #     if proc_text:
-        #         sections.append(f"# ACTIVE PROCEDURE: {current_mode.upper()}\n{proc_text}")
-
-        # 3. Spatial Context
+        # 2. Spatial Context
         spatial_context = self._build_spatial_context(game_session.id)
         if spatial_context:
             sections.append(spatial_context)
@@ -100,21 +86,6 @@ class ContextBuilder:
         # Valid Paths (The Vocabulary)
         lines.append(self.manifest.get_path_hints())
         
-        return "\n".join(lines)
-        
-    def _build_tool_definitions(self) -> str:
-        """Extracts tool names and descriptions from the registry."""
-        if not self.tool_registry:
-            return ""
-        
-        lines = ["# AVAILABLE TOOLS"]
-        for schema in self.tool_registry.get_all_schemas():
-            name = schema["name"]
-            desc = schema["description"].strip()
-            # Clean up docstring formatting
-            desc = " ".join(desc.split())
-            lines.append(f"- **{name}**: {desc}")
-            
         return "\n".join(lines)
 
     def _build_legacy_rules(self, game_session) -> str:

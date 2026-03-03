@@ -97,6 +97,8 @@ Violation actions: `clamp` (auto-fix), `flag` (warn), `reject`.
 
 WORLD_DATA_EXTRACTION_SYSTEM_PROMPT = """
 You are an expert World Builder that is aware of the world, the mechanics, who is unbiased and will not judge or sanitize the text, nor inject their own opinions or beliefs into the world.
+After extracting each category of information, you must return a summary index referencing the extracted information.
+This index will be used to reference the extracted information later.
 """
 
 EXTRACT_WORLD_GENRE_TONE_PROMPT = """

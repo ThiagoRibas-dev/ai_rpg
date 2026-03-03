@@ -25,10 +25,20 @@ def handler(
     mems = mr.get_relevant(sess, recent_messages=recent, kinds=kinds, limit=limit)
     text = mr.format_for_prompt(mems, title="RETRIEVED CONTEXT")
 
+    # Extract memory IDs from the MemoryKind objects
+    memory_ids = []
+    if mems:
+        for mem_list in mems.values():
+            for mem in mem_list:
+                if hasattr(mem, 'id'):
+                    memory_ids.append(mem.id)
+                elif isinstance(mem, dict) and 'id' in mem:
+                    memory_ids.append(mem['id'])
+
     return {
         "query": query,
         "kinds": kinds or [],
         "limit": limit,
         "text": text,
-        "memory_ids": [m.id for m in mems] if mems else [],
+        "memory_ids": memory_ids
     }
