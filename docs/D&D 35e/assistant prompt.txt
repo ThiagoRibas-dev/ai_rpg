@@ -373,8 +373,9 @@ Reflex: +1
 Will: +10
 
 --- RESOURCES ---
-Turn/Destroy Undead: 8 / 8 (Uses/Day) # 3 Base + 1 Cha + 4 Feat
-Law Devotion: 1 / 1
+Turn Undead: 8 / 8 (Uses/Day) # 3 Base + 1 Cha + 4 Feat
+Destroy Undead: 8 / 8 (Uses/Day) # Same as Turn Undead
+Law Devotion: 1 / 1 # Can use 3 Turn Undead uses to rechharge
 Smite (Ordained Champ): Uses Turn Attempts
 
 --- ATTACKS ---
@@ -423,7 +424,7 @@ Survival: +6
 - Combat Feats (Ordained Champion)
 - Continued Advancement (Caster Level)
 
---- SPELLCASTING (Cleric CL 4) ---
+--- SPELLCASTING (Cleric; Prepared; Caster Level 4) ---
 0-Level Slots: [][][][][]
 1st-Level Slots: [][][][][]
 2nd-Level Slots: [][][][]

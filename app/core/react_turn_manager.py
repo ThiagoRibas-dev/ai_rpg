@@ -165,13 +165,14 @@ class ReActTurnManager:
                     tool["function"]["description"] = desc
 
         # Appends the list of available tools to the working history
-        tools_defs = ""
+        tools_defs = "Autonomously use the following tools to perform actions, retrieve information, create, or modify game elements, etc.\n\n```available_tools\n"
         for tool in llm_tools:
             name = tool["function"]["name"]
             desc = tool["function"]["description"].strip()
             # Clean up docstring formatting
             desc = " ".join(desc.split())
             tools_defs += f"- **{name}**: {desc}\n"
+        tools_defs += "\n```"
 
         tool_message = Message(
             role="tool",
@@ -341,11 +342,11 @@ class ReActTurnManager:
                 Message(
                     role="user",
                     content=(
-                        "Out-of-character: summarize this turn and suggest next actions.\n"
+                        "Out-of-character: Summarize this scene, generate tags that describe the scene and a importance rating, then suggest next actions.\n"
                         "1. Provide a concise 1-3 sentence summary of what happened.\n"
-                        "2. Provide short tags that summarize the turn, for later retrieval.\n"
+                        "2. Provide tags that describe the turn.\n"
                         "3. Rate importance 1-5 rating of the turn.\n"
-                        "4. Write 3-5 actions the Player could take next in first person. (In the format: \"I do X\", \"I go to Y\", etc.)\n"
+                        "4. Write 3-5 actions the Player could take next, in first person, in the format: \"I do X\", \"I go to Y\", etc.\n"
                         "Return strictly as JSON."
                     ),
                 )

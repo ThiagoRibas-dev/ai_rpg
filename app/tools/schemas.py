@@ -94,7 +94,7 @@ class Move(BaseModel):
 
 class Note(BaseModel):
     """
-    Save a note (a memory, fact, event, or preference) in the game history log for future reference.
+    Save a note (a memory, fact, event, game rule, or preference) in the game history log for future reference.
     """
 
     name: Literal["note"] = "note"

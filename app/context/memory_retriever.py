@@ -233,7 +233,7 @@ class MemoryRetriever:
             lines.append("")
                 
         if categorized_memories.get(MemoryKind.LORE):
-            lines.append("## WORLD LORE\n")
+            lines.append("## WORLD LORE SAMPLE\n")
             for m in categorized_memories.get(MemoryKind.LORE, []):
                 tags = f" [{', '.join(m.tags_list())}]" if m.tags_list() else ""
                 lines.append(f"📜 {m.content}{tags}")

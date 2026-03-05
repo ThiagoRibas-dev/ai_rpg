@@ -14,7 +14,7 @@ class SheetGenerator:
         self.llm = llm
 
     # -------------------------------------------------------------------------
-    # STRATEGY 2: MANIFEST-AWARE (The Lego Protocol)
+    # STRATEGY 2: MANIFEST-AWARE (Prefabs)
     # -------------------------------------------------------------------------
     def generate_from_manifest(
         self, manifest: SystemManifest, character_concept: str, rules_text: str = ""
