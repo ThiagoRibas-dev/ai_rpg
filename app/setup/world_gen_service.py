@@ -119,7 +119,8 @@ class WorldGenService:
                 location=loc_name,
                 guidance=guidance,
             )
-            gen = self.llm.get_streaming_response(WORLD_DATA_EXTRACTION_SYSTEM_PROMPT.format(format=WorldExtraction.model_json_schema()), [Message(role="user", content=prompt)])
+            sys_prompt = "You are an expert Game Master beginning a new adventure."
+            gen = self.llm.get_streaming_response(sys_prompt, [Message(role="user", content=prompt)])
             return "".join(gen)
         except Exception:
             return "You stand ready. What do you do?"

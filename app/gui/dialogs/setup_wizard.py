@@ -178,49 +178,76 @@ class SetupWizard:
     def _update_timer_ui(self):
         if self.start_time:
             elapsed = time.time() - self.start_time
-            self.status_label.set_text(f"{self.status_msg} ({elapsed:.1f}s)")
+            msgs = []
+            if hasattr(self, "status_msgs") and any(self.status_msgs.values()):
+                for k in ["main", "chargen", "worldgen"]:
+                    if self.status_msgs.get(k):
+                        msgs.append(self.status_msgs[k])
+                status_text = " • ".join(msgs)
+            else:
+                status_text = getattr(self, "status_msg", "Loading...")
+            self.status_label.set_text(f"{status_text} ({elapsed:.1f}s)")
 
-    def _update_status(self, msg):
+    def _update_status(self, msg, channel="main"):
+        if not hasattr(self, "status_msgs"):
+            self.status_msgs = {"main": "", "chargen": "", "worldgen": ""}
+        
+        if channel == "main":
+            self.status_msgs = {"main": msg, "chargen": "", "worldgen": ""}
+        else:
+            self.status_msgs["main"] = ""
+            self.status_msgs[channel] = msg
+            
         self.status_msg = msg
 
     def _execute_pipeline(self):
         try:
+            from concurrent.futures import ThreadPoolExecutor
+
             connector = self.orchestrator._get_llm_connector()
-            sheet_gen = SheetGenerator(connector)
 
             # 1. Load System Manifest from the prompt, if present
             manifest = None
-            self._update_status("[Step 1/3] Generating Character...")
             if self.prompt.template_manifest:
                 try:
                     manifest = SystemManifest.from_json(self.prompt.template_manifest)
                 except Exception as e:
                     logger.warning(f"Failed to load SystemManifest from prompt: {e}")
 
-            # 1.1. Character Gen (Manifest-aware)
+            def run_chargen():
+                if manifest:
+                    self._update_status("[CharGen] Starting...", channel="chargen")
+                    sheet_gen = SheetGenerator(connector, status_callback=lambda msg: self._update_status(f"[CharGen] {msg}", channel="chargen"))
+                    raw = sheet_gen.generate_from_manifest(
+                        manifest,
+                        self.input_char,
+                        rules_text=self.prompt.rules_document,
+                    )
+                    val_entity, _ = validate_entity(raw, manifest)
+                    return val_entity
+                return {"identity": {"name": "Player"}}
+
+            def run_worldgen():
+                self._update_status("[WorldGen] Starting...", channel="worldgen")
+                world_service = WorldGenService(connector, status_callback=lambda msg: self._update_status(f"[WorldGen] {msg}", channel="worldgen"))
+                return world_service.extract_world_data(self.input_world)
+
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                future_char = executor.submit(run_chargen)
+                future_world = executor.submit(run_worldgen)
+
+                self.preview_entity = future_char.result()
+                self.extracted_world = future_world.result()
+
+            self.manifest = manifest
             if manifest:
-                raw_values = sheet_gen.generate_from_manifest(
-                    manifest,
-                    self.input_char,
-                    rules_text=self.prompt.rules_document,
-                )
-                validated_entity, _ = validate_entity(raw_values, manifest)
-                self.preview_entity = validated_entity
-                self.manifest = manifest
-
-                # store this for create_game()
-                self.generated_values = validated_entity
+                self.generated_values = self.preview_entity
             else:
-                self.preview_entity = {"identity": {"name": "Player"}}
-                self.manifest = None
-
-            # 2. World Gen
-            self._update_status("[Step 2/3] Building World...")
-            world_service = WorldGenService(connector)
-            self.extracted_world = world_service.extract_world_data(self.input_world)
+                self.generated_values = None
 
             # 3. Opening Crawl
-            self._update_status("[Step 3/3] Writing Intro...")
+            self._update_status("[Final Step] Writing Intro...")
+            world_service = WorldGenService(connector, status_callback=self._update_status)
 
             class DummyChar:
                 name = (self.preview_entity.get("identity") or {}).get("name", "Player")
@@ -421,7 +448,7 @@ class SetupWizard:
             tags = [t.strip() for t in tags_str.split(",") if t.strip()]
             if "world_gen" not in tags:
                 tags.append("world_gen")
-            # CHANGED: Use LoreData to match expected structure
+            # Using LoreData to match expected structure
             final_lore.append(
                 LoreData(kind=MemoryKind.LORE, content=content, priority=3, tags=tags)
             )

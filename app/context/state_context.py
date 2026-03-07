@@ -5,6 +5,7 @@ from app.tools.schemas import StateQuery
 from app.services.state_service import get_entity
 from app.prefabs.manifest import SystemManifest
 from app.prefabs.validation import get_path
+from app.models.vocabulary import PrefabID, FieldKey
 
 
 class StateContextBuilder:
@@ -36,7 +37,7 @@ class StateContextBuilder:
             if not player:
                 return "No character data found."
 
-            name = player.get("name", "Player")
+            name = player.get(FieldKey.NAME, "Player")
             lines.append(f"**Player Character**: {name}")
 
             # 2. Render Categories via Manifest
@@ -90,7 +91,7 @@ class StateContextBuilder:
                         ent = self.db.game_state.get_entity(session_id, etype, ekey)
                         if ent:
                             roster.append(
-                                f"{ent.get('name', 'Unknown')} (ID: `{ekey}`)"
+                                f"{ent.get(FieldKey.NAME, 'Unknown')} (ID: `{ekey}`)"
                             )
                 if roster:
                     lines.append("\n**SCENE ROSTER**:\n- " + "\n- ".join(roster))
@@ -106,46 +107,46 @@ class StateContextBuilder:
         if value is None:
             return ""
 
-        if prefab == "RES_POOL":
+        if prefab == PrefabID.RES_POOL:
             # Render as Current/Max
             if isinstance(value, dict):
-                curr = value.get("current", 0)
-                mx = value.get("max", 0)
+                curr = value.get(FieldKey.CURRENT, 0)
+                mx = value.get(FieldKey.MAX, 0)
                 return f"{curr}/{mx}"
             return str(value)
 
-        elif prefab == "RES_TRACK":
+        elif prefab == PrefabID.RES_TRACK:
             # Render as visual dots: [x][x][ ]
             if isinstance(value, list):
                 return "".join(["[x]" if x else "[ ]" for x in value])
             return str(value)
 
-        elif prefab == "VAL_COMPOUND":
+        elif prefab == PrefabID.VAL_COMPOUND:
             # Render as Score (+Mod)
             if isinstance(value, dict):
-                score = value.get("score", 0)
-                mod = value.get("mod", 0)
+                score = value.get(FieldKey.SCORE, 0)
+                mod = value.get(FieldKey.MOD, 0)
                 sign = "+" if mod >= 0 else ""
                 return f"{score} ({sign}{mod})"
             return str(value)
 
-        elif prefab == "VAL_LADDER":
+        elif prefab == PrefabID.VAL_LADDER:
             # Render as +1 (Average)
             if isinstance(value, dict):
-                val = value.get("value", 0)
-                lbl = value.get("label", "")
+                val = value.get(FieldKey.VALUE, 0)
+                lbl = value.get(FieldKey.LABEL, "")
                 sign = "+" if val >= 0 else ""
                 return f"{sign}{val} ({lbl})"
             return str(value)
 
-        elif prefab == "CONT_LIST":
+        elif prefab == PrefabID.CONT_LIST:
             # Concise list: [Sword, Shield]
             if isinstance(value, list):
                 items = []
                 for item in value:
                     if isinstance(item, dict):
-                        name = item.get("name", "Item")
-                        qty = item.get("qty", 1)
+                        name = item.get(FieldKey.NAME, "Item")
+                        qty = item.get(FieldKey.QTY, 1)
                         if qty > 1:
                             items.append(f"{name} x{qty}")
                         else:
@@ -157,7 +158,7 @@ class StateContextBuilder:
                 return "[" + ", ".join(items) + "]"
             return "[]"
 
-        elif prefab == "CONT_TAGS":
+        elif prefab == PrefabID.CONT_TAGS:
             if isinstance(value, list):
                 return "[" + ", ".join(str(v) for v in value) + "]"
             return "[]"

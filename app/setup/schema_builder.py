@@ -125,6 +125,68 @@ class SchemaBuilder:
         self._cache[cache_key] = CreationModel
         return CreationModel
 
+    def build_creation_model_for_category(self, category: str) -> Type[BaseModel]:
+        """Builds a strict Pydantic model for a single category."""
+        cache_key = f"creation_prompt_cat_{category}"
+        if cache_key in self._cache:
+            return self._cache[cache_key]
+
+        fields = [f for f in self.manifest.fields if f.category == category]
+        model_fields: Dict[str, tuple[Type, Field]] = {}
+
+        for field in fields:
+            if field.formula or field.max_formula:
+                continue
+
+            py_type, default = self._get_simplified_type_and_default(field)
+            desc = field.label
+            if field.usage_hint:
+                desc += f" ({field.usage_hint})"
+
+            field_name = field.path.split(".")[-1]
+
+            if default is not None:
+                model_fields[field_name] = (py_type, Field(default, description=desc))
+            else:
+                model_fields[field_name] = (py_type, Field(..., description=desc))
+
+        if category == CategoryName.IDENTITY:
+            if "name" not in model_fields:
+                model_fields["name"] = (str, Field(..., description="Character Name"))
+            if "description" not in model_fields:
+                model_fields["description"] = (str, Field("", description="Visual / narrative description"))
+            if "concept" not in model_fields:
+                model_fields["concept"] = (str, Field("", description="High Concept / Elevator Pitch"))
+
+        if not model_fields:
+            CatModel = create_model(f"{category.title()}Creation", __config__=ConfigDict(extra="forbid"))
+            self._cache[cache_key] = CatModel
+            return CatModel
+
+        CatModel = create_model(
+            f"{category.title()}Creation",
+            __config__=ConfigDict(extra="forbid"),
+            **model_fields,
+        )
+
+        self._cache[cache_key] = CatModel
+        return CatModel
+
+    def build_prefab_schema_reference(self) -> str:
+        """Builds a markdown reference for all Prefab data shapes to guide the LLM."""
+        from app.prefabs.registry import PREFABS
+        
+        lines = ["## PREFAB STRUCTURES", "Use these exact data shapes when the schema indicates a prefab type."]
+        for family, family_name in [("VAL", "Values"), ("RES", "Resources"), ("CONT", "Containers")]:
+            lines.append(f"\n### {family_name}")
+            for prefab in PREFABS.values():
+                if prefab.family == family:
+                    import json
+                    shape_str = json.dumps(prefab.shape) if isinstance(prefab.shape, (dict, list)) else str(prefab.shape)
+                    lines.append(f"- **{prefab.id}**: {shape_str}  *(Hint: {prefab.ai_hint})*")
+        
+        return "\n".join(lines)
+
     def convert_simplified_to_full(
         self, simplified_data: Dict[str, Any]
     ) -> Dict[str, Any]:

@@ -1,17 +1,26 @@
 import logging
-from typing import Any, Dict
+import json
+from typing import Any, Dict, Optional, Callable
 
 from app.llm.llm_connector import LLMConnector
 from app.models.message import Message
 from app.prefabs.manifest import SystemManifest
 from app.setup.schema_builder import SchemaBuilder
+from app.models.vocabulary import CategoryName
+from app.prompts.templates import CHARACTER_CREATION_SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
 
 
 class SheetGenerator:
-    def __init__(self, llm: LLMConnector):
+    def __init__(self, llm: LLMConnector, status_callback: Optional[Callable[[str], None]] = None):
         self.llm = llm
+        self.status_callback = status_callback
+
+    def _update_status(self, msg: str):
+        if self.status_callback:
+            self.status_callback(msg)
+        logger.info(f"[SheetGenerator] {msg}")
 
     # -------------------------------------------------------------------------
     # STRATEGY 2: MANIFEST-AWARE (Prefabs)
@@ -32,12 +41,11 @@ class SheetGenerator:
         # 1. Build Builder
         builder = SchemaBuilder(manifest)
 
-        # 2. Get the 'Simplified' model for LLM
-        CreationModel = builder.build_creation_prompt_model()
+        # 2. Extract context hints and prefab schema reference
+        prefab_ref = builder.build_prefab_schema_reference()
         hints = builder.get_creation_prompt_hints()
 
-        # 3. Build Prompt
-        # Prefer a dedicated character_creation procedure from the manifest if available.
+        # 3. Build Prompt (Rules context)
         try:
             creation_proc = manifest.get_procedure("character_creation")
         except Exception:
@@ -48,62 +56,82 @@ class SheetGenerator:
             if rules_text:
                 rules_section += f"\n\n**Additional Rules Context:**\n{rules_text}"
         else:
-            # Fallback to the raw rules text or a generic hint
             rules_section = rules_text if rules_text else ""
 
-        prompt = f"""
-### TASK: CREATE CHARACTER DATA
-You are populating a character with this format :
-{CreationModel.schema_json(indent=2)}
-{rules_section}
-**Field Constraints & Types:**
-{hints}
+        sys_prompt = CHARACTER_CREATION_SYSTEM_PROMPT.format(
+            character_concept=character_concept,
+            rules_section=rules_section,
+            hints=hints,
+            prefab_reference=prefab_ref
+        )
 
-**Character Concept:**
-{character_concept}
+        # 4. Determine optimal extraction order
+        extraction_order = [
+            CategoryName.META,
+            CategoryName.NARRATIVE,
+            CategoryName.CONNECTIONS,
+            CategoryName.PROGRESSION,
+            CategoryName.INVENTORY,
+            CategoryName.IDENTITY,
+            CategoryName.ATTRIBUTES,
+            CategoryName.SKILLS,
+            CategoryName.FEATURES,
+            CategoryName.COMBAT,
+            CategoryName.RESOURCES,
+            # CategoryName.STATUS, // used during the game, not during character creation
+        ]
+        
+        manifest_cats = set(f.category for f in manifest.fields)
+        manifest_cats.add(CategoryName.IDENTITY)  # Always extract identity
+        
+        cats_to_extract = [c for c in extraction_order if c in manifest_cats]
+        total = len(cats_to_extract)
+
+        # 5. Extract category by category
+        generated_context: Dict[str, Any] = {}
+        raw_combined: Dict[str, Any] = {}
+
+        for i, cat in enumerate(cats_to_extract, 1):
+            self._update_status(f"Generating {cat.title()} ({i}/{total})...")
+            
+            CatModel = builder.build_creation_model_for_category(cat)
+            
+            prompt = f"""
+### TASK: POPULATE CATEGORY: {cat.upper()}
+You are populating the `{cat}` section of the character sheet.
+
+**Previously Generated Character Data (Context):**
+```json
+{json.dumps(generated_context, indent=2)}
+```
 
 **Instructions:**
-- Fill in values that fit the concept and rules.
-- Respect the type hints (e.g., if range 1-20, don't put 25).
+- Fill in values for the `{cat}` category that fit the concept and rules, and make logical sense given the previously generated data.
+- Output ONLY the `{cat}` category data.
 """
 
-        # 4. Call LLM
+            try:
+                cat_data = self.llm.get_structured_response(
+                    system_prompt=sys_prompt,
+                    chat_history=[Message(role="user", content=prompt)],
+                    output_schema=CatModel,
+                    temperature=0.7,
+                )
+                
+                cat_raw = cat_data.model_dump()
+                raw_combined[cat] = cat_raw
+                generated_context[cat] = cat_raw
+                
+            except Exception as e:
+                logger.error(f"Failed to generate category '{cat}': {e}", exc_info=True)
+                self._update_status(f"Error generating {cat.title()}, skipping...")
+
+        # Adds the empty Status category
+        raw_combined[CategoryName.STATUS] = {}
+        
+        # 6. Expand to Full Data using manifest/prefabs
         try:
-            simplified_data = self.llm.get_structured_response(
-                system_prompt="You are an expert TTRPG character creator.",
-                chat_history=[Message(role="user", content=prompt)],
-                output_schema=CreationModel,
-                temperature=0.7,
-            )
-
-            # 5. Normalize dotted keys into nested structure
-            raw = simplified_data.model_dump()
-
-            # Example keys we want to normalize:
-            # "identity.race" -> raw["identity"]["race"]
-            # "attributes.str" -> raw["attributes"]["str"]
-            # "resources.hp.current" -> raw["resources"]["hp"]["current"]
-            dotted_keys = [k for k in raw.keys() if "." in k]
-            for key in dotted_keys:
-                value = raw.pop(key)
-                parts = key.split(".")
-
-                # Start at top-level category
-                node = raw.setdefault(parts[0], {})
-                if not isinstance(node, dict):
-                    # If the category was a scalar, we can't sensibly merge; skip
-                    continue
-
-                cur = node
-                for p in parts[1:-1]:
-                    if not isinstance(cur.get(p), dict):
-                        cur[p] = {}
-                    cur = cur[p]
-                cur[parts[-1]] = value
-
-            # 6. Expand to Full Data using manifest/prefabs
-            full_values = builder.convert_simplified_to_full(raw)
-
+            full_values = builder.convert_simplified_to_full(raw_combined)
             return full_values
 
         except Exception as e:

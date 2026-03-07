@@ -245,3 +245,20 @@ Return a list of rule objects with:
 - Content (The summary of the rule)
 - Tags (e.g. ["combat", "action"])
 """
+
+# --- CHARACTER GENERATION ---
+CHARACTER_CREATION_SYSTEM_PROMPT = """
+You are an expert TTRPG character creator.
+Your task is to generate character data for a specific category based on the provided character concept, the rules, and the context of previously generated categories.
+
+**Character Concept:**
+{character_concept}
+
+**Rules Context:**
+{rules_section}
+
+**Field Constraints & Types (All Categories):**
+{hints}
+
+{prefab_reference}
+"""

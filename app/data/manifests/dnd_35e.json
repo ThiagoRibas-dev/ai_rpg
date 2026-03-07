@@ -46,21 +46,34 @@
             "label": "Race",
             "prefab": "VAL_TEXT",
             "category": "identity",
-            "usage_hint": "Character race (e.g. Human, Elf, Dwarf, Half-Orc, Halfling, Gnome, Half-Elf). Influences ability adjustments, size, speed, and racial traits."
+            "usage_hint": "Character's primary race (e.g., Human, Elf, Dwarf, Halfling). Influences size, speed, and base racial traits."
         },
         {
-            "path": "identity.primary_class",
-            "label": "Primary Class",
+            "path": "identity.sub_race",
+            "label": "Sub-Race",
             "prefab": "VAL_TEXT",
             "category": "identity",
-            "usage_hint": "Main class at the current level (e.g. Fighter, Wizard, Cleric, Rogue). For multiclass characters, this is descriptive; actual levels tracked separately."
+            "usage_hint": "Specific sub-race or variant (e.g., Wood Elf, Svirfneblin, Water Genasi). Leave blank if not applicable."
         },
         {
-            "path": "identity.other_classes",
-            "label": "Other Classes / Prestige",
+            "path": "identity.templates",
+            "label": "Templates",
+            "prefab": "CONT_TAGS",
+            "category": "identity",
+            "usage_hint": "Acquired or inherited templates applied to the base race (e.g., Half-Dragon, Lich, Vampire, Celestial). Leave empty if none."
+        },
+        {
+            "path": "identity.classes",
+            "label": "Classes & Levels",
             "prefab": "CONT_LIST",
             "category": "identity",
-            "usage_hint": "Additional base or prestige classes with brief level notes (e.g. 'Rogue 3', 'Shadowdancer 2')."
+            "config": {
+                "item_shape": {
+                    "class_name": "str",
+                    "level": "int"
+                }
+            },
+            "usage_hint": "List of all base and prestige classes the character has, along with their associated level."
         },
         {
             "path": "identity.alignment",
@@ -193,6 +206,34 @@
             "usage_hint": "Each entry is one class+spell-level row: {class_name, spell_level, slots_current, slots_max}."
         },
         {
+            "path": "resources.spells_known",
+            "label": "Spells Known",
+            "prefab": "CONT_LIST",
+            "category": "resources",
+            "config": {
+                "item_shape": {
+                    "spell_name": "str",
+                    "level": "int"
+                }
+            },
+            "usage_hint": "List of specific spells this character knows and can cast spontaneously (e.g., Sorcerer, Bard)."
+        },
+        {
+            "path": "resources.spells_prepared",
+            "label": "Spells Prepared",
+            "prefab": "CONT_LIST",
+            "category": "resources",
+            "config": {
+                "item_shape": {
+                    "spell_name": "str",
+                    "level": "int",
+                    "prepared": "int",
+                    "expended": "int"
+                }
+            },
+            "usage_hint": "List of specific spells currently prepared in Vancian slots (e.g., Wizard, Cleric)."
+        },
+        {
             "path": "resources.limited_uses",
             "label": "Limited Use Features",
             "prefab": "CONT_LIST",
@@ -205,7 +246,21 @@
                     "refresh_rate": "str"
                 }
             },
-            "usage_hint": "Each entry is one feature with uses, such as Turn Undead, Rage, or daily feat uses."
+            "usage_hint": "Each entry is one feature with uses or cooldowns, such as Turn Undead, Rage, SLAs/PLAs, ShadowCasting Mysteries, Vestige abilities, abilities from feats, etc."
+        },
+        {
+            "path": "resources.alternative_pools",
+            "label": "Alternative Resource Pools",
+            "prefab": "CONT_LIST",
+            "category": "resources",
+            "config": {
+                "item_shape": {
+                    "pool_name": "str",
+                    "current": "int",
+                    "max": "int"
+                }
+            },
+            "usage_hint": "Use this for numeric resource pools like Psionic Power Points, Ki, or Essentia."
         },
         {
             "path": "resources.gold",
@@ -219,15 +274,68 @@
             "usage_hint": "Abstract measure of coins and liquid wealth available for purchases and costs like spell components or item crafting."
         },
         {
+            "path": "combat.speed",
+            "label": "Speed",
+            "prefab": "VAL_INT",
+            "category": "combat",
+            "config": {
+                "min": 0,
+                "default": 30
+            },
+            "usage_hint": "Movement speed in feet per round. Typically 30 for medium races, 20 for small races, reduced by heavy armor."
+        },
+        {
+            "path": "combat.armor_check_penalty",
+            "label": "Armor Check Penalty",
+            "prefab": "VAL_INT",
+            "category": "combat",
+            "config": {
+                "max": 0,
+                "default": 0
+            },
+            "usage_hint": "Penalty applied to physical skills when wearing heavy armor or carrying a heavy load (usually a negative number)."
+        },
+        {
+            "path": "combat.arcane_spell_failure",
+            "label": "Arcane Spell Failure %",
+            "prefab": "VAL_INT",
+            "category": "combat",
+            "config": {
+                "min": 0,
+                "max": 100,
+                "default": 0
+            },
+            "usage_hint": "Percentage chance for arcane spells with somatic components to fail when cast in armor."
+        },
+        {
+            "path": "combat.damage_reduction",
+            "label": "Damage Reduction",
+            "prefab": "VAL_TEXT",
+            "category": "combat",
+            "usage_hint": "Amount of physical damage ignored, and what bypasses it (e.g., '5/magic', '10/silver and good')."
+        },
+        {
+            "path": "combat.spell_resistance",
+            "label": "Spell Resistance",
+            "prefab": "VAL_INT",
+            "category": "combat",
+            "config": {
+                "min": 0,
+                "default": 0
+            },
+            "usage_hint": "Innate resistance to magic. Spells must beat this number with a caster level check to affect the character."
+        },
+        {
             "path": "combat.ac",
             "label": "Armor Class (AC)",
             "prefab": "VAL_INT",
             "category": "combat",
             "config": {
                 "min": 1,
-                "max": 50,
+                "max": 100,
                 "default": 10
             },
+            "formula": "10 + dex_mod",
             "usage_hint": "Total AC, normally 10 + armor + shield + Dex modifier + size + other bonuses. Attacks must meet or exceed this number to hit."
         },
         {
@@ -237,9 +345,10 @@
             "category": "combat",
             "config": {
                 "min": 1,
-                "max": 50,
+                "max": 100,
                 "default": 10
             },
+            "formula": "10 + dex_mod",
             "usage_hint": "AC against touch attacks that ignore armor, shield, and natural armor; usually 10 + Dex modifier + deflection + size + misc."
         },
         {
@@ -249,9 +358,10 @@
             "category": "combat",
             "config": {
                 "min": 1,
-                "max": 50,
+                "max": 100,
                 "default": 10
             },
+            "formula": "10",
             "usage_hint": "AC when denied Dex bonus to AC (such as during surprise); does not include Dex or dodge bonuses."
         },
         {
@@ -264,7 +374,20 @@
                 "max": 20,
                 "default": 0
             },
+            "formula": "dex_mod",
             "usage_hint": "Modifier added to 1d20 to determine initiative order, typically Dexterity modifier plus any feats or effects."
+        },
+        {
+            "path": "progression.caster_level",
+            "label": "Caster Level",
+            "prefab": "VAL_INT",
+            "category": "combat",
+            "config": {
+                "min": 0,
+                "max": 30,
+                "default": 0
+            },
+            "usage_hint": "Total effective caster level for determining spell range, duration, damage, and overcoming spell resistance."
         },
         {
             "path": "combat.base_attack_bonus",
@@ -273,10 +396,23 @@
             "category": "combat",
             "config": {
                 "min": 0,
-                "max": 20,
+                "max": 30,
                 "default": 0
             },
             "usage_hint": "Total base attack bonus from class levels. Determines attack progression and number of attacks on a full attack."
+        },
+        {
+            "path": "combat.grapple_bonus",
+            "label": "Grapple Bonus",
+            "prefab": "VAL_INT",
+            "category": "combat",
+            "config": {
+                "min": -20,
+                "max": 100,
+                "default": 0
+            },
+            "formula": "combat.base_attack_bonus + str_mod",
+            "usage_hint": "Bonus for grappling checks (BAB + Strength modifier + size modifier + misc)."
         },
         {
             "path": "combat.melee_attack_bonus",
@@ -285,9 +421,10 @@
             "category": "combat",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
+            "formula": "combat.base_attack_bonus + str_mod",
             "usage_hint": "Typical primary melee attack bonus (BAB + Strength modifier + size + misc) with a favored weapon."
         },
         {
@@ -297,10 +434,47 @@
             "category": "combat",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
+            "formula": "combat.base_attack_bonus + dex_mod",
             "usage_hint": "Typical primary ranged attack bonus (BAB + Dexterity modifier + size + range penalties + misc)."
+        },
+        {
+            "path": "combat.base_save_fortitude",
+            "label": "Base Fortitude Save",
+            "prefab": "VAL_INT",
+            "category": "combat",
+            "config": {
+                "min": 0,
+                "max": 20,
+                "default": 0
+            },
+            "usage_hint": "Base Fortitude save derived purely from class levels."
+        },
+        {
+            "path": "combat.base_save_reflex",
+            "label": "Base Reflex Save",
+            "prefab": "VAL_INT",
+            "category": "combat",
+            "config": {
+                "min": 0,
+                "max": 20,
+                "default": 0
+            },
+            "usage_hint": "Base Reflex save derived purely from class levels."
+        },
+        {
+            "path": "combat.base_save_will",
+            "label": "Base Will Save",
+            "prefab": "VAL_INT",
+            "category": "combat",
+            "config": {
+                "min": 0,
+                "max": 20,
+                "default": 0
+            },
+            "usage_hint": "Base Will save derived purely from class levels."
         },
         {
             "path": "combat.save_fortitude",
@@ -312,6 +486,7 @@
                 "max": 30,
                 "default": 0
             },
+            "formula": "combat.base_save_fortitude + con_mod",
             "usage_hint": "Saving throw bonus vs effects that attack health and stamina (e.g. poison, disease). Usually base Fort save + Constitution modifier + misc."
         },
         {
@@ -324,6 +499,7 @@
                 "max": 30,
                 "default": 0
             },
+            "formula": "combat.base_save_reflex + dex_mod",
             "usage_hint": "Saving throw bonus vs effects that can be dodged (e.g. fireball, traps). Usually base Reflex save + Dexterity modifier + misc."
         },
         {
@@ -336,6 +512,7 @@
                 "max": 30,
                 "default": 0
             },
+            "formula": "combat.base_save_will + wis_mod",
             "usage_hint": "Saving throw bonus vs mental influence and many magical effects (e.g. charm, fear). Usually base Will save + Wisdom modifier + misc."
         },
         {
@@ -352,7 +529,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Total modifier for estimating item value and identifying fake or unusual goods (Int-based)."
@@ -364,7 +541,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Moving safely on narrow or unstable surfaces; often affected by armor check penalty (Dex-based)."
@@ -376,7 +553,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Lies, feints, and secret messages; opposed by Sense Motive (Cha-based)."
@@ -388,7 +565,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Scaling walls and cliffs; armor check penalty applies (Str-based)."
@@ -400,7 +577,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Maintaining spells or focus under duress (wounds, distractions, vigorous motion) (Con-based)."
@@ -412,7 +589,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Generic craft modifier; specify specialty (e.g. Craft (Weaponsmithing)); used for making and repairing items (Int-based)."
@@ -424,7 +601,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Negotiating and improving attitudes along the Hostile-Helpful scale (Cha-based)."
@@ -436,7 +613,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Disarming traps and sabotaging mechanisms (trained only; Int-based)."
@@ -448,7 +625,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Altering appearance, voice, or mannerisms to pass as someone else (Cha-based)."
@@ -460,7 +637,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Slipping bonds, squeezing through tight spaces, escaping grapples; ACP may apply (Dex-based)."
@@ -472,7 +649,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Working taverns and streets for rumors and news over hours (Cha-based)."
@@ -484,7 +661,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Handling, training, and directing animals; many uses are trained only (Cha-based)."
@@ -496,7 +673,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "First aid, stabilizing the dying, treating poison and disease (Wis-based)."
@@ -508,7 +685,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Staying out of sight; opposed by Spot; armor check penalty applies (Dex-based)."
@@ -520,7 +697,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Threatening or bullying to influence others; can demoralize foes in combat (Cha-based)."
@@ -532,7 +709,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Horizontal and vertical leaps; armor check penalty applies (Str-based)."
@@ -544,7 +721,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Arcane magic theory, symbols, magical traditions, constructs, dragons, and magical beasts. (trained only; Int-based)"
@@ -556,7 +733,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Buildings, bridges, fortifications, aqueducts, structural design, and engineering principles. (trained only; Int-based)"
@@ -568,7 +745,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Underground terrain, caverns, spelunking hazards, aberrations, and oozes. (trained only; Int-based)"
@@ -580,7 +757,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Lands, terrain, climate, regional features, and peoples of various areas. (trained only; Int-based)"
@@ -592,7 +769,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Wars, empires, colonies, migrations, founding of cities, and major historical events. (trained only; Int-based)"
@@ -604,7 +781,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Local laws, customs, legends, personalities, and humanoid groups in a specific region. (trained only; Int-based)"
@@ -616,7 +793,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Natural environments, animals, plants, seasons and weather, fey, giants, and monstrous humanoids. (trained only; Int-based)"
@@ -628,7 +805,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Lineages, heraldry, noble and royal titles, family trees, courts, and high-society customs. (trained only; Int-based)"
@@ -640,7 +817,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Psionic traditions, disciplines, monsters, symbols, races, and psionic constructs/items. (trained only; Int-based)"
@@ -652,7 +829,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Gods, religious dogma, mythic history, church traditions, holy symbols, and undead lore. (trained only; Int-based)"
@@ -664,7 +841,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Planar cosmology (Inner, Outer, Astral, Ethereal), planar traits, outsiders, elementals, and planar magic. (trained only; Int-based)"
@@ -676,7 +853,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Hearing noises or detecting hidden creatures (Wis-based)."
@@ -688,7 +865,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Moving quietly, opposed by Listen; armor check penalty applies (Dex-based)."
@@ -700,7 +877,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Picking mechanical locks (trained only; Dex-based)."
@@ -712,7 +889,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Entertaining with music, acting, storytelling, etc.; specify form (Cha-based)."
@@ -724,7 +901,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Controlling mounts in and out of combat (Dex-based)."
@@ -736,7 +913,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Actively looking for hidden objects, traps, or details (Int-based)."
@@ -748,7 +925,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Reading intentions and detecting lies; opposes Bluff (Wis-based)."
@@ -760,7 +937,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Pickpocketing, palming objects, and subtle manual tricks (trained only; Dex-based; ACP applies)."
@@ -772,7 +949,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Identifying spells and magical effects, and understanding magical writings (trained only; Int-based)."
@@ -784,7 +961,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Noticing creatures or objects at a distance; complements Listen (Wis-based)."
@@ -796,7 +973,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Tracking, foraging, navigating wilderness, and enduring harsh environments (Wis-based)."
@@ -808,7 +985,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Moving through water; armor check penalty applies (Str-based)."
@@ -820,7 +997,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Dodging past foes and avoiding attacks of opportunity; trained only and ACP applies (Dex-based)."
@@ -832,7 +1009,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Activating magic items without meeting normal requirements (trained only; Cha-based)."
@@ -844,7 +1021,7 @@
             "category": "skills",
             "config": {
                 "min": -10,
-                "max": 40,
+                "max": 100,
                 "default": 0
             },
             "usage_hint": "Tying secure knots, binding, and managing ropes or grapples (Dex-based)."
@@ -882,7 +1059,7 @@
             "label": "Feats",
             "prefab": "CONT_LIST",
             "category": "features",
-            "usage_hint": "Feats the character has taken (combat, metamagic, item creation, etc.). Each entry should contain name and short mechanical benefit."
+            "usage_hint": "Feats the character has taken (combat, metamagic, item creation, etc.) from level ups, race, class, etc."
         },
         {
             "path": "features.class_features",
@@ -899,11 +1076,25 @@
             "usage_hint": "High-level summary of how this character casts spells (arcane or divine, prepared or spontaneous, key ability, schools or domains)."
         },
         {
+            "path": "features.special_abilities",
+            "label": "Special Abilities & States",
+            "prefab": "CONT_LIST",
+            "category": "features",
+            "config": {
+                "item_shape": {
+                    "name": "str",
+                    "type": "str",
+                    "state": "str"
+                }
+            },
+            "usage_hint": "Catch-all for esoteric states: Maneuvers readied/expended, Chakra binds, Warlock Invocations known, or Truenamer Utterances."
+        },
+        {
             "path": "connections.allies",
             "label": "Allies & Companions",
             "prefab": "CONT_LIST",
             "category": "connections",
-            "usage_hint": "Important friendly NPCs, cohorts, animal companions, or familiars, with short notes."
+            "usage_hint": "Important cohorts, animal companions, familiars, and other NPC allies, with short notes."
         },
         {
             "path": "connections.enemies",

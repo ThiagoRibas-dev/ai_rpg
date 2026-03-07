@@ -65,13 +65,14 @@ A turn is executed by `ReActTurnManager.execute_turn` in a background thread.
 
 *(See [Database Schema](docs/03_database_schema.md) for full table definitions).*
 
--   **Manifests:** JSON definitions of game systems (D&D 5e, CoC, etc.).
+-   **Manifests:** JSON definitions of game systems (D&D 3.5e, CoC, Fate, etc.).
 -   **Game State:** A Key-Value store where every entity (Player, NPC, Location) is a JSON blob.
 -   **Memories:** Stores Lore, Facts, and Events. Vector-indexed for RAG.
 -   **Turn Metadata:** Stores summaries of past turns to allow the AI to "remember" long-term history via semantic search.
 
 ## Prefabs & Validation
 
+The main vocabulary for the basic types used by the prefabs is defined in `app/models/vocabulary.py`. Avoid magic strings and use references to the Enum values instead.
 Instead of generic JSON, data follows strict patterns defined in `app/prefabs/registry.py`:
 
 **Logic:**
