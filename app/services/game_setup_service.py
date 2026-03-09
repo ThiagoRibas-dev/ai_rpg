@@ -217,6 +217,25 @@ class GameSetupService:
             except Exception:
                 pass
 
+        # 6. Seed Entity Index
+        from app.services.entity_index import add_location, add_npc, add_memory, _ensure_index
+        _ensure_index(session_id, self.db)
+
+        # Locations
+        add_location(session_id, self.db, loc.key, f"{loc.name} ({loc.type})")
+        for neighbor in world_data.adjacent_locations:
+            add_location(session_id, self.db, neighbor.key, f"{neighbor.name} ({neighbor.type})")
+
+        # NPCs
+        for npc in world_data.initial_npcs:
+            key = f"npc_{npc.name.lower().replace(' ', '_')}"
+            add_npc(session_id, self.db, key, f"{npc.name} ({npc.initial_disposition})")
+
+        # Lore memories
+        for mem in world_data.lore:
+            title = mem.content[:60].replace("\n", " ")
+            add_memory(session_id, self.db, mem.kind, title)
+
     def _create_npc_entity(
         self,
         session_id: int,

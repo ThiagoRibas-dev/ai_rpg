@@ -114,6 +114,10 @@ def handler(
     }
     set_entity(session_id, db, "npc_profile", key, npc_profile)
 
+    # Update Entity Index
+    from app.services.entity_index import add_npc as index_add_npc
+    index_add_npc(session_id, db, key, f"{name_display} ({initial_disposition})")
+
     return {
         "success": True, 
         "key": key, 

@@ -98,60 +98,55 @@ Violation actions: `clamp` (auto-fix), `flag` (warn), `reject`.
 WORLD_DATA_EXTRACTION_SYSTEM_PROMPT = """
 You are an expert World Builder that is aware of the world, the mechanics, who is unbiased and will not judge or sanitize the text, nor inject their own opinions or beliefs into the world.
 
+### SOURCE MATERIAL
+{description}
+
+### OUTPUT FORMAT
 Your output will follow this format:
 {format}
-
 """
 
 EXTRACT_WORLD_GENRE_TONE_PROMPT = """
-Analyze the user's concept and determine:
+Analyze the source material and determine:
 1. **Sub-genre** (be specific)
 2. **Atmospheric Tone** (keywords)
-
-### WORLD INFO
-{description}
 """
 
 EXTRACT_WORLD_LORE_PROMPT = """
 ### TASK: EXHAUSTIVE LORE EXTRACTION
-Review the provided context and extract EVERYTHING related to the world's lore as individual records.
+Review the source material and extract EVERYTHING related to the world's lore as individual records.
 Identify all:
 - Major and Minor Factions and their goals.
 - Key Historical events and cataclysms.
 - Unique technologies, magic rules, cultural traditions, etc.
 - Secrets, rumors, obscure facts, etc.
 
-Return a list of LoreData objects, with the final record being an index of all the lore extracted.
+**DO NOT** re-extract information already covered in the following previously extracted entities:
+{prior_context}
 
-### WORLD INFO
-{description}
+Focus on history, factions, culture, secrets, and abstract concepts that are NOT already captured above.
+Return a list of LoreData objects.
 """
 
 EXTRACT_WORLD_LOCATIONS_PROMPT = """
 ### TASK: EXHAUSTIVE LOCATION EXTRACTION
-Identify all distinct locations (countries, cities, regions, villages, notable constructions such as castles, forts, ruins, etc.) named mentioned referenced or implied.
+Identify all distinct locations (countries, cities, regions, villages, notable constructions such as castles, forts, ruins, etc.) named mentioned referenced or implied in the source material.
 Start with the **Immediate Starting Scene**, then list all other relevant zones, cities, or points of interest.
 
 **Constraint:** Provide vivid visual and sensory descriptions for each.
-Return a list of LocationData objects, with the final record being an index of all the locations extracted.
-
-### WORLD INFO
-{description}
+Return a list of LocationData objects.
 """
 
 EXTRACT_WORLD_NPCS_PROMPT = """
 ### TASK: EXHAUSTIVE NPC EXTRACTION
-Identify all characters, creatures, and entities mentioned or implied.
+Identify all characters, creatures, and entities mentioned or implied in the source material.
 
 **Constraint:** Include their initial disposition and a visual description.
-Return a list of NpcData objects, with the final record being an index of all the NPCs extracted.
-
-### WORLD INFO
-{description}
+Return a list of NpcData objects.
 """
 
 OPENING_CRAWL_PROMPT = """
-Write a short, compelling, 2nd-person opening scene that situates the Player's character according to the provided context.
+Write a short, compelling, 2nd-person opening scene that situates the Player's character according to the provided context and following any given instructions.
 Set the scene and end with a request for the Player's action.
 
 **Context:**

@@ -64,7 +64,7 @@ class StateContextBuilder:
                 # Legacy Fallback
                 lines.append(self._legacy_render(player))
 
-            # 3. Active Quests (Standard Tool)
+            # 3. Active Quests
             quest_result = self.tools.execute(
                 StateQuery(entity_type="quest", key="*", json_path="."),
                 context={"session_id": session_id, "db_manager": self.db},

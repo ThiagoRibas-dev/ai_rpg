@@ -9,7 +9,7 @@ from app.setup.sheet_generator import SheetGenerator
 from app.services.game_setup_service import GameSetupService
 from app.setup.schemas import LoreData
 from app.prefabs.manifest import SystemManifest
-from app.models.vocabulary import MemoryKind
+from app.models.vocabulary import MemoryKind, TaskState
 
 logger = logging.getLogger(__name__)
 
@@ -39,10 +39,12 @@ class SetupWizard:
 
         self.is_generating = False
 
-        # Status
-        self.status_msg = ""
+        self.is_generating = False
+
+        # Status Tracking
         self.start_time = None
         self.status_timer = None
+        self.task_tracker = {}  # {key: {"label": str, "state": TaskState, "start": float, "elapsed": float}}
 
         # UI State for Lore
         self.lore_ui_items = []
@@ -108,10 +110,27 @@ class SetupWizard:
                     with ui.column().classes(
                         "w-full h-full items-center justify-center gap-4"
                     ):
-                        self.spinner = ui.spinner(size="lg").classes("text-blue-500")
-                        self.status_label = ui.label("Initializing...").classes(
-                            "text-lg animate-pulse font-mono"
-                        )
+                        # Tracking UI
+                        self.generation_tracking_container = ui.column().classes("w-full gap-4 items-center")
+                        with self.generation_tracking_container:
+                            ui.label("Generation Progress").classes("text-xl font-bold text-amber-500")
+                            self.elapsed_label = ui.label("⏱ Elapsed: 0.0s").classes("text-md text-gray-400 font-mono")
+                            
+                            with ui.row().classes("w-full gap-4 items-start"):
+                                # Pending
+                                with ui.card().classes("flex-grow bg-slate-800 border border-slate-700 w-1/3 min-h-[120px]"):
+                                    ui.label("⏳ PENDING").classes("text-sm font-bold text-gray-400 border-b border-gray-600 w-full mb-2 pb-1")
+                                    self.pending_container = ui.row().classes("w-full gap-2")
+                                
+                                # Running
+                                with ui.card().classes("flex-grow bg-slate-800 border border-slate-700 w-1/3 min-h-[120px]"):
+                                    ui.label("⚙ RUNNING").classes("text-sm font-bold text-blue-400 border-b border-blue-800 w-full mb-2 pb-1")
+                                    self.running_container = ui.row().classes("w-full gap-2")
+                                    
+                                # Completed
+                                with ui.card().classes("flex-grow bg-slate-800 border border-slate-700 w-1/3 min-h-[120px]"):
+                                    ui.label("✅ COMPLETED").classes("text-sm font-bold text-green-400 border-b border-green-800 w-full mb-2 pb-1")
+                                    self.completed_container = ui.row().classes("w-full gap-2")
 
                         # Error Container (Hidden by default)
                         self.error_container = ui.column().classes(
@@ -148,13 +167,13 @@ class SetupWizard:
         self.is_generating = True
 
         # Reset UI
-        self.spinner.classes(remove="hidden")
-        self.status_label.classes(remove="hidden")
+        self.generation_tracking_container.classes(remove="hidden")
         self.error_container.classes(add="hidden")
         self.btn_review.classes(add="hidden")
 
         self.start_time = time.time()
-        self.status_timer = ui.timer(0.1, self._update_timer_ui)
+        self.task_tracker.clear()
+        self.status_timer = ui.timer(0.2, self._update_timer_ui)
 
         # Run Pipeline
         success = await asyncio.to_thread(self._execute_pipeline)
@@ -163,46 +182,75 @@ class SetupWizard:
             self.status_timer.cancel()
 
         if success:
-            self.spinner.classes(add="hidden")
-            self.status_label.set_text("Complete!")
+            self.elapsed_label.set_text(f"✨ Complete! Total Time: {time.time() - self.start_time:.1f}s")
             self._prepare_review_data()
             self._render_review()
             self.btn_review.classes(remove="hidden")
             self.stepper.next()
         else:
             # Error state handled in _execute_pipeline wrapper, but we update UI here
-            self.spinner.classes(add="hidden")
-            self.status_label.classes(add="hidden")
+            self.generation_tracking_container.classes(add="hidden")
             self.error_container.classes(remove="hidden")
 
     def _update_timer_ui(self):
-        if self.start_time:
-            elapsed = time.time() - self.start_time
-            msgs = []
-            if hasattr(self, "status_msgs") and any(self.status_msgs.values()):
-                for k in ["main", "chargen", "worldgen"]:
-                    if self.status_msgs.get(k):
-                        msgs.append(self.status_msgs[k])
-                status_text = " • ".join(msgs)
-            else:
-                status_text = getattr(self, "status_msg", "Loading...")
-            self.status_label.set_text(f"{status_text} ({elapsed:.1f}s)")
-
-    def _update_status(self, msg, channel="main"):
-        if not hasattr(self, "status_msgs"):
-            self.status_msgs = {"main": "", "chargen": "", "worldgen": ""}
-        
-        if channel == "main":
-            self.status_msgs = {"main": msg, "chargen": "", "worldgen": ""}
-        else:
-            self.status_msgs["main"] = ""
-            self.status_msgs[channel] = msg
+        if not self.start_time:
+            return
             
-        self.status_msg = msg
+        elapsed = time.time() - self.start_time
+        self.elapsed_label.set_text(f"⏱ Elapsed: {elapsed:.1f}s")
+        
+        # Categorize tasks
+        pending = []
+        running = []
+        completed = []
+        
+        for key, task in self.task_tracker.items():
+            if task["state"] == TaskState.PENDING:
+                pending.append(task)
+            elif task["state"] == TaskState.RUNNING:
+                running.append(task)
+            elif task["state"] == TaskState.DONE:
+                completed.append(task)
+                
+        # Update Pending
+        self.pending_container.clear()
+        with self.pending_container:
+            for t in pending:
+                ui.badge(t["label"], color="gray")
+                
+        # Update Running
+        self.running_container.clear()
+        with self.running_container:
+            for t in running:
+                ui.badge(t["label"], color="blue")
+                
+        # Update Completed
+        self.completed_container.clear()
+        with self.completed_container:
+            for t in completed:
+                dur = t.get("elapsed", 0)
+                ui.badge(f"{t['label']} ({dur:.1f}s)", color="green").props("outline")
+
+    def _track_task(self, key: str, label: str, state: TaskState):
+        now = time.time()
+        if key not in self.task_tracker:
+            self.task_tracker[key] = {"label": label, "state": state, "start": now, "elapsed": 0.0}
+        else:
+            task = self.task_tracker[key]
+            task["state"] = state
+            if state == TaskState.RUNNING and task.get("start") == task.get("start"): # Just entered running or was already
+                if "start_run" not in task:
+                    task["start_run"] = now
+            elif state == TaskState.DONE:
+                if "start_run" in task:
+                    task["elapsed"] = now - task["start_run"]
+                else:
+                    task["elapsed"] = now - task["start"]
 
     def _execute_pipeline(self):
         try:
             from concurrent.futures import ThreadPoolExecutor
+            import os
 
             connector = self.orchestrator._get_llm_connector()
 
@@ -214,30 +262,31 @@ class SetupWizard:
                 except Exception as e:
                     logger.warning(f"Failed to load SystemManifest from prompt: {e}")
 
-            def run_chargen():
+            def run_chargen(llm_executor):
                 if manifest:
-                    self._update_status("[CharGen] Starting...", channel="chargen")
-                    sheet_gen = SheetGenerator(connector, status_callback=lambda msg: self._update_status(f"[CharGen] {msg}", channel="chargen"))
+                    sheet_gen = SheetGenerator(connector, task_callback=self._track_task)
                     raw = sheet_gen.generate_from_manifest(
                         manifest,
                         self.input_char,
                         rules_text=self.prompt.rules_document,
+                        executor=llm_executor,
                     )
                     val_entity, _ = validate_entity(raw, manifest)
                     return val_entity
                 return {"identity": {"name": "Player"}}
 
-            def run_worldgen():
-                self._update_status("[WorldGen] Starting...", channel="worldgen")
-                world_service = WorldGenService(connector, status_callback=lambda msg: self._update_status(f"[WorldGen] {msg}", channel="worldgen"))
-                return world_service.extract_world_data(self.input_world)
+            def run_worldgen(llm_executor):
+                world_service = WorldGenService(connector, task_callback=self._track_task)
+                return world_service.extract_world_data(self.input_world, executor=llm_executor)
 
-            with ThreadPoolExecutor(max_workers=2) as executor:
-                future_char = executor.submit(run_chargen)
-                future_world = executor.submit(run_worldgen)
+            max_workers = int(os.environ.get("SETUP_MAX_WORKERS", "2"))
+            with ThreadPoolExecutor(max_workers=max_workers) as llm_executor:
+                with ThreadPoolExecutor(max_workers=2) as pipeline_executor:
+                    future_char = pipeline_executor.submit(run_chargen, llm_executor)
+                    future_world = pipeline_executor.submit(run_worldgen, llm_executor)
 
-                self.preview_entity = future_char.result()
-                self.extracted_world = future_world.result()
+                    self.preview_entity = future_char.result()
+                    self.extracted_world = future_world.result()
 
             self.manifest = manifest
             if manifest:
@@ -246,8 +295,7 @@ class SetupWizard:
                 self.generated_values = None
 
             # 3. Opening Crawl
-            self._update_status("[Final Step] Writing Intro...")
-            world_service = WorldGenService(connector, status_callback=self._update_status)
+            world_service = WorldGenService(connector, task_callback=self._track_task)
 
             class DummyChar:
                 name = (self.preview_entity.get("identity") or {}).get("name", "Player")
@@ -256,7 +304,6 @@ class SetupWizard:
                 DummyChar(), self.extracted_world, self.input_world
             )
 
-            self._update_status("Done!")
             return True
 
         except Exception as e:

@@ -74,6 +74,11 @@ class ContextBuilder:
         if spatial_context:
             sections.append(spatial_context)
 
+        # 3. Entity Index
+        entity_index = self._build_entity_index(game_session.id)
+        if entity_index:
+            sections.append(entity_index)
+
         return "\n\n".join(sections)
 
     def _build_manifest_context(self) -> str:
@@ -97,6 +102,16 @@ class ContextBuilder:
             if ruleset:
                 e = ruleset.engine
                 return f"# ENGINE CONFIG\n- Dice: {e.dice_notation}\n- Mechanic: {e.roll_mechanic}"
+        return ""
+
+    def _build_entity_index(self, session_id: int) -> str:
+        try:
+            from app.services.entity_index import get_index, render_index
+            index = get_index(session_id, self.db)
+            if index:
+                return render_index(index)
+        except Exception:
+            pass
         return ""
 
     def _build_spatial_context(self, session_id: int) -> str:

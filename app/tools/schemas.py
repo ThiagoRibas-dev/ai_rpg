@@ -111,13 +111,13 @@ class Note(BaseModel):
 
 class StateQuery(BaseModel):
     """
-    Query the low-level game state directly using JSON paths. 
-    Use this for complex data retrieval that isn't covered by standard tools.
+    Look up details about a known entity (NPC, location, quest, etc.) by key.
+    Use the World Index to find valid keys. Use json_path="." for full data.
     """
     name: Literal["state.query"] = "state.query"
-    entity_type: str = Field(...)
-    key: str = Field(...)
-    json_path: str = Field(...)
+    entity_type: str = Field(..., description="Entity type: 'character', 'location', 'quest', etc.")
+    key: str = Field(..., description="Entity key from the World Index (e.g. 'npc_captain_voss', 'tavern_rusty_nail'). Use '*' for all of a type.")
+    json_path: str = Field(".", description="JSON path to drill into (use '.' for full entity data).")
 
 
 class NpcSpawn(BaseModel):
@@ -148,7 +148,7 @@ class LocationCreate(BaseModel):
 
 class ContextRetrieve(BaseModel):
     """
-    Retrieve relevant piece of information (story/lore/rules memories) based on the query text.
+    Retrieve relevant piece of information (lore, rules, events, etc) based on the query text.
     """
 
     name: Literal["context.retrieve"] = "context.retrieve"

@@ -12,7 +12,7 @@ from app.models.message import Message
 from app.models.session import Session
 from app.setup.setup_manifest import SetupManifest
 from app.tools.executor import ToolExecutor
-from app.tools.schemas import Adjust, Set, Mark, Roll, Move, Note, ContextRetrieve, NpcSpawn, LocationCreate
+from app.tools.schemas import Adjust, Set, Mark, Roll, Move, Note, ContextRetrieve, NpcSpawn, LocationCreate, StateQuery
 from app.llm.schemas import TurnFinalOutput
 
 logger = logging.getLogger(__name__)
@@ -147,6 +147,7 @@ class ReActTurnManager:
 
             Note.model_fields["name"].default,
             ContextRetrieve.model_fields["name"].default,
+            StateQuery.model_fields["name"].default,
 
             NpcSpawn.model_fields["name"].default,
             LocationCreate.model_fields["name"].default,
@@ -228,6 +229,14 @@ class ReActTurnManager:
                 self.logger.info(
                     f"ReAct Loop {loop_count}: Model called {len(response.tool_calls)} tools."
                 )
+                if response.thought:
+                    self.ui_queue.put(
+                        {
+                            "type": "thought_bubble",
+                            "content": response.thought,
+                            "turn_id": turn_id,
+                        }
+                    )
                 if response.content:
                     self.ui_queue.put(
                         {

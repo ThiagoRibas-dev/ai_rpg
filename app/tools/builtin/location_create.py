@@ -79,6 +79,10 @@ def handler(
 
     version = set_entity(session_id, db, "location", key, location_data)
 
+    # Update Entity Index
+    from app.services.entity_index import add_location as index_add_location
+    index_add_location(session_id, db, key, f"{name_display} ({type})")
+
     return {
         "success": True,
         "key": key,

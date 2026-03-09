@@ -1,4 +1,4 @@
-from enum import StrEnum
+from enum import StrEnum, Enum
 
 # ---------------------------------------------------------------------------
 # MEMORY KINDS
@@ -107,3 +107,37 @@ class ExtractionKey:
     SOCIAL = "social"
     DOWNTIME = "downtime"
     CHARACTER_CREATION = "character_creation"
+
+
+# ---------------------------------------------------------------------------
+# TASK STATES
+# ---------------------------------------------------------------------------
+
+class TaskState(StrEnum):
+    PENDING = "pending"
+    RUNNING = "running"
+    DONE = "done"
+
+# ---------------------------------------------------------------------------
+# SETUP TASKS
+# ---------------------------------------------------------------------------
+
+class SetupTask(Enum):
+    WORLDGEN_GENRE = ("worldgen_genre", "Genre & Tone")
+    WORLDGEN_LOCATIONS = ("worldgen_locations", "Locations")
+    WORLDGEN_NPCS = ("worldgen_npcs", "NPCs")
+    WORLDGEN_LORE = ("worldgen_lore", "Lore")
+    OPENING_CRAWL = ("opening_crawl", "Opening Crawl")
+    
+    @property
+    def id(self) -> str:
+        return self.value[0]
+        
+    @property
+    def label(self) -> str:
+        return self.value[1]
+    
+    @classmethod
+    def chargen(cls, category: str) -> tuple[str, str]:
+        """Returns (task_id, display_label) for a chargen category."""
+        return (f"chargen_{category}", category.title())
