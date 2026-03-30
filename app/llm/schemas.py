@@ -1,11 +1,10 @@
-from typing import List, Literal, Optional, Union, Any
+from typing import Any, Literal, Union
 
 from pydantic import BaseModel, Field
 
-
 # A reusable JSON type to avoid recursion errors with Pydantic's schema generator.
 
-JSONValue = Union[str, int, float, bool, dict, List]
+JSONValue = Union[str, int, float, bool, dict, list]
 
 
 class ToolCall(BaseModel):
@@ -37,7 +36,7 @@ class PatchOp(BaseModel):
         example="/stats/hp",
     )
 
-    value: Optional[JSONValue] = Field(
+    value: JSONValue | None = Field(
         default=None,
         description="The value to be used for 'add' or 'replace' operations.",
         example=90,
@@ -57,7 +56,7 @@ class Patch(BaseModel):
         example="player",
     )
 
-    ops: List[PatchOp] = Field(
+    ops: list[PatchOp] = Field(
         description="A list of patch operations to apply to the entity."
     )
 
@@ -77,7 +76,7 @@ class WorldTickOutcome(BaseModel):
         example=True,
     )
 
-    proposed_patches: List[Patch] = Field(
+    proposed_patches: list[Patch] = Field(
         default_factory=list,
         description="A list of state changes to apply to the world as a result of this outcome. E.g., updating an NPC's inventory, location, or a relationship.",
     )
@@ -85,21 +84,21 @@ class WorldTickOutcome(BaseModel):
 class TurnFinalOutput(BaseModel):
     """Combined output for final turn processing (actions + metadata) to save an LLM round-trip."""
 
-    choices: List[str] = Field(
+    choices: list[str] = Field(
         ...,
         description="A list of 3-5 concise action options the player could take next.",
         example=["Go to the blacksmith.", "Enter the tavern.", "Roll a check to jump the chasm."],
         min_length=3,
         max_length=5,
     )
-    
+
     summary: str = Field(
         ...,
         description="Concise 1-3 sentence summary of what happened this scene.",
         max_length=512,
     )
 
-    tags: List[str] = Field(
+    tags: list[str] = Field(
         default_factory=list,
         description="Tags in snake_case that describe the scene.",
         max_length=12,
@@ -116,7 +115,7 @@ class TurnFinalOutput(BaseModel):
 class TurnSuggestions(BaseModel):
     """High-speed extraction for action choices."""
 
-    choices: List[str] = Field(
+    choices: list[str] = Field(
         ...,
         description="A list of 3-5 action options the player could take next.",
         min_length=3,
@@ -133,7 +132,7 @@ class TurnMetadata(BaseModel):
         max_length=512,
     )
 
-    tags: List[str] = Field(
+    tags: list[str] = Field(
         default_factory=list,
         description="Tags in snake_case that describe the scene.",
         max_length=12,

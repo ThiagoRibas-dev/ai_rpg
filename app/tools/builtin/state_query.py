@@ -1,7 +1,9 @@
-from typing import Any, Dict
-from app.services.state_service import get_entity, get_all_of_type
+from typing import Any
 
-def handler(entity_type: str, key: str, json_path: str, **context) -> Dict[str, Any]:
+from app.services.state_service import get_all_of_type, get_entity
+
+
+def handler(entity_type: str, key: str, json_path: str, **context) -> dict[str, Any]:
     """
     Query game state entity data.
 

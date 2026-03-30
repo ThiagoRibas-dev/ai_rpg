@@ -1,9 +1,11 @@
-from nicegui import ui
 import asyncio
+import logging
 import time
+
+from nicegui import ui
+
 from app.models.prompt import Prompt
 from app.setup.manifest_extractor import ManifestExtractor
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -182,18 +184,18 @@ class PromptEditorDialog:
         try:
             # 1. Run Pipeline
             manifest = extractor.extract(self.rules)
-            
+
             # 2. Update Name if empty
             if not self.name and manifest.name:
                 self.name = manifest.name
 
             # 3. Serialize to UI
             self.manifest_json = manifest.to_json(indent=2)
-            
+
             self._update_status("Extraction Complete!")
         except Exception as e:
             logger.error(f"Rules extraction failed: {e}", exc_info=True)
-            self._update_status(f"Error: {str(e)}")
+            self._update_status(f"Error: {e!s}")
 
     def _update_status(self, msg):
         self.current_status_msg = msg

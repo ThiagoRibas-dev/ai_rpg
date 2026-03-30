@@ -1,6 +1,5 @@
-from dataclasses import dataclass
-from typing import List, Optional
 import json
+from dataclasses import dataclass
 
 
 @dataclass
@@ -12,17 +11,17 @@ class Memory:
     priority: int
     tags: str
     created_at: str
-    fictional_time: Optional[str] = None
-    last_accessed: Optional[str] = None
+    fictional_time: str | None = None
+    last_accessed: str | None = None
     access_count: int = 0
 
-    def tags_list(self) -> List[str]:
+    def tags_list(self) -> list[str]:
         """Parse tags from JSON string to list."""
         try:
             return json.loads(self.tags) if self.tags else []
         except (json.JSONDecodeError, TypeError):
             return []
 
-    def set_tags(self, tags_list: List[str]):
+    def set_tags(self, tags_list: list[str]):
         """Convert list to JSON string for storage."""
         self.tags = json.dumps(tags_list)

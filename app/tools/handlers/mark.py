@@ -1,8 +1,9 @@
 import logging
-from typing import Optional, Any
-from app.services.state_service import get_entity, set_entity
-from app.prefabs.validation import validate_entity, get_path, set_path
+from typing import Any
+
 from app.prefabs.manifest import SystemManifest
+from app.prefabs.validation import get_path, set_path, validate_entity
+from app.services.state_service import get_entity, set_entity
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +14,7 @@ def handler(path: str, count: int = 1, target: str = "player", **context: Any) -
     """
     session_id = context.get("session_id")
     db = context.get("db_manager")
-    manifest: Optional[SystemManifest] = context.get("manifest")
+    manifest: SystemManifest | None = context.get("manifest")
 
     entity_type = "character"
     entity_key = target

@@ -1,7 +1,10 @@
-from nicegui import ui
-from typing import Any, Callable
 import logging
-from app.models.vocabulary import PrefabID, FieldKey
+from collections.abc import Callable
+from typing import Any
+
+from nicegui import ui
+
+from app.models.vocabulary import FieldKey, PrefabID
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +22,7 @@ class FieldEditorDialog:
         current_value: Any,
         constraints: dict | None = None,  # e.g., {"min": 0, "max": 20}
         key_map: dict | None = None,
-        on_save: Callable[[str, Any], None] = None,
+        on_save: Callable[[str, Any], None] | None = None,
     ):
         self.label = label
         self.path = path
@@ -103,13 +106,13 @@ class FieldEditorDialog:
                     if isinstance(self.current_value, dict)
                     else 0
                 )
-                
+
                 self.input_ref["score"] = ui.number(
                     label="Score",
                     value=score_val,
                     precision=0,
                 ).classes("w-full").props('dark standout')
-                
+
                 self.input_ref["mod"] = ui.number(
                     label="Modifier",
                     value=mod_val,
@@ -155,14 +158,14 @@ class FieldEditorDialog:
             import json
             default_val = "{}"
             try:
-                if isinstance(self.current_value, (dict, list)):
+                if isinstance(self.current_value, dict | list):
                     default_val = json.dumps(self.current_value, indent=2)
                 else:
                     default_val = str(self.current_value)
             except Exception as e:
                 logger.warning(f"Failed to serialize value: {e}", exc_info=True)
                 pass
-                
+
             self.input_ref = ui.textarea(
                 label="JSON Data",
                 value=default_val,

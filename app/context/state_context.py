@@ -1,11 +1,12 @@
 import logging
 from typing import Any
-from app.tools.registry import ToolRegistry
-from app.tools.schemas import StateQuery
-from app.services.state_service import get_entity
+
+from app.models.vocabulary import FieldKey, PrefabID
 from app.prefabs.manifest import SystemManifest
 from app.prefabs.validation import get_path
-from app.models.vocabulary import PrefabID, FieldKey
+from app.services.state_service import get_entity
+from app.tools.registry import ToolRegistry
+from app.tools.schemas import StateQuery
 
 
 class StateContextBuilder:
@@ -53,7 +54,7 @@ class StateContextBuilder:
                         score = val.get(FieldKey.SCORE, 0)
                         mod = val.get(FieldKey.MOD, 0)
                         rows.append(f"| {f.label} | {score} | {mod:+} |")
-            
+
             elif PrefabID.RES_POOL in prefabs:
                 header = "| Resource | Current | Max |"
                 sep = "| :--- | :--- | :--- |"

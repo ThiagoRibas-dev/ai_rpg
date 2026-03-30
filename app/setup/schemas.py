@@ -1,8 +1,10 @@
-from typing import Literal, Dict, Any, List, Optional
-from pydantic import BaseModel, Field, field_validator, model_validator
-from concurrent.futures import Future
 import re
-from app.models.vocabulary import PrefabID, CategoryName, MemoryKind, WorldCategory
+from concurrent.futures import Future
+from typing import Any, Literal
+
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+from app.models.vocabulary import CategoryName, MemoryKind, PrefabID, WorldCategory
 
 # ---------------------------------------------------------------------------
 # PREFAB / MANIFEST EXTRACTION SCHEMAS
@@ -13,8 +15,8 @@ class ExtractedField(BaseModel):
     path: str = Field(..., description="snake_case.path")
     prefab: PrefabID
     category: CategoryName
-    config: Dict[str, Any] = Field(default_factory=dict)
-    formula: Optional[str] = None
+    config: dict[str, Any] = Field(default_factory=dict)
+    formula: str | None = None
     usage_hint: str = Field(..., description="Short explanation for the AI")
 
     @field_validator("prefab", mode="before")
@@ -31,7 +33,7 @@ class ExtractedField(BaseModel):
 
 
 class ExtractedFieldList(BaseModel):
-    fields: List[ExtractedField]
+    fields: list[ExtractedField]
 
 
 class MechanicsExtraction(BaseModel):
@@ -59,7 +61,7 @@ class MechanicsExtraction(BaseModel):
         "",
         description="Rules for fumbles or critical failures, if any.",
     )
-    aliases: Dict[str, str] = Field(
+    aliases: dict[str, str] = Field(
         default_factory=dict,
         description="Global derived stats and formulas (e.g. 'str_mod').",
     )
@@ -97,14 +99,14 @@ class ExtractedRule(BaseModel):
         ...,
         description="Human-readable summary of the rule or mechanic.",
     )
-    tags: List[str] = Field(
+    tags: list[str] = Field(
         default_factory=list,
         description="Category tags (e.g. ['combat', 'movement']).",
     )
 
 
 class RuleListExtraction(BaseModel):
-    rules: List[ExtractedRule] = Field(
+    rules: list[ExtractedRule] = Field(
         default_factory=list,
         description="List of extracted rules/mechanics.",
     )
@@ -148,7 +150,7 @@ class NpcData(BaseModel):
 
         # Build a descriptive text from role + traits if visual_description missing
         if "visual_description" not in data:
-            parts: List[str] = []
+            parts: list[str] = []
             role = data.get("role")
             if isinstance(role, str) and role.strip():
                 parts.append(role.strip())
@@ -256,7 +258,7 @@ class LoreData(BaseModel):
         ...,
         description="The content/fact/detail about the world.",
     )
-    tags: List[str] = Field(
+    tags: list[str] = Field(
         ...,
         description="Categories or keywords associated with this lore item.",
     )
@@ -316,7 +318,7 @@ class GenreToneExtraction(BaseModel):
     )
 
 class LoreListExtraction(BaseModel):
-    lore: List[LoreData] = Field(
+    lore: list[LoreData] = Field(
         default_factory=list,
         description="Key facts, secrets, world details, lore, etc.",
     )
@@ -326,26 +328,26 @@ class WorldIndexItem(BaseModel):
     type: WorldCategory = Field(..., description="The entity type (including lore sub-categories).")
 
 class WorldIndexExtraction(BaseModel):
-    items: List[WorldIndexItem] = Field(default_factory=list)
+    items: list[WorldIndexItem] = Field(default_factory=list)
 
 class LocationListExtraction(BaseModel):
-    locations: List[LocationData] = Field(
+    locations: list[LocationData] = Field(
         default_factory=list,
         description="Locations directly mentioned or implied and their connections to one another.",
     )
 
 class NpcListExtraction(BaseModel):
-    npcs: List[NpcData] = Field(
+    npcs: list[NpcData] = Field(
         default_factory=list,
         description="All NPCs (characters, creatures, entities, etc.) mentioned or implied in the text.",
     )
 
 class WorldEntitiesExtraction(BaseModel):
-    locations: List[LocationData] = Field(
+    locations: list[LocationData] = Field(
         default_factory=list,
         description="Locations directly mentioned or implied and their connections to one another.",
     )
-    npcs: List[NpcData] = Field(
+    npcs: list[NpcData] = Field(
         default_factory=list,
         description="All NPCs (characters, creatures, entities, etc.) mentioned or implied in the text.",
     )
@@ -368,15 +370,15 @@ class WorldExtraction(BaseModel):
     starting_location: LocationData = Field(
         ..., description="The initial scene location where play begins."
     )
-    adjacent_locations: List[LocationData] = Field(
+    adjacent_locations: list[LocationData] = Field(
         default_factory=list,
         description="Locations directly connected to the starting location.",
     )
-    lore: List[LoreData] = Field(
+    lore: list[LoreData] = Field(
         default_factory=list,
         description="Key facts, secrets, or world details that might become memories.",
     )
-    initial_npcs: List[NpcData] = Field(
+    initial_npcs: list[NpcData] = Field(
         default_factory=list,
         description="NPCs present in or immediately around the starting scene.",
     )
@@ -431,9 +433,9 @@ class LoreStream:
     Asynchronous coordination object for sharing world data with character generation.
     """
     def __init__(self):
-        self._npc_future: Future[List[NpcData]] = Future()
+        self._npc_future: Future[list[NpcData]] = Future()
 
-    def set_npcs(self, npcs: List[NpcData]):
+    def set_npcs(self, npcs: list[NpcData]):
         """Fulfills the promise of NPC data."""
         if not self._npc_future.done():
             self._npc_future.set_result(npcs)
@@ -443,6 +445,6 @@ class LoreStream:
         if not self._npc_future.done():
             self._npc_future.set_exception(exc)
 
-    def get_npcs(self) -> List[NpcData]:
+    def get_npcs(self) -> list[NpcData]:
         """Blocks until NPCs are available and returns them."""
         return self._npc_future.result()

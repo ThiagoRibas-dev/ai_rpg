@@ -1,6 +1,7 @@
 
 import logging
 from typing import Any
+
 from app.services.state_service import get_entity, set_entity
 
 logger = logging.getLogger(__name__)
@@ -12,7 +13,7 @@ def handler(destination: str, **context: Any) -> dict:
     """
     session_id = context.get("session_id")
     db = context.get("db_manager")
-    
+
     if not session_id or not db:
         return {"error": "Missing session context"}
 
@@ -22,7 +23,7 @@ def handler(destination: str, **context: Any) -> dict:
         scene = {"members": ["character:player"], "location_key": "unknown"}
 
     current_loc = scene.get("location_key")
-    
+
     # 2. Update Scene
     scene["location_key"] = destination
     set_entity(session_id, db, "scene", "active_scene", scene)
@@ -36,7 +37,7 @@ def handler(destination: str, **context: Any) -> dict:
     # 4. Get Destination Details for Context
     loc_data = get_entity(session_id, db, "location", destination)
     loc_name = loc_data.get("name", destination) if loc_data else destination
-    
+
     return {
         "status": "moved",
         "from": current_loc,

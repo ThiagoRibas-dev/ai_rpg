@@ -1,10 +1,11 @@
 import logging
-from typing import List, Optional
-from app.models.session import Session
+
 from app.models.game_session import GameSession
 from app.models.message import Message
+from app.models.session import Session
 from app.prefabs.manifest import SystemManifest
 from app.setup.setup_manifest import SetupManifest
+
 
 class ContextBuilder:
     """
@@ -19,7 +20,7 @@ class ContextBuilder:
         mem_retriever,
         simulation_service,
         logger: logging.Logger | None = None,
-        manifest: Optional[SystemManifest] = None
+        manifest: SystemManifest | None = None
     ):
         self.db = db_manager
         self.vs = vector_store
@@ -40,7 +41,7 @@ class ContextBuilder:
         Builds the permanent system instruction (Rules, Engine, Vocabulary).
         """
         sections = []
-        
+
         # 1. Core Persona (Plain Text)
         session_data = Session.from_json(game_session.session_data)
         user_game_prompt = session_data.get_system_prompt()
@@ -53,10 +54,10 @@ class ContextBuilder:
         else:
              # Fallback for legacy/setup
              rules_content = self._build_legacy_rules(game_session)
-        
+
         if rules_content:
             sections.append(self._wrap_section("GAME RULES & SYSTEM", rules_content))
-        
+
         # 3. Author's Note. Assumes the formatting will be done by the Player/User
         if game_session.authors_note:
             sections.append(self._wrap_section("AUTHOR'S NOTE", game_session.authors_note, lang="text"))
@@ -66,8 +67,8 @@ class ContextBuilder:
     def build_dynamic_context(
         self,
         game_session: GameSession,
-        chat_history: List[Message],
-        rag_memories: Optional[dict] = None,
+        chat_history: list[Message],
+        rag_memories: dict | None = None,
     ) -> str:
         """
         Builds the context that changes every turn (State, Narrative, Procedure).
@@ -101,13 +102,13 @@ class ContextBuilder:
     def _build_manifest_context(self) -> str:
         """Generates the cheat sheet for the active game system."""
         lines = [f"# SYSTEM: {self.manifest.name}\n"]
-        
+
         # Engine (Table-fied)
         lines.append(f"**Engine Configuration**\n{self.manifest.get_engine_table()}\n")
-        
+
         # Valid Paths (The Vocabulary)
         lines.append(self.manifest.get_path_hints())
-        
+
         return "\n".join(lines)
 
     def _build_legacy_rules(self, game_session) -> str:
@@ -131,22 +132,42 @@ class ContextBuilder:
             pass
         return ""
 
+    def _build_spatial_context(self, session_id: int) -> str:
+        try:
+            scene = self.db.game_state.get_entity(session_id, "scene", "active_scene")
+            if not scene:
+                return ""
+            lines = []
+            loc_key = scene.get("location_key")
+            if loc_key:
+                location = self.db.game_state.get_entity(session_id, "location", loc_key)
+                if location:
+                    lines.append(f"# LOCATION: {location.get('name', 'Unknown')} ({loc_key}) #")
+                    lines.append(location.get("description_visual", ""))
+                    conns = location.get("connections", {})
+                    if conns:
+                        exits = [f"{d.upper()} -> {data.get('display_name')}" for d, data in conns.items()]
+                        lines.append("Exits: " + ", ".join(exits))
+            return "\n".join(lines)
+        except Exception:
+            return ""
+
     def _build_scene_block(self, session_id: int) -> str:
         """Combines spatial description and scene roster into one coherent block."""
         parts = []
-        
+
         # Spatial
         spatial = self._build_spatial_context(session_id)
         if spatial:
             parts.append(spatial)
-            
+
         # Roster
         roster = self.state_builder.build_scene_roster(session_id)
         if roster:
             parts.append(f"**Present Characters / NPCs**:\n{roster}")
-            
+
         return "\n\n".join(parts).strip()
 
-    def get_truncated_history(self, session: Session, max_messages: int) -> List[Message]:
+    def get_truncated_history(self, session: Session, max_messages: int) -> list[Message]:
         history = session.get_history()
         return history[-max_messages:] if len(history) > max_messages else history

@@ -1,11 +1,14 @@
-import os
 import json
+import logging
+import os
+from collections.abc import Generator
+from typing import Any
+
 import openai
-from typing import Dict, Type, List, Generator, Any
 from pydantic import BaseModel, ValidationError
+
 from app.llm.llm_connector import LLMConnector, LLMResponse
 from app.models.message import Message
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -31,16 +34,16 @@ class OpenAIConnector(LLMConnector):
         self.client = openai.OpenAI(base_url=self.base_url, api_key=self.api_key)
 
     def _convert_chat_history_to_messages(
-        self, chat_history: List[Message]
-    ) -> List[Dict[str, Any]]:
+        self, chat_history: list[Message]
+    ) -> list[dict[str, Any]]:
         messages = []
         for msg in chat_history:
             message_dict = {"role": msg.role}
-            
+
             # Handle Content (allow None if it's a pure tool call)
             if msg.content is not None:
                 message_dict["content"] = msg.content
-            
+
             # Handle Assistant Tool Calls
             if msg.role == "assistant" and msg.tool_calls:
                 # Convert our internal normalized format back to OpenAI API format
@@ -55,7 +58,7 @@ class OpenAIConnector(LLMConnector):
                         }
                     })
                 message_dict["tool_calls"] = openai_tool_calls
-                
+
                 # OpenAI sometimes requires content to be null if missing
                 if "content" not in message_dict:
                     message_dict["content"] = None
@@ -68,7 +71,7 @@ class OpenAIConnector(LLMConnector):
                     message_dict["tool_call_id"] = "unknown_call_id"
                 else:
                     message_dict["tool_call_id"] = msg.tool_call_id
-                
+
                 # Some local servers (and OpenAI) allow/expect 'name'
                 if msg.name:
                     message_dict["name"] = msg.name
@@ -77,7 +80,7 @@ class OpenAIConnector(LLMConnector):
         return messages
 
     def get_streaming_response(
-        self, system_prompt: str, chat_history: List[Message]
+        self, system_prompt: str, chat_history: list[Message]
     ) -> Generator[str, None, None]:
         messages = [{"role": "system", "content": system_prompt}]
         converted_history = self._convert_chat_history_to_messages(chat_history)
@@ -110,8 +113,8 @@ class OpenAIConnector(LLMConnector):
     def get_structured_response(
         self,
         system_prompt: str,
-        chat_history: List[Message],
-        output_schema: Type[BaseModel],
+        chat_history: list[Message],
+        output_schema: type[BaseModel],
         temperature: float = 0.5,
         top_p: float = 0.9,
     ) -> BaseModel:
@@ -172,7 +175,7 @@ class OpenAIConnector(LLMConnector):
             logger.error(f"Raw content: {content}")
             raise
 
-    def _clean_schema(self, schema: Dict[str, Any]):
+    def _clean_schema(self, schema: dict[str, Any]):
         """
         Recursively remove 'title' and 'default' fields from JSON schema,
         and flatten $ref fields by inlining their definitions from $defs.
@@ -185,7 +188,7 @@ class OpenAIConnector(LLMConnector):
         # 2. Recursively clean remaining metadata
         self._recursive_clean(schema)
 
-    def _resolve_references(self, schema: Any, defs: Dict[str, Any]):
+    def _resolve_references(self, schema: Any, defs: dict[str, Any]):
         """
         Recursively replaces "$ref" with the actual definition from defs.
         """
@@ -228,8 +231,8 @@ class OpenAIConnector(LLMConnector):
     def chat_with_tools(
         self,
         system_prompt: str,
-        chat_history: List[Message],
-        tools: List[Dict[str, Any]],
+        chat_history: list[Message],
+        tools: list[dict[str, Any]],
     ) -> LLMResponse:
         messages = [{"role": "system", "content": system_prompt}]
         converted_history = self._convert_chat_history_to_messages(chat_history)

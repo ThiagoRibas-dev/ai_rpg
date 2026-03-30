@@ -3,7 +3,7 @@ import os
 import queue
 import threading
 import uuid
-from typing import Callable
+from collections.abc import Callable
 
 from app.core.react_turn_manager import ReActTurnManager
 from app.core.vector_store import VectorStore

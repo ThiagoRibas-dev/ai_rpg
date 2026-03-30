@@ -1,4 +1,5 @@
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -7,27 +8,27 @@ class Message(BaseModel):
         ...,
         description="Message role: 'user', 'assistant', 'system', or 'tool'.",
     )
-    content: Optional[str] = Field(
+    content: str | None = Field(
         None,
         description="Text content of the message; may be None for pure tool calls.",
     )
-    thought: Optional[str] = Field(
+    thought: str | None = Field(
         None,
         description="Thinking process or reasoning behind the response (e.g. for Gemini thinking models).",
     )
-    thought_signature: Optional[str] = Field(
+    thought_signature: str | None = Field(
         None,
         description="Internal signature for thinking parts required by some Gemini models.",
     )
-    tool_calls: Optional[List[Dict[str, Any]]] = Field(
+    tool_calls: list[dict[str, Any]] | None = Field(
         None,
         description="List of tool calls produced by the assistant for this turn (normalized format).",
     )
-    tool_call_id: Optional[str] = Field(
+    tool_call_id: str | None = Field(
         None,
         description="For tool messages: ID of the tool call this result relates to.",
     )
-    name: Optional[str] = Field(
+    name: str | None = Field(
         None,
         description="For tool messages: name of the tool that produced this result.",
     )

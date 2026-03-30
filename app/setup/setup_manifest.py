@@ -1,6 +1,6 @@
 import json
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any
 
 
 @dataclass
@@ -8,8 +8,8 @@ class SetupValidation:
     """Result of manifest validation."""
 
     is_complete: bool
-    missing_items: List[str]
-    warnings: List[str]
+    missing_items: list[str]
+    warnings: list[str]
 
 
 class SetupManifest:
@@ -18,7 +18,7 @@ class SetupManifest:
     def __init__(self, db_manager):
         self.db = db_manager
 
-    def get_manifest(self, session_id: int) -> Dict[str, Any]:
+    def get_manifest(self, session_id: int) -> dict[str, Any]:
         session = self.db.sessions.get_by_id(session_id)
         if not session.setup_phase_data:
             return self._empty_manifest()
@@ -28,8 +28,8 @@ class SetupManifest:
             return self._empty_manifest()
 
     def update_manifest(
-        self, session_id: int, updates: Dict[str, Any], merge: bool = True
-    ) -> Dict[str, Any]:
+        self, session_id: int, updates: dict[str, Any], merge: bool = True
+    ) -> dict[str, Any]:
         session = self.db.sessions.get_by_id(session_id)
         if merge:
             current = self.get_manifest(session_id)
@@ -42,9 +42,9 @@ class SetupManifest:
         return new_manifest
 
     def validate(self, session_id: int) -> SetupValidation:
-        from app.services.state_service import get_entity
-        from app.prefabs.validation import validate_entity
         from app.prefabs.manifest import SystemManifest
+        from app.prefabs.validation import validate_entity
+        from app.services.state_service import get_entity
 
         manifest = self.get_manifest(session_id)
         missing = []
@@ -67,7 +67,7 @@ class SetupManifest:
             missing.append("Genre")
         if not manifest.get("tone"):
             missing.append("Tone")
-            
+
         start_loc = manifest.get("starting_location")
         if not start_loc:
             missing.append("Starting Location")
@@ -89,7 +89,7 @@ class SetupManifest:
 
         return SetupValidation(is_complete, missing, warnings)
 
-    def _empty_manifest(self) -> Dict[str, Any]:
+    def _empty_manifest(self) -> dict[str, Any]:
         return {
             "genre": None,
             "tone": None,

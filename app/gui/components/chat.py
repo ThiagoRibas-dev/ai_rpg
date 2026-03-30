@@ -1,5 +1,7 @@
 import json
+
 from nicegui import ui
+
 from app.gui.theme import Theme
 
 
@@ -136,7 +138,7 @@ class ChatComponent:
 
         # Custom Chat Bubble Implementation
         row_classes = "w-full justify-end" if sent else "w-full justify-start"
-        
+
         with ui.row().classes(row_classes + " gap-2 group"):
             # Avatar area
             if not sent:
@@ -145,7 +147,7 @@ class ChatComponent:
             with ui.column().classes("max-w-[80%] items-end" if sent else "max-w-[80%] items-start"):
                 # Using a DIV as the bubble
                 bubble = ui.element('div').classes("p-3 rounded-2xl relative shadow-sm")
-                
+
                 # Apply styles via classes
                 if sent:
                     # User: Green
@@ -153,7 +155,7 @@ class ChatComponent:
                 else:
                     # AI: Dark Grey
                     bubble.classes(Theme.chat_bubble_received + " rounded-tl-none")
-                
+
                 with bubble:
                     # Context Menu attached to the bubble
                     with ui.context_menu():
@@ -275,10 +277,10 @@ class ChatComponent:
                 with ui.row().classes(row_classes + " gap-2"):
                     if not sent:
                         ui.label(name).classes("text-xs font-bold text-gray-400 mt-1 self-start")
-                        
+
                     with ui.column().classes("max-w-[80%] items-end" if sent else "max-w-[80%] items-start"):
                         bubble = ui.element('div').classes("p-3 rounded-2xl shadow-sm")
-                        
+
                         # Apply Theme classes (same as history rendering)
                         if sent:
                             bubble.classes(Theme.chat_bubble_sent + " rounded-tr-none")
@@ -386,15 +388,15 @@ class ChatComponent:
     def add_rag_context(self, text: str, memory_ids: list):
         if not self.container or not text:
             return
-        
+
         # Count memories by counting lines starting with emojis or symbols
         # (Assuming the format from MemoryRetriever.format_for_prompt)
         m_count = len([line for line in text.split('\n') if line.strip() and not line.startswith('#')])
-        
+
         with self.container:
             with ui.row().classes("w-full justify-start"):
                 with ui.expansion(
-                    f"🧠 Recalled {m_count} context items...", 
+                    f"🧠 Recalled {m_count} context items...",
                     icon="psychology"
                 ).classes(
                     "w-full max-w-lg bg-slate-900/40 border border-blue-900/30 rounded-lg text-xs"

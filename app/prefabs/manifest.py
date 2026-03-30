@@ -8,10 +8,10 @@ import json
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from app.prefabs.registry import PREFABS
 from app.models.vocabulary import CategoryName, PrefabID
+from app.prefabs.registry import PREFABS
 
 logger = logging.getLogger(__name__)
 
@@ -24,14 +24,14 @@ class FieldDef:
     label: str
     prefab: str
     category: str
-    config: Dict[str, Any] = field(default_factory=dict)
-    formula: Optional[str] = None
-    max_formula: Optional[str] = None
-    default_formula: Optional[str] = None
-    threshold_hint: Optional[str] = None
-    usage_hint: Optional[str] = None
+    config: dict[str, Any] = field(default_factory=dict)
+    formula: str | None = None
+    max_formula: str | None = None
+    default_formula: str | None = None
+    threshold_hint: str | None = None
+    usage_hint: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         result = {
             "path": self.path,
             "label": self.label,
@@ -53,7 +53,7 @@ class FieldDef:
         return result
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "FieldDef":
+    def from_dict(cls, data: dict[str, Any]) -> "FieldDef":
         return cls(
             path=data["path"],
             label=data["label"],
@@ -76,11 +76,11 @@ class EngineConfig:
     crit: str
     fumble: str = ""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {k: v for k, v in self.__dict__.items() if v}
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "EngineConfig":
+    def from_dict(cls, data: dict[str, Any]) -> "EngineConfig":
         return cls(**data)
 
 
@@ -106,13 +106,13 @@ class EngineConfig:
 class RuleDef:
     name: str
     content: str
-    tags: List[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {"name": self.name, "content": self.content, "tags": self.tags}
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "RuleDef":
+    def from_dict(cls, data: dict[str, Any]) -> "RuleDef":
         return cls(
             name=data["name"], content=data["content"], tags=data.get("tags", [])
         )
@@ -123,21 +123,21 @@ class SystemManifest:
     id: str
     name: str
     engine: EngineConfig
-    procedures: Dict[str, str] = field(default_factory=dict)
-    fields: List[FieldDef] = field(default_factory=list)
-    aliases: Dict[str, str] = field(default_factory=dict)
-    rules: List[RuleDef] = field(default_factory=list)  # RAG Knowledge Base
+    procedures: dict[str, str] = field(default_factory=dict)
+    fields: list[FieldDef] = field(default_factory=list)
+    aliases: dict[str, str] = field(default_factory=dict)
+    rules: list[RuleDef] = field(default_factory=list)  # RAG Knowledge Base
 
-    def get_field(self, path: str) -> Optional[FieldDef]:
+    def get_field(self, path: str) -> FieldDef | None:
         for f in self.fields:
             if f.path == path:
                 return f
         return None
 
-    def get_fields_by_category(self, category: str) -> List[FieldDef]:
+    def get_fields_by_category(self, category: str) -> list[FieldDef]:
         return [f for f in self.fields if f.category == category]
 
-    def get_categories(self) -> List[str]:
+    def get_categories(self) -> list[str]:
         return sorted(set(f.category for f in self.fields))
 
     def get_path_hints(self) -> str:
@@ -154,7 +154,7 @@ class SystemManifest:
                 lines.append(f"  `{f.path}{suffix}` - {f.label} ({hint})")
         return "\n".join(lines)
 
-    def get_procedure(self, mode: str) -> Optional[str]:
+    def get_procedure(self, mode: str) -> str | None:
         return self.procedures.get(mode.lower())
 
 
@@ -162,7 +162,7 @@ class SystemManifest:
         """Returns the engine configuration formatted as a Markdown table."""
         return self.engine.to_markdown_table()
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "name": self.name,
@@ -174,7 +174,7 @@ class SystemManifest:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "SystemManifest":
+    def from_dict(cls, data: dict[str, Any]) -> "SystemManifest":
         return cls(
             id=data["id"],
             name=data["name"],
@@ -194,7 +194,7 @@ class SystemManifest:
 
     @classmethod
     def from_file(cls, path: Path) -> "SystemManifest":
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             return cls.from_dict(json.load(f))
 
 

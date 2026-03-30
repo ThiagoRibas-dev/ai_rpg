@@ -1,4 +1,5 @@
 import logging
+
 from app.models.vocabulary import MemoryKind
 
 schema = {
@@ -36,7 +37,7 @@ def handler(
         raise ValueError("Missing session context")
 
     vs = context.get("vector_store")
-    
+
     # --- Deduplication Logic ---
     if vs:
         try:
@@ -45,7 +46,7 @@ def handler(
 
             for hit in sem_results:
                 mid = int(hit["memory_id"])
-                
+
                 # FIX: Use correct repository accessor (db.memories.get_by_id)
                 existing = db_manager.memories.get_by_id(mid)
                 if not existing:

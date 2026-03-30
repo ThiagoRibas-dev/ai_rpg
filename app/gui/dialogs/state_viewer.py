@@ -1,5 +1,6 @@
 from nicegui import ui
 
+
 class StateViewerDialog:
     def __init__(self, db_manager, session_id):
         self.db = db_manager
@@ -17,11 +18,11 @@ class StateViewerDialog:
 
             # State Data
             state_data = self._get_full_state()
-            
+
             # Using ui.json_editor for nice tree view
             self.json_editor = ui.json_editor({'content': {'json': state_data}}) \
                 .classes('w-full flex-grow')
-        
+
         self.dialog.open()
 
     def _get_full_state(self):

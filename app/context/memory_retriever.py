@@ -1,7 +1,8 @@
 import logging
 import re
-from typing import List, Any, Optional
 from datetime import datetime
+from typing import Any
+
 from app.models.message import Message
 from app.models.vocabulary import MemoryKind
 
@@ -14,7 +15,7 @@ class MemoryRetriever:
         self.vs = vector_store
         self.logger = logger or logging.getLogger(__name__)
 
-    def extract_keywords(self, text: str, min_length: int = 3) -> List[str]:
+    def extract_keywords(self, text: str, min_length: int = 3) -> list[str]:
         words = re.findall(r"\b\w+\b", text.lower())
         stop_words = {
             "the",
@@ -37,11 +38,11 @@ class MemoryRetriever:
     def get_relevant(
         self,
         session,
-        recent_messages: List[Message],
-        extra_tags: Optional[List[str]] = None,
-        kinds: Optional[List[MemoryKind]] = None,
-        limit: Optional[int] = None,
-    ) -> dict[str, List[Any]]:
+        recent_messages: list[Message],
+        extra_tags: list[str] | None = None,
+        kinds: list[MemoryKind] | None = None,
+        limit: int | None = None,
+    ) -> dict[str, list[Any]]:
         """
         Retrieve relevant memories using Tag Funnel and Dual-System Retrieval.
         Returns a dictionary categorized by kind (rule, lore, episodic, etc).
@@ -56,13 +57,13 @@ class MemoryRetriever:
             last_ai = next((m for m in reversed(recent_messages[:-1]) if m.role == "assistant"), None)
             if last_ai and last_ai.content:
                 query_parts.append(last_ai.content[-3000:])
-        
+
         if recent_messages and recent_messages[-1].role == "user":
             query_parts.append(recent_messages[-1].content)
 
         recent_text = " ".join(query_parts) if query_parts else "Start of session"
         keywords = self.extract_keywords(recent_text)
-        
+
         # 2. GATHER CONTEXTUAL TAGS
         active_tags = set(extra_tags or [])
 
@@ -106,25 +107,25 @@ class MemoryRetriever:
                 session.id, kind=codex_kinds, tags=list(active_tags), limit=100
             )
             high_pri_codex = self.db.memories.query(session.id, kind=codex_kinds, limit=100)
-            
+
             # Merge and score
             candidates_codex_dict = {m.id: m for m in candidates_codex + high_pri_codex}
             scored_codex = []
             for mem in candidates_codex_dict.values():
                 score = mem.priority * 100
                 mem_tags = {t.lower() for t in mem.tags_list()}
-                
+
                 score += len(active_tags & mem_tags) * 50
-                
+
                 if any(kw in mem.content.lower() for kw in keywords):
                     score += 30
-                
+
                 if any(h["memory_id"] == mem.id for h in sem_hits):
                     score += 100
-                
+
                 if score > 50: # Minimum filter
                     scored_codex.append((score, mem))
-            
+
             scored_codex.sort(key=lambda x: x[0], reverse=True)
             final_codex = [m for s, m in scored_codex]
 
@@ -135,22 +136,22 @@ class MemoryRetriever:
             episodic_mems = self.db.memories.query(session.id, kind=MemoryKind.EPISODIC, limit=50)
             candidate_ids_ep = {m.id for m in episodic_mems}
             hit_ids_ep = {h["memory_id"] for h in sem_hits if h["memory_id"] in candidate_ids_ep}
-            
+
             # Create history fingerprint for deduplication
             history_words = set(self.extract_keywords(" ".join(m.content for m in history[-10:] if m.content)))
-            
+
             scored_episodic = []
             for mem in episodic_mems:
                 score = 0
-                if mem.id in hit_ids_ep: 
+                if mem.id in hit_ids_ep:
                     score += 100
-                if mem.priority >= 4: 
+                if mem.priority >= 4:
                     score += 50
-                
+
                 # Keyword overlap boost
                 mem_words = set(self.extract_keywords(mem.content))
                 score += len(mem_words & set(keywords)) * 15
-            
+
                 # Recency inversion
                 try:
                     created = datetime.fromisoformat(mem.created_at)
@@ -159,12 +160,12 @@ class MemoryRetriever:
                         score += min(age_days * 2, 30)
                 except Exception:
                     pass
-            
+
                 # Deduplication: Penalize if already clearly in recent history
                 overlap_ratio = len(mem_words & history_words) / max(len(mem_words), 1)
                 if overlap_ratio > 0.6:
                     score -= 200
-                    
+
                 if score > 0:
                     scored_episodic.append((score, mem))
 
@@ -178,7 +179,7 @@ class MemoryRetriever:
             MemoryKind.USER_PREF: [],
             MemoryKind.EPISODIC: final_episodic
         }
-        
+
         # Override default budgets if explicit limit is provided
         if limit is not None:
              default_limit = max(1, limit // len(codex_kinds)) if codex_kinds else limit
@@ -200,7 +201,7 @@ class MemoryRetriever:
             all_mems = []
             for k in [MemoryKind.RULE, MemoryKind.LORE, MemoryKind.USER_PREF, MemoryKind.EPISODIC]:
                 all_mems.extend(result_dict.get(k, []))
-            
+
             if len(all_mems) > limit:
                  # Truncate result_dict to meet limit
                  current_total = 0
@@ -217,11 +218,11 @@ class MemoryRetriever:
 
 
     def format_for_prompt(
-        self, categorized_memories: dict[str, List[Any]], title: str = "# KNOWLEDGE AND MEMORIES\n"
+        self, categorized_memories: dict[str, list[Any]], title: str = "# KNOWLEDGE AND MEMORIES\n"
     ) -> str:
         if not categorized_memories:
             return ""
-            
+
         lines = []
         if categorized_memories.get(MemoryKind.RULE) or categorized_memories.get(MemoryKind.USER_PREF):
             lines.append("## GAME RULES REMINDER\n")
@@ -231,18 +232,18 @@ class MemoryRetriever:
             for m in categorized_memories.get(MemoryKind.USER_PREF, []):
                 lines.append(f"⚙️ {m.content}")
             lines.append("")
-                
+
         if categorized_memories.get(MemoryKind.LORE):
             lines.append("## WORLD LORE SAMPLE\n")
             for m in categorized_memories.get(MemoryKind.LORE, []):
                 tags = f" [{', '.join(m.tags_list())}]" if m.tags_list() else ""
                 lines.append(f"📜 {m.content}{tags}")
             lines.append("")
-                
+
         if categorized_memories.get(MemoryKind.EPISODIC):
             lines.append("## RECALLED PAST EVENTS\n")
             for m in categorized_memories.get(MemoryKind.EPISODIC, []):
                 lines.append(f"📖 {m.content}")
-                
+
         return "\n".join(lines).strip()
 

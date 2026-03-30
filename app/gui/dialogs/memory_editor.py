@@ -1,4 +1,5 @@
 from nicegui import ui
+
 from app.models.memory import Memory
 from app.models.vocabulary import MemoryKind
 

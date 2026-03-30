@@ -1,9 +1,10 @@
 import logging
 from typing import Any
+
+from app.database.db_manager import DBManager
+from app.setup.setup_manifest import SetupManifest
 from app.tools.executor import ToolExecutor
 from app.tools.schemas import Set
-from app.setup.setup_manifest import SetupManifest
-from app.database.db_manager import DBManager
 
 logger = logging.getLogger(__name__)
 
@@ -87,23 +88,23 @@ class ManualEditService:
             if results:
                 res = results[0]
                 result_data = res.get("result", {})
-                
+
                 # Check for explicit error
                 if res.get("error") or result_data.get("error"):
                     error = res.get("error") or result_data.get("error")
                     logger.warning(f"Manual edit failed for {full_path}: {error}")
                     return {"success": False, "error": error}
-                
+
                 # Success case: result has 'new_value' key (Set tool output)
                 if "new_value" in result_data:
                     logger.info(f"Manual edit success: {full_path} = {result_data.get('new_value')}")
                     return {"success": True, "message": f"Updated {path}"}
-                
+
                 # Fallback: check for 'status' == 'ok'
                 if result_data.get("status") == "ok":
                     logger.info(f"Manual edit success: {full_path} = {new_value}")
                     return {"success": True, "message": f"Updated {path}"}
-            
+
             # If we get here, something unexpected happened
             logger.warning(f"Manual edit failed for {full_path}: Unexpected result format")
             logger.warning(f"Full result: {results}")

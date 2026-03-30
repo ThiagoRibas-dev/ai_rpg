@@ -1,14 +1,14 @@
 import sqlite3
-from typing import Optional
+
 from app.database.repositories import (
-    PromptRepository,
-    SessionRepository,
-    MemoryRepository,
     GameStateRepository,
-    TurnMetadataRepository,
-    RulesetRepository,
-    StatTemplateRepository,
     ManifestRepository,
+    MemoryRepository,
+    PromptRepository,
+    RulesetRepository,
+    SessionRepository,
+    StatTemplateRepository,
+    TurnMetadataRepository,
 )
 
 
@@ -26,26 +26,26 @@ class DBManager:
         self.conn = None
 
         # Repositories (initialized in __enter__)
-        self.prompts: Optional[PromptRepository] = None
-        self.sessions: Optional[SessionRepository] = None
-        self.memories: Optional[MemoryRepository] = None
-        self.game_state: Optional[GameStateRepository] = None
-        self.turn_metadata: Optional[TurnMetadataRepository] = None
-        self.rulesets: Optional[RulesetRepository] = None
-        self.stat_templates: Optional[StatTemplateRepository] = None
-        self.manifests: Optional[ManifestRepository] = None
+        self.prompts: PromptRepository | None = None
+        self.sessions: SessionRepository | None = None
+        self.memories: MemoryRepository | None = None
+        self.game_state: GameStateRepository | None = None
+        self.turn_metadata: TurnMetadataRepository | None = None
+        self.rulesets: RulesetRepository | None = None
+        self.stat_templates: StatTemplateRepository | None = None
+        self.manifests: ManifestRepository | None = None
 
     def __enter__(self):
         # Set a long timeout (30s) so threads wait rather than crashing immediately
-        # Set isolation_level=None to enable autocommit mode. 
+        # Set isolation_level=None to enable autocommit mode.
         self.conn = sqlite3.connect(self.db_path, timeout=30.0, isolation_level=None)
-        
-        # Enable Write-Ahead Logging (WAL). 
+
+        # Enable Write-Ahead Logging (WAL).
         self.conn.execute("PRAGMA journal_mode=WAL;")
-        
+
         # Enforce foreign keys
         self.conn.execute("PRAGMA foreign_keys=ON;")
-        
+
         self.conn.row_factory = sqlite3.Row
 
         # Initialize all repositories

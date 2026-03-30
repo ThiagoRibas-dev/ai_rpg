@@ -1,10 +1,11 @@
+import logging
 import os
+from typing import Any
+
 import chromadb
+from chromadb.api.types import Where
 from chromadb.config import Settings
 from fastembed import TextEmbedding
-from typing import List, Dict, Any
-import logging
-from chromadb.api.types import Where
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +21,7 @@ class VectorStore:
         self.client = chromadb.PersistentClient(
             path=persist_directory, settings=Settings(anonymized_telemetry=False)
         )
-        
+
         # Initialize Collections
         self.turn_collection = self.client.get_or_create_collection(
             name="turn_metadata", metadata={"hnsw:space": "cosine"}
@@ -42,14 +43,14 @@ class VectorStore:
             logger.error(f"Failed to load embedding model: {e}")
             self.embed_model = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
 
-    def _embed(self, text: str) -> List[float]:
-        return list(self.embed_model.embed([text]))[0].tolist()
+    def _embed(self, text: str) -> list[float]:
+        return next(iter(self.embed_model.embed([text]))).tolist()
 
     # ==========================================================================
     # RULES (The New Layer)
     # ==========================================================================
-    
-    def add_rules(self, ruleset_id: int, rules: List[Dict[str, Any]]):
+
+    def add_rules(self, ruleset_id: int, rules: list[dict[str, Any]]):
         """
         Batch add rules to the vector store.
         rules: List of {'name': str, 'text': str, 'tags': List[str]}
@@ -66,7 +67,7 @@ class VectorStore:
             # Unique ID: ruleset_id + name hash or index
             doc_id = f"rule_{ruleset_id}_{i}_{hash(rule['name'])}"
             content = f"{rule['name']}: {rule['text']}"
-            
+
             ids.append(doc_id)
             documents.append(content)
             embeddings.append(self._embed(content))
@@ -87,13 +88,13 @@ class VectorStore:
         except Exception as e:
             logger.error(f"Error indexing rules: {e}", exc_info=True)
 
-    def search_rules(self, ruleset_id: int, query: str, k: int = 3) -> List[Dict[str, Any]]:
+    def search_rules(self, ruleset_id: int, query: str, k: int = 3) -> list[dict[str, Any]]:
         """Semantic search for rules relevant to the query."""
         if not query.strip():
             return []
 
         embedding = self._embed(query)
-        
+
         results = self.rules_collection.query(
             query_embeddings=[embedding],
             n_results=k,
@@ -114,7 +115,7 @@ class VectorStore:
     # MEMORIES & TURNS (Existing)
     # ==========================================================================
 
-    def add_turn(self, session_id: int, prompt_id: int, round_number: int, summary: str, tags: List[str], importance: int):
+    def add_turn(self, session_id: int, prompt_id: int, round_number: int, summary: str, tags: list[str], importance: int):
         try:
             embedding = self._embed(summary)
             doc_id = f"{session_id}_{round_number}"
@@ -133,7 +134,7 @@ class VectorStore:
         except Exception as e:
             logger.error(f"Error adding turn: {e}")
 
-    def search_relevant_turns(self, session_id: int, query_text: str, top_k: int = 5, min_importance: int = 2) -> List[Dict[str, Any]]:
+    def search_relevant_turns(self, session_id: int, query_text: str, top_k: int = 5, min_importance: int = 2) -> list[dict[str, Any]]:
         embedding = self._embed(query_text)
         where_clause: Where = {
             "$and": [
@@ -146,7 +147,7 @@ class VectorStore:
         )
         formatted = []
         if results["ids"] and results["ids"][0]:
-            for i, meta in enumerate(results["metadatas"][0]):
+            for _i, meta in enumerate(results["metadatas"][0]):
                 formatted.append({
                     "round_number": meta["round_number"],
                     "summary": meta["summary"],
@@ -155,7 +156,7 @@ class VectorStore:
                 })
         return formatted
 
-    def upsert_memory(self, session_id: int, memory_id: int, text: str, kind: str, tags: List[str], priority: int):
+    def upsert_memory(self, session_id: int, memory_id: int, text: str, kind: str, tags: list[str], priority: int):
         try:
             emb = self._embed(text)
             doc_id = f"{session_id}:{memory_id}"
@@ -173,7 +174,7 @@ class VectorStore:
         except Exception as e:
             logger.error(f"upsert_memory failed: {e}")
 
-    def search_memories(self, session_id: int, query_text: str, k: int = 5, min_priority: int = 1) -> List[Dict[str, Any]]:
+    def search_memories(self, session_id: int, query_text: str, k: int = 5, min_priority: int = 1) -> list[dict[str, Any]]:
         if not query_text.strip():
             return []
         emb = self._embed(query_text)
@@ -197,11 +198,11 @@ class VectorStore:
                     "distance": res["distances"][0][i] if res["distances"] else 0
                 })
         return out
-    
+
     def delete_session_data(self, session_id: int):
         # Implementation of deletions (omitted for brevity but implied same as before)
         pass
-    
+
     def delete_memory(self, session_id: int, memory_id: int):
         # Implementation of deletion
         pass

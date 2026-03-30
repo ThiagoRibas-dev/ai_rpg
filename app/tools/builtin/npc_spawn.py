@@ -1,7 +1,8 @@
-from typing import Any, Optional
-from app.services.state_service import get_entity, set_entity
-from app.prefabs.manifest import SystemManifest, EngineConfig, FieldDef
+from typing import Any
+
+from app.prefabs.manifest import EngineConfig, FieldDef, SystemManifest
 from app.prefabs.validation import validate_entity
+from app.services.state_service import get_entity, set_entity
 
 # --- MINIMAL NPC FALLBACK ---
 MINIMAL_NPC_MANIFEST = SystemManifest(
@@ -23,7 +24,7 @@ def handler(
     visual_description: str,
     stat_template: str,
     initial_disposition: str = "neutral",
-    location_key: Optional[str] = None,
+    location_key: str | None = None,
     **context: Any
 ) -> dict:
     """
@@ -39,24 +40,24 @@ def handler(
     if not location_key:
         scene = get_entity(session_id, db, "scene", "active_scene")
         location_key = scene.get("location_key") if scene else None
-    
+
     if not location_key:
         return {"success": False, "error": "No location specified."}
 
     # 2. Resolve Template Strategy
     manifest_to_use = None
-    
+
     # Strategy A: Look for a SystemManifest matching the requested template name
     # e.g. stat_template="dnd_5e" or "Cyberpunk Guard"
     all_manifests = db.manifests.get_all()
-    
+
     # 1. Try exact ID match
     found_meta = next((m for m in all_manifests if m["system_id"] == stat_template), None)
-    
+
     # 2. Try Name match (case-insensitive)
     if not found_meta:
         found_meta = next((m for m in all_manifests if m["name"].lower() == stat_template.lower()), None)
-    
+
     if found_meta:
         # Load the full manifest
         manifest_to_use = db.manifests.get_by_id(found_meta["id"])
@@ -72,10 +73,10 @@ def handler(
         "location_key": location_key,
         "disposition": initial_disposition,
         "scene_state": {"zone_id": None, "is_hidden": False},
-        
+
         # We store the ID if it's a real DB manifest, else None for Minimal
         "template_id": found_meta["id"] if found_meta else None,
-        
+
         # Initialize empty containers for all categories in the manifest
         "attributes": {},
         "resources": {},
@@ -98,12 +99,12 @@ def handler(
     scene = get_entity(session_id, db, "scene", "active_scene")
     if not scene:
         scene = {"members": [], "location_key": location_key}
-    
+
     member_id = f"character:{key}"
     if member_id not in scene.get("members", []):
         scene.setdefault("members", []).append(member_id)
         set_entity(session_id, db, "scene", "active_scene", scene)
-    
+
     # 6. Profile
     npc_profile = {
         "personality_traits": context.get("personality_traits", []),
@@ -119,7 +120,7 @@ def handler(
     index_add_npc(session_id, db, key, f"{name_display} ({initial_disposition})")
 
     return {
-        "success": True, 
-        "key": key, 
+        "success": True,
+        "key": key,
         "template_used": manifest_to_use.name
     }

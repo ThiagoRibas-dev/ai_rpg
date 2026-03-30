@@ -1,8 +1,7 @@
 """Base repository for database operations."""
 
-from abc import ABC, abstractmethod
 import sqlite3
-from typing import List, Optional
+from abc import ABC, abstractmethod
 
 
 class BaseRepository(ABC):
@@ -23,12 +22,12 @@ class BaseRepository(ABC):
         """Execute a query and return cursor."""
         return self.conn.execute(query, params)
 
-    def _fetchone(self, query: str, params: tuple = ()) -> Optional[sqlite3.Row]:
+    def _fetchone(self, query: str, params: tuple = ()) -> sqlite3.Row | None:
         """Execute and fetch one result."""
         cursor = self._execute(query, params)
         return cursor.fetchone()
 
-    def _fetchall(self, query: str, params: tuple = ()) -> List[sqlite3.Row]:
+    def _fetchall(self, query: str, params: tuple = ()) -> list[sqlite3.Row]:
         """Execute and fetch all results."""
         cursor = self._execute(query, params)
         return cursor.fetchall()

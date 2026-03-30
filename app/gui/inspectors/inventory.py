@@ -1,10 +1,13 @@
+from typing import Any
+
 from nicegui import ui
+
+from app.models.vocabulary import PrefabID
+from app.prefabs.validation import get_path
 from app.services.state_service import get_entity
 from app.setup.setup_manifest import SetupManifest
-from app.prefabs.validation import get_path
+
 from .rendering_mixin import RenderingMixin
-from typing import Any
-from app.models.vocabulary import PrefabID
 
 
 class InventoryInspector(RenderingMixin):
@@ -89,7 +92,7 @@ class InventoryInspector(RenderingMixin):
     def _render_inventory_item(self, path, idx, item, config=None):
         item_path = f"{path}.{idx}" if path else None
         name = self._get_item_label(item, config)
-        
+
         # 3-Layer Agnostic Prefab Detection for List Items
         detected_prefab, key_map = self._detect_item_prefab(item, config)
         if detected_prefab == PrefabID.RES_POOL:
@@ -122,10 +125,10 @@ class InventoryInspector(RenderingMixin):
                     # Gameplay Actions
                     ui.button(icon="play_arrow", on_click=lambda: self.trigger_action("use", name)) \
                         .props("flat dense round size=xs color=green").tooltip(f"Use/Equip {name}")
-                    
+
                     ui.button(icon="vertical_align_bottom", on_click=lambda: self.trigger_action("drop", name)) \
                         .props("flat dense round size=xs color=orange").tooltip(f"Drop {name}")
-                    
+
                     ui.button(icon="help_outline", on_click=lambda: self.trigger_action("inspect", name)) \
                         .props("flat dense round size=xs color=cyan").tooltip(f"Inspect {name}")
 
@@ -134,7 +137,7 @@ class InventoryInspector(RenderingMixin):
                         ui.separator().props("vertical")
                         ui.button(icon="edit", on_click=lambda: self._edit_item(path, idx, item)) \
                             .props("flat dense round size=xs color=grey").tooltip("Edit (Manual)")
-                        
+
                         ui.button(icon="delete", on_click=lambda: self._remove_item(path, idx)) \
                             .props("flat dense round size=xs color=red").tooltip("Remove (Manual)")
 

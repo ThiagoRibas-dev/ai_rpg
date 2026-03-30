@@ -1,19 +1,20 @@
 import json
 import logging
 import threading
-from typing import Dict, Type
+
 from pydantic import BaseModel
+
 from app.context.context_builder import ContextBuilder
 from app.context.memory_retriever import MemoryRetriever
 from app.context.state_context import StateContextBuilder
 from app.core.simulation_service import SimulationService
+from app.llm.schemas import TurnMetadata, TurnSuggestions
 from app.models.game_session import GameSession
 from app.models.message import Message
 from app.models.session import Session
 from app.setup.setup_manifest import SetupManifest
 from app.tools.executor import ToolExecutor
-from app.tools.schemas import Adjust, Set, Mark, Roll, Move, Note, ContextRetrieve, NpcSpawn, LocationCreate, StateQuery
-from app.llm.schemas import TurnSuggestions, TurnMetadata
+from app.tools.schemas import Adjust, ContextRetrieve, LocationCreate, Mark, Move, Note, NpcSpawn, Roll, Set, StateQuery
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +36,7 @@ class ReActTurnManager:
         self.tool_registry = orchestrator.tool_registry
         self.vector_store = orchestrator.vector_store
         self.ui_queue = orchestrator.ui_queue
-        self.tool_map: Dict[str, Type[BaseModel]] = {
+        self.tool_map: dict[str, type[BaseModel]] = {
             t.model_fields["name"].default: t
             for t in self.tool_registry.get_all_tool_types()
         }
@@ -100,7 +101,7 @@ class ReActTurnManager:
         )
         working_history = list(chat_history)
         working_history = self._prepend_rolling_summary(game_session, working_history)
-        
+
         mems = mem_retriever.get_relevant(
             session_in_thread,
             recent_messages=working_history,
@@ -110,7 +111,7 @@ class ReActTurnManager:
             game_session, chat_history, rag_memories=mems
         )
         turn_system_prompt = f"{static_instruction}\n\n{dynamic_context}"
-        
+
         if mems:
             # Emit UI event for debug visibility
             rag_text_for_ui = mem_retriever.format_for_prompt(mems)
@@ -123,7 +124,7 @@ class ReActTurnManager:
                 turn_id=turn_id,
             )
             working_history.append(tool_return_message)
-            
+
             # Flatten memory IDs for the UI queue
             flat_mem_ids = [m.id for cat_mems in mems.values() for m in cat_mems]
 
@@ -182,7 +183,7 @@ class ReActTurnManager:
             turn_id=turn_id,
         )
         working_history.append(tool_message)
-        
+
         # --- 5. ACTION LOOP ---
         loop_count = 0
         narrative_text = ""
@@ -203,7 +204,7 @@ class ReActTurnManager:
                 if self.orchestrator.stop_event.is_set():
                     return
                 raise e
-                
+
             assistant_msg = Message(
                 role="assistant",
                 content=response.content,
@@ -212,7 +213,7 @@ class ReActTurnManager:
                 tool_calls=response.tool_calls,
             )
             working_history.append(assistant_msg)
-            
+
             if response.content and not response.tool_calls:
                 self.ui_queue.put(
                     {
@@ -329,11 +330,11 @@ class ReActTurnManager:
                     )
             except Exception as fallback_e:
                 self.logger.error(f"Fallback narrative generation failed: {fallback_e}")
-                
+
         # --- 6. TIER 1: SYNCHRONOUS SUGGESTIONS ---
         if self.orchestrator.stop_event.is_set() or not narrative_text:
             return
-            
+
         choices = []
         try:
             # Prepare minimal history for suggestions
@@ -347,7 +348,7 @@ class ReActTurnManager:
                     content="Write 3-5 action options the Player could take next, in first person, in the format: \"I do X\", \"I go to Y\", etc. Return strictly as JSON.",
                 )
             )
-            
+
             # Fast, small schema call
             suggestions_out = self.llm_connector.get_structured_response(
                 system_prompt=turn_system_prompt,
@@ -356,14 +357,14 @@ class ReActTurnManager:
                 temperature=0.7,
             )
             choices = list(suggestions_out.choices or [])
-            
+
         except Exception as e:
             self.logger.warning(f"Turn suggestions generation failed: {e}")
-        
+
         # --- 7. PERSISTENCE (NARRATIVE) ---
         if narrative_text.strip():
             session_in_thread.add_message("assistant", narrative_text)
-            
+
         self.orchestrator._update_game_in_thread(
             game_session, thread_db_manager, session_in_thread
         )
@@ -406,7 +407,7 @@ class ReActTurnManager:
         Uses its own DB connection for thread safety.
         """
         self.logger.debug(f"Starting background chronicler for session {session_id}")
-        
+
         try:
             # Prepare metadata context
             final_history = list(working_history)
@@ -434,15 +435,15 @@ class ReActTurnManager:
             )
 
             # Persist with new DB connection
-            from app.database.db_manager import DBManager
             from app.core.metadata.turn_metadata_service import TurnMetadataService
+            from app.database.db_manager import DBManager
             with DBManager(self.orchestrator.db_path) as db:
                 turnmeta = TurnMetadataService(db, self.vector_store)
-                
+
                 # Fetch rolling history to get round number
                 game_session = db.sessions.get_by_id(session_id)
                 full_session = Session.from_json(game_session.session_data)
-                
+
                 turnmeta.persist(
                     session_id=session_id,
                     prompt_id=game_session.prompt_id,
@@ -451,9 +452,9 @@ class ReActTurnManager:
                     tags=[t.strip() for t in metadata_out.tags if isinstance(t, str) and t.strip()],
                     importance=int(metadata_out.importance or 3),
                 )
-            
+
             self.logger.info(f"Background chronicler complete for session {session_id}")
-                
+
         except Exception as e:
             self.logger.error(f"Background chronicler failed: {e}", exc_info=True)
 
@@ -475,6 +476,6 @@ class ReActTurnManager:
             role=prefix_role,
             content=f"# STORY SO FAR\n{summary}",
         )
-        return [prefix] + history
+        return [prefix, *history]
 
 

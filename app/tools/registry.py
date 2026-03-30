@@ -1,9 +1,10 @@
+import copy
 import importlib
 import logging
 import pkgutil
+from collections.abc import Callable
 from pathlib import Path
-import copy
-from typing import Any, Callable, Dict, List, Type
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -31,7 +32,7 @@ def _clean_schema(d: Any):
             _clean_schema(item)
 
 
-def _resolve_refs(schema_part: Any, defs: Dict[str, Any]) -> Any:
+def _resolve_refs(schema_part: Any, defs: dict[str, Any]) -> Any:
     """Recursively resolves $ref in schema."""
     if isinstance(schema_part, dict):
         if "$ref" in schema_part:
@@ -54,19 +55,19 @@ class ToolRegistry:
     """
 
     def __init__(self):
-        self._handlers: Dict[Type[BaseModel], Callable] = {}
-        self.tool_schemas: List[Dict[str, Any]] = []
+        self._handlers: dict[type[BaseModel], Callable] = {}
+        self.tool_schemas: list[dict[str, Any]] = []
         self._discover_tools()
 
     def _discover_tools(self):
         """
         Auto-discovers tools in app.tools.handlers (Atomic) AND app.tools.builtin (Legacy/Setup).
         """
-        import app.tools.handlers as atomic_tools
         import app.tools.builtin as builtin_tools
+        import app.tools.handlers as atomic_tools
 
         # 1. Map Tool Names -> Pydantic Types
-        name_to_type: Dict[str, Type[BaseModel]] = {}
+        name_to_type: dict[str, type[BaseModel]] = {}
         for attr_name in dir(tool_schemas):
             attr = getattr(tool_schemas, attr_name)
             if (
@@ -133,7 +134,7 @@ class ToolRegistry:
                 except Exception as e:
                     logger.error(f"Failed to load {module_name}: {e}", exc_info=True)
 
-    def _register_schema(self, schema_type: Type[BaseModel]):
+    def _register_schema(self, schema_type: type[BaseModel]):
         schema = schema_type.model_json_schema()
         defs = schema.get("$defs", {}) or schema.get("definitions", {})
         properties = schema.get("properties", {}).copy()
@@ -144,7 +145,7 @@ class ToolRegistry:
         # Ensure all parameters have a JSON Schema "type" where possible.
         # Some fields (like 'Any') produce schemas with only a description/title,
         # which llama.cpp's JSON-schema-to-BNF converter does not accept.
-        for prop_name, prop_schema in properties.items():
+        for _prop_name, prop_schema in properties.items():
             if not isinstance(prop_schema, dict):
                 continue
             # Skip schemas that already declare a type or use combinators/refs/enums
@@ -174,13 +175,13 @@ class ToolRegistry:
             }
         )
 
-    def get_all_schemas(self) -> List[Dict[str, Any]]:
+    def get_all_schemas(self) -> list[dict[str, Any]]:
         return self.tool_schemas
 
-    def get_all_tool_types(self) -> List[Type[BaseModel]]:
+    def get_all_tool_types(self) -> list[type[BaseModel]]:
         return list(self._handlers.keys())
 
-    def get_llm_tool_schemas(self, tool_names: List[str]) -> List[Dict[str, Any]]:
+    def get_llm_tool_schemas(self, tool_names: list[str]) -> list[dict[str, Any]]:
         llm_schemas = []
         for schema in self.tool_schemas:
             if schema["name"] in tool_names:
@@ -197,7 +198,7 @@ class ToolRegistry:
         return llm_schemas
 
     def execute(
-        self, tool_model: BaseModel, context: Dict[str, Any] | None = None
+        self, tool_model: BaseModel, context: dict[str, Any] | None = None
     ) -> Any:
         tool_type = type(tool_model)
         if tool_type not in self._handlers:

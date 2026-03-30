@@ -1,6 +1,7 @@
+from dotenv import load_dotenv
+
 from app.gui.main import run
 from app.utils.logger_config import setup_logging
-from dotenv import load_dotenv
 
 DB_PATH = "ai_rpg.db"
 

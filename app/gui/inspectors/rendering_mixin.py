@@ -1,9 +1,12 @@
+import re
+from typing import Any
+
 from nicegui import ui
-from typing import Any, Dict, Optional, Tuple
-from app.models.vocabulary import FieldKey, ConfigKey, PrefabID
+
+from app.models.vocabulary import ConfigKey, FieldKey, PrefabID
 from app.prefabs.validation import get_path
 from app.services.state_service import get_entity
-import re
+
 
 class RenderingMixin:
     """
@@ -15,17 +18,17 @@ class RenderingMixin:
     - _handle_field_save(path, value): updates the state
     """
 
-    def _detect_pool_keys(self, item: Any) -> Tuple[Optional[str], Optional[str]]:
+    def _detect_pool_keys(self, item: Any) -> tuple[str | None, str | None]:
         """Identifies current/max key pairs in a dict."""
         if not isinstance(item, dict):
             return None, None
-        
+
         # 1. Standard keys
         if FieldKey.CURRENT in item and FieldKey.MAX in item:
             return FieldKey.CURRENT, FieldKey.MAX
         if "current" in item and "max" in item:
             return "current", "max"
-            
+
         # 2. Suffix match (*_current, *_max)
         curr_keys = [k for k in item.keys() if k.endswith("_current")]
         for ck in curr_keys:
@@ -33,15 +36,15 @@ class RenderingMixin:
             mk = f"{base}_max"
             if mk in item:
                 return ck, mk
-            
+
         # 3. Fallback: First two numeric values
-        numeric_keys = [k for k, v in item.items() if isinstance(v, (int, float))]
+        numeric_keys = [k for k, v in item.items() if isinstance(v, int | float)]
         if len(numeric_keys) >= 2:
             return numeric_keys[0], numeric_keys[1]
-            
+
         return None, None
 
-    def _detect_item_prefab(self, item: Any, config: Optional[Dict] = None) -> Tuple[Optional[str], Dict[str, str]]:
+    def _detect_item_prefab(self, item: Any, config: dict | None = None) -> tuple[str | None, dict[str, str]]:
         """
         3-layer detection algorithm for identifying list item structure:
         1. Schema: item_shape from config
@@ -54,7 +57,7 @@ class RenderingMixin:
                 return PrefabID.RES_TRACK, {}
             if isinstance(item, bool):
                 return PrefabID.VAL_BOOL, {}
-            if isinstance(item, (int, float)):
+            if isinstance(item, int | float):
                 return PrefabID.RES_COUNTER, {}
             if isinstance(item, str) and re.match(r'^\d*d\d+', item):
                 return PrefabID.VAL_STEP_DIE, {}
@@ -68,25 +71,25 @@ class RenderingMixin:
             max_key = next((k for k in item_shape.keys() if k.endswith("_max")), None)
             if curr_key and max_key:
                 return PrefabID.RES_POOL, {"curr_key": curr_key, "max_key": max_key}
-            
+
             # Check for VAL_COMPOUND
             if FieldKey.SCORE in item_shape and FieldKey.MOD in item_shape:
                 return PrefabID.VAL_COMPOUND, {}
-            
+
             # Check for VAL_LADDER
             if FieldKey.VALUE in item_shape and FieldKey.LABEL in item_shape:
                 return PrefabID.VAL_LADDER, {}
 
         # --- Layer 2: Prefab shape matching (canonical shapes) ---
         item_keys = set(item.keys())
-        
+
         # Exact match logic for common prefabs
         if {FieldKey.SCORE, FieldKey.MOD}.issubset(item_keys):
             return PrefabID.VAL_COMPOUND, {}
-            
+
         if {FieldKey.VALUE, FieldKey.LABEL}.issubset(item_keys):
             return PrefabID.VAL_LADDER, {}
-            
+
         if {FieldKey.CURRENT, FieldKey.MAX}.issubset(item_keys) or {"current", "max"}.issubset(item_keys):
             curr = FieldKey.CURRENT if FieldKey.CURRENT in item_keys else "current"
             mx = FieldKey.MAX if FieldKey.MAX in item_keys else "max"
@@ -99,20 +102,20 @@ class RenderingMixin:
 
         return None, {}
 
-    def _get_item_label(self, item: Any, config: Optional[Dict] = None) -> str:
+    def _get_item_label(self, item: Any, config: dict | None = None) -> str:
         """Helper to get just the label part of an agnostic item."""
-        if not isinstance(item, dict): 
+        if not isinstance(item, dict):
             return str(item)
         item_shape = config.get(ConfigKey.ITEM_SHAPE, {}) if config else {}
         for key, type_name in item_shape.items():
-            if type_name == "str" and key in item: 
+            if type_name == "str" and key in item:
                 return str(item[key])
         for key in [FieldKey.NAME, FieldKey.LABEL]:
-            if key in item and item[key]: 
+            if item.get(key):
                 return str(item[key])
         return "Item"
 
-    def _format_item_agnostic(self, item: Any, config: Optional[Dict] = None) -> str:
+    def _format_item_agnostic(self, item: Any, config: dict | None = None) -> str:
         """
         Recursively formats an item based on its shape and manifest metadata.
         Aligns with "Lego Protocol" (Prefabs).
@@ -128,32 +131,32 @@ class RenderingMixin:
             return s
 
         item_shape = config.get(ConfigKey.ITEM_SHAPE, {}) if config else {}
-        
+
         # 1. Identify Label(s)
         labels = []
         used_keys = set()
-        
+
         # Try manifest hint first
         label_key = None
         for key, type_name in item_shape.items():
             if type_name == "str" and key in item:
                 label_key = key
                 break
-        
+
         # Fallback to standard name/label keys
         if not label_key:
             for k in [FieldKey.NAME, FieldKey.LABEL]:
-                if k in item and item[k]:
+                if item.get(k):
                     label_key = k
                     break
-        
+
         if label_key:
             labels.append(str(item[label_key]))
             used_keys.add(label_key)
 
         # 2. Identify Values
         vals = []
-        
+
         # Specific prefab detection for text summary
         keys = self._detect_pool_keys(item)
         if keys[0] and keys[1]:
@@ -163,26 +166,26 @@ class RenderingMixin:
             sign = "+" if item[FieldKey.MOD] >= 0 else ""
             vals.append(f"{item[FieldKey.SCORE]} ({sign}{item[FieldKey.MOD]})")
             used_keys.update([FieldKey.SCORE, FieldKey.MOD])
-        
+
         # Collect remaining numeric/bool fields
         for k, v in item.items():
-            if k in used_keys: 
+            if k in used_keys:
                 continue
-            if isinstance(v, (int, float, bool)):
+            if isinstance(v, int | float | bool):
                 fmt_v = self._format_item_agnostic(v)
                 vals.append(f"{k}:{fmt_v}")
 
         label_part = " ".join(labels)
         val_part = ", ".join(vals)
-        
+
         if label_part and val_part:
             return f"{label_part} ({val_part})"
         return label_part or val_part or "???"
 
-    def _render_pool_widget(self, label: str, path: str, val: Any, config: Optional[Dict] = None, mini: bool = False, keys: Optional[Tuple[str, str]] = None):
+    def _render_pool_widget(self, label: str, path: str, val: Any, config: dict | None = None, mini: bool = False, keys: tuple[str, str] | None = None):
         if not isinstance(val, dict):
             val = {}
-            
+
         curr_key, max_key = keys if keys else self._detect_pool_keys(val)
         if not curr_key or not max_key:
             # Fallback to simple label if detection fails
@@ -208,7 +211,7 @@ class RenderingMixin:
 
             ui.linear_progress(value=pct, size="4px" if mini else "6px", show_value=False).classes("rounded bg-slate-700")
 
-    def _render_counter_widget(self, label: str, path: str, val: Any, config: Optional[Dict] = None, mini: bool = False):
+    def _render_counter_widget(self, label: str, path: str, val: Any, config: dict | None = None, mini: bool = False):
         with ui.row().classes("w-full justify-between items-center mb-1 rounded p-1 transition-colors cursor-pointer hover:bg-slate-700/40 group").on("click", lambda: self._open_editor(label, path, PrefabID.RES_COUNTER, val)):
             ui.label(label).classes("text-sm text-slate-300")
             with ui.row().classes("items-center gap-2"):
@@ -217,7 +220,7 @@ class RenderingMixin:
                 ui.button("+", on_click=lambda e: (e.stop_propagation(), self._quick_adjust(path, 1, config))).props("flat dense round size=xs")
                 ui.icon("edit", size="12px").classes("text-slate-600 opacity-0 group-hover:opacity-100")
 
-    def _render_track_widget(self, label: str, path: str, val: Any, config: Optional[Dict] = None, mini: bool = False):
+    def _render_track_widget(self, label: str, path: str, val: Any, config: dict | None = None, mini: bool = False):
         if not isinstance(val, list):
             val = []
         with ui.row().classes("w-full justify-between items-center mb-1 rounded p-1 transition-colors cursor-pointer hover:bg-slate-700/40 group").on("click", lambda: self._open_editor(label, path, PrefabID.RES_TRACK, val)):
@@ -228,10 +231,10 @@ class RenderingMixin:
                     ui.icon("circle").classes(f"text-[10px] {color}")
                 ui.icon("edit", size="12px").classes("text-slate-600 opacity-0 group-hover:opacity-100")
 
-    def _render_simple_val_widget(self, label: str, path: str, val: Any, prefab: str, config: Optional[Dict] = None, mini: bool = False):
+    def _render_simple_val_widget(self, label: str, path: str, val: Any, prefab: str, config: dict | None = None, mini: bool = False):
         with ui.row().classes("w-full justify-between items-center mb-1 rounded p-1 transition-colors cursor-pointer hover:bg-slate-700/40 group").on("click", lambda: self._open_editor(label, path, prefab, val)):
             ui.label(label).classes("text-sm text-slate-300")
-            
+
             with ui.row().classes("items-center gap-2"):
                 if prefab == PrefabID.VAL_TEXT:
                     ui.label(str(val)).classes("text-sm text-white font-serif italic")
@@ -262,7 +265,7 @@ class RenderingMixin:
 
                 ui.icon("edit", size="12px").classes("text-slate-600 opacity-0 group-hover:opacity-100")
 
-    def _quick_adjust(self, path: str, delta: int, config: Optional[Dict] = None):
+    def _quick_adjust(self, path: str, delta: int, config: dict | None = None):
         """Quickly adjust a resource current value."""
         if not self.session_id:
             return
@@ -282,26 +285,26 @@ class RenderingMixin:
                 new_val = full_val.get(curr_key, 0) + delta
                 self._handle_field_save(f"{path}.{curr_key}", new_val)
                 return
-            
+
             # Fallback to old heuristic if detection fails
             curr_key, _ = self._detect_pool_keys(full_val)
             if curr_key:
                 new_val = full_val.get(curr_key, 0) + delta
                 self._handle_field_save(f"{path}.{curr_key}", new_val)
                 return
-        
+
         # It's a simple int or counter
         new_val = int(full_val or 0) + delta
         self._handle_field_save(path, new_val)
 
     def _prompt_add_item(self, path):
         """Show dialog to add a new item/tag."""
-        new_val = {"name": "New Item", "description": ""} 
+        new_val = {"name": "New Item", "description": ""}
         self._open_editor("Add New Item", path, "VAL_JSON", new_val, on_save=self._handle_list_add)
 
     def _handle_list_add(self, path, new_item):
         """Add an item to a list field."""
-        if not self.session_id: 
+        if not self.session_id:
             return
         entity_key = getattr(self, "entity_key", "player")
         entity = get_entity(self.session_id, self.db, "character", entity_key)
@@ -312,7 +315,7 @@ class RenderingMixin:
 
     def _handle_list_update(self, path, index, new_item):
         """Update an item at a specific index in a list field."""
-        if not self.session_id: 
+        if not self.session_id:
             return
         entity_key = getattr(self, "entity_key", "player")
         entity = get_entity(self.session_id, self.db, "character", entity_key)
@@ -323,7 +326,7 @@ class RenderingMixin:
 
     def _delete_list_item(self, path, index):
         """Remove an item from a list field."""
-        if not self.session_id: 
+        if not self.session_id:
             return
         entity_key = getattr(self, "entity_key", "player")
         entity = get_entity(self.session_id, self.db, "character", entity_key)

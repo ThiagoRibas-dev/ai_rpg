@@ -1,4 +1,5 @@
 import logging
+
 from app.models.ruleset import Ruleset
 
 logger = logging.getLogger(__name__)

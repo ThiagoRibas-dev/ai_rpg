@@ -1,15 +1,17 @@
-from nicegui import ui
 import asyncio
-import logging
 import json
+import logging
 import time
+
+from nicegui import ui
+
+from app.models.vocabulary import MemoryKind, TaskState
+from app.prefabs.manifest import SystemManifest
 from app.prefabs.validation import validate_entity
-from app.setup.world_gen_service import WorldGenService
-from app.setup.sheet_generator import SheetGenerator
 from app.services.game_setup_service import GameSetupService
 from app.setup.schemas import LoreData, LoreStream
-from app.prefabs.manifest import SystemManifest
-from app.models.vocabulary import MemoryKind, TaskState
+from app.setup.sheet_generator import SheetGenerator
+from app.setup.world_gen_service import WorldGenService
 
 logger = logging.getLogger(__name__)
 
@@ -115,18 +117,18 @@ class SetupWizard:
                         with self.generation_tracking_container:
                             ui.label("Generation Progress").classes("text-xl font-bold text-amber-500")
                             self.elapsed_label = ui.label("⏱ Elapsed: 0.0s").classes("text-md text-gray-400 font-mono")
-                            
+
                             with ui.row().classes("w-full gap-4 items-start"):
                                 # Pending
                                 with ui.card().classes("flex-grow bg-slate-800 border border-slate-700 w-1/3 min-h-[120px]"):
                                     ui.label("⏳ PENDING").classes("text-sm font-bold text-gray-400 border-b border-gray-600 w-full mb-2 pb-1")
                                     self.pending_container = ui.row().classes("w-full gap-2")
-                                
+
                                 # Running
                                 with ui.card().classes("flex-grow bg-slate-800 border border-slate-700 w-1/3 min-h-[120px]"):
                                     ui.label("⚙ RUNNING").classes("text-sm font-bold text-blue-400 border-b border-blue-800 w-full mb-2 pb-1")
                                     self.running_container = ui.row().classes("w-full gap-2")
-                                    
+
                                 # Completed
                                 with ui.card().classes("flex-grow bg-slate-800 border border-slate-700 w-1/3 min-h-[120px]"):
                                     ui.label("✅ COMPLETED").classes("text-sm font-bold text-green-400 border-b border-green-800 w-full mb-2 pb-1")
@@ -195,35 +197,35 @@ class SetupWizard:
     def _update_timer_ui(self):
         if not self.start_time:
             return
-            
+
         elapsed = time.time() - self.start_time
         self.elapsed_label.set_text(f"⏱ Elapsed: {elapsed:.1f}s")
-        
+
         # Categorize tasks
         pending = []
         running = []
         completed = []
-        
-        for key, task in self.task_tracker.items():
+
+        for _key, task in self.task_tracker.items():
             if task["state"] == TaskState.PENDING:
                 pending.append(task)
             elif task["state"] == TaskState.RUNNING:
                 running.append(task)
             elif task["state"] == TaskState.DONE:
                 completed.append(task)
-                
+
         # Update Pending
         self.pending_container.clear()
         with self.pending_container:
             for t in pending:
                 ui.badge(t["label"], color="gray")
-                
+
         # Update Running
         self.running_container.clear()
         with self.running_container:
             for t in running:
                 ui.badge(t["label"], color="blue")
-                
+
         # Update Completed
         self.completed_container.clear()
         with self.completed_container:
@@ -249,8 +251,8 @@ class SetupWizard:
 
     def _execute_pipeline(self):
         try:
-            from concurrent.futures import ThreadPoolExecutor, as_completed
             import os
+            from concurrent.futures import ThreadPoolExecutor, as_completed
 
             connector = self.orchestrator._get_llm_connector()
 
@@ -325,7 +327,7 @@ class SetupWizard:
 
         except Exception as e:
             logger.error(f"Generation Pipeline Failed: {e}", exc_info=True)
-            self.error_msg.set_text(f"Generation Failed: {str(e)}")
+            self.error_msg.set_text(f"Generation Failed: {e!s}")
             return False
 
     def _prepare_review_data(self):
@@ -460,7 +462,7 @@ class SetupWizard:
                 if isinstance(val, dict) and "value" in val:
                     val = val["value"]
 
-                is_num = isinstance(val, (int, float))
+                is_num = isinstance(val, int | float)
                 is_digit = isinstance(val, str) and val.isdigit()
 
                 if is_num or is_digit:
@@ -538,7 +540,7 @@ class SetupWizard:
                 self.on_complete()
 
         except Exception as e:
-            ui.notify(f"Creation Failed: {str(e)}", type="negative")
+            ui.notify(f"Creation Failed: {e!s}", type="negative")
             logger.error(f"Creation failed: {e}", exc_info=True)
 
     def _render_manifest_character_sheet(self):

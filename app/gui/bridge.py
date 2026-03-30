@@ -1,6 +1,6 @@
-import queue
 import logging
-from typing import Any, Dict, Optional
+import queue
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ class NiceGUIBridge:
         self.map_component = None
 
         # Lifecycle Management
-        self.active_turn_id: Optional[str] = None
+        self.active_turn_id: str | None = None
 
         # Header Labels
         self.session_label = MockElement()
@@ -81,7 +81,7 @@ class NiceGUIBridge:
         except Exception as e:
             logger.error(f"Error processing UI queue: {e}", exc_info=True)
 
-    async def _dispatch_message(self, msg: Dict[str, Any]):
+    async def _dispatch_message(self, msg: dict[str, Any]):
         # --- LIFECYCLE FILTER ---
         # If the message is tagged with a turn_id, check if it matches the active one.
         # Messages without a turn_id (system events) are allowed through.

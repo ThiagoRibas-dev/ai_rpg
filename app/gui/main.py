@@ -1,18 +1,20 @@
-from nicegui import ui, app
-import os
 import logging
-from app.gui.theme import Theme
-from app.database.db_manager import DBManager
+import os
+
+from nicegui import app, ui
+
 from app.core.orchestrator import Orchestrator
+from app.database.db_manager import DBManager
 from app.gui.bridge import NiceGUIBridge
-from app.services.manifest_service import seed_builtin_manifests
 
 # Components
 from app.gui.components.chat import ChatComponent
 from app.gui.components.map import MapComponent
-from app.gui.inspectors.manager import InspectorManager
-from app.gui.controls.session_list import SessionListComponent
 from app.gui.controls.prompt_list import PromptListComponent
+from app.gui.controls.session_list import SessionListComponent
+from app.gui.inspectors.manager import InspectorManager
+from app.gui.theme import Theme
+from app.services.manifest_service import seed_builtin_manifests
 
 logger = logging.getLogger(__name__)
 

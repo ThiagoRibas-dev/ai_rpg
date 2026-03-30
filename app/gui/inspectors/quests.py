@@ -1,4 +1,5 @@
 from nicegui import ui
+
 from app.services.state_service import get_all_of_type
 
 
@@ -29,7 +30,7 @@ class QuestInspector:
                 )
                 return
 
-            for key, quest in quests.items():
+            for _key, quest in quests.items():
                 self._render_quest_card(quest)
 
     def _render_quest_card(self, quest):

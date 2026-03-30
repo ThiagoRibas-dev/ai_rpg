@@ -1,8 +1,9 @@
 import logging
-from typing import Any, Optional
-from app.services.state_service import get_entity, set_entity
-from app.prefabs.validation import validate_entity, get_path, set_path
+from typing import Any
+
 from app.prefabs.manifest import SystemManifest
+from app.prefabs.validation import get_path, set_path, validate_entity
+from app.services.state_service import get_entity, set_entity
 
 logger = logging.getLogger(__name__)
 
@@ -13,10 +14,10 @@ def handler(path: str, value: Any, target: str = "player", reason: str = "", **c
     """
     session_id = context.get("session_id")
     db = context.get("db_manager")
-    manifest: Optional[SystemManifest] = context.get("manifest")
+    manifest: SystemManifest | None = context.get("manifest")
 
     parts = path.split(".")
-    
+
     # Check if path starts with valid entity type/id (e.g. "character.player.stats...")
     # This is a heuristic: if we have at least 3 parts (type.id.field), treat as absolute.
     if len(parts) >= 3 and parts[0] in ["character", "location", "item", "quest"]:

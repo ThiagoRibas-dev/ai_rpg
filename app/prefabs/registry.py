@@ -5,39 +5,39 @@ Defines the Prefab dataclass and the global PREFABS dictionary.
 Each prefab bundles: data shape, validator, UI widget hint, and AI description.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Literal
+from typing import Any, Literal
 
-from app.models.vocabulary import PrefabID, FieldKey
+from app.models.vocabulary import FieldKey, PrefabID
 from app.prefabs.validators import (
-    # Validators
-    validate_int,
-    validate_compound,
-    validate_step_die,
-    validate_ladder,
-    validate_bool,
-    validate_text,
-    validate_pool,
-    validate_counter,
-    validate_track,
-    validate_list,
-    validate_tags,
-    validate_weighted,
+    get_default_bool,
+    get_default_compound,
+    get_default_counter,
     # Default generators
     get_default_int,
-    get_default_compound,
-    get_default_step_die,
     get_default_ladder,
-    get_default_bool,
-    get_default_text,
-    get_default_pool,
-    get_default_counter,
-    get_default_track,
     get_default_list,
+    get_default_pool,
+    get_default_step_die,
     get_default_tags,
+    get_default_text,
+    get_default_track,
     get_default_weighted,
+    validate_bool,
+    validate_compound,
+    validate_counter,
+    # Validators
+    validate_int,
+    validate_ladder,
+    validate_list,
+    validate_pool,
+    validate_step_die,
+    validate_tags,
+    validate_text,
+    validate_track,
+    validate_weighted,
 )
-
 
 # =============================================================================
 # PREFAB DATACLASS
@@ -48,7 +48,7 @@ from app.prefabs.validators import (
 class Prefab:
     """
     A prefab bundles vocabulary, validation, and rendering for a field type.
-    
+
     Attributes:
         id: Unique identifier (e.g., "RES_POOL")
         family: Category for grouping ("VAL", "RES", "CONT")
@@ -61,8 +61,8 @@ class Prefab:
     id: str
     family: Literal["VAL", "RES", "CONT"]
     shape: Any
-    validate: Callable[[Any, Dict[str, Any]], Any]
-    get_default: Callable[[Dict[str, Any]], Any]
+    validate: Callable[[Any, dict[str, Any]], Any]
+    get_default: Callable[[dict[str, Any]], Any]
     widget: str
     ai_hint: str
 
@@ -72,12 +72,12 @@ class Prefab:
 # =============================================================================
 
 
-PREFABS: Dict[str, Prefab] = {
-    
+PREFABS: dict[str, Prefab] = {
+
     # -------------------------------------------------------------------------
     # VALUE FAMILY: Rarely-changing ratings
     # -------------------------------------------------------------------------
-    
+
     PrefabID.VAL_INT: Prefab(
         id=PrefabID.VAL_INT,
         family="VAL",
@@ -87,7 +87,7 @@ PREFABS: Dict[str, Prefab] = {
         widget="number",
         ai_hint="Simple number. Use 'adjust' +/- or 'set' to change.",
     ),
-    
+
     PrefabID.VAL_COMPOUND: Prefab(
         id=PrefabID.VAL_COMPOUND,
         family="VAL",
@@ -97,7 +97,7 @@ PREFABS: Dict[str, Prefab] = {
         widget="compound",
         ai_hint="Score with modifier (e.g., 18 -> +4). Set the score, mod auto-computes.",
     ),
-    
+
     PrefabID.VAL_STEP_DIE: Prefab(
         id=PrefabID.VAL_STEP_DIE,
         family="VAL",
@@ -107,7 +107,7 @@ PREFABS: Dict[str, Prefab] = {
         widget="die_selector",
         ai_hint="Die type from chain. Use 'set' to change step (e.g., 'd6' to 'd8').",
     ),
-    
+
     PrefabID.VAL_LADDER: Prefab(
         id=PrefabID.VAL_LADDER,
         family="VAL",
@@ -117,7 +117,7 @@ PREFABS: Dict[str, Prefab] = {
         widget="ladder",
         ai_hint="Rated value with label (e.g., +2 = 'Fair'). Set the value, label auto-fills.",
     ),
-    
+
     PrefabID.VAL_BOOL: Prefab(
         id=PrefabID.VAL_BOOL,
         family="VAL",
@@ -137,11 +137,11 @@ PREFABS: Dict[str, Prefab] = {
         widget="text_label",
         ai_hint="Simple text string (e.g. Deity, Class Path). Use 'set' to change."
     ),
-    
+
     # -------------------------------------------------------------------------
     # RESOURCE FAMILY: Fluctuating values during play
     # -------------------------------------------------------------------------
-    
+
     PrefabID.RES_POOL: Prefab(
         id=PrefabID.RES_POOL,
         family="RES",
@@ -151,7 +151,7 @@ PREFABS: Dict[str, Prefab] = {
         widget="progress_bar",
         ai_hint="Current/max pool. Adjust 'path.current' for damage/healing. Auto-clamped to 0-max.",
     ),
-    
+
     PrefabID.RES_COUNTER: Prefab(
         id=PrefabID.RES_COUNTER,
         family="RES",
@@ -161,7 +161,7 @@ PREFABS: Dict[str, Prefab] = {
         widget="counter",
         ai_hint="Simple counter (XP, gold). Use 'adjust' to add/subtract. Usually no max.",
     ),
-    
+
     PrefabID.RES_TRACK: Prefab(
         id=PrefabID.RES_TRACK,
         family="RES",
@@ -171,11 +171,11 @@ PREFABS: Dict[str, Prefab] = {
         widget="checkbox_row",
         ai_hint="Sequential boxes. Use 'mark' to fill, negative to clear. Fills left-to-right.",
     ),
-    
+
     # -------------------------------------------------------------------------
     # CONTAINER FAMILY: Lists and collections
     # -------------------------------------------------------------------------
-    
+
     PrefabID.CONT_LIST: Prefab(
         id=PrefabID.CONT_LIST,
         family="CONT",
@@ -185,7 +185,7 @@ PREFABS: Dict[str, Prefab] = {
         widget="item_list",
         ai_hint="List of items. Use 'set' to replace entire list or modify path to specific item.",
     ),
-    
+
     PrefabID.CONT_TAGS: Prefab(
         id=PrefabID.CONT_TAGS,
         family="CONT",
@@ -195,7 +195,7 @@ PREFABS: Dict[str, Prefab] = {
         widget="tag_list",
         ai_hint="Simple string list. Use 'set' to replace list.",
     ),
-    
+
     PrefabID.CONT_WEIGHTED: Prefab(
         id=PrefabID.CONT_WEIGHTED,
         family="CONT",
@@ -216,7 +216,7 @@ PREFABS: Dict[str, Prefab] = {
 def get_prefab(prefab_id: str) -> Prefab:
     """
     Get a prefab by ID.
-    
+
     Raises:
         KeyError: If prefab_id not found
     """
@@ -225,10 +225,10 @@ def get_prefab(prefab_id: str) -> Prefab:
     return PREFABS[prefab_id]
 
 
-def list_prefabs(family: str = None) -> List[str]:
+def list_prefabs(family: str | None = None) -> list[str]:
     """
     List all prefab IDs, optionally filtered by family.
-    
+
     Args:
         family: "VAL", "RES", or "CONT" (or None for all)
     """
@@ -237,15 +237,15 @@ def list_prefabs(family: str = None) -> List[str]:
     return [p.id for p in PREFABS.values() if p.family == family]
 
 
-def validate_value(prefab_id: str, value: Any, config: Dict[str, Any] = None) -> Any:
+def validate_value(prefab_id: str, value: Any, config: dict[str, Any] | None = None) -> Any:
     """
     Convenience function to validate a value using a prefab.
-    
+
     Args:
         prefab_id: Prefab identifier
         value: Value to validate
         config: Prefab configuration
-    
+
     Returns:
         Validated/corrected value
     """
@@ -253,14 +253,14 @@ def validate_value(prefab_id: str, value: Any, config: Dict[str, Any] = None) ->
     return prefab.validate(value, config or {})
 
 
-def get_default_value(prefab_id: str, config: Dict[str, Any] = None) -> Any:
+def get_default_value(prefab_id: str, config: dict[str, Any] | None = None) -> Any:
     """
     Get the default value for a prefab.
-    
+
     Args:
         prefab_id: Prefab identifier
         config: Prefab configuration
-    
+
     Returns:
         Default value
     """
@@ -274,12 +274,12 @@ def get_ai_hints() -> str:
     Used in prompt building.
     """
     lines = ["## PREFAB TYPES\n"]
-    
+
     for family, family_name in [("VAL", "Values"), ("RES", "Resources"), ("CONT", "Containers")]:
         lines.append(f"### {family_name}")
         for prefab in PREFABS.values():
             if prefab.family == family:
                 lines.append(f"- **{prefab.id}**: {prefab.ai_hint}")
         lines.append("")
-    
+
     return "\n".join(lines)

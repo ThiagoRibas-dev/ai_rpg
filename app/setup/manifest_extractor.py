@@ -1,16 +1,24 @@
 import logging
 import re
-from typing import Optional, Callable, List, Dict
+from collections.abc import Callable
 
 from app.llm.llm_connector import LLMConnector
 from app.models.message import Message
-from app.prefabs.registry import PREFABS
+from app.models.vocabulary import CategoryName, PrefabID
 from app.prefabs.manifest import (
-    SystemManifest,
     EngineConfig,
     FieldDef,
     RuleDef,
+    SystemManifest,
     validate_manifest,
+)
+from app.prefabs.registry import PREFABS
+from app.prompts.templates import (
+    EXTRACT_FIELDS_PROMPT,
+    EXTRACT_MECHANICS_PROMPT,
+    EXTRACT_PROCEDURES_PROMPT,
+    EXTRACT_RULES_PROMPT,
+    SHARED_RULES_SYSTEM_PROMPT,
 )
 from app.setup.schemas import (
     ExtractedField,
@@ -19,14 +27,6 @@ from app.setup.schemas import (
     ProceduresExtraction,
     RuleListExtraction,
 )
-from app.prompts.templates import (
-    SHARED_RULES_SYSTEM_PROMPT,
-    EXTRACT_MECHANICS_PROMPT,
-    EXTRACT_FIELDS_PROMPT,
-    EXTRACT_PROCEDURES_PROMPT,
-    EXTRACT_RULES_PROMPT,
-)
-from app.models.vocabulary import CategoryName, PrefabID
 
 logger = logging.getLogger(__name__)
 
@@ -47,14 +47,14 @@ class ManifestExtractor:
         key = system_name.lower().strip()
         return self.KNOWN_SYSTEM_IDS.get(key, self._slugify_system_id(system_name))
 
-    def _normalize_aliases(self, aliases: Dict[str, str], fields: List[ExtractedField]) -> Dict[str, str]:
+    def _normalize_aliases(self, aliases: dict[str, str], fields: list[ExtractedField]) -> dict[str, str]:
         """
         Rewrites alias formulas so compound fields are referenced via `.score`
         instead of the container path itself.
         Example: `attributes.str` -> `attributes.str.score`
         """
         compound_paths = {f.path for f in fields if f.prefab == PrefabID.VAL_COMPOUND}
-        normalized: Dict[str, str] = {}
+        normalized: dict[str, str] = {}
 
         for alias_key, formula in aliases.items():
             updated = formula
@@ -66,7 +66,7 @@ class ManifestExtractor:
 
         return normalized
 
-    def __init__(self, llm: LLMConnector, status_callback: Optional[Callable[[str], None]] = None):
+    def __init__(self, llm: LLMConnector, status_callback: Callable[[str], None] | None = None):
         self.llm = llm
         self.status_callback = status_callback
         self.total_steps = 7 # Added Rule Phase
@@ -90,10 +90,10 @@ class ManifestExtractor:
         all_fields = []
         self._update_status(3, "Extracting Core Stats...")
         all_fields.extend(self._extract_field_group(system_prompt, menu_text, mechanics.aliases, [CategoryName.ATTRIBUTES, CategoryName.RESOURCES, CategoryName.PROGRESSION]))
-        
+
         self._update_status(4, "Extracting Capabilities...")
         all_fields.extend(self._extract_field_group(system_prompt, menu_text, mechanics.aliases, [CategoryName.SKILLS, CategoryName.COMBAT, CategoryName.STATUS]))
-        
+
         self._update_status(5, "Extracting Assets...")
         all_fields.extend(
             self._extract_field_group(
@@ -151,9 +151,9 @@ class ManifestExtractor:
         self,
         prompt: str,
         menu: str,
-        aliases: Dict,
-        cats: List[CategoryName],
-    ) -> List[ExtractedField]:
+        aliases: dict,
+        cats: list[CategoryName],
+    ) -> list[ExtractedField]:
         p = EXTRACT_FIELDS_PROMPT.format(
             categories=", ".join(cats),
             menu=menu,
@@ -179,7 +179,7 @@ class ManifestExtractor:
                 messages.append(Message(role="assistant", content="I provided an invalid JSON response."))
                 messages.append(Message(role="user", content=f"Validation failed: {e}. Please fix the errors and try again. Provide ONLY valid JSON."))
 
-    def _extract_procedures(self, prompt: str) -> Dict[str, str]:
+    def _extract_procedures(self, prompt: str) -> dict[str, str]:
         messages = [Message(role="user", content=EXTRACT_PROCEDURES_PROMPT)]
         for attempt in range(3):
             try:
@@ -191,7 +191,7 @@ class ManifestExtractor:
                 messages.append(Message(role="assistant", content="I provided an invalid JSON response."))
                 messages.append(Message(role="user", content=f"Validation failed: {e}. Please fix the errors and try again. Provide ONLY valid JSON."))
 
-    def _extract_rules(self, prompt: str) -> List[RuleDef]:
+    def _extract_rules(self, prompt: str) -> list[RuleDef]:
         messages = [Message(role="user", content=EXTRACT_RULES_PROMPT)]
         for attempt in range(3):
             try:

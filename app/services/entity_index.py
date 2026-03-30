@@ -8,7 +8,7 @@ import logging
 
 from app.models.vocabulary import MemoryKind
 from app.services.state_service import get_entity, set_entity
-from app.tools.schemas import StateQuery, ContextRetrieve
+from app.tools.schemas import ContextRetrieve, StateQuery
 
 logger = logging.getLogger(__name__)
 
@@ -99,8 +99,7 @@ def smart_truncate(text: str, max_len: int = 90) -> str:
     last_idx = -1
     for char in (".", ",", " "):
         idx = subset.rfind(char)
-        if idx > last_idx:
-            last_idx = idx
+        last_idx = max(last_idx, idx)
 
     if last_idx > 0:
         # Return truncated text stripped of the separator, plus ellipsis

@@ -1,8 +1,10 @@
 """Repository for memory operations."""
 
 import json
-from typing import List, Optional, Any, Dict, Union
+from typing import Any
+
 from app.models.memory import Memory
+
 from .base_repository import BaseRepository
 
 
@@ -36,24 +38,24 @@ class MemoryRepository(BaseRepository):
         kind: str,
         content: str,
         priority: int = 3,
-        tags: List[str] | None = None,
+        tags: list[str] | None = None,
         fictional_time: str | None = None,
     ) -> Memory:
         tags_json = json.dumps(tags or [])
         cursor = self._execute(
-            """INSERT INTO memories 
-            (session_id, kind, content, priority, tags, fictional_time) 
+            """INSERT INTO memories
+            (session_id, kind, content, priority, tags, fictional_time)
             VALUES (?, ?, ?, ?, ?, ?)""",
             (session_id, kind, content, priority, tags_json, fictional_time),
         )
         self._commit()
         return self.get_by_id(cursor.lastrowid)
 
-    def get_by_id(self, memory_id: int) -> Optional[Memory]:
+    def get_by_id(self, memory_id: int) -> Memory | None:
         row = self._fetchone("""SELECT * FROM memories WHERE id = ?""", (memory_id,))
         return Memory(**dict(row)) if row else None
 
-    def get_by_session(self, session_id: int) -> List[Memory]:
+    def get_by_session(self, session_id: int) -> list[Memory]:
         rows = self._fetchall(
             """SELECT * FROM memories WHERE session_id = ? ORDER BY created_at DESC""",
             (session_id,),
@@ -63,14 +65,14 @@ class MemoryRepository(BaseRepository):
     def query(
         self,
         session_id: int,
-        kind: Union[str, List[str], None] = None,
-        tags: List[str] | None = None,
+        kind: str | list[str] | None = None,
+        tags: list[str] | None = None,
         query_text: str | None = None,
         limit: int = 10,
-    ) -> List[Memory]:
+    ) -> list[Memory]:
         """Query memories with filters. Kind can be a string or list of strings."""
         query = """SELECT * FROM memories WHERE session_id = ?"""
-        params: List[Any] = [session_id]
+        params: list[Any] = [session_id]
 
         if kind:
             if isinstance(kind, list):
@@ -104,7 +106,7 @@ class MemoryRepository(BaseRepository):
         )
         self._commit()
 
-    def update(self, memory_id: int, **kwargs) -> Optional[Memory]:
+    def update(self, memory_id: int, **kwargs) -> Memory | None:
         updates = []
         params = []
         for k, v in kwargs.items():
@@ -126,7 +128,7 @@ class MemoryRepository(BaseRepository):
         self._execute("DELETE FROM memories WHERE id = ?", (memory_id,))
         self._commit()
 
-    def get_statistics(self, session_id: int) -> Dict[str, Any]:
+    def get_statistics(self, session_id: int) -> dict[str, Any]:
         rows = self._fetchall(
             "SELECT kind, COUNT(*) as count FROM memories WHERE session_id = ? GROUP BY kind",
             (session_id,),

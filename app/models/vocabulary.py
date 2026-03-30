@@ -1,4 +1,4 @@
-from enum import StrEnum, Enum
+from enum import Enum, StrEnum
 
 # ---------------------------------------------------------------------------
 # MEMORY KINDS
@@ -10,7 +10,7 @@ class MemoryKind(StrEnum):
     LORE = "lore"
     RULE = "rule"
     USER_PREF = "user_pref"
-    
+
 class WorldCategory(StrEnum):
     LOCATION = "location"
     NPC = "npc"
@@ -35,12 +35,12 @@ class PrefabID(StrEnum):
     VAL_LADDER = "VAL_LADDER"
     VAL_BOOL = "VAL_BOOL"
     VAL_TEXT = "VAL_TEXT"
-    
+
     # Resources
     RES_POOL = "RES_POOL"
     RES_COUNTER = "RES_COUNTER"
     RES_TRACK = "RES_TRACK"
-    
+
     # Containers
     CONT_LIST = "CONT_LIST"
     CONT_TAGS = "CONT_TAGS"
@@ -74,15 +74,15 @@ class FieldKey:
     # RES_POOL
     CURRENT = "current"
     MAX = "max"
-    
+
     # VAL_COMPOUND
     SCORE = "score"
     MOD = "mod"
-    
+
     # VAL_LADDER
     VALUE = "value"
     LABEL = "label"
-    
+
     # CONT_LIST / CONT_WEIGHTED
     NAME = "name"
     QTY = "qty"
@@ -111,7 +111,7 @@ class ExtractionKey:
     CRIT_RULES = "crit_rules"
     FUMBLE_RULES = "fumble_rules"
     ALIASES = "aliases"
-    
+
     # Procedures
     COMBAT = "combat"
     EXPLORATION = "exploration"
@@ -146,15 +146,15 @@ class SetupTask(Enum):
     WORLDGEN_STATUS    = ("worldgen_status", "Current Status")
     WORLDGEN_REMNANTS  = ("worldgen_remnants", "Unresolved Lore")
     OPENING_CRAWL      = ("opening_crawl", "Opening Crawl")
-    
+
     @property
     def id(self) -> str:
         return self.value[0]
-        
+
     @property
     def label(self) -> str:
         return self.value[1]
-    
+
     @classmethod
     def chargen(cls, category: str) -> tuple[str, str]:
         """Returns (task_id, display_label) for a chargen category."""

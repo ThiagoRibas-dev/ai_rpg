@@ -1,12 +1,14 @@
-import os
+import base64
 import json
 import logging
-import base64
+import os
+from collections.abc import Generator
+from typing import Any
+
 from google import genai
 from google.genai import types
 from pydantic import BaseModel
 
-from typing import Type, List, Generator, Dict, Any
 from app.llm.llm_connector import LLMConnector, LLMResponse
 from app.models.message import Message
 
@@ -22,7 +24,7 @@ class GeminiConnector(LLMConnector):
         self.model_name = os.environ.get("GEMINI_API_MODEL")
         if not self.model_name:
             self.model_name = "gemini-flash-latest" # Updated default
-        
+
         self.client = genai.Client(api_key=api_key)
         self.default_max_tokens = 65535
         self.default_thinking_budget = 12000
@@ -46,10 +48,10 @@ class GeminiConnector(LLMConnector):
         ]
 
     def _convert_chat_history_to_contents(
-        self, chat_history: List[Message]
-    ) -> List[types.Content]:
+        self, chat_history: list[Message]
+    ) -> list[types.Content]:
         contents = []
-        
+
         for msg in chat_history:
             if msg.role == "system":
                 continue
@@ -57,18 +59,18 @@ class GeminiConnector(LLMConnector):
             # --- 1. Handle User Messages ---
             if msg.role == "user":
                 contents.append(types.Content(
-                    role="user", 
+                    role="user",
                     parts=[types.Part.from_text(text=msg.content)]
                 ))
 
             # --- 2. Handle Assistant (Model) Messages ---
             elif msg.role == "assistant":
                 parts = []
-                
+
                 # B. Text Content
                 if msg.content:
                     parts.append(types.Part.from_text(text=msg.content))
-                
+
                 # C. Thought Content
                 if getattr(msg, 'thought', None):
                     parts.append(types.Part(
@@ -96,9 +98,9 @@ class GeminiConnector(LLMConnector):
                         }
                         if idx == 0 and sig_bytes:
                             part_args["thought_signature"] = sig_bytes
-                            
+
                         parts.append(types.Part(**part_args))
-                
+
                 if parts:
                     contents.append(types.Content(role="model", parts=parts))
 
@@ -116,7 +118,7 @@ class GeminiConnector(LLMConnector):
                     name=msg.name,
                     response=response_data
                 )
-                
+
                 if contents and contents[-1].role == "user":
                     contents[-1].parts.append(part)
                 else:
@@ -125,7 +127,7 @@ class GeminiConnector(LLMConnector):
         return contents
 
     def get_streaming_response(
-        self, system_prompt: str, chat_history: List[Message]
+        self, system_prompt: str, chat_history: list[Message]
     ) -> Generator[str, None, None]:
         contents = self._convert_chat_history_to_contents(chat_history)
         if not contents:
@@ -159,8 +161,8 @@ class GeminiConnector(LLMConnector):
     def get_structured_response(
         self,
         system_prompt: str,
-        chat_history: List[Message],
-        output_schema: Type[BaseModel],
+        chat_history: list[Message],
+        output_schema: type[BaseModel],
         temperature: float = 0.7,
         top_p: float = 0.9,
     ) -> BaseModel:
@@ -177,7 +179,7 @@ class GeminiConnector(LLMConnector):
             max_output_tokens=self.default_max_tokens,
             safety_settings=self.default_safety_settings,
         )
-        
+
         if "flash" in self.model_name.lower() or "thought" in self.model_name.lower():
              generation_config.thinking_config = types.ThinkingConfig(
                 thinking_budget=self.default_thinking_budget
@@ -186,25 +188,25 @@ class GeminiConnector(LLMConnector):
         response = self.client.models.generate_content(
             model=self.model_name, contents=contents, config=generation_config
         )
-        
+
         if response.parsed:
             return output_schema.model_validate(response.parsed)
-            
+
         if response.text:
             try:
                 data = json.loads(response.text)
                 return output_schema.model_validate(data)
             except Exception as e:
                 logger.error(f"Gemini structured response failure. Raw text: {response.text}")
-                raise ValueError(f"Failed to parse Gemini response: {e}")
-        
+                raise ValueError(f"Failed to parse Gemini response: {e}") from e
+
         raise ValueError("Gemini returned empty response (blocked or error).")
 
     def chat_with_tools(
         self,
         system_prompt: str,
-        chat_history: List[Message],
-        tools: List[Dict[str, Any]],
+        chat_history: list[Message],
+        tools: list[dict[str, Any]],
     ) -> LLMResponse:
         contents = self._convert_chat_history_to_contents(chat_history)
         if not contents:
@@ -222,7 +224,7 @@ class GeminiConnector(LLMConnector):
             "max_output_tokens": self.default_max_tokens,
             "safety_settings": self.default_safety_settings,
         }
-        
+
         # Check for model thinking capabilities
         if "flash" in self.model_name.lower() or "thought" in self.model_name.lower():
              config_args["thinking_config"] = types.ThinkingConfig(
@@ -246,7 +248,7 @@ class GeminiConnector(LLMConnector):
                     thought_text += part.text
                 elif getattr(part, "text", None):
                     content_text += part.text
-                
+
                 # Capture thought_signature (bytes) from any part that has it
                 if getattr(part, "thought_signature", None) and thought_sig is None:
                     thought_sig = base64.b64encode(part.thought_signature).decode("ascii")
@@ -259,7 +261,7 @@ class GeminiConnector(LLMConnector):
                     })
 
         return LLMResponse(
-            content=content_text, 
+            content=content_text,
             thought=thought_text if thought_text else None,
             thought_signature=thought_sig,
             tool_calls=tool_calls if tool_calls else None

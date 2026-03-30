@@ -1,5 +1,6 @@
-from typing import Any, Dict
-from app.services.state_service import set_entity, get_entity
+from typing import Any
+
+from app.services.state_service import get_entity, set_entity
 
 _REVERSE_DIRS = {
     "north": "south",
@@ -27,7 +28,7 @@ def handler(
     description_visual: str,
     description_sensory: str,
     type: str,
-    neighbors: Dict[str, str] = None,
+    neighbors: dict[str, str] | None = None,
     **context: Any,
 ) -> dict:
     session_id = context["session_id"]

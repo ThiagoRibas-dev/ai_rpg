@@ -1,16 +1,16 @@
+import datetime
 import json
 import logging
-import datetime
-from typing import Any, Dict
+from typing import Any
 
-from app.models.session import Session
 from app.models.game_session import GameSession
+from app.models.session import Session
+from app.models.vocabulary import MemoryKind
 from app.prefabs.manifest import SystemManifest
 from app.prefabs.validation import validate_entity
 from app.services.state_service import set_entity
-from app.tools.builtin.location_create import handler as location_create_handler
 from app.setup.setup_manifest import SetupManifest as SetupManifestService
-from app.models.vocabulary import MemoryKind
+from app.tools.builtin.location_create import handler as location_create_handler
 
 logger = logging.getLogger(__name__)
 
@@ -135,7 +135,7 @@ class GameSetupService:
                     session_id=game_session.id,
                     kind=MemoryKind.RULE,
                     content=f"{rule.name}: {rule.content}",
-                    tags=rule.tags + ["system_rule"],
+                    tags=[*rule.tags, "system_rule"],
                     priority=3,
                 )
                 if self.vs:
@@ -158,7 +158,7 @@ class GameSetupService:
         self.db.sessions.update(game_session)
         return game_session
 
-    def _map_legacy_char_data(self, char_data) -> Dict:
+    def _map_legacy_char_data(self, char_data) -> dict:
         values = {
             "identity": {"name": getattr(char_data, "name", "Player")},
             "attributes": {},
@@ -218,7 +218,7 @@ class GameSetupService:
                 pass
 
         # 6. Seed Entity Index
-        from app.services.entity_index import add_location, add_npc, add_memory, _ensure_index
+        from app.services.entity_index import _ensure_index, add_location, add_memory, add_npc
         _ensure_index(session_id, self.db)
 
         # Locations

@@ -1,7 +1,8 @@
 """Repository for game state operations."""
 
 import json
-from typing import Any, Dict
+from typing import Any
+
 from .base_repository import BaseRepository
 
 
@@ -32,7 +33,7 @@ class GameStateRepository(BaseRepository):
     def get_entity(self, session_id: int, entity_type: str, entity_key: str) -> dict:
         """Retrieve a single entity's state."""
         row = self._fetchone(
-            """SELECT state_data FROM game_state 
+            """SELECT state_data FROM game_state
                WHERE session_id = ? AND entity_type = ? AND entity_key = ?""",
             (session_id, entity_type, entity_key),
         )
@@ -52,8 +53,8 @@ class GameStateRepository(BaseRepository):
         cursor = self._execute(
             """INSERT INTO game_state (session_id, entity_type, entity_key, state_data, version)
                VALUES (?, ?, ?, ?, 1)
-               ON CONFLICT(session_id, entity_type, entity_key) 
-               DO UPDATE SET 
+               ON CONFLICT(session_id, entity_type, entity_key)
+               DO UPDATE SET
                    state_data = excluded.state_data,
                    version = version + 1,
                    updated_at = CURRENT_TIMESTAMP
@@ -64,14 +65,14 @@ class GameStateRepository(BaseRepository):
         self._commit()
         return row["version"] if row else 1
 
-    def get_versions(self, session_id: int, entity_type: str) -> Dict[str, int]:
+    def get_versions(self, session_id: int, entity_type: str) -> dict[str, int]:
         """
         Fast query to get just the version numbers for all entities of a type.
         Used for UI Cache Invalidation.
         Returns: { 'player': 5, 'goblin': 2 }
         """
         rows = self._fetchall(
-            """SELECT entity_key, version FROM game_state 
+            """SELECT entity_key, version FROM game_state
                WHERE session_id = ? AND entity_type = ?""",
             (session_id, entity_type),
         )
@@ -80,7 +81,7 @@ class GameStateRepository(BaseRepository):
     def get_all_entities_by_type(self, session_id: int, entity_type: str) -> dict:
         """Get all entities of a specific type for a session. Returns {key: data} dict."""
         rows = self._fetchall(
-            """SELECT entity_key, state_data FROM game_state 
+            """SELECT entity_key, state_data FROM game_state
                WHERE session_id = ? AND entity_type = ?
                ORDER BY entity_key""",
             (session_id, entity_type),
@@ -100,23 +101,23 @@ class GameStateRepository(BaseRepository):
     def delete_entity(self, session_id: int, entity_type: str, entity_key: str):
         """Delete a specific entity."""
         self._execute(
-            """DELETE FROM game_state 
+            """DELETE FROM game_state
                WHERE session_id = ? AND entity_type = ? AND entity_key = ?""",
             (session_id, entity_type, entity_key),
         )
         self._commit()
 
-    def get_all(self, session_id: int) -> Dict[str, Dict[str, Any]]:
+    def get_all(self, session_id: int) -> dict[str, dict[str, Any]]:
         """Get all game state for a session, organized by entity type."""
         rows = self._fetchall(
             """SELECT entity_type, entity_key, state_data, version, updated_at
-               FROM game_state 
+               FROM game_state
                WHERE session_id = ?
                ORDER BY entity_type, entity_key""",
             (session_id,),
         )
 
-        state: Dict[str, Dict[str, Any]] = {}
+        state: dict[str, dict[str, Any]] = {}
         for row in rows:
             entity_type = row["entity_type"]
             entity_key = row["entity_key"]
@@ -139,9 +140,9 @@ class GameStateRepository(BaseRepository):
     def get_statistics(self, session_id: int) -> dict:
         """Get statistics about game state for a session."""
         rows = self._fetchall(
-            """SELECT entity_type, COUNT(*) as count 
-               FROM game_state 
-               WHERE session_id = ? 
+            """SELECT entity_type, COUNT(*) as count
+               FROM game_state
+               WHERE session_id = ?
                GROUP BY entity_type""",
             (session_id,),
         )

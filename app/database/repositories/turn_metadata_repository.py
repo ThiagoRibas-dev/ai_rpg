@@ -1,7 +1,8 @@
 """Repository for turn metadata operations."""
 
 import json
-from typing import Any, Dict, List
+from typing import Any
+
 from .base_repository import BaseRepository
 
 
@@ -28,7 +29,7 @@ class TurnMetadataRepository(BaseRepository):
             );
             """
         )
-        
+
         # Scene History table (Logically linked to turns)
         self._execute(
             """
@@ -44,7 +45,7 @@ class TurnMetadataRepository(BaseRepository):
             );
             """
         )
-        
+
         # Optimization: Index for finding recent scenes quickly
         self._execute(
             "CREATE INDEX IF NOT EXISTS idx_scene_history_session ON scene_history(session_id);"
@@ -57,15 +58,15 @@ class TurnMetadataRepository(BaseRepository):
         prompt_id: int,
         round_number: int,
         summary: str,
-        tags: List[str],
+        tags: list[str],
         importance: int,
     ) -> int:
         """Create a turn metadata entry and return its ID."""
         tags_json = json.dumps(tags)
 
         cursor = self._execute(
-            """INSERT INTO turn_metadata 
-            (session_id, prompt_id, round_number, summary, tags, importance) 
+            """INSERT INTO turn_metadata
+            (session_id, prompt_id, round_number, summary, tags, importance)
             VALUES (?, ?, ?, ?, ?, ?)""",
             (session_id, prompt_id, round_number, summary, tags_json, importance),
         )
@@ -77,11 +78,11 @@ class TurnMetadataRepository(BaseRepository):
 
     def get_range(
         self, session_id: int, start_round: int, end_round: int
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get metadata for a range of rounds."""
         rows = self._fetchall(
-            """SELECT round_number, summary, tags, importance 
-            FROM turn_metadata 
+            """SELECT round_number, summary, tags, importance
+            FROM turn_metadata
             WHERE session_id = ? AND round_number BETWEEN ? AND ?
             ORDER BY round_number ASC""",
             (session_id, start_round, end_round),
@@ -98,11 +99,11 @@ class TurnMetadataRepository(BaseRepository):
             )
         return results
 
-    def get_all(self, session_id: int) -> List[Dict[str, Any]]:
+    def get_all(self, session_id: int) -> list[dict[str, Any]]:
         """Get all metadata for a session."""
         rows = self._fetchall(
-            """SELECT round_number, summary, tags, importance 
-            FROM turn_metadata 
+            """SELECT round_number, summary, tags, importance
+            FROM turn_metadata
             WHERE session_id = ?
             ORDER BY round_number ASC""",
             (session_id,),
@@ -128,12 +129,12 @@ class TurnMetadataRepository(BaseRepository):
         )
         self._commit()
 
-    def get_recent_scenes(self, session_id: int, limit: int = 3) -> List[Dict[str, Any]]:
+    def get_recent_scenes(self, session_id: int, limit: int = 3) -> list[dict[str, Any]]:
         """Get the most recent scene summaries."""
         rows = self._fetchall(
-            """SELECT location_key, summary_text, created_at 
-               FROM scene_history 
-               WHERE session_id = ? 
+            """SELECT location_key, summary_text, created_at
+               FROM scene_history
+               WHERE session_id = ?
                ORDER BY id DESC LIMIT ?""",
             (session_id, limit)
         )

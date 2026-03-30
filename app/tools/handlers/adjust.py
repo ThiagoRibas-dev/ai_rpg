@@ -1,8 +1,9 @@
 import logging
-from typing import Optional, Any
-from app.services.state_service import get_entity, set_entity
-from app.prefabs.validation import validate_entity, get_path, set_path
+from typing import Any
+
 from app.prefabs.manifest import SystemManifest
+from app.prefabs.validation import get_path, set_path, validate_entity
+from app.services.state_service import get_entity, set_entity
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +15,7 @@ def handler(path: str, delta: int | float, target: str = "player", reason: str =
     session_id = context.get("session_id")
     db = context.get("db_manager")
     # Executor passes the full manifest object here
-    manifest: Optional[SystemManifest] = context.get("manifest")
+    manifest: SystemManifest | None = context.get("manifest")
 
     entity_type = "character"
     entity_key = target
@@ -27,7 +28,7 @@ def handler(path: str, delta: int | float, target: str = "player", reason: str =
 
     # 2. Get Current Value
     current_val = get_path(entity, target_path)
-    
+
     # Handle Pools (path.current logic)
     actual_path = target_path
     if isinstance(current_val, dict) and "current" in current_val:
@@ -42,7 +43,7 @@ def handler(path: str, delta: int | float, target: str = "player", reason: str =
     except (ValueError, TypeError):
         pass
 
-    if not isinstance(current_val, (int, float)):
+    if not isinstance(current_val, int | float):
         return {"error": f"Path '{actual_path}' is not numeric ({type(current_val)})."}
 
     # 3. Apply Delta
@@ -58,7 +59,7 @@ def handler(path: str, delta: int | float, target: str = "player", reason: str =
 
     # 6. Report
     final_val = get_path(validated_entity, actual_path)
-    
+
     return {
         "path": actual_path,
         "old_value": current_val,

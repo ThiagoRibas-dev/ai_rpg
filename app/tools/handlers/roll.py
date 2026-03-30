@@ -17,7 +17,7 @@ def handler(formula: str, reason: str = "Action", **context: Any) -> dict:
     # Normalize "d20" to "1d20"
     if spec.lower().startswith("d"):
         spec = "1" + spec
-    
+
     # Normalize "5" to "1d5" (edge case)
     if re.match(r"^\d+$", spec):
         spec = f"1d{spec}"
@@ -32,7 +32,7 @@ def handler(formula: str, reason: str = "Action", **context: Any) -> dict:
     kd_type = m.group(4).lower() if m.group(4) else None
     kd_count = int(m.group(5)) if m.group(5) else 0
     mod_str = m.group(6)
-    
+
     rolls = []
     # Roll dice, including exploding logic
     for _ in range(n):
@@ -41,7 +41,7 @@ def handler(formula: str, reason: str = "Action", **context: Any) -> dict:
         while exploding and roll == sides:
             roll = random.randint(1, sides)
             rolls.append(roll)
-            
+
     # Keep/Drop logic
     active_rolls = rolls.copy()
     if kd_type and kd_count > 0:

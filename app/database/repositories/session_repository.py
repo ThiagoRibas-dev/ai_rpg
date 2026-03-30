@@ -1,7 +1,8 @@
 """Repository for session operations."""
 
-from typing import List, Optional
+
 from app.models.game_session import GameSession
+
 from .base_repository import BaseRepository
 
 
@@ -36,8 +37,8 @@ class SessionRepository(BaseRepository):
     ) -> GameSession:
         """Create a new game session."""
         cursor = self._execute(
-            """INSERT INTO sessions 
-               (name, session_data, prompt_id, memory, authors_note, game_mode, setup_phase_data) 
+            """INSERT INTO sessions
+               (name, session_data, prompt_id, memory, authors_note, game_mode, setup_phase_data)
                VALUES (?, ?, ?, '', '', 'SETUP', ?)""",
             (name, session_data, prompt_id, setup_phase_data),
         )
@@ -56,10 +57,10 @@ class SessionRepository(BaseRepository):
             setup_phase_data=setup_phase_data,
         )
 
-    def get_by_id(self, session_id: int) -> Optional[GameSession]:
+    def get_by_id(self, session_id: int) -> GameSession | None:
         """Load a session by ID."""
         row = self._fetchone(
-            """SELECT id, name, session_data, prompt_id, memory, authors_note, 
+            """SELECT id, name, session_data, prompt_id, memory, authors_note,
                       game_time, game_mode, setup_phase_data
                FROM sessions WHERE id = ?""",
             (session_id,),
@@ -68,20 +69,20 @@ class SessionRepository(BaseRepository):
             return GameSession(**dict(row))
         return None
 
-    def get_all(self) -> List[GameSession]:
+    def get_all(self) -> list[GameSession]:
         """Get all sessions."""
         rows = self._fetchall(
-            """SELECT id, name, session_data, prompt_id, memory, authors_note, 
+            """SELECT id, name, session_data, prompt_id, memory, authors_note,
                       game_time, game_mode, setup_phase_data
                FROM sessions
                ORDER BY id desc"""
         )
         return [GameSession(**dict(row)) for row in rows]
 
-    def get_by_prompt(self, prompt_id: int) -> List[GameSession]:
+    def get_by_prompt(self, prompt_id: int) -> list[GameSession]:
         """Get all sessions for a specific prompt."""
         rows = self._fetchall(
-            """SELECT id, name, session_data, prompt_id, memory, authors_note, 
+            """SELECT id, name, session_data, prompt_id, memory, authors_note,
                        game_time, game_mode, setup_phase_data
                FROM sessions WHERE prompt_id = ? ORDER BY id DESC""",
             (prompt_id,),
@@ -96,8 +97,8 @@ class SessionRepository(BaseRepository):
     def update(self, session: GameSession):
         """Update a session."""
         self._execute(
-            """UPDATE sessions 
-               SET name = ?, session_data = ?, prompt_id = ?, memory = ?, 
+            """UPDATE sessions
+               SET name = ?, session_data = ?, prompt_id = ?, memory = ?,
                    authors_note = ?, game_time = ?, game_mode = ?, setup_phase_data = ?
                WHERE id = ?""",
             (
@@ -129,7 +130,7 @@ class SessionRepository(BaseRepository):
         )
         self._commit()
 
-    def get_context(self, session_id: int) -> Optional[dict]:
+    def get_context(self, session_id: int) -> dict | None:
         """Get context fields for a session."""
         row = self._fetchone(
             "SELECT memory, authors_note FROM sessions WHERE id = ?", (session_id,)

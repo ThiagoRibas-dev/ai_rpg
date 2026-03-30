@@ -3,7 +3,7 @@ Models for the Game System Rules.
 Refactored: Flattened structure, 'Engine' instead of 'Physics', and Sheet Hints.
 """
 
-from typing import List, Dict, Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -26,7 +26,7 @@ class ProcedureDef(BaseModel):
     """A specific game loop."""
 
     description: str
-    steps: List[str]
+    steps: list[str]
 
 
 
@@ -53,7 +53,7 @@ class StateInvariant(BaseModel):
         "clamp",
         description="Action on violation: 'clamp' (auto-correct), 'flag' (warn), 'reject' (fail)",
     )
-    correction_value: Optional[str] = Field(
+    correction_value: str | None = Field(
         None,
         description="Value to use when clamping - literal or path. If None, uses reference.",
     )
@@ -62,7 +62,7 @@ class StateInvariant(BaseModel):
 class Ruleset(BaseModel):
     """Root Configuration."""
 
-    meta: Dict[str, str] = Field(
+    meta: dict[str, str] = Field(
         default_factory=lambda: {"name": "Untitled", "genre": "Generic"}
     )
 
@@ -71,30 +71,30 @@ class Ruleset(BaseModel):
     )
 
     # Flattened Procedures
-    combat_procedures: Dict[str, ProcedureDef] = Field(
+    combat_procedures: dict[str, ProcedureDef] = Field(
         default_factory=dict,
         description="Describes the steps for the different combat procedures.",
     )
-    exploration_procedures: Dict[str, ProcedureDef] = Field(
+    exploration_procedures: dict[str, ProcedureDef] = Field(
         default_factory=dict,
         description="Describes the steps for the different exploration procedures.",
     )
-    social_procedures: Dict[str, ProcedureDef] = Field(
+    social_procedures: dict[str, ProcedureDef] = Field(
         default_factory=dict,
         description="Describes the steps for the different social procedures.",
     )
-    downtime_procedures: Dict[str, ProcedureDef] = Field(
+    downtime_procedures: dict[str, ProcedureDef] = Field(
         default_factory=dict,
         description="Describes the steps for the different downtime procedures.",
     )
 
     # Hints for the Sheet Generator
-    sheet_hints: List[str] = Field(
+    sheet_hints: list[str] = Field(
         default_factory=list,
         description="Notes on stats/resources found in text (e.g. 'Uses Sanity', 'Has Strength').",
     )
 
-    state_invariants: List[StateInvariant] = Field(
+    state_invariants: list[StateInvariant] = Field(
         default_factory=list,
         description="Validation rules extracted from the game system, enforced on entity updates.",
     )

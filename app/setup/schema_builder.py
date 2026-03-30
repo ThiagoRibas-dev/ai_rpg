@@ -1,9 +1,10 @@
 import logging
-from typing import Any, Dict, List, Type
+from typing import Any
 
-from pydantic import BaseModel, Field, create_model, ConfigDict
-from app.prefabs.manifest import SystemManifest, FieldDef
-from app.models.vocabulary import PrefabID, CategoryName, FieldKey, ConfigKey
+from pydantic import BaseModel, ConfigDict, Field, create_model
+
+from app.models.vocabulary import CategoryName, ConfigKey, FieldKey, PrefabID
+from app.prefabs.manifest import FieldDef, SystemManifest
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +32,9 @@ class SchemaBuilder:
 
     def __init__(self, manifest: SystemManifest):
         self.manifest = manifest
-        self._cache: Dict[str, Type[BaseModel]] = {}
+        self._cache: dict[str, type[BaseModel]] = {}
 
-    def build_creation_prompt_model(self) -> Type[BaseModel]:
+    def build_creation_prompt_model(self) -> type[BaseModel]:
         """
         Builds a strict Pydantic model for the LLM to fill out, derived from the SystemManifest.
 
@@ -50,7 +51,7 @@ class SchemaBuilder:
             return self._cache[cache_key]
 
         # 1. Group non-derived fields by category
-        fields_by_cat: Dict[str, List[FieldDef]] = {}
+        fields_by_cat: dict[str, list[FieldDef]] = {}
         for field_def in self.manifest.fields:
             # Skip purely derived stats; formulas and max_formulas are handled by validate_entity
             if field_def.formula or field_def.max_formula:
@@ -62,10 +63,10 @@ class SchemaBuilder:
             fields_by_cat[CategoryName.IDENTITY] = []
 
         # 2. Build strict sub-models per category
-        category_models: Dict[str, Any] = {}
+        category_models: dict[str, Any] = {}
 
         for cat, fields in fields_by_cat.items():
-            model_fields: Dict[str, tuple[Type, Field]] = {}
+            model_fields: dict[str, tuple[type, Field]] = {}
 
             for field in fields:
                 py_type, default = self._get_simplified_type_and_default(field)
@@ -125,14 +126,14 @@ class SchemaBuilder:
         self._cache[cache_key] = CreationModel
         return CreationModel
 
-    def build_creation_model_for_category(self, category: str) -> Type[BaseModel]:
+    def build_creation_model_for_category(self, category: str) -> type[BaseModel]:
         """Builds a strict Pydantic model for a single category."""
         cache_key = f"creation_prompt_cat_{category}"
         if cache_key in self._cache:
             return self._cache[cache_key]
 
         fields = [f for f in self.manifest.fields if f.category == category]
-        model_fields: Dict[str, tuple[Type, Field]] = {}
+        model_fields: dict[str, tuple[type, Field]] = {}
 
         for field in fields:
             if field.formula or field.max_formula:
@@ -175,26 +176,26 @@ class SchemaBuilder:
     def build_prefab_schema_reference(self) -> str:
         """Builds a markdown reference for all Prefab data shapes to guide the LLM."""
         from app.prefabs.registry import PREFABS
-        
+
         lines = ["## PREFAB STRUCTURES", "Use these exact data shapes when the schema indicates a prefab type."]
         for family, family_name in [("VAL", "Values"), ("RES", "Resources"), ("CONT", "Containers")]:
             lines.append(f"\n### {family_name}")
             for prefab in PREFABS.values():
                 if prefab.family == family:
                     import json
-                    shape_str = json.dumps(prefab.shape) if isinstance(prefab.shape, (dict, list)) else str(prefab.shape)
+                    shape_str = json.dumps(prefab.shape) if isinstance(prefab.shape, dict | list) else str(prefab.shape)
                     lines.append(f"- **{prefab.id}**: {shape_str}  *(Hint: {prefab.ai_hint})*")
-        
+
         return "\n".join(lines)
 
     def convert_simplified_to_full(
-        self, simplified_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, simplified_data: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Expands the simplified LLM output (int/str) into full Prefab structures.
         e.g., {"hp": 10} -> {"hp": {"current": 10, "max": 10}}
         """
-        result: Dict[str, Any] = {}
+        result: dict[str, Any] = {}
 
         for cat_key, cat_data in simplified_data.items():
             if not isinstance(cat_data, dict):
@@ -223,7 +224,7 @@ class SchemaBuilder:
 
         return result
 
-    def _get_simplified_type_and_default(self, field_def: FieldDef) -> tuple[Type, Any]:
+    def _get_simplified_type_and_default(self, field_def: FieldDef) -> tuple[type, Any]:
         """Map Prefab -> (PythonType, DefaultValue) for LLM prompting."""
         p = field_def.prefab
 
@@ -308,15 +309,15 @@ class SchemaBuilder:
 
         return value
 
-    def get_creation_prompt_hints(self, categories: List[str] = None) -> str:
+    def get_creation_prompt_hints(self, categories: list[str] | None = None) -> str:
         """Returns text explaining the fields to the AI, optionally filtered by category."""
         return self.get_filtered_path_hints(categories) if categories else self.manifest.get_path_hints()
 
-    def get_filtered_path_hints(self, categories: List[str]) -> str:
+    def get_filtered_path_hints(self, categories: list[str]) -> str:
         """Returns hint text ONLY for the requested categories."""
         lines = ["## VALID PATHS FOR THIS BATCH"]
         from app.prefabs.registry import PREFABS
-        
+
         for category in categories:
             fields = self.manifest.get_fields_by_category(category)
             if not fields:
@@ -326,27 +327,27 @@ class SchemaBuilder:
                 # Skip derived fields as they aren't generated by the LLM
                 if f.formula or f.max_formula:
                     continue
-                    
+
                 prefab = PREFABS.get(f.prefab)
                 hint = prefab.ai_hint if prefab else ""
                 suffix = ".current" if f.prefab == PrefabID.RES_POOL else ""
-                
+
                 # Include item_shape info for complex containers
                 usage = f.usage_hint
                 if not usage and f.config.get(ConfigKey.ITEM_SHAPE):
                     shape = f.config[ConfigKey.ITEM_SHAPE]
                     usage = f"List of items with shape: {shape}"
-                
+
                 hint_text = f"  - `{f.path}{suffix}`: {f.label}"
                 if hint:
                     hint_text += f" ({hint})"
                 if usage:
                     hint_text += f" | Hint: {usage}"
-                    
+
                 lines.append(hint_text)
         return "\n".join(lines)
 
-    def _build_item_model(self, field_def: FieldDef) -> Type[BaseModel]:
+    def _build_item_model(self, field_def: FieldDef) -> type[BaseModel]:
         """
         Build (and cache) a Pydantic model for a CONT_LIST item when
         field_def.config['item_shape'] is present.
@@ -357,8 +358,8 @@ class SchemaBuilder:
         if cache_key in self._cache:
             return self._cache[cache_key]  # type: ignore[return-value]
 
-        item_shape: Dict[str, str] = field_def.config.get(ConfigKey.ITEM_SHAPE, {})
-        model_fields: Dict[str, tuple[type, Field]] = {}
+        item_shape: dict[str, str] = field_def.config.get(ConfigKey.ITEM_SHAPE, {})
+        model_fields: dict[str, tuple[type, Field]] = {}
 
         for name, type_name in item_shape.items():
             if type_name == "int":

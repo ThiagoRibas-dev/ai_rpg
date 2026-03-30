@@ -1,25 +1,28 @@
 import logging
-from typing import Callable, Optional, Any, List
+from collections.abc import Callable
+from typing import Any
+
 from app.llm.llm_connector import LLMConnector
 from app.models.message import Message
+from app.models.vocabulary import SetupTask, TaskState, WorldCategory
 from app.prompts.templates import (
+    EXTRACT_WORLD_DETAILS_PROMPT,
     EXTRACT_WORLD_GENRE_TONE_PROMPT,
     EXTRACT_WORLD_INDEX_PROMPT,
-    EXTRACT_WORLD_DETAILS_PROMPT,
     OPENING_CRAWL_PROMPT,
     WORLD_DATA_EXTRACTION_SYSTEM_PROMPT,
 )
 from app.setup.schemas import (
-    NpcListExtraction,
-    LoreStream,
-    WorldExtraction,
-    LoreListExtraction,
-    LocationListExtraction,
     GenreToneExtraction,
-    WorldIndexExtraction,
     LocationData,
+    LocationListExtraction,
+    LoreListExtraction,
+    LoreStream,
+    NpcListExtraction,
+    WorldExtraction,
+    WorldIndexExtraction,
 )
-from app.models.vocabulary import TaskState, SetupTask, WorldCategory
+
 logger = logging.getLogger(__name__)
 
 
@@ -29,7 +32,7 @@ class WorldGenService:
     def __init__(
         self,
         llm_connector: LLMConnector,
-        task_callback: Optional[Callable[[str, str, TaskState], None]] = None,
+        task_callback: Callable[[str, str, TaskState], None] | None = None,
     ):
         self.llm = llm_connector
         self.task_callback = task_callback
@@ -40,7 +43,7 @@ class WorldGenService:
         logger.info(f"[WorldGen] {label} -> {state}")
 
     def extract_world_data(
-        self, world_info: str, stream: Optional[LoreStream] = None, executor=None
+        self, world_info: str, stream: LoreStream | None = None, executor=None
     ) -> WorldExtraction:
         if not world_info.strip():
             world_info = "A generic fantasy tavern."
@@ -57,7 +60,7 @@ class WorldGenService:
             for t in SetupTask:
                 if t.name.startswith("WORLDGEN_") or t == SetupTask.OPENING_CRAWL:
                     self._track_task(t.id, t.label, TaskState.PENDING)
-            
+
             # --- LAYER 0: THE LENS (Genre & Tone) ---
             self._track_task(SetupTask.WORLDGEN_GENRE.id, SetupTask.WORLDGEN_GENRE.label, TaskState.RUNNING)
             genre_res = self.llm.get_structured_response(
@@ -117,7 +120,7 @@ class WorldGenService:
                 else:
                     # Category found empty in Deep Scan - mark as DONE so it clears from PENDING
                     self._track_task(task.id, "Skipped", TaskState.DONE)
-                    
+
                     # Fulfill the LoreStream if this was the NPC category to prevent deadlocks
                     if cat_type == WorldCategory.NPC and stream:
                         stream.set_npcs([])
@@ -131,7 +134,7 @@ class WorldGenService:
             for f in as_completed(futures):
                 task_id = future_to_id[f]
                 res = f.result()
-                
+
                 if isinstance(res, LocationListExtraction):
                     all_locations.extend(res.locations)
                 elif isinstance(res, NpcListExtraction):
@@ -140,13 +143,13 @@ class WorldGenService:
                         stream.set_npcs(res.npcs) # Fulfill NPCs as soon as they finish!
                 elif isinstance(res, LoreListExtraction):
                     all_lore.extend(res.lore)
-                
+
                 # Update UI for this specific task
                 self._track_task(task_id, "Completed", TaskState.DONE)
 
             # --- ASSEMBLY ---
             start_loc = all_locations[0] if all_locations else LocationData(
-                key="loc_start", name="Starting Location", 
+                key="loc_start", name="Starting Location",
                 description_visual="A blank slate.", description_sensory="Silence.", type="void"
             )
             adj_locs = all_locations[1:] if len(all_locations) > 1 else []
@@ -169,7 +172,7 @@ class WorldGenService:
             if own_executor:
                 executor.shutdown()
 
-    def _extract_batch(self, world_info: str, names: List[str], type: str) -> Any:
+    def _extract_batch(self, world_info: str, names: list[str], type: str) -> Any:
         """Universal batch extractor for Locations, NPCs, or Lore."""
         schema_map = {
             "location": LocationListExtraction,
@@ -177,7 +180,7 @@ class WorldGenService:
         }
         # Fallback for all lore types
         target_schema = schema_map.get(type, LoreListExtraction)
-        
+
         prompt = EXTRACT_WORLD_DETAILS_PROMPT.format(
             type=type.upper(),
             names=", ".join(names)

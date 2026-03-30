@@ -1,4 +1,5 @@
 from nicegui import ui
+
 from app.gui.dialogs.memory_editor import MemoryEditorDialog
 from app.models.vocabulary import MemoryKind
 
@@ -46,15 +47,14 @@ class MemoryInspector:
             kind_filter = MemoryKind.USER_PREF
         elif self.active_tab == "Rules":
             kind_filter = MemoryKind.RULE
+        # Episodic, Lore, or any future tab where label == kind title-cased
+        # Enums don't have .lower() on the class, only instances, so handle matching text
+        elif self.active_tab == "Episodic":
+            kind_filter = MemoryKind.EPISODIC
+        elif self.active_tab == "Lore":
+            kind_filter = MemoryKind.LORE
         else:
-            # Episodic, Lore, or any future tab where label == kind title-cased
-            # Enums don't have .lower() on the class, only instances, so handle matching text
-            if self.active_tab == "Episodic":
-                kind_filter = MemoryKind.EPISODIC
-            elif self.active_tab == "Lore":
-                kind_filter = MemoryKind.LORE
-            else:
-                kind_filter = self.active_tab.lower()
+            kind_filter = self.active_tab.lower()
 
         memories = self.db.memories.query(
             self.session_id,

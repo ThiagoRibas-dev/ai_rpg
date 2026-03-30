@@ -9,14 +9,14 @@ Contains:
 """
 
 from app.setup.manifest_extractor import ManifestExtractor
-from app.setup.schema_builder import SchemaBuilder, InventoryItem
+from app.setup.schema_builder import InventoryItem, SchemaBuilder
 from app.setup.sheet_generator import SheetGenerator
 from app.setup.world_gen_service import WorldGenService
 
 __all__ = [
+    "InventoryItem",
     "ManifestExtractor",
     "SchemaBuilder",
-    "InventoryItem",
     "SheetGenerator",
     "WorldGenService",
 ]

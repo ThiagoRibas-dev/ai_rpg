@@ -1,7 +1,8 @@
 """Repository for prompt operations."""
 
-from typing import List
+
 from app.models.prompt import Prompt
+
 from .base_repository import BaseRepository
 
 
@@ -47,7 +48,7 @@ class PromptRepository(BaseRepository):
             template_manifest=template_manifest,
         )
 
-    def get_all(self) -> List[Prompt]:
+    def get_all(self) -> list[Prompt]:
         """Get all prompts."""
         rows = self._fetchall(
             "SELECT id, name, content, rules_document, template_manifest FROM prompts"

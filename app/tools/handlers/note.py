@@ -1,12 +1,14 @@
 
-from typing import Any, List
-from app.tools.builtin.memory_upsert import handler as memory_upsert
+from typing import Any
+
 from app.models.vocabulary import MemoryKind
+from app.tools.builtin.memory_upsert import handler as memory_upsert
+
 
 def handler(
     content: str,
     kind: MemoryKind = MemoryKind.EPISODIC,
-    tags: List[str] = None,
+    tags: list[str] | None = None,
     **context: Any
 ) -> dict:
     """

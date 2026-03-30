@@ -1,7 +1,9 @@
+import logging
+
 from nicegui import ui
+
 from app.gui.components.context_editor import ContextEditor
 from app.gui.dialogs.lore_editor import LoreEditorDialog
-import logging
 
 logger = logging.getLogger(__name__)
 

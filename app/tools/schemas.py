@@ -1,5 +1,7 @@
-from typing import Literal, Optional, Union, List
+from typing import Literal
+
 from pydantic import BaseModel, Field
+
 from app.models.vocabulary import MemoryKind
 
 # --- ATOMIC GAMEPLAY TOOLS ---
@@ -19,7 +21,7 @@ class Adjust(BaseModel):
         ...,
         description="Full path to the field (e.g. 'resources.hp.current', 'attributes.str').",
     )
-    delta: Union[int, float] = Field(
+    delta: int | float = Field(
         ..., description="Amount to add (positive) or subtract (negative)."
     )
     reason: str = Field(
@@ -42,7 +44,7 @@ class Set(BaseModel):
         ...,
         description="Full path to the field (e.g. 'status.is_hiding', 'inventory.weapon').",
     )
-    value: Union[int, float, bool, str, dict, list] = Field(
+    value: int | float | bool | str | dict | list = Field(
         ..., description="The new value to set."
     )
     reason: str = Field("Update", description="Brief reason for the change.")
@@ -102,7 +104,7 @@ class Note(BaseModel):
     kind: MemoryKind = Field(
         MemoryKind.EPISODIC, description="Type of memory. Use 'episodic' for events, 'semantic' for general facts."
     )
-    tags: List[str] = Field(
+    tags: list[str] = Field(
         ..., description="Names, tags, keywords, or categories to help retrieve this memory later."
     )
 
@@ -130,7 +132,7 @@ class NpcSpawn(BaseModel):
     visual_description: str = Field(...)
     stat_template: str = Field(...)
     initial_disposition: Literal["hostile", "neutral", "friendly"] = "neutral"
-    location_key: Optional[str] = None
+    location_key: str | None = None
 
 
 class LocationCreate(BaseModel):
@@ -155,7 +157,7 @@ class ContextRetrieve(BaseModel):
     query: str = Field(
         ..., description="Query text (usually derived from last user action)."
     )
-    kinds: List[MemoryKind] = Field(
+    kinds: list[MemoryKind] = Field(
         default_factory=lambda: [MemoryKind.EPISODIC, MemoryKind.SEMANTIC, MemoryKind.LORE, MemoryKind.RULE]
     )
     limit: int = Field(8, ge=1, le=20)

@@ -1,10 +1,13 @@
-from nicegui import ui
 import logging
+from typing import Any
+
+from nicegui import ui
+
+from app.models.vocabulary import PrefabID
+from app.prefabs.validation import get_path
 from app.services.state_service import get_entity
 from app.setup.setup_manifest import SetupManifest
-from app.prefabs.validation import get_path
-from typing import Any
-from app.models.vocabulary import PrefabID
+
 from .rendering_mixin import RenderingMixin
 
 logger = logging.getLogger(__name__)
@@ -146,10 +149,10 @@ class CharacterInspector(RenderingMixin):
 
     def _render_list_item(self, path, idx, item, config=None):
         item_path = f"{path}.{idx}"
-        
+
         # 3-Layer Agnostic Prefab Detection for List Items
         detected_prefab, key_map = self._detect_item_prefab(item, config)
-        
+
         with ui.row().classes(
             "w-full justify-between items-center group hover:bg-slate-800 rounded px-1 transition-colors relative"
         ):
@@ -177,7 +180,7 @@ class CharacterInspector(RenderingMixin):
                     # Fallback to agnostic text summary
                     txt = self._format_item_agnostic(item, config)
                     ui.label(txt).classes("text-xs text-slate-300 py-1 font-mono")
-            
+
             # Hover Actions (Edit/Delete)
             with ui.row().classes("absolute right-1 top-1 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800/90 rounded px-1 gap-1 z-10"):
                 ui.button(icon="edit", on_click=lambda: self._open_editor(self._get_item_label(item, config), item_path, "VAL_JSON", item)).props("flat dense round size=xs color=grey")

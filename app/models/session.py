@@ -1,5 +1,5 @@
 import json
-from typing import List, Optional
+
 from app.models.message import Message
 
 
@@ -15,9 +15,9 @@ class Session:
         setup_phase_data: str = "{}",
     ):
         self.session_id = session_id
-        self.id: Optional[int] = None
+        self.id: int | None = None
         self.system_prompt = system_prompt  # ✅ Store separately, not in history
-        self.history: List[
+        self.history: list[
             Message
         ] = []  # ✅ Start empty - only user/assistant messages
         self.setup_phase_data = setup_phase_data
@@ -30,7 +30,7 @@ class Session:
         else:
             self.history.append(Message(role=role, content=content))
 
-    def get_history(self) -> List[Message]:
+    def get_history(self) -> list[Message]:
         """Returns the entire conversation history (user/assistant only)."""
         return self.history
 

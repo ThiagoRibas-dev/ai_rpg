@@ -1,16 +1,18 @@
-import logging
 import json
-from typing import Any, Dict, List, Optional, Callable
+import logging
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
+from typing import Any
+
 from pydantic import create_model
 
 from app.llm.llm_connector import LLMConnector
 from app.models.message import Message
+from app.models.vocabulary import CHARGEN_BRANCH_CATEGORIES, CategoryName, ChargenBranch, SetupTask, TaskState
 from app.prefabs.manifest import SystemManifest
-from app.setup.schema_builder import SchemaBuilder
-from app.models.vocabulary import CategoryName, TaskState, SetupTask, ChargenBranch, CHARGEN_BRANCH_CATEGORIES
 from app.prompts.templates import CHARACTER_CREATION_SYSTEM_PROMPT, EXTRACT_CHARACTER_BATCH_PROMPT
-from app.setup.schemas import WorldExtraction, LoreStream
+from app.setup.schema_builder import SchemaBuilder
+from app.setup.schemas import LoreStream, WorldExtraction
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +21,7 @@ logger = logging.getLogger(__name__)
 # Batch 1 (Foundations) runs first, building the core identity.
 # Batch 2 runs next, splitting into Fluff (Narrative/Descriptive) and Crunch (Mechanics/Stats).
 
-CHARGEN_BATCHES: List[Dict[str, List[str]]] = [
+CHARGEN_BATCHES: list[dict[str, list[str]]] = [
     {
         ChargenBranch.BASE: CHARGEN_BRANCH_CATEGORIES[ChargenBranch.BASE],
     },
@@ -34,7 +36,7 @@ CHARGEN_BATCHES: List[Dict[str, List[str]]] = [
 
 
 class SheetGenerator:
-    def __init__(self, llm: LLMConnector, task_callback: Optional[Callable[[str, str, TaskState], None]] = None):
+    def __init__(self, llm: LLMConnector, task_callback: Callable[[str, str, TaskState], None] | None = None):
         self.llm = llm
         self.task_callback = task_callback
 
@@ -47,12 +49,12 @@ class SheetGenerator:
     # STRATEGY 2: MANIFEST-AWARE (Prefabs)
     # -------------------------------------------------------------------------
     def generate_from_manifest(
-        self, manifest: SystemManifest, character_sheet: str, 
-        world_data: Optional[WorldExtraction] = None, 
-        stream: Optional[LoreStream] = None,
+        self, manifest: SystemManifest, character_sheet: str,
+        world_data: WorldExtraction | None = None,
+        stream: LoreStream | None = None,
         rules_text: str = "",
         executor=None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Generates character data strictly adhering to the SystemManifest.
 
@@ -100,8 +102,8 @@ class SheetGenerator:
             own_executor = True
 
         try:
-            generated_context: Dict[str, Any] = {}
-            raw_combined: Dict[str, Any] = {}
+            generated_context: dict[str, Any] = {}
+            raw_combined: dict[str, Any] = {}
 
             # 5. First Pass: Register all potential batch tasks as PENDING
             for batch_dict in CHARGEN_BATCHES:
@@ -139,9 +141,9 @@ class SheetGenerator:
                 # Snapshot the context for this batch
                 context_snapshot = json.dumps(generated_context, indent=2)
 
-                def extract_branch(branch_name: str, branch_cats: List[str], ctx_snap: str = context_snapshot):
+                def extract_branch(branch_name: str, branch_cats: list[str], ctx_snap: str = context_snapshot):
                     t_id, t_label = SetupTask.chargen(branch_name.lower())
-                    
+
                     # --- ASYNC CONTEXT INJECTION (NPCs for Background) ---
                     injected_npcs = None
                     if branch_name == ChargenBranch.BACKGROUND:
@@ -150,18 +152,18 @@ class SheetGenerator:
                         logger.info(f"Branch '{branch_name}' received {len(injected_npcs)} NPCs.")
 
                     self._track_task(t_id, t_label, TaskState.RUNNING)
-                    
+
                     # 1. Dynamically assemble a unified Pydantic model for this branch
                     fields = {}
                     for cat in branch_cats:
                         CatModel = builder.build_creation_model_for_category(cat)
                         fields[cat] = (CatModel, ...)
-                        
+
                     UnifiedModel = create_model(f"Unified{branch_name}", **fields)
 
                     # 1. Get filtered hints for these specific categories
                     hints_batch = builder.get_creation_prompt_hints(branch_cats)
-                    
+
                     # 2. Build User Prompt (DYNAMIC)
                     prompt = EXTRACT_CHARACTER_BATCH_PROMPT.format(
                         branch_name=str(branch_name),
@@ -218,17 +220,17 @@ You are populating the `{cat}` section of the character sheet.
 - Fill in values for the `{cat}` category that fit the concept and rules, and make logical sense given the previously generated data.
 - Output ONLY the `{cat}` category data.
 """
-                    def extract_remaining_cat():
+                    def extract_remaining_cat(p=prompt, cm=CatModel):
                         return self.llm.get_structured_response(
                             system_prompt=sys_prompt,
-                            chat_history=[Message(role="user", content=prompt)],
-                            output_schema=CatModel,
+                            chat_history=[Message(role="user", content=p)],
+                            output_schema=cm,
                             temperature=0.7,
                         )
                     future_cat = executor.submit(extract_remaining_cat)
                     cat_data = future_cat.result()
                     self._track_task(t_id, t_label, TaskState.DONE)
-                    
+
                     cat_raw = cat_data.model_dump()
                     raw_combined[cat] = cat_raw
                     generated_context[cat] = cat_raw
@@ -239,7 +241,7 @@ You are populating the `{cat}` section of the character sheet.
 
             # Adds the empty Status category
             raw_combined[CategoryName.STATUS] = {}
-            
+
             # 6. Expand to Full Data using manifest/prefabs
             try:
                 full_values = builder.convert_simplified_to_full(raw_combined)

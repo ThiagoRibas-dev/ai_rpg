@@ -1,12 +1,14 @@
 
 from nicegui import ui
 
+from app.gui.dialogs.state_viewer import StateViewerDialog
+
 # Import Sub-Inspectors
 from app.gui.inspectors.character import CharacterInspector
 from app.gui.inspectors.inventory import InventoryInspector
-from app.gui.inspectors.quests import QuestInspector
 from app.gui.inspectors.memory import MemoryInspector
-from app.gui.dialogs.state_viewer import StateViewerDialog
+from app.gui.inspectors.quests import QuestInspector
+
 
 class InspectorManager:
     """
@@ -16,7 +18,7 @@ class InspectorManager:
         self.db = db_manager
         self.orchestrator = orchestrator
         self.active_session_id = None
-        
+
         # Instantiate sub-components
         self.char_view = CharacterInspector(db_manager, orchestrator)
         self.inv_view = InventoryInspector(db_manager, orchestrator) # Pass Orchestrator
@@ -35,7 +37,7 @@ class InspectorManager:
         """Called by Bridge when game state changes."""
         if not self.active_session_id:
             return
-            
+
         self.char_view.refresh()
         self.inv_view.refresh()
         self.quest_view.refresh()
@@ -44,7 +46,7 @@ class InspectorManager:
     def render(self):
         """Draws the Tab container and panels."""
         with ui.column().classes('w-full h-full p-0 gap-0'):
-            
+
             # Tab Header
             with ui.tabs().classes('w-full text-gray-400 bg-slate-950') as tabs:
                 t_char = ui.tab('Stats', icon='person')
@@ -54,18 +56,18 @@ class InspectorManager:
 
             # Tab Content (Fill remaining height)
             with ui.tab_panels(tabs, value=t_char).classes('w-full flex-grow bg-transparent p-2'):
-                
+
                 with ui.tab_panel(t_char).classes('p-0'):
                     self.char_view.render()
-                    
+
                 with ui.tab_panel(t_inv).classes('p-0'):
                     self.inv_view.container = ui.column().classes('w-full')
-                    self.inv_view.refresh() 
-                    
+                    self.inv_view.refresh()
+
                 with ui.tab_panel(t_quest).classes('p-0'):
                     self.quest_view.container = ui.column().classes('w-full')
                     self.quest_view.refresh()
-                    
+
                 with ui.tab_panel(t_mem).classes('p-0'):
                     self.mem_view.container = ui.column().classes('w-full')
                     self.mem_view.refresh()
@@ -76,9 +78,9 @@ class InspectorManager:
                     .props('flat dense text-color=grey')
 
     def open_debug(self):
-        if not self.active_session_id: 
+        if not self.active_session_id:
             ui.notify("No Session")
             return
-        
+
         dialog = StateViewerDialog(self.db, self.active_session_id)
         dialog.open()

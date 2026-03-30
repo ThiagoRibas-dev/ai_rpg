@@ -1,11 +1,12 @@
-from typing import Any, List, Optional
+from typing import Any
+
 from app.context.memory_retriever import MemoryRetriever
-from app.models.session import Session
 from app.models.message import Message
+from app.models.session import Session
 
 
 def handler(
-    query: str, kinds: Optional[List[str]] = None, limit: int = 8, **context: Any
+    query: str, kinds: list[str] | None = None, limit: int = 8, **context: Any
 ) -> dict:
     session_id = context.get("session_id")
     db = context.get("db_manager")

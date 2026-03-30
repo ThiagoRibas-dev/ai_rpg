@@ -1,5 +1,6 @@
-from typing import List, Optional, Any
 import json
+from typing import Any
+
 from .base_repository import BaseRepository
 
 
@@ -30,7 +31,7 @@ class StatTemplateRepository(BaseRepository):
         name = "Character Sheet Template"
 
         cursor = self._execute(
-            """INSERT INTO stat_templates (ruleset_id, name, data_json) 
+            """INSERT INTO stat_templates (ruleset_id, name, data_json)
                VALUES (?, ?, ?)""",
             (ruleset_id, name, data_str),
         )
@@ -39,7 +40,7 @@ class StatTemplateRepository(BaseRepository):
             return cursor.lastrowid
         raise ValueError("Failed to create stat template")
 
-    def get_by_id(self, template_id: int) -> Optional[dict]:
+    def get_by_id(self, template_id: int) -> dict | None:
         row = self._fetchone(
             "SELECT data_json FROM stat_templates WHERE id = ?", (template_id,)
         )
@@ -50,7 +51,7 @@ class StatTemplateRepository(BaseRepository):
                 return None
         return None
 
-    def get_by_ruleset(self, ruleset_id: int) -> List[dict]:
+    def get_by_ruleset(self, ruleset_id: int) -> list[dict]:
         rows = self._fetchall(
             "SELECT id, name FROM stat_templates WHERE ruleset_id = ? ORDER BY name",
             (ruleset_id,),
@@ -61,8 +62,8 @@ class StatTemplateRepository(BaseRepository):
         data_str = template.model_dump_json()
         name = "Updated Template"
         self._execute(
-            """UPDATE stat_templates 
-               SET name = ?, data_json = ?, updated_at = CURRENT_TIMESTAMP 
+            """UPDATE stat_templates
+               SET name = ?, data_json = ?, updated_at = CURRENT_TIMESTAMP
                WHERE id = ?""",
             (name, data_str, template_id),
         )

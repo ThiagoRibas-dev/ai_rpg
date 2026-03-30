@@ -1,11 +1,12 @@
 import logging
-from typing import Dict, Any
+from typing import Any
+
 from simpleeval import simple_eval
 
 logger = logging.getLogger(__name__)
 
 
-def safe_evaluate(expression: str, context: Dict[str, Any]) -> int | float:
+def safe_evaluate(expression: str, context: dict[str, Any]) -> int | float:
     if not expression or expression == "0" or expression == "null":
         return 0
     try:
@@ -23,8 +24,8 @@ def safe_evaluate(expression: str, context: Dict[str, Any]) -> int | float:
 
 
 def recalculate_derived_stats(
-    entity_data: Dict[str, Any], template: Any
-) -> Dict[str, Any]:
+    entity_data: dict[str, Any], template: Any
+) -> dict[str, Any]:
     """
     Legacy helper. Derived stats are now handled by the manifest validation pipeline
     (validate_entity with SystemManifest). This function is kept as a no-op for

@@ -119,7 +119,7 @@ Analyze the source material and determine:
 2. **Atmospheric Tone** (keywords, e.g. 'grim', 'hopeful', 'mysterious').
 """
 EXTRACT_WORLD_INDEX_PROMPT = """
-Perform an exhaustive "Discovery Scan" of the provided source material. 
+Perform an exhaustive "Discovery Scan" of the provided source material.
 Identify every unique Location, NPC, and significant Lore topic.
 
 For each item, determine its Type according to these rules:
@@ -149,7 +149,7 @@ Extract full, exhaustive records for only these specific entities:
 - If type is **NPC**: Focus on 'visual_description', 'stat_template' (Civilian/Warrior/etc), and 'initial_disposition'.
 - If type is any **LORE** category (Systems, Races, Factions, etc): Extract the 'content' as a detailed paragraph. Use the category name as one of the tags.
 
-Do NOT extract entities not listed in the TARGET ENTITIES list. 
+Do NOT extract entities not listed in the TARGET ENTITIES list.
 Ensure each entry is self-contained and descriptive.
 """
 

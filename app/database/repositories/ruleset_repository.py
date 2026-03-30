@@ -1,9 +1,10 @@
 
 """Repository for Ruleset operations."""
 
-from typing import List, Optional
-from .base_repository import BaseRepository
+
 from app.models.ruleset import Ruleset
+
+from .base_repository import BaseRepository
 
 
 class RulesetRepository(BaseRepository):
@@ -33,17 +34,17 @@ class RulesetRepository(BaseRepository):
         name = ruleset.meta.get("name", "Untitled Ruleset") if ruleset.meta else "Untitled Ruleset"
 
         cursor = self._execute(
-            """INSERT INTO rulesets (name, data_json) 
+            """INSERT INTO rulesets (name, data_json)
                VALUES (?, ?)""",
             (name, data_str),
         )
         self._commit()
-        
+
         if cursor.lastrowid:
             return cursor.lastrowid
         raise ValueError("Failed to create ruleset")
 
-    def get_by_id(self, ruleset_id: int) -> Optional[Ruleset]:
+    def get_by_id(self, ruleset_id: int) -> Ruleset | None:
         """Retrieve a Ruleset by ID."""
         row = self._fetchone(
             "SELECT data_json FROM rulesets WHERE id = ?", (ruleset_id,)
@@ -55,7 +56,7 @@ class RulesetRepository(BaseRepository):
                 return None
         return None
 
-    def get_by_name(self, name: str) -> Optional[dict]:
+    def get_by_name(self, name: str) -> dict | None:
         """Retrieve a Ruleset ID and Data by Name."""
         row = self._fetchone(
             "SELECT id, data_json FROM rulesets WHERE name = ?", (name,)
@@ -64,7 +65,7 @@ class RulesetRepository(BaseRepository):
             return {"id": row["id"], "data_json": row["data_json"]}
         return None
 
-    def get_all(self) -> List[dict]:
+    def get_all(self) -> list[dict]:
         """
         Get all rulesets (metadata only).
         Returns a list of dicts {'id': int, 'name': str}.
@@ -76,7 +77,7 @@ class RulesetRepository(BaseRepository):
         """Update an existing ruleset."""
         data_str = ruleset.model_dump_json()
         name = ruleset.meta.get("name", "Untitled Ruleset")
-        
+
         self._execute(
             "UPDATE rulesets SET name = ?, data_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
             (name, data_str, ruleset_id),

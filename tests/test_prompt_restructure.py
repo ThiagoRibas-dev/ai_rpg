@@ -1,8 +1,13 @@
 import unittest
 from unittest.mock import MagicMock
-from app.services.entity_index import smart_truncate, render_index
-from app.prefabs.manifest import SystemManifest, EngineConfig, FieldDef
-from app.models.vocabulary import PrefabID, MemoryKind
+
+from app.context.context_builder import ContextBuilder
+from app.context.state_context import StateContextBuilder
+from app.models.game_session import GameSession
+from app.models.vocabulary import MemoryKind, PrefabID
+from app.prefabs.manifest import EngineConfig, FieldDef, SystemManifest
+from app.services.entity_index import render_index, smart_truncate
+
 
 class TestPromptRestructure(unittest.TestCase):
     def test_smart_truncate(self):
@@ -11,7 +16,7 @@ class TestPromptRestructure(unittest.TestCase):
         # max_len 50: "The Melkhar Empire is the most powerful kingdom" (index 46)
         res = smart_truncate(text, 50)
         self.assertEqual(res, "The Melkhar Empire is the most powerful kingdom...")
-        
+
         # Case 2: Truncate at a comma
         text2 = "Sorcerers are individuals capable of innate magical power, or so it is said."
         res2 = smart_truncate(text2, 60)
@@ -35,10 +40,10 @@ class TestPromptRestructure(unittest.TestCase):
 
     def test_engine_table_rendering(self):
         eng = EngineConfig(
-            dice="1d20", 
-            mechanic="d20 + modifiers vs DC", 
-            success="Result >= DC", 
-            crit="Nat 20", 
+            dice="1d20",
+            mechanic="d20 + modifiers vs DC",
+            success="Result >= DC",
+            crit="Nat 20",
             fumble="Nat 1"
         )
         table = eng.to_markdown_table()
@@ -49,16 +54,15 @@ class TestPromptRestructure(unittest.TestCase):
         # Mocking app components
         mock_db = MagicMock()
         mock_registry = MagicMock()
-        from app.context.state_context import StateContextBuilder
         builder = StateContextBuilder(mock_registry, mock_db)
 
         # Mock Manifest
         mock_manifest = MagicMock(spec=SystemManifest)
         mock_manifest.get_categories.return_value = ["Attributes", "Resources"]
-        
+
         attr_field = FieldDef(path="attributes.str", label="Strength", prefab=PrefabID.VAL_COMPOUND, category="Attributes")
         res_field = FieldDef(path="resources.hp", label="HP", prefab=PrefabID.RES_POOL, category="Resources")
-        
+
         mock_manifest.get_fields_by_category.side_effect = lambda cat: [attr_field] if cat == "Attributes" else [res_field]
 
         # Mock Player Entity
@@ -68,16 +72,37 @@ class TestPromptRestructure(unittest.TestCase):
                 "resources": {"hp": {"current": 10, "max": 10}},
                 "name": "Thorin"
             }
-            
+
             res = builder.build_character_sheet(1, mock_manifest)
-            
+
             # Verify Attributes table
             self.assertIn("| Attribute | Score | Mod |", res)
             self.assertIn("| Strength | 18 | +4 |", res)
-            
+
             # Verify Resources table
             self.assertIn("| Resource | Current | Max |", res)
             self.assertIn("| HP | 10 | 10 |", res)
+
+    def test_context_builder_integration(self):
+        """Ensures ContextBuilder can run its full dynamic pipeline without AttributeErrors."""
+
+        mock_db = MagicMock()
+        mock_vs = MagicMock()
+        mock_state = MagicMock()
+        mock_mem = MagicMock()
+        mock_sim = MagicMock()
+
+        builder = ContextBuilder(mock_db, mock_vs, mock_state, mock_mem, mock_sim)
+
+        mock_session = MagicMock(spec=GameSession)
+        mock_session.id = 1
+        mock_session.authors_note = "Test note"
+
+        # This confirms that all internal _build_* calls (including _build_spatial_context) exist
+        try:
+            builder.build_dynamic_context(mock_session, [])
+        except AttributeError as e:
+            self.fail(f"ContextBuilder integration failed: {e}")
 
     def test_wrap_section_logic(self):
         # We need to test the logic that will be in ContextBuilder
@@ -85,10 +110,10 @@ class TestPromptRestructure(unittest.TestCase):
             if not content or not content.strip():
                 return ""
             return f"### {title}\n```{lang}\n{content.strip()}\n```"
-        
+
         res = _wrap_section("TEST", "Hello World")
         self.assertEqual(res, "### TEST\n```markdown\nHello World\n```")
-        
+
         res_empty = _wrap_section("EMPTY", "")
         self.assertEqual(res_empty, "")
 

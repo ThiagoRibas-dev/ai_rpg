@@ -5,14 +5,14 @@ Refactored from app.tools.builtin._state_storage.
 """
 
 import logging
-from typing import Dict, Any
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
 def get_entity(
     session_id: int, db_manager, entity_type: str, key: str
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Get a single entity."""
     if not session_id or not db_manager:
         raise ValueError("Missing session_id or db_manager")
@@ -24,7 +24,7 @@ def get_entity(
 
 
 def set_entity(
-    session_id: int, db_manager, entity_type: str, key: str, value: Dict[str, Any]
+    session_id: int, db_manager, entity_type: str, key: str, value: dict[str, Any]
 ) -> int:
     """Set/update a single entity. Returns version."""
     if not session_id or not db_manager:
@@ -38,7 +38,7 @@ def set_entity(
         raise
 
 
-def get_all_of_type(session_id: int, db_manager, entity_type: str) -> Dict[str, Any]:
+def get_all_of_type(session_id: int, db_manager, entity_type: str) -> dict[str, Any]:
     """Get all entities of a specific type."""
     if not session_id or not db_manager:
         raise ValueError("Missing session_id or db_manager")
@@ -49,9 +49,9 @@ def get_all_of_type(session_id: int, db_manager, entity_type: str) -> Dict[str, 
         return {}
 
 
-def get_versions(session_id: int, db_manager, entity_type: str) -> Dict[str, int]:
+def get_versions(session_id: int, db_manager, entity_type: str) -> dict[str, int]:
     """
-    Get version map for cache invalidation. 
+    Get version map for cache invalidation.
     Returns: {'key': version_int}
     """
     if not session_id or not db_manager:

@@ -27,16 +27,16 @@ class Theme:
                 body { background-color: #0f172a; color: #f3f4f6; overflow: hidden; }
                 ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
                 ::-webkit-scrollbar-thumb:hover { background: #64748b; }
-                
+
                 /* Chat Bubble Constraints */
                 .q-message-label { max-width: 100%; }
                 .q-message-text { max-width: 100%; word-break: break-word; }
                 .q-message-content { max-width: 100%; }
-                
+
                 /* Force Markdown Code Blocks to Wrap */
-                pre, code { 
-                    white-space: pre-wrap !important; 
-                    word-wrap: break-word !important; 
+                pre, code {
+                    white-space: pre-wrap !important;
+                    word-wrap: break-word !important;
                     max-width: 100%;
                 }
             </style>

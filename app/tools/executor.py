@@ -1,10 +1,10 @@
 import logging
 import queue
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from pydantic import BaseModel
 
-from app.tools.schemas import Roll, Note
+from app.tools.schemas import Note, Roll
 
 
 class ToolExecutor:
@@ -29,15 +29,15 @@ class ToolExecutor:
 
     def execute(
         self,
-        tool_calls: List[BaseModel],
+        tool_calls: list[BaseModel],
         session,
-        manifest: Dict[str, Any],
+        manifest: dict[str, Any],
         tool_budget: int,
         current_game_time: str | None = None,
-        extra_context: Dict[str, Any] | None = None,
+        extra_context: dict[str, Any] | None = None,
         turn_id: str | None = None,
-    ) -> Tuple[List[Dict[str, Any]], bool]:
-        results: List[Dict[str, Any]] = []
+    ) -> tuple[list[dict[str, Any]], bool]:
+        results: list[dict[str, Any]] = []
         memory_tool_used = False
 
         if not tool_calls:
@@ -55,7 +55,7 @@ class ToolExecutor:
         if extra_context:
             ctx.update(extra_context)
 
-        for i, call in enumerate(tool_calls[:tool_budget]):
+        for _i, call in enumerate(tool_calls[:tool_budget]):
             tool_name = call.name
 
             # Notify UI

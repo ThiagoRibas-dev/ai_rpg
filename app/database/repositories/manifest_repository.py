@@ -1,8 +1,10 @@
 """Repository for SystemManifest operations."""
 
-from typing import List, Optional, Dict, Any
-from .base_repository import BaseRepository
+from typing import Any
+
 from app.prefabs.manifest import SystemManifest
+
+from .base_repository import BaseRepository
 
 
 class ManifestRepository(BaseRepository):
@@ -34,14 +36,14 @@ class ManifestRepository(BaseRepository):
         Save a new Manifest to the database. Returns the new ID.
         """
         data_str = manifest.to_json()
-        
+
         cursor = self._execute(
-            """INSERT INTO manifests (system_id, name, data_json, is_builtin) 
+            """INSERT INTO manifests (system_id, name, data_json, is_builtin)
                VALUES (?, ?, ?, ?)""",
             (manifest.id, manifest.name, data_str, 1 if is_builtin else 0),
         )
         self._commit()
-        
+
         if cursor.lastrowid:
             return cursor.lastrowid
         raise ValueError("Failed to create manifest")
@@ -67,10 +69,10 @@ class ManifestRepository(BaseRepository):
             if row:
                 self.update(row["id"], manifest)
                 return row["id"]
-        
+
         return self.create(manifest, is_builtin=True)
 
-    def get_by_id(self, manifest_id: int) -> Optional[SystemManifest]:
+    def get_by_id(self, manifest_id: int) -> SystemManifest | None:
         """Retrieve a Manifest by numeric ID."""
         row = self._fetchone(
             "SELECT data_json FROM manifests WHERE id = ?", (manifest_id,)
@@ -82,7 +84,7 @@ class ManifestRepository(BaseRepository):
                 return None
         return None
 
-    def get_by_system_id(self, system_id: str) -> Optional[dict]:
+    def get_by_system_id(self, system_id: str) -> dict | None:
         """
         Retrieve a Manifest row by string system_id.
         Returns {'id': int, 'manifest': SystemManifest} or None.
@@ -98,7 +100,7 @@ class ManifestRepository(BaseRepository):
                 return None
         return None
 
-    def get_all(self) -> List[Dict[str, Any]]:
+    def get_all(self) -> list[dict[str, Any]]:
         """
         Get all manifests (metadata only).
         Returns list of dicts: {'id', 'system_id', 'name', 'is_builtin'}
