@@ -10,6 +10,17 @@ class MemoryKind(StrEnum):
     LORE = "lore"
     RULE = "rule"
     USER_PREF = "user_pref"
+    
+class WorldCategory(StrEnum):
+    LOCATION = "location"
+    NPC = "npc"
+    SYSTEMS = "systems"
+    RACES = "races"
+    FACTIONS = "factions"
+    HISTORY = "history"
+    CULTURE = "culture"
+    STATUS = "status"
+    MISC = "misc"
 
 
 # ---------------------------------------------------------------------------
@@ -42,12 +53,12 @@ class PrefabID(StrEnum):
 
 class CategoryName(StrEnum):
     IDENTITY = "identity"
+    PROGRESSION = "progression"
     ATTRIBUTES = "attributes"
     RESOURCES = "resources"
     SKILLS = "skills"
-    INVENTORY = "inventory"
     FEATURES = "features"
-    PROGRESSION = "progression"
+    INVENTORY = "inventory"
     COMBAT = "combat"
     STATUS = "status"
     META = "meta"
@@ -123,11 +134,18 @@ class TaskState(StrEnum):
 # ---------------------------------------------------------------------------
 
 class SetupTask(Enum):
-    WORLDGEN_GENRE = ("worldgen_genre", "Genre & Tone")
-    WORLDGEN_LOCATIONS = ("worldgen_locations", "Locations")
-    WORLDGEN_NPCS = ("worldgen_npcs", "NPCs")
-    WORLDGEN_LORE = ("worldgen_lore", "Lore")
-    OPENING_CRAWL = ("opening_crawl", "Opening Crawl")
+    WORLDGEN_GENRE     = ("worldgen_genre", "Genre & Tone")
+    WORLDGEN_INDEX     = ("worldgen_index", "Deep Scan (Index)")
+    WORLDGEN_ATLAS     = ("worldgen_atlas", "Atlas (Locations)")
+    WORLDGEN_CODEX     = ("worldgen_codex", "Codex (Systems)")
+    WORLDGEN_PEOPLES   = ("worldgen_peoples", "Peoples (Biology)")
+    WORLDGEN_POWER     = ("worldgen_power", "Power & Politics")
+    WORLDGEN_CHRONICLE = ("worldgen_chronicle", "Chronicle (History)")
+    WORLDGEN_CULTURE   = ("worldgen_culture", "Culture & Life")
+    WORLDGEN_DRAMATIS  = ("worldgen_dramatis", "Dramatis Personae")
+    WORLDGEN_STATUS    = ("worldgen_status", "Current Status")
+    WORLDGEN_REMNANTS  = ("worldgen_remnants", "Unresolved Lore")
+    OPENING_CRAWL      = ("opening_crawl", "Opening Crawl")
     
     @property
     def id(self) -> str:
@@ -141,3 +159,20 @@ class SetupTask(Enum):
     def chargen(cls, category: str) -> tuple[str, str]:
         """Returns (task_id, display_label) for a chargen category."""
         return (f"chargen_{category}", category.title())
+# ---------------------------------------------------------------------------
+# CHARACTER GENERATION BRANCHES
+# ---------------------------------------------------------------------------
+
+class ChargenBranch(StrEnum):
+    BASE = "Base"
+    MECHANICS = "Mechanics"
+    DERIVED = "Derived"
+    BACKGROUND = "Background"
+
+# Lists of categories mapped to each branch for sheet_generator.py
+CHARGEN_BRANCH_CATEGORIES = {
+    ChargenBranch.BASE: [CategoryName.IDENTITY, CategoryName.META, CategoryName.ATTRIBUTES, CategoryName.PROGRESSION],
+    ChargenBranch.MECHANICS: [CategoryName.SKILLS, CategoryName.FEATURES],
+    ChargenBranch.DERIVED: [CategoryName.COMBAT, CategoryName.RESOURCES, CategoryName.INVENTORY],
+    ChargenBranch.BACKGROUND: [CategoryName.CONNECTIONS, CategoryName.NARRATIVE]
+}

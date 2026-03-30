@@ -200,9 +200,6 @@ class GeminiConnector(LLMConnector):
         
         raise ValueError("Gemini returned empty response (blocked or error).")
 
-    def get_tool_calls(self, system_prompt, chat_history, tools):
-        return [] # Legacy stub
-
     def chat_with_tools(
         self,
         system_prompt: str,

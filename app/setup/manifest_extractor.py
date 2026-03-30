@@ -1,23 +1,71 @@
 import logging
+import re
 from typing import Optional, Callable, List, Dict
 
 from app.llm.llm_connector import LLMConnector
 from app.models.message import Message
 from app.prefabs.registry import PREFABS
-from app.prefabs.manifest import SystemManifest, EngineConfig, FieldDef, RuleDef
+from app.prefabs.manifest import (
+    SystemManifest,
+    EngineConfig,
+    FieldDef,
+    RuleDef,
+    validate_manifest,
+)
 from app.setup.schemas import (
-    ExtractedField, ExtractedFieldList, MechanicsExtraction, 
-    ProceduresExtraction, RuleListExtraction
+    ExtractedField,
+    ExtractedFieldList,
+    MechanicsExtraction,
+    ProceduresExtraction,
+    RuleListExtraction,
 )
 from app.prompts.templates import (
-    SHARED_RULES_SYSTEM_PROMPT, EXTRACT_MECHANICS_PROMPT,
-    EXTRACT_FIELDS_PROMPT, EXTRACT_PROCEDURES_PROMPT, EXTRACT_RULES_PROMPT
+    SHARED_RULES_SYSTEM_PROMPT,
+    EXTRACT_MECHANICS_PROMPT,
+    EXTRACT_FIELDS_PROMPT,
+    EXTRACT_PROCEDURES_PROMPT,
+    EXTRACT_RULES_PROMPT,
 )
-from app.models.vocabulary import CategoryName
+from app.models.vocabulary import CategoryName, PrefabID
 
 logger = logging.getLogger(__name__)
 
 class ManifestExtractor:
+    KNOWN_SYSTEM_IDS = {
+        "dungeons & dragons 3.5e": "dnd_3_5e",
+        "dungeons and dragons 3.5e": "dnd_3_5e",
+    }
+
+    def _slugify_system_id(self, name: str) -> str:
+        slug = name.lower().strip()
+        slug = slug.replace("&", "and")
+        slug = re.sub(r"[^a-z0-9]+", "_", slug)
+        slug = re.sub(r"_+", "_", slug).strip("_")
+        return slug or "extracted_system"
+
+    def _derive_system_id(self, system_name: str) -> str:
+        key = system_name.lower().strip()
+        return self.KNOWN_SYSTEM_IDS.get(key, self._slugify_system_id(system_name))
+
+    def _normalize_aliases(self, aliases: Dict[str, str], fields: List[ExtractedField]) -> Dict[str, str]:
+        """
+        Rewrites alias formulas so compound fields are referenced via `.score`
+        instead of the container path itself.
+        Example: `attributes.str` -> `attributes.str.score`
+        """
+        compound_paths = {f.path for f in fields if f.prefab == PrefabID.VAL_COMPOUND}
+        normalized: Dict[str, str] = {}
+
+        for alias_key, formula in aliases.items():
+            updated = formula
+            for path in compound_paths:
+                # Replace bare references only, not already-dotted ones like `.score`
+                pattern = rf"\b{re.escape(path)}\b(?!\.)"
+                updated = re.sub(pattern, f"{path}.score", updated)
+            normalized[alias_key] = updated
+
+        return normalized
+
     def __init__(self, llm: LLMConnector, status_callback: Optional[Callable[[str], None]] = None):
         self.llm = llm
         self.status_callback = status_callback
@@ -47,7 +95,21 @@ class ManifestExtractor:
         all_fields.extend(self._extract_field_group(system_prompt, menu_text, mechanics.aliases, [CategoryName.SKILLS, CategoryName.COMBAT, CategoryName.STATUS]))
         
         self._update_status(5, "Extracting Assets...")
-        all_fields.extend(self._extract_field_group(system_prompt, menu_text, mechanics.aliases, [CategoryName.INVENTORY, CategoryName.FEATURES, CategoryName.META, CategoryName.IDENTITY, CategoryName.NARRATIVE]))
+        all_fields.extend(
+            self._extract_field_group(
+                system_prompt,
+                menu_text,
+                mechanics.aliases,
+                [
+                    CategoryName.INVENTORY,
+                    CategoryName.FEATURES,
+                    CategoryName.META,
+                    CategoryName.IDENTITY,
+                    CategoryName.NARRATIVE,
+                    CategoryName.CONNECTIONS,
+                ],
+            )
+        )
 
         # Phase 3: Procedures
         self._update_status(6, "Extracting Procedures...")
@@ -73,16 +135,43 @@ class ManifestExtractor:
             except Exception as e:
                 logger.warning(f"Mechanics extraction failed (attempt {attempt+1}/3): {e}")
                 if attempt == 2:
-                    return MechanicsExtraction(dice_notation="1d20", resolution_mechanic="Unknown", success_condition="Unknown", crit_rules="None")
+                    return MechanicsExtraction(
+                        system_name="Extracted System",
+                        dice_notation="1d20",
+                        resolution_mechanic="Unknown",
+                        success_condition="Unknown",
+                        crit_rules="None",
+                        fumble_rules="",
+                        aliases={},
+                    )
                 messages.append(Message(role="assistant", content="I provided an invalid JSON response."))
                 messages.append(Message(role="user", content=f"Validation failed: {e}. Please fix the errors and try again. Provide ONLY valid JSON."))
 
-    def _extract_field_group(self, prompt: str, menu: str, aliases: Dict, cats: List[str]) -> List[ExtractedField]:
-        p = EXTRACT_FIELDS_PROMPT.format(categories=", ".join(cats), menu=menu, aliases=str(aliases))
+    def _extract_field_group(
+        self,
+        prompt: str,
+        menu: str,
+        aliases: Dict,
+        cats: List[CategoryName],
+    ) -> List[ExtractedField]:
+        p = EXTRACT_FIELDS_PROMPT.format(
+            categories=", ".join(cats),
+            menu=menu,
+            aliases=str(aliases),
+        )
         messages = [Message(role="user", content=p)]
+
         for attempt in range(3):
             try:
-                return self.llm.get_structured_response(prompt, messages, ExtractedFieldList, 0.4).fields
+                result = self.llm.get_structured_response(prompt, messages, ExtractedFieldList, 0.4)
+                allowed = {str(c) for c in cats}
+                filtered = [f for f in result.fields if str(f.category) in allowed]
+
+                dropped = [f.path for f in result.fields if str(f.category) not in allowed]
+                if dropped:
+                    logger.info(f"Dropped out-of-batch fields for cats {cats}: {dropped}")
+
+                return filtered
             except Exception as e:
                 logger.warning(f"Field extraction failed for cats {cats} (attempt {attempt+1}/3): {e}")
                 if attempt == 2:
@@ -116,11 +205,47 @@ class ManifestExtractor:
                 messages.append(Message(role="user", content=f"Validation failed: {e}. Please fix the errors and try again. Provide ONLY valid JSON."))
 
     def _assemble(self, mech, fields, procs, rules) -> SystemManifest:
+        # Deduplicate by path; last one wins
         unique = {f.path: f for f in fields}
-        defs = [FieldDef(path=f.path, label=f.label, prefab=f.prefab, category=f.category, config=f.config, formula=f.formula, usage_hint=f.usage_hint) for f in unique.values()]
-        sys_id = "custom_" + str(hash(mech.resolution_mechanic))[:8]
-        return SystemManifest(
-            id=sys_id, name="Extracted System", 
-            engine=EngineConfig(dice=mech.dice_notation, mechanic=mech.resolution_mechanic, success=mech.success_condition, crit=mech.crit_rules, fumble=mech.fumble_rules),
-            procedures=procs, fields=defs, aliases=mech.aliases, rules=rules
+        deduped_fields = list(unique.values())
+
+        # Normalize aliases now that we know actual field shapes
+        normalized_aliases = self._normalize_aliases(mech.aliases, deduped_fields)
+
+        defs = [
+            FieldDef(
+                path=f.path,
+                label=f.label,
+                prefab=f.prefab,
+                category=f.category,
+                config=f.config,
+                formula=f.formula,
+                usage_hint=f.usage_hint,
+            )
+            for f in deduped_fields
+        ]
+
+        system_name = (mech.system_name or "Extracted System").strip()
+        system_id = self._derive_system_id(system_name)
+
+        manifest = SystemManifest(
+            id=system_id,
+            name=system_name,
+            engine=EngineConfig(
+                dice=mech.dice_notation,
+                mechanic=mech.resolution_mechanic,
+                success=mech.success_condition,
+                crit=mech.crit_rules,
+                fumble=mech.fumble_rules,
+            ),
+            procedures=procs,
+            fields=defs,
+            aliases=normalized_aliases,
+            rules=rules,
         )
+
+        problems = validate_manifest(manifest)
+        for problem in problems:
+            logger.warning(f"Manifest validation: {problem}")
+
+        return manifest

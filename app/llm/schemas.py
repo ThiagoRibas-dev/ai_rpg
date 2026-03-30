@@ -112,3 +112,37 @@ class TurnFinalOutput(BaseModel):
         le=5,
     )
 
+
+class TurnSuggestions(BaseModel):
+    """High-speed extraction for action choices."""
+
+    choices: List[str] = Field(
+        ...,
+        description="A list of 3-5 action options the player could take next.",
+        min_length=3,
+        max_length=5,
+    )
+
+
+class TurnMetadata(BaseModel):
+    """Background extraction for narration summary and indexing."""
+
+    summary: str = Field(
+        ...,
+        description="Concise 1-3 sentence summary of what happened this scene.",
+        max_length=512,
+    )
+
+    tags: List[str] = Field(
+        default_factory=list,
+        description="Tags in snake_case that describe the scene.",
+        max_length=12,
+    )
+
+    importance: int = Field(
+        3,
+        description="1-5 importance rating for retrieval (1 = unimportant, 5 = major).",
+        ge=1,
+        le=5,
+    )
+

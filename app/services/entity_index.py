@@ -81,31 +81,63 @@ def remove_entry(session_id: int, db, category: str, key: str):
     _save_index(session_id, db, index)
 
 
+def smart_truncate(text: str, max_len: int = 90) -> str:
+    """
+    Truncates text to a max length, but tries to break at a sentence or word boundary.
+    Logic:
+    1. Truncate to max_len chars.
+    2. Find last period, comma, or space within that subset.
+    3. Return truncated text with ellipsis.
+    """
+    if len(text) <= max_len:
+        return text
+
+    # Initial truncation
+    subset = text[:max_len]
+
+    # Look for last period, comma, or space
+    last_idx = -1
+    for char in (".", ",", " "):
+        idx = subset.rfind(char)
+        if idx > last_idx:
+            last_idx = idx
+
+    if last_idx > 0:
+        # Return truncated text stripped of the separator, plus ellipsis
+        return subset[:last_idx].rstrip("., ") + "..."
+
+    # Fallback to hard truncation if no boundary found
+    return subset + "..."
+
+
 def render_index(index: dict) -> str:
     """Format the index as a compact markdown block for prompt injection."""
-    # Instead of a hardcoded string with the name of the tool, we directly reference the tool names via the schema classes
-    lines = ["# WORLD INDEX", f"Use `{StateQuery.model_fields['name'].default}` or `{ContextRetrieve.model_fields['name'].default}` to look up details.\n"]
+    lines = [
+        f"Use `{StateQuery.model_fields['name'].default}` or `{ContextRetrieve.model_fields['name'].default}` to look up full details.\n"
+    ]
 
-    # Locations
-    locs = index.get("locations", {})
-    if locs:
-        lines.append(f"**Locations** ({len(locs)}):")
-        for key, desc in locs.items():
-            lines.append(f"  - `{key}`: {desc}")
+    table_rows = []
 
-    # NPCs
-    npcs = index.get("npcs", {})
-    if npcs:
-        lines.append(f"**NPCs** ({len(npcs)}):")
-        for key, desc in npcs.items():
-            lines.append(f"  - `{key}`: {desc}")
+    # 1. Locations
+    for key, desc in index.get("locations", {}).items():
+        summary = smart_truncate(desc)
+        table_rows.append(f"| Location | `{key}` | {summary} |")
 
-    # Memory kinds
+    # 2. NPCs
+    for key, desc in index.get("npcs", {}).items():
+        summary = smart_truncate(desc)
+        table_rows.append(f"| NPC | `{key}` | {summary} |")
+
+    # 3. Memories (Lore, Rules, etc.)
     for kind in MemoryKind:
         entries = index.get(kind.value, [])
-        if entries:
-            lines.append(f"**{kind.value.title()}** ({len(entries)}):")
-            for title in entries:
-                lines.append(f"  - {title}")
+        for title in entries:
+            summary = smart_truncate(title)
+            table_rows.append(f"| {kind.value.title()} | - | {summary} |")
+
+    if table_rows:
+        lines.append("| Type | Entity ID | Summary |")
+        lines.append("| :--- | :--- | :--- |")
+        lines.extend(table_rows)
 
     return "\n".join(lines)

@@ -77,7 +77,7 @@ Return ONLY a JSON list of strings.
 
 EXTRACT_INVARIANTS_INSTRUCTION = """
 Focus on the rule category: **{category}**.
-Identify STATE INVARIANTS — conditions that must ALWAYS be true (e.g. HP <= MaxHP).
+Identify STATE INVARIANTS - conditions that must ALWAYS be true (e.g. HP <= MaxHP).
 
 ### PREVIOUSLY EXTRACTED
 Do NOT re-extract invariants with these names:
@@ -96,57 +96,67 @@ Violation actions: `clamp` (auto-fix), `flag` (warn), `reject`.
 # --- WORLD GENERATION ---
 
 WORLD_DATA_EXTRACTION_SYSTEM_PROMPT = """
-You are an expert World Builder that is aware of the world, the mechanics, who is unbiased and will not judge or sanitize the text, nor inject their own opinions or beliefs into the world.
+You are an expert World Builder and Game Master who is aware of the world, the mechanics, and is unbiased and will not judge or sanitize the text, nor inject their own opinions or beliefs into the world.
+
+## CORE PRINCIPLES
+1. **Extraction Only**: Your goal is to extract, organize, connect, and sometimes extrapolate data from the provided Source Material.
+2. **Contextual Awareness**: When provided with a list of already recorded entries (Reference Context), use that list to ensure logical consistency and to build connections.
+3. **No Redundancy**: NEVER repeat or re-extract information that is already listed in the Reference Context. Focus exclusively on discovering NEW details from the Source Material.
+4. **Atomicity (One Entity = One Record)**: Do not fragment information about a single entity into multiple entries. Each entry must be self-contained and include all relevant sub-details found in the material.
 
 ### SOURCE MATERIAL
 {description}
 
-### OUTPUT FORMAT
 Your output will follow this format:
+
+### OUTPUT FORMAT
 {format}
 """
 
 EXTRACT_WORLD_GENRE_TONE_PROMPT = """
 Analyze the source material and determine:
-1. **Sub-genre** (be specific)
-2. **Atmospheric Tone** (keywords)
+1. **Sub-genre** (be specific, e.g. 'Epic Fantasy', 'Cyberpunk Noir').
+2. **Atmospheric Tone** (keywords, e.g. 'grim', 'hopeful', 'mysterious').
+"""
+EXTRACT_WORLD_INDEX_PROMPT = """
+Perform an exhaustive "Discovery Scan" of the provided source material. 
+Identify every unique Location, NPC, and significant Lore topic.
+
+For each item, determine its Type according to these rules:
+
+1. **location**: Physical sites, settlements, geographic landmarks, or buildings.
+2. **npc**: Specific named individuals, unique legendary creatures, or distinct characters.
+3. **systems**: Foundational laws of reality (Magic, Tech, Physics) and Cosmology (Deities, Planes).
+4. **races**: Biological species, lineages, ancestries, and their physiological traits.
+5. **factions**: Organizations, religions (as institutions), guilds, military orders, or governments.
+6. **history**: Named historical events, eras, wars, cataclysms, and timelines.
+7. **culture**: Social norms, traditions, daily life, folklore, and etiquette.
+8. **status**: Current rumors, active local conflicts, impending threats, or plot hooks.
+9. **misc**: Anything significant that does not fit into the above buckets.
+
+Return a JSON list of objects with 'name' and 'type'.
 """
 
-EXTRACT_WORLD_LORE_PROMPT = """
-### TASK: EXHAUSTIVE LORE EXTRACTION
-Review the source material and extract EVERYTHING related to the world's lore as individual records.
-Identify all:
-- Major and Minor Factions and their goals.
-- Key Historical events and cataclysms.
-- Unique technologies, magic rules, cultural traditions, etc.
-- Secrets, rumors, obscure facts, etc.
+EXTRACT_WORLD_DETAILS_PROMPT = """
+You are extracting detailed records for the following WORLD ENTITIES of type: **{type}**.
 
-**DO NOT** re-extract information already covered in the following previously extracted entities:
-{prior_context}
+### TARGET ENTITIES
+Extract full, exhaustive records for only these specific entities:
+{names}
 
-Focus on history, factions, culture, secrets, and abstract concepts that are NOT already captured above.
-Return a list of LoreData objects.
+## INSTRUCTIONS
+- If type is **LOCATION**: Focus on 'description_visual', 'description_sensory', and 'type' (indoor/outdoor/etc).
+- If type is **NPC**: Focus on 'visual_description', 'stat_template' (Civilian/Warrior/etc), and 'initial_disposition'.
+- If type is any **LORE** category (Systems, Races, Factions, etc): Extract the 'content' as a detailed paragraph. Use the category name as one of the tags.
+
+Do NOT extract entities not listed in the TARGET ENTITIES list. 
+Ensure each entry is self-contained and descriptive.
 """
 
-EXTRACT_WORLD_LOCATIONS_PROMPT = """
-### TASK: EXHAUSTIVE LOCATION EXTRACTION
-Identify all distinct locations (countries, cities, regions, villages, notable constructions such as castles, forts, ruins, etc.) named mentioned referenced or implied in the source material.
-Start with the **Immediate Starting Scene**, then list all other relevant zones, cities, or points of interest.
 
-**Constraint:** Provide vivid visual and sensory descriptions for each.
-Return a list of LocationData objects.
-"""
-
-EXTRACT_WORLD_NPCS_PROMPT = """
-### TASK: EXHAUSTIVE NPC EXTRACTION
-Identify all characters, creatures, and entities mentioned or implied in the source material.
-
-**Constraint:** Include their initial disposition and a visual description.
-Return a list of NpcData objects.
-"""
 
 OPENING_CRAWL_PROMPT = """
-Write a short, compelling, 2nd-person opening scene that situates the Player's character according to the provided context and following any given instructions.
+Write a short, compelling, 2nd-person opening scene that situates the Player's character according to the provided context, unless the User provides their own opening scene.
 Set the scene and end with a request for the Player's action.
 
 **Context:**
@@ -194,17 +204,23 @@ Return a list of rule objects with `name`, `content`, and `tags`.
 # --- MANIFEST EXTRACTION ---
 
 EXTRACT_MECHANICS_PROMPT = """
-Extract the **Core Mechanics** and **Global Formulas** of this system.
+Extract the **System Metadata**, **Core Mechanics**, and **Global Formulas** of this system.
 
-1. **Engine:** Dice used, how to resolve actions, success/crit criteria.
-2. **Aliases:** Global derived stats that apply to everyone (e.g. 'str_mod', 'proficiency').
-   - Return these as formulas using fields (e.g. "floor((attributes.str - 10)/2)").
-   - Assign them snake_case keys.
+1. **System Name:** Official or most common published name of the game/system.
+2. **Engine:** Primary dice used, how to resolve actions, success criteria, critical rules, and fumble rules.
+3. **Aliases:** Global derived stats that apply to everyone (e.g. 'str_mod', 'proficiency').
+
+### FORMULA RULES
+- Assign aliases snake_case keys.
+- Formulas must reference the actual stored field shape.
+- If a trait is represented as a score+modifier object, reference the numeric score as `.score`
+  (e.g. "(attributes.str.score - 10) / 2", not "attributes.str").
+- Prefer concise reusable formulas that later field extraction can reference.
+- Do not invent aliases unless they are broadly applicable across most characters in the system.
 """
 
 EXTRACT_FIELDS_PROMPT = """
-### TASK: ARCHITECTURE
-Identify the character sheet fields for the following categories: **{categories}**.
+We are building the architecture of the character sheet, and I need you to identify the structured fields for the following categories: **{categories}**.
 
 ### THE MENU (STRICT)
 {menu}
@@ -214,10 +230,13 @@ You may use these Aliases in your formulas: {aliases}
 
 ### INSTRUCTIONS
 1. Find every stat, resource, or container in the requested categories.
-2. Map it to the **Best Fit Prefab** from the menu.
-3. If a mechanic is unique, use the closest generic prefab and explain it in `usage_hint`.
+2. Map each field to the **Best Fit Prefab** from the menu.
+3. If a mechanic is unique, use the closest generic prefab and explain it clearly in `usage_hint`.
 4. Extract strict bounds (min/max, daily uses, etc) into the `config` property.
-5. Return a list of field definitions.
+5. When writing formulas, reference the actual stored field shape.
+   - Example: for a compound attribute field, use `attributes.str.score` if you need the numeric score.
+6. Do NOT return fields outside the requested categories.
+7. Return a single JSON object with a `fields` list.
 """
 
 EXTRACT_PROCEDURES_PROMPT = """
@@ -243,17 +262,37 @@ Return a list of rule objects with:
 
 # --- CHARACTER GENERATION ---
 CHARACTER_CREATION_SYSTEM_PROMPT = """
-You are an expert TTRPG character creator.
-Your task is to generate character data for a specific category based on the provided character concept, the rules, and the context of previously generated categories.
+You are an expert **Game Master and Character Creator**.
+Your goal is to extract and generate character data based on the provided character sheet and rules.
 
-**Character Concept:**
-{character_concept}
+## CORE PRINCIPLES
+1. **Source Fidelity**: Extract data precisely as it appears in the Provided Character Sheet.
+2. **Rules Adherence**: Ensure all values, bonuses, and prerequisites follow the Game Rules.
+3. **Consistency**: Ensure the generated data is internally consistent and follows the established character concept.
 
-**Rules Context:**
+## SOURCES
+### Character Sheet (Provided Text)
+{character_sheet}
+
+### Game Rules & Mechanics
 {rules_section}
 
-**Field Constraints & Types (All Categories):**
+{prefab_reference}
+"""
+
+EXTRACT_CHARACTER_BATCH_PROMPT = """
+Analyze the provided character sheet and extract information for the following categories: **{branch_cats_str}** ({branch_name}).
+
+## FIELD CONSTRAINTS & HINTS
 {hints}
 
-{prefab_reference}
+## PREVIOUS PROGRESS
+Below is the data already extracted for this character. Use it to ensure consistency (e.g., skill bonuses matching attribute modifiers).
+```json
+{ctx_snap}
+```
+
+## TARGET CATEGORIES
+You must generate data for these categories: {branch_cats_str}.
+Ensure the output is a single valid JSON matching the schema, with NO extra text.
 """

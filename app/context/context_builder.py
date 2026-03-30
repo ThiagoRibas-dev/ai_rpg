@@ -29,27 +29,37 @@ class ContextBuilder:
         self.logger = logger or logging.getLogger(__name__)
         self.manifest = manifest
 
+    def _wrap_section(self, title: str, content: str, lang: str = "markdown") -> str:
+        """Utility to encapsulate a section in a backtick block with a header."""
+        if not content or not content.strip():
+            return ""
+        return f"### {title}\n```{lang}\n{content.strip()}\n```"
+
     def build_static_system_instruction(self, game_session: GameSession) -> str:
         """
         Builds the permanent system instruction (Rules, Engine, Vocabulary).
         """
         sections = []
         
-        # 1. Core Persona
+        # 1. Core Persona (Plain Text)
         session_data = Session.from_json(game_session.session_data)
         user_game_prompt = session_data.get_system_prompt()
         sections.append(user_game_prompt)
 
-        # 2. Game System Rules (from Manifest)
+        # 2. Game System Rules (Sectionalized)
+        rules_content = ""
         if self.manifest:
-            sections.append(self._build_manifest_context())
+            rules_content = self._build_manifest_context()
         else:
-            # Fallback for legacy/setup
-            sections.append(self._build_legacy_rules(game_session))
+             # Fallback for legacy/setup
+             rules_content = self._build_legacy_rules(game_session)
+        
+        if rules_content:
+            sections.append(self._wrap_section("GAME RULES & SYSTEM", rules_content))
         
         # 3. Author's Note. Assumes the formatting will be done by the Player/User
         if game_session.authors_note:
-            sections.append(game_session.authors_note)
+            sections.append(self._wrap_section("AUTHOR'S NOTE", game_session.authors_note, lang="text"))
 
         return "\n\n".join(sections)
 
@@ -61,32 +71,39 @@ class ContextBuilder:
     ) -> str:
         """
         Builds the context that changes every turn (State, Narrative, Procedure).
+        Order: World Index -> Active Quests -> Current Scene -> Character Sheet.
         """
         sections = []
 
-        # 1. Current State (Character Sheet, Location, Inventory)
-        state_text = self.state_builder.build(game_session.id, self.manifest)
-        if state_text:
-            sections.append(f"# CURRENT STATE #\n{state_text}")
+        # 1. World Index (The Directory)
+        index_text = self._build_entity_index(game_session.id)
+        if index_text:
+            sections.append(self._wrap_section("WORLD INDEX", index_text))
 
-        # 2. Spatial Context
-        spatial_context = self._build_spatial_context(game_session.id)
-        if spatial_context:
-            sections.append(spatial_context)
+        # 2. Active Quests
+        quests_text = self.state_builder.build_active_quests(game_session.id)
+        if quests_text:
+            sections.append(self._wrap_section("ACTIVE QUESTS", quests_text))
 
-        # 3. Entity Index
-        entity_index = self._build_entity_index(game_session.id)
-        if entity_index:
-            sections.append(entity_index)
+        # 3. Current Scene (Unified Spatial + Roster)
+        scene_text = self._build_scene_block(game_session.id)
+        if scene_text:
+            sections.append(self._wrap_section("CURRENT SCENE", scene_text))
+
+        # 4. Character Sheet (The Player's Personal Stats)
+        if self.manifest:
+            char_text = self.state_builder.build_character_sheet(game_session.id, self.manifest)
+            if char_text:
+                sections.append(self._wrap_section("CHARACTER SHEET", char_text))
 
         return "\n\n".join(sections)
 
     def _build_manifest_context(self) -> str:
         """Generates the cheat sheet for the active game system."""
-        lines = [f"# GAME SYSTEM: {self.manifest.name}"]
+        lines = [f"# SYSTEM: {self.manifest.name}\n"]
         
-        # Engine (Dice, Success, Crit)
-        lines.append(self.manifest.get_engine_text())
+        # Engine (Table-fied)
+        lines.append(f"**Engine Configuration**\n{self.manifest.get_engine_table()}\n")
         
         # Valid Paths (The Vocabulary)
         lines.append(self.manifest.get_path_hints())
@@ -114,25 +131,21 @@ class ContextBuilder:
             pass
         return ""
 
-    def _build_spatial_context(self, session_id: int) -> str:
-        try:
-            scene = self.db.game_state.get_entity(session_id, "scene", "active_scene")
-            if not scene:
-                return ""
-            lines = []
-            loc_key = scene.get("location_key")
-            if loc_key:
-                location = self.db.game_state.get_entity(session_id, "location", loc_key)
-                if location:
-                    lines.append(f"# LOCATION: {location.get('name', 'Unknown')} ({loc_key}) #")
-                    lines.append(location.get("description_visual", ""))
-                    conns = location.get("connections", {})
-                    if conns:
-                        exits = [f"{d.upper()} -> {data.get('display_name')}" for d, data in conns.items()]
-                        lines.append("Exits: " + ", ".join(exits))
-            return "\n".join(lines)
-        except Exception:
-            return ""
+    def _build_scene_block(self, session_id: int) -> str:
+        """Combines spatial description and scene roster into one coherent block."""
+        parts = []
+        
+        # Spatial
+        spatial = self._build_spatial_context(session_id)
+        if spatial:
+            parts.append(spatial)
+            
+        # Roster
+        roster = self.state_builder.build_scene_roster(session_id)
+        if roster:
+            parts.append(f"**Present Characters / NPCs**:\n{roster}")
+            
+        return "\n\n".join(parts).strip()
 
     def get_truncated_history(self, session: Session, max_messages: int) -> List[Message]:
         history = session.get_history()

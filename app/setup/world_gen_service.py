@@ -1,24 +1,25 @@
 import logging
-from typing import Callable, Optional, Any
+from typing import Callable, Optional, Any, List
 from app.llm.llm_connector import LLMConnector
 from app.models.message import Message
 from app.prompts.templates import (
     EXTRACT_WORLD_GENRE_TONE_PROMPT,
-    EXTRACT_WORLD_LORE_PROMPT,
-    EXTRACT_WORLD_LOCATIONS_PROMPT,
-    EXTRACT_WORLD_NPCS_PROMPT,
+    EXTRACT_WORLD_INDEX_PROMPT,
+    EXTRACT_WORLD_DETAILS_PROMPT,
     OPENING_CRAWL_PROMPT,
     WORLD_DATA_EXTRACTION_SYSTEM_PROMPT,
 )
 from app.setup.schemas import (
+    NpcListExtraction,
+    LoreStream,
     WorldExtraction,
-    GenreToneExtraction,
     LoreListExtraction,
     LocationListExtraction,
-    NpcListExtraction,
+    GenreToneExtraction,
+    WorldIndexExtraction,
     LocationData,
 )
-from app.models.vocabulary import TaskState, SetupTask
+from app.models.vocabulary import TaskState, SetupTask, WorldCategory
 logger = logging.getLogger(__name__)
 
 
@@ -38,7 +39,9 @@ class WorldGenService:
             self.task_callback(key, label, state)
         logger.info(f"[WorldGen] {label} -> {state}")
 
-    def extract_world_data(self, world_info: str, executor=None) -> WorldExtraction:
+    def extract_world_data(
+        self, world_info: str, stream: Optional[LoreStream] = None, executor=None
+    ) -> WorldExtraction:
         if not world_info.strip():
             world_info = "A generic fantasy tavern."
 
@@ -46,115 +49,149 @@ class WorldGenService:
 
         own_executor = False
         if executor is None:
-            executor = ThreadPoolExecutor(max_workers=2)
+            executor = ThreadPoolExecutor(max_workers=3)
             own_executor = True
 
         try:
-            # Register tasks
-            self._track_task(SetupTask.WORLDGEN_GENRE.id, SetupTask.WORLDGEN_GENRE.label, TaskState.PENDING)
-            self._track_task(SetupTask.WORLDGEN_LOCATIONS.id, SetupTask.WORLDGEN_LOCATIONS.label, TaskState.PENDING)
-            self._track_task(SetupTask.WORLDGEN_NPCS.id, SetupTask.WORLDGEN_NPCS.label, TaskState.PENDING)
-            self._track_task(SetupTask.WORLDGEN_LORE.id, SetupTask.WORLDGEN_LORE.label, TaskState.PENDING)
+            # Register initial tasks - we show all potential World Gen tasks upfront
+            for t in SetupTask:
+                if t.name.startswith("WORLDGEN_") or t == SetupTask.OPENING_CRAWL:
+                    self._track_task(t.id, t.label, TaskState.PENDING)
+            
+            # --- LAYER 0: THE LENS (Genre & Tone) ---
+            self._track_task(SetupTask.WORLDGEN_GENRE.id, SetupTask.WORLDGEN_GENRE.label, TaskState.RUNNING)
+            genre_res = self.llm.get_structured_response(
+                WORLD_DATA_EXTRACTION_SYSTEM_PROMPT.format(
+                    description=world_info,
+                    format=GenreToneExtraction.model_json_schema()
+                ),
+                [Message(role="user", content=EXTRACT_WORLD_GENRE_TONE_PROMPT)],
+                GenreToneExtraction,
+            )
+            self._track_task(SetupTask.WORLDGEN_GENRE.id, SetupTask.WORLDGEN_GENRE.label, TaskState.DONE)
 
-            # --- STAGE 1: PARALLEL (Genre, Locations, NPCs) ---
-            # These three extraction tasks operate independently on the user's prompt.
-            # The system prompt includes the user's description as static text near the top
-            # so backends like llama.cpp can cache the shared prefix.
+            # --- LAYER 1: THE MASTER INDEX ---
+            self._track_task(SetupTask.WORLDGEN_INDEX.id, SetupTask.WORLDGEN_INDEX.label, TaskState.RUNNING)
+            index_res = self.llm.get_structured_response(
+                WORLD_DATA_EXTRACTION_SYSTEM_PROMPT.format(
+                    description=world_info,
+                    format=WorldIndexExtraction.model_json_schema()
+                ),
+                [Message(role="user", content=EXTRACT_WORLD_INDEX_PROMPT)],
+                WorldIndexExtraction,
+            )
+            self._track_task(SetupTask.WORLDGEN_INDEX.id, SetupTask.WORLDGEN_INDEX.label, TaskState.DONE)
 
-            def extract_genre():
-                self._track_task(SetupTask.WORLDGEN_GENRE.id, SetupTask.WORLDGEN_GENRE.label, TaskState.RUNNING)
-                res = self.llm.get_structured_response(
-                    WORLD_DATA_EXTRACTION_SYSTEM_PROMPT.format(
-                        description=world_info,
-                        format=GenreToneExtraction.model_json_schema()
-                    ),
-                    [Message(role="user", content=EXTRACT_WORLD_GENRE_TONE_PROMPT)],
-                    GenreToneExtraction,
-                )
-                self._track_task(SetupTask.WORLDGEN_GENRE.id, SetupTask.WORLDGEN_GENRE.label, TaskState.DONE)
-                return res
+            # --- LAYER 2: PARALLEL BATCH EXTRACTION ---
+            # Group items by type for batching
+            from collections import defaultdict
+            batches = defaultdict(list)
+            for item in index_res.items:
+                batches[item.type].append(item.name)
 
-            def extract_locations():
-                self._track_task(SetupTask.WORLDGEN_LOCATIONS.id, SetupTask.WORLDGEN_LOCATIONS.label, TaskState.RUNNING)
-                res = self.llm.get_structured_response(
-                    WORLD_DATA_EXTRACTION_SYSTEM_PROMPT.format(
-                        description=world_info,
-                        format=LocationListExtraction.model_json_schema()
-                    ),
-                    [Message(role="user", content=EXTRACT_WORLD_LOCATIONS_PROMPT)],
-                    LocationListExtraction,
-                )
-                self._track_task(SetupTask.WORLDGEN_LOCATIONS.id, SetupTask.WORLDGEN_LOCATIONS.label, TaskState.DONE)
-                return res
+            # Mapping for all possible lore categories to their SetupTasks (for UI)
+            type_to_task = {
+                WorldCategory.LOCATION: SetupTask.WORLDGEN_ATLAS,
+                WorldCategory.NPC:      SetupTask.WORLDGEN_DRAMATIS,
+                WorldCategory.SYSTEMS:  SetupTask.WORLDGEN_CODEX,
+                WorldCategory.RACES:    SetupTask.WORLDGEN_PEOPLES,
+                WorldCategory.FACTIONS: SetupTask.WORLDGEN_POWER,
+                WorldCategory.HISTORY:  SetupTask.WORLDGEN_CHRONICLE,
+                WorldCategory.CULTURE:  SetupTask.WORLDGEN_CULTURE,
+                WorldCategory.STATUS:   SetupTask.WORLDGEN_STATUS,
+                WorldCategory.MISC:     SetupTask.WORLDGEN_REMNANTS
+            }
 
-            def extract_npcs():
-                self._track_task(SetupTask.WORLDGEN_NPCS.id, SetupTask.WORLDGEN_NPCS.label, TaskState.RUNNING)
-                res = self.llm.get_structured_response(
-                    WORLD_DATA_EXTRACTION_SYSTEM_PROMPT.format(
-                        description=world_info,
-                        format=NpcListExtraction.model_json_schema()
-                    ),
-                    [Message(role="user", content=EXTRACT_WORLD_NPCS_PROMPT)],
-                    NpcListExtraction,
-                )
-                self._track_task(SetupTask.WORLDGEN_NPCS.id, SetupTask.WORLDGEN_NPCS.label, TaskState.DONE)
-                return res
+            futures = []
+            # Map of future -> SetupTask ID for tracking
+            future_to_id = {}
 
-            future_genre = executor.submit(extract_genre)
-            future_locs = executor.submit(extract_locations)
-            future_npcs = executor.submit(extract_npcs)
+            # SECOND PASS: Dispatch all batches to threadpool or mark as Skipped
+            for cat_type, task in type_to_task.items():
+                if cat_type in batches:
+                    names = batches[cat_type]
+                    f = executor.submit(self._extract_batch, world_info, names, cat_type)
+                    future_to_id[f] = task.id
+                    futures.append(f)
+                    self._track_task(task.id, task.label, TaskState.RUNNING)
+                else:
+                    # Category found empty in Deep Scan - mark as DONE so it clears from PENDING
+                    self._track_task(task.id, "Skipped", TaskState.DONE)
+                    
+                    # Fulfill the LoreStream if this was the NPC category to prevent deadlocks
+                    if cat_type == WorldCategory.NPC and stream:
+                        stream.set_npcs([])
 
-            genre_tone = future_genre.result()
-            loc_data = future_locs.result()
-            npc_data = future_npcs.result()
+            # --- WAIT & COLLECT ---
+            from concurrent.futures import as_completed
+            all_locations = []
+            all_npcs = []
+            all_lore = []
+
+            for f in as_completed(futures):
+                task_id = future_to_id[f]
+                res = f.result()
+                
+                if isinstance(res, LocationListExtraction):
+                    all_locations.extend(res.locations)
+                elif isinstance(res, NpcListExtraction):
+                    all_npcs.extend(res.npcs)
+                    if stream:
+                        stream.set_npcs(res.npcs) # Fulfill NPCs as soon as they finish!
+                elif isinstance(res, LoreListExtraction):
+                    all_lore.extend(res.lore)
+                
+                # Update UI for this specific task
+                self._track_task(task_id, "Completed", TaskState.DONE)
+
+            # --- ASSEMBLY ---
+            start_loc = all_locations[0] if all_locations else LocationData(
+                key="loc_start", name="Starting Location", 
+                description_visual="A blank slate.", description_sensory="Silence.", type="void"
+            )
+            adj_locs = all_locations[1:] if len(all_locations) > 1 else []
+
+            return WorldExtraction(
+                genre=genre_res.genre,
+                tone=genre_res.tone,
+                starting_location=start_loc,
+                adjacent_locations=adj_locs,
+                lore=all_lore,
+                initial_npcs=all_npcs,
+            )
+
+        except Exception as e:
+            if stream:
+                stream.set_error(e)
+            logger.error(f"World Extraction Pipeline Failed: {e}", exc_info=True)
+            raise
         finally:
             if own_executor:
                 executor.shutdown()
 
-        # --- STAGE 2: SEQUENTIAL LORE (with prior context) ---
-        # Lore extraction receives the already-extracted locations and NPCs
-        # so it focuses on history, factions, and concepts without duplication.
-        prior_lines = []
-        if loc_data.locations:
-            prior_lines.append("**Locations already extracted:** " +
-                ", ".join(loc.name for loc in loc_data.locations))
-        if npc_data.npcs:
-            prior_lines.append("**NPCs already extracted:** " +
-                ", ".join(npc.name for npc in npc_data.npcs))
-        prior_context = "\n".join(prior_lines) if prior_lines else "(none)"
+    def _extract_batch(self, world_info: str, names: List[str], type: str) -> Any:
+        """Universal batch extractor for Locations, NPCs, or Lore."""
+        schema_map = {
+            "location": LocationListExtraction,
+            "npc": NpcListExtraction
+        }
+        # Fallback for all lore types
+        target_schema = schema_map.get(type, LoreListExtraction)
+        
+        prompt = EXTRACT_WORLD_DETAILS_PROMPT.format(
+            type=type.upper(),
+            names=", ".join(names)
+        )
 
-        self._track_task(SetupTask.WORLDGEN_LORE.id, SetupTask.WORLDGEN_LORE.label, TaskState.RUNNING)
-        lore_data = self.llm.get_structured_response(
+        res = self.llm.get_structured_response(
             WORLD_DATA_EXTRACTION_SYSTEM_PROMPT.format(
                 description=world_info,
-                format=LoreListExtraction.model_json_schema()
+                format=target_schema.model_json_schema()
             ),
-            [Message(role="user", content=EXTRACT_WORLD_LORE_PROMPT.format(prior_context=prior_context))],
-            LoreListExtraction,
+            [Message(role="user", content=prompt)],
+            target_schema,
         )
-        self._track_task(SetupTask.WORLDGEN_LORE.id, SetupTask.WORLDGEN_LORE.label, TaskState.DONE)
-
-        # --- ASSEMBLY ---
-        start_loc = loc_data.locations[0] if loc_data.locations else None
-        adj_locs = loc_data.locations[1:] if len(loc_data.locations) > 1 else []
-
-        if not start_loc:
-            start_loc = LocationData(
-                key="loc_start",
-                name="Starting Location",
-                description_visual="A blank slate.",
-                description_sensory="Silence.",
-                type="void"
-            )
-
-        return WorldExtraction(
-            genre=genre_tone.genre,
-            tone=genre_tone.tone,
-            starting_location=start_loc,
-            adjacent_locations=adj_locs,
-            lore=lore_data.lore,
-            initial_npcs=npc_data.npcs
-        )
+        return res
 
     def generate_opening_crawl(
         self, char: Any, world: WorldExtraction, guidance: str = ""

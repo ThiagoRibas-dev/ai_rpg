@@ -83,17 +83,23 @@ class EngineConfig:
     def from_dict(cls, data: Dict[str, Any]) -> "EngineConfig":
         return cls(**data)
 
-    def to_prompt_text(self) -> str:
-        lines = [
-            f"**Dice:** {self.dice}",
-            f"**Mechanic:** {self.mechanic}",
-            f"**Success:** {self.success}",
-        ]
+
+    def to_markdown_table(self) -> str:
+        """Renders engine configuration as a clean Markdown table."""
+        headers = ["Dice", "Mechanic", "Success"]
+        values = [self.dice, self.mechanic, self.success]
         if self.crit:
-            lines.append(f"**Critical:** {self.crit}")
+            headers.append("Critical")
+            values.append(self.crit)
         if self.fumble:
-            lines.append(f"**Fumble:** {self.fumble}")
-        return "\n".join(lines)
+            headers.append("Fumble")
+            values.append(self.fumble)
+
+        header_str = "| " + " | ".join(headers) + " |"
+        sep_str = "| " + " | ".join([":---"] * len(headers)) + " |"
+        val_str = "| " + " | ".join(values) + " |"
+
+        return f"{header_str}\n{sep_str}\n{val_str}"
 
 
 @dataclass
@@ -151,8 +157,10 @@ class SystemManifest:
     def get_procedure(self, mode: str) -> Optional[str]:
         return self.procedures.get(mode.lower())
 
-    def get_engine_text(self) -> str:
-        return self.engine.to_prompt_text()
+
+    def get_engine_table(self) -> str:
+        """Returns the engine configuration formatted as a Markdown table."""
+        return self.engine.to_markdown_table()
 
     def to_dict(self) -> Dict[str, Any]:
         return {

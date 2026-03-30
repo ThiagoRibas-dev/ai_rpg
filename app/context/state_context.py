@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional, Any
+from typing import Any
 from app.tools.registry import ToolRegistry
 from app.tools.schemas import StateQuery
 from app.services.state_service import get_entity
@@ -24,47 +24,79 @@ class StateContextBuilder:
         self.db = db_manager
         self.logger = logger or logging.getLogger(__name__)
 
-    def build(
-        self, session_id: int | None, manifest: Optional[SystemManifest] = None
-    ) -> str:
-        if not session_id:
-            return ""
 
-        lines: List[str] = []
-        try:
-            # 1. Load Player Entity
-            player = get_entity(session_id, self.db, "character", "player")
-            if not player:
-                return "No character data found."
+    def build_character_sheet(self, session_id: int, manifest: SystemManifest) -> str:
+        """Renders character categories into clean Markdown tables based on Prefab type."""
+        player = get_entity(session_id, self.db, "character", "player")
+        if not player:
+            return "No character data found."
 
-            name = player.get(FieldKey.NAME, "Player")
-            lines.append(f"**Player Character**: {name}")
+        name = player.get(FieldKey.NAME, "Player")
+        sections = [f"**Player Character**: {name}"]
 
-            # 2. Render Categories via Manifest
-            if manifest:
-                for category in manifest.get_categories():
-                    fields = manifest.get_fields_by_category(category)
-                    if not fields:
-                        continue
+        for category in manifest.get_categories():
+            fields = manifest.get_fields_by_category(category)
+            if not fields:
+                continue
 
-                    cat_lines = []
-                    for field in fields:
-                        # Get raw value from entity
-                        val = get_path(player, field.path)
-                        # Render based on Prefab Type
-                        rendered = self._render_field(val, field.prefab)
+            prefabs = {f.prefab for f in fields}
+            rows = []
+            header = None
+            sep = None
 
-                        # Only show if not None/Empty, unless it's a vital stat
-                        if rendered:
-                            cat_lines.append(f"{field.label}: {rendered}")
+            if PrefabID.VAL_COMPOUND in prefabs:
+                header = "| Attribute | Score | Mod |"
+                sep = "| :--- | :--- | :--- |"
+                for f in fields:
+                    val = get_path(player, f.path)
+                    if isinstance(val, dict):
+                        score = val.get(FieldKey.SCORE, 0)
+                        mod = val.get(FieldKey.MOD, 0)
+                        rows.append(f"| {f.label} | {score} | {mod:+} |")
+            
+            elif PrefabID.RES_POOL in prefabs:
+                header = "| Resource | Current | Max |"
+                sep = "| :--- | :--- | :--- |"
+                for f in fields:
+                    val = get_path(player, f.path)
+                    if isinstance(val, dict):
+                        curr = val.get(FieldKey.CURRENT, 0)
+                        mx = val.get(FieldKey.MAX, 0)
+                        rows.append(f"| {f.label} | {curr} | {mx} |")
 
-                    if cat_lines:
-                        lines.append(f"**{category.title()}**: " + ", ".join(cat_lines))
+            elif PrefabID.CONT_LIST in prefabs:
+                header = "| Item | Qty | Description/Tags |"
+                sep = "| :--- | :--- | :--- |"
+                for f in fields:
+                    val = get_path(player, f.path)
+                    if isinstance(val, list):
+                        for item in val:
+                            if isinstance(item, dict):
+                                i_name = item.get(FieldKey.NAME, "Item")
+                                i_qty = item.get(FieldKey.QTY, 1)
+                                i_desc = item.get("description") or item.get("tags") or ""
+                                if isinstance(i_desc, list):
+                                    i_desc = ", ".join(str(x) for x in i_desc)
+                                rows.append(f"| {i_name} | {i_qty} | {i_desc} |")
+
+            if header and rows:
+                sections.append(f"**{category.title()}**\n{header}\n{sep}\n" + "\n".join(rows))
             else:
-                # Legacy Fallback
-                lines.append(self._legacy_render(player))
+                # Fallback for categories without a clear table prefab (e.g. Identity, Skills as tags)
+                cat_lines = []
+                for f in fields:
+                    val = get_path(player, f.path)
+                    rendered = self._render_field(val, f.prefab)
+                    if rendered:
+                        cat_lines.append(f"{f.label}: {rendered}")
+                if cat_lines:
+                    sections.append(f"**{category.title()}**: " + ", ".join(cat_lines))
 
-            # 3. Active Quests
+        return "\n\n".join(sections)
+
+    def build_active_quests(self, session_id: int) -> str:
+        """Renders active quests as a Markdown table."""
+        try:
             quest_result = self.tools.execute(
                 StateQuery(entity_type="quest", key="*", json_path="."),
                 context={"session_id": session_id, "db_manager": self.db},
@@ -72,35 +104,34 @@ class StateContextBuilder:
             quests = quest_result.get("value", {}) or {}
             if quests and isinstance(quests, dict):
                 active_q = [
-                    f"{q.get('title')}"
+                    f"| {q.get('title')} | {q.get('status')} | {q.get('goal', '')} |"
                     for q in quests.values()
                     if q.get("status") == "active"
                 ]
                 if active_q:
-                    lines.append("\n**Active Quests**: " + ", ".join(active_q))
+                    return "| Title | Status | Goal |\n| :--- | :--- | :--- |\n" + "\n".join(active_q)
+        except Exception:
+            pass
+        return ""
 
-            # 4. Scene Roster
-            scene = self.db.game_state.get_entity(session_id, "scene", "active_scene")
-            if scene and "members" in scene:
-                roster = []
-                for member in scene["members"]:
-                    if "player" in member:
-                        continue
-                    if ":" in member:
-                        etype, ekey = member.split(":", 1)
-                        ent = self.db.game_state.get_entity(session_id, etype, ekey)
-                        if ent:
-                            roster.append(
-                                f"{ent.get(FieldKey.NAME, 'Unknown')} (ID: `{ekey}`)"
-                            )
-                if roster:
-                    lines.append("\n**SCENE ROSTER**:\n- " + "\n- ".join(roster))
-
-        except Exception as e:
-            if self.logger:
-                self.logger.warning(f"State build failed: {e}", exc_info=True)
-
-        return "\n".join(lines)
+    def build_scene_roster(self, session_id: int) -> str:
+        """Renders currently present NPCs as a Markdown table."""
+        scene = self.db.game_state.get_entity(session_id, "scene", "active_scene")
+        if scene and "members" in scene:
+            rows = []
+            for member in scene["members"]:
+                if "player" in member:
+                    continue
+                if ":" in member:
+                    etype, ekey = member.split(":", 1)
+                    ent = self.db.game_state.get_entity(session_id, etype, ekey)
+                    if ent:
+                        e_name = ent.get(FieldKey.NAME, "Unknown")
+                        e_status = ent.get("disposition") or ent.get("role") or "Present"
+                        rows.append(f"| `{ekey}` | {e_name} | {e_status} |")
+            if rows:
+                return "| Entity ID | Name | Role/Status |\n| :--- | :--- | :--- |\n" + "\n".join(rows)
+        return ""
 
     def _render_field(self, value: Any, prefab: str) -> str:
         """Render value based on prefab type for the LLM Context."""
@@ -165,6 +196,3 @@ class StateContextBuilder:
 
         return str(value)
 
-    def _legacy_render(self, player) -> str:
-        """Old renderer for compatibility."""
-        return "Legacy Character Data (No Manifest Loaded)"

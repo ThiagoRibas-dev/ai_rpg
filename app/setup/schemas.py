@@ -1,7 +1,8 @@
 from typing import Literal, Dict, Any, List, Optional
 from pydantic import BaseModel, Field, field_validator, model_validator
+from concurrent.futures import Future
 import re
-from app.models.vocabulary import PrefabID, CategoryName, MemoryKind
+from app.models.vocabulary import PrefabID, CategoryName, MemoryKind, WorldCategory
 
 # ---------------------------------------------------------------------------
 # PREFAB / MANIFEST EXTRACTION SCHEMAS
@@ -34,6 +35,10 @@ class ExtractedFieldList(BaseModel):
 
 
 class MechanicsExtraction(BaseModel):
+    system_name: str = Field(
+        "",
+        description="Official or common published name of the RPG system.",
+    )
     dice_notation: str = Field(
         ...,
         description="Primary dice expression used by the system (e.g. '1d20', '2d6').",
@@ -316,6 +321,13 @@ class LoreListExtraction(BaseModel):
         description="Key facts, secrets, world details, lore, etc.",
     )
 
+class WorldIndexItem(BaseModel):
+    name: str = Field(..., description="The unique name of the entity.")
+    type: WorldCategory = Field(..., description="The entity type (including lore sub-categories).")
+
+class WorldIndexExtraction(BaseModel):
+    items: List[WorldIndexItem] = Field(default_factory=list)
+
 class LocationListExtraction(BaseModel):
     locations: List[LocationData] = Field(
         default_factory=list,
@@ -323,6 +335,16 @@ class LocationListExtraction(BaseModel):
     )
 
 class NpcListExtraction(BaseModel):
+    npcs: List[NpcData] = Field(
+        default_factory=list,
+        description="All NPCs (characters, creatures, entities, etc.) mentioned or implied in the text.",
+    )
+
+class WorldEntitiesExtraction(BaseModel):
+    locations: List[LocationData] = Field(
+        default_factory=list,
+        description="Locations directly mentioned or implied and their connections to one another.",
+    )
     npcs: List[NpcData] = Field(
         default_factory=list,
         description="All NPCs (characters, creatures, entities, etc.) mentioned or implied in the text.",
@@ -402,3 +424,25 @@ class WorldExtraction(BaseModel):
         data.setdefault("initial_npcs", [])
 
         return data
+
+
+class LoreStream:
+    """
+    Asynchronous coordination object for sharing world data with character generation.
+    """
+    def __init__(self):
+        self._npc_future: Future[List[NpcData]] = Future()
+
+    def set_npcs(self, npcs: List[NpcData]):
+        """Fulfills the promise of NPC data."""
+        if not self._npc_future.done():
+            self._npc_future.set_result(npcs)
+
+    def set_error(self, exc: Exception):
+        """Propagates failure to any waiting consumers."""
+        if not self._npc_future.done():
+            self._npc_future.set_exception(exc)
+
+    def get_npcs(self) -> List[NpcData]:
+        """Blocks until NPCs are available and returns them."""
+        return self._npc_future.result()

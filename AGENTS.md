@@ -6,15 +6,21 @@ This document provides a technical overview of the Solo Text AI-RPG framework, o
 
 **Planning:** Before making changes, perform an iterative planning step. Lay out a detailed implementation plan (what, where, how, why). Only execute once the plan is accepted.
 
-**Atomic Edits:** Avoid editing whole files at once. Edit specific, targeted snippets. Be aware of replacing snippets that exist in multiple parts of a file. Keep files small (<500 lines); split if necessary.
+**Atomic Edits:** Avoid editing whole files at once. Edit specific, targeted snippets. Be aware of replacing snippets that exist in multiple parts of a file. Keep files small (<500 lines); split if necessary. If a file becomes too large or contains too many disparate functions, break it into smaller, logically organized individual files.
 
-**Code Quality:** Run `ruff check . --fix` after batches of changes. Ensure type hints are used everywhere.
-
-**Error Handling:** Never use silent exceptions (`try/except: pass`). Always log errors with the appropriate level (`logger.error` for critical failures, `logger.warning` for degradations) and provide an informative message to help with debugging.
+**Code Quality & Strong Typing:** Run `.\run_checks.bat` after batches of changes.
+- **Strong Typing:** Use type hints everywhere. Favor Pydantic models for structured data. Avoid `Any` and use `NewType` or dedicated classes for domain-specific IDs (e.g., `SessionID`, `EntityID`).
+- **Error Handling:** Never use silent exceptions (`try/except: pass`). Always log errors with the appropriate level (`logger.error` for critical failures, `logger.warning` for degradations) and provide an informative message to help with debugging.
 
 **Deterministic Rendering:** UI components must not "guess" how to render data. Always prioritize the `SystemManifest` (via `item_shape`) over heuristics. Use the 3-layer detection algorithm (Schema → Shape → Heuristics) to ensure accuracy.
 
-**Magic Strings:** Never use hardcoded strings for Prefab IDs or internal field keys. Always use `PrefabID` enums and `FieldKey` constants from `app/models/vocabulary.py`.
+**Magic Strings & Numbers:** Never use hardcoded strings for Prefab IDs, internal field keys, or arbitrary configuration values.
+- Always use `PrefabID` enums and `FieldKey` constants from `app/models/vocabulary.py`.
+- Define logic-specific constants at the top of the module or in a dedicated `constants.py` file. Avoid "magic numbers" in logic; use descriptive constant names (e.g., `MAX_RETRY_ATTEMPTS`).
+
+**Code Reuse & Centralization:** Prioritize DRY (Don't Repeat Yourself).
+- **Extract Logic:** If logic is used in more than one place (e.g., calculating a modifier or parsing a path), extract it into a utility function or a service method.
+- **Centralize Systems:** Avoid duplicating complex logic across different layers (e.g., UI vs. Backend). Use shared services for state manipulation or UI-agnostic operations.
 
 ## Core Concepts
 

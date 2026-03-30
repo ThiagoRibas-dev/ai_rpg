@@ -172,16 +172,6 @@ class OpenAIConnector(LLMConnector):
             logger.error(f"Raw content: {content}")
             raise
 
-    def get_tool_calls(
-        self,
-        system_prompt: str,
-        chat_history: List[Message],
-        tools: List[Dict[str, Any]],
-    ) -> List[Dict[str, Any]]:
-        """Legacy method kept for compatibility, delegates to standard chat."""
-        # ... implementation skipped as we use chat_with_tools now ...
-        return []
-
     def _clean_schema(self, schema: Dict[str, Any]):
         """
         Recursively remove 'title' and 'default' fields from JSON schema,

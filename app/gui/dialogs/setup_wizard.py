@@ -7,7 +7,7 @@ from app.prefabs.validation import validate_entity
 from app.setup.world_gen_service import WorldGenService
 from app.setup.sheet_generator import SheetGenerator
 from app.services.game_setup_service import GameSetupService
-from app.setup.schemas import LoreData
+from app.setup.schemas import LoreData, LoreStream
 from app.prefabs.manifest import SystemManifest
 from app.models.vocabulary import MemoryKind, TaskState
 
@@ -249,7 +249,7 @@ class SetupWizard:
 
     def _execute_pipeline(self):
         try:
-            from concurrent.futures import ThreadPoolExecutor
+            from concurrent.futures import ThreadPoolExecutor, as_completed
             import os
 
             connector = self.orchestrator._get_llm_connector()
@@ -262,12 +262,13 @@ class SetupWizard:
                 except Exception as e:
                     logger.warning(f"Failed to load SystemManifest from prompt: {e}")
 
-            def run_chargen(llm_executor):
+            def run_chargen(llm_executor, stream=None):
                 if manifest:
                     sheet_gen = SheetGenerator(connector, task_callback=self._track_task)
                     raw = sheet_gen.generate_from_manifest(
                         manifest,
                         self.input_char,
+                        stream=stream,
                         rules_text=self.prompt.rules_document,
                         executor=llm_executor,
                     )
@@ -275,18 +276,34 @@ class SetupWizard:
                     return val_entity
                 return {"identity": {"name": "Player"}}
 
-            def run_worldgen(llm_executor):
+            def run_worldgen(llm_executor, stream=None):
                 world_service = WorldGenService(connector, task_callback=self._track_task)
-                return world_service.extract_world_data(self.input_world, executor=llm_executor)
+                return world_service.extract_world_data(
+                    self.input_world, stream=stream, executor=llm_executor
+                )
 
+            stream = LoreStream()
             max_workers = int(os.environ.get("SETUP_MAX_WORKERS", "2"))
             with ThreadPoolExecutor(max_workers=max_workers) as llm_executor:
                 with ThreadPoolExecutor(max_workers=2) as pipeline_executor:
-                    future_char = pipeline_executor.submit(run_chargen, llm_executor)
-                    future_world = pipeline_executor.submit(run_worldgen, llm_executor)
+                    # Launch both in parallel
+                    futures = {
+                        pipeline_executor.submit(run_chargen, llm_executor, stream): "character",
+                        pipeline_executor.submit(run_worldgen, llm_executor, stream): "world"
+                    }
 
-                    self.preview_entity = future_char.result()
-                    self.extracted_world = future_world.result()
+                    for future in as_completed(futures):
+                        try:
+                            result = future.result()
+                            if futures[future] == "character":
+                                self.preview_entity = result
+                            else:
+                                self.extracted_world = result
+                        except Exception as e:
+                            logger.error(f"Pipeline task '{futures[future]}' failed: {e}")
+                            # Signal error to stream to unblock other tasks if they are waiting
+                            stream.set_error(e)
+                            raise
 
             self.manifest = manifest
             if manifest:

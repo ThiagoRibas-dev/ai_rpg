@@ -191,19 +191,19 @@
             "usage_hint": "Accumulated nonlethal damage. When nonlethal damage exceeds current HP, the character falls unconscious rather than dying."
         },
         {
-            "path": "resources.spell_slots",
-            "label": "Spell Slots / Prepared Spells",
+            "path": "resources.spell_slots_tracking",
+            "label": "Spell Slots Tracking",
             "prefab": "CONT_LIST",
             "category": "resources",
             "config": {
                 "item_shape": {
                     "class_name": "str",
                     "spell_level": "int",
-                    "slots_max": "int",
-                    "slots_current": "int"
+                    "max": "int",
+                    "current": "int"
                 }
             },
-            "usage_hint": "Each entry is one class+spell-level row: {class_name, spell_level, slots_current, slots_max}."
+            "usage_hint": "Used to track spell slots for each spell level and class. Each entry is one class+spell-level row. E.g.: { 'class_name': 'Wizard', 'spell_level': 1, 'max': 4, 'current': 3}."
         },
         {
             "path": "resources.spells_known",
@@ -212,11 +212,12 @@
             "category": "resources",
             "config": {
                 "item_shape": {
+                    "class_name": "str",
                     "spell_name": "str",
                     "level": "int"
                 }
             },
-            "usage_hint": "List of specific spells this character knows and can cast spontaneously (e.g., Sorcerer, Bard)."
+            "usage_hint": "Optional. List of specific spells this character knows and can cast spontaneously (e.g., Sorcerer, Bard)."
         },
         {
             "path": "resources.spells_prepared",
@@ -225,13 +226,13 @@
             "category": "resources",
             "config": {
                 "item_shape": {
+                    "class_name": "str",
                     "spell_name": "str",
                     "level": "int",
-                    "prepared": "int",
                     "expended": "int"
                 }
             },
-            "usage_hint": "List of specific spells currently prepared in Vancian slots (e.g., Wizard, Cleric)."
+            "usage_hint": "Optional. List of specific spells currently prepared in Vancian slots (e.g., Wizard, Cleric)."
         },
         {
             "path": "resources.limited_uses",
@@ -378,18 +379,6 @@
             "usage_hint": "Modifier added to 1d20 to determine initiative order, typically Dexterity modifier plus any feats or effects."
         },
         {
-            "path": "progression.caster_level",
-            "label": "Caster Level",
-            "prefab": "VAL_INT",
-            "category": "combat",
-            "config": {
-                "min": 0,
-                "max": 30,
-                "default": 0
-            },
-            "usage_hint": "Total effective caster level for determining spell range, duration, damage, and overcoming spell resistance."
-        },
-        {
             "path": "combat.base_attack_bonus",
             "label": "Base Attack Bonus (BAB)",
             "prefab": "VAL_INT",
@@ -439,6 +428,19 @@
             },
             "formula": "combat.base_attack_bonus + dex_mod",
             "usage_hint": "Typical primary ranged attack bonus (BAB + Dexterity modifier + size + range penalties + misc)."
+        },
+        {
+            "path": "combat.caster_level",
+            "label": "Caster Level",
+            "prefab": "CONT_LIST",
+            "category": "combat",
+            "config": {
+                "item_shape": {
+                    "class_name": "str",
+                    "caster_level": "int"
+                }
+            },
+            "usage_hint": "Total effective caster level for each class, determining spell range, duration, damage, and overcoming spell resistance for that class."
         },
         {
             "path": "combat.base_save_fortitude",
