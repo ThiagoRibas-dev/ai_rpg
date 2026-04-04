@@ -105,7 +105,7 @@ class PromptEditorDialog:
                         manifests: list[Any] = []
                         if self.db and self.db.manifests:
                             manifests = self.db.manifests.get_all()
-                        options = {m.id: m.name for m in manifests}
+                        options = {m["id"]: m["name"] for m in manifests}
 
 
                         ui.select(

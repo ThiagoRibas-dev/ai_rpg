@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
-from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
@@ -64,13 +64,19 @@ class SheetGenerator:
         rules_text: str = "",
         executor=None,
     ) -> dict[str, Any]:
-        """
-        Generates character data strictly adhering to the SystemManifest.
+        """Synchronous wrapper for the async character sheet generation pipeline."""
+        return asyncio.run(self.async_generate_from_manifest(
+            manifest, character_sheet, world_data, stream, rules_text
+        ))
 
-        1. Builds a Pydantic model from the Manifest.
-        2. Prompts LLM to fill it based on Concept + Rules.
-        3. Expands simplified LLM output to full Prefab structures.
-        Returns a plain entity dict; validation happens outside this method.
+    async def async_generate_from_manifest(
+        self, manifest: SystemManifest, character_sheet: str,
+        world_data: WorldExtraction | None = None,
+        stream: LoreStream | None = None,
+        rules_text: str = "",
+    ) -> dict[str, Any]:
+        """
+        Generates character data strictly adhering to the SystemManifest using async calls.
         """
         logger.info(f"Generating sheet from Manifest: {manifest.name}")
 
@@ -98,17 +104,11 @@ class SheetGenerator:
         manifest_cats.discard(CategoryName.STATUS)  # Status is always empty at generation
 
         # 6. Build System Prompt (STRICTLY STATIC)
-        # This prompt is the same for all parallel branches in this generation run.
         sys_prompt = CHARACTER_CREATION_SYSTEM_PROMPT.format(
             character_sheet=character_sheet,
             rules_section=rules_section,
             prefab_reference=prefab_ref
         )
-
-        own_executor = False
-        if executor is None:
-            executor = ThreadPoolExecutor(max_workers=2)
-            own_executor = True
 
         try:
             generated_context: dict[str, Any] = {}
@@ -117,96 +117,45 @@ class SheetGenerator:
             # 5. First Pass: Register all potential batch tasks as PENDING
             for batch_dict in CHARGEN_BATCHES:
                 for branch_name in batch_dict.keys():
-                    # Only register if at least one category in the branch is in the manifest
                     if any(c in manifest_cats for c in batch_dict[branch_name]):
                         t_id, t_label = SetupTask.chargen(str(branch_name).lower())
                         self._track_task(t_id, t_label, TaskState.PENDING)
                     else:
-                        # Branch not in this manifest - skip it upfront
                         t_id, t_label = SetupTask.chargen(str(branch_name).lower())
                         self._track_task(t_id, t_label, TaskState.DONE)
 
-
-            # Register any remaining categories not covered by main batches
             batch_cats = set().union(*(set(cats) for cats in CHARGEN_BRANCH_CATEGORIES.values()))
             remaining_cats = manifest_cats - batch_cats
             for cat in remaining_cats:
                 t_id, t_label = SetupTask.chargen(str(cat))
                 self._track_task(t_id, t_label, TaskState.PENDING)
 
-
             for batch_dict in CHARGEN_BATCHES:
-                # Filter categories present in the manifest
                 active_branches = {}
                 for branch_name, cats in batch_dict.items():
                     valid_cats = [c for c in cats if c in manifest_cats]
                     if valid_cats:
                         active_branches[branch_name] = valid_cats
-                    else:
-                        # Already marked as DONE/Skipped above
-                        continue
 
                 if not active_branches:
                     continue
 
-                # Snapshot the context for this batch
                 context_snapshot = json.dumps(generated_context, indent=2)
 
-                def extract_branch(branch_name: ChargenBranch, branch_cats: list[CategoryName], ctx_snap: str = context_snapshot):
-                    t_id, t_label = SetupTask.chargen(str(branch_name).lower())
-
-
-                    # --- ASYNC CONTEXT INJECTION (NPCs for Background) ---
-                    injected_npcs = None
-                    if branch_name == ChargenBranch.BACKGROUND:
-                        logger.info(f"Branch '{branch_name}' waiting for NPCs from LoreStream...")
-                        injected_npcs = stream.get_npcs() if stream else []
-                        logger.info(f"Branch '{branch_name}' received {len(injected_npcs)} NPCs.")
-
-                    self._track_task(t_id, t_label, TaskState.RUNNING)
-
-                    # 1. Dynamically assemble a unified Pydantic model for this branch
-                    fields: dict[str, Any] = {}
-                    for cat in branch_cats:
-                        cat_model = builder.build_creation_model_for_category(cat)
-                        fields[cat] = (cat_model, ...)
-
-                    unified_model = create_model(f"Unified{branch_name}", **fields) # type: ignore[arg-type]
-
-
-                    # 1. Get filtered hints for these specific categories
-                    hints_batch = builder.get_creation_prompt_hints(branch_cats)
-
-                    # 2. Build User Prompt (DYNAMIC)
-                    prompt = EXTRACT_CHARACTER_BATCH_PROMPT.format(
-                        branch_name=str(branch_name),
-                        branch_cats_str=", ".join(branch_cats),
-                        ctx_snap=ctx_snap,
-                        hints=hints_batch
-                    )
-
-                    if injected_npcs:
-                        npc_list = "\n".join([f"- {n.name}: {n.visual_description}" for n in injected_npcs])
-                        prompt += f"\n\nList of NPCs extracted from the Lore document:\n{npc_list}"
-
-                    res = self.llm.get_structured_response(
-                        system_prompt=sys_prompt,
-                        chat_history=[Message(role="user", content=prompt)],
-                        output_schema=cast(type[BaseModel], unified_model),
-                        temperature=0.7,
-                    )
-
-                    self._track_task(t_id, t_label, TaskState.DONE)
-                    return branch_name, branch_cats, res
-
-                futures = {}
-                # Dispatch all branches immediately - blocking now happens inside specific threads!
-                for branch_name, branch_cats in active_branches.items():
-                    futures[branch_name] = executor.submit(extract_branch, branch_name, branch_cats)
+                tasks = []
+                branch_info_list = [] # Store (branch_name, branch_cats) for processing results
 
                 for branch_name, branch_cats in active_branches.items():
-                    _, _, branch_data = futures[branch_name].result()
-                    # Unpack the unified response back into individual categories
+                    tasks.append(self._async_extract_branch(
+                        branch_name, branch_cats, context_snapshot, sys_prompt, builder, stream
+                    ))
+                    branch_info_list.append((branch_name, branch_cats))
+
+                # Fire parallel requests for this batch
+                results = await asyncio.gather(*tasks)
+
+                for idx, branch_data in enumerate(results):
+                    branch_name, branch_cats = branch_info_list[idx]
                     data_dict = branch_data.model_dump()
                     for cat in branch_cats:
                         if cat in data_dict:
@@ -216,13 +165,96 @@ class SheetGenerator:
 
             # Handle any manifest categories not covered by the predefined batches
             remaining = manifest_cats - set(raw_combined.keys())
-            for cat in remaining:
-                try:
-                    t_id, t_label = SetupTask.chargen(str(cat))
-                    self._track_task(t_id, t_label, TaskState.RUNNING)
+            remaining_tasks = []
+            remaining_task_meta = [] # (task_id, cat)
 
-                    cat_model = builder.build_creation_model_for_category(cat)
-                    prompt = f"""
+            for cat in remaining:
+                t_id, _ = SetupTask.chargen(str(cat))
+                remaining_task_meta.append((t_id, cat))
+                # Ensure we pass CategoryName to the internal method
+                remaining_tasks.append(self._async_extract_remaining_cat(
+                    cast(CategoryName, cat), generated_context, sys_prompt, builder
+                ))
+
+            if remaining_tasks:
+                remaining_results = await asyncio.gather(*remaining_tasks)
+                for idx, cat_data in enumerate(remaining_results):
+                    t_id, cat = remaining_task_meta[idx]
+                    cat_raw = cat_data.model_dump()
+                    raw_combined[str(cat)] = cat_raw
+                    generated_context[str(cat)] = cat_raw
+                    t_id, label = SetupTask.chargen(str(cat))
+                    self._track_task(t_id, label, TaskState.DONE)
+
+            # Adds the empty Status category
+            raw_combined[CategoryName.STATUS] = {}
+
+            # 6. Expand to Full Data using manifest/prefabs
+            try:
+                full_values = builder.convert_simplified_to_full(raw_combined)
+                return full_values
+            except Exception as e:
+                logger.error(f"Manifest-based generation failed: {e}", exc_info=True)
+                raise
+        finally:
+            pass
+
+    async def _async_extract_branch(
+        self, branch_name: ChargenBranch, branch_cats: list[CategoryName],
+        ctx_snap: str, sys_prompt: str, builder: SchemaBuilder, stream: LoreStream | None
+    ) -> BaseModel:
+        t_id, t_label = SetupTask.chargen(str(branch_name).lower())
+
+        # --- ASYNC CONTEXT INJECTION (NPCs for Background) ---
+        injected_npcs = None
+        if branch_name == ChargenBranch.BACKGROUND:
+            logger.info(f"Branch '{branch_name}' waiting for NPCs from LoreStream...")
+            # stream.get_npcs() is documented as fulfilling once NPCs are available.
+            # In a truly async world, this should be awaited if get_npcs() is async.
+            # For now, we assume bridge logic or we keep it sync if it's a simple list.
+            injected_npcs = stream.get_npcs() if stream else []
+            logger.info(f"Branch '{branch_name}' received {len(injected_npcs)} NPCs.")
+
+        self._track_task(t_id, t_label, TaskState.RUNNING)
+
+        # 1. Dynamically assemble unified Pydantic model
+        fields: dict[str, Any] = {}
+        for cat in branch_cats:
+            cat_model = builder.build_creation_model_for_category(cat)
+            fields[cat] = (cat_model, ...)
+
+        unified_model = create_model(f"Unified{branch_name}", **fields) # type: ignore[arg-type]
+        hints_batch = builder.get_creation_prompt_hints(branch_cats)
+
+        prompt = EXTRACT_CHARACTER_BATCH_PROMPT.format(
+            branch_name=str(branch_name),
+            branch_cats_str=", ".join(branch_cats),
+            ctx_snap=ctx_snap,
+            hints=hints_batch
+        )
+
+        if injected_npcs:
+            npc_list = "\n".join([f"- {n.name}: {n.visual_description}" for n in injected_npcs])
+            prompt += f"\n\nList of NPCs extracted from the Lore document:\n{npc_list}"
+
+        res = await self.llm.async_get_structured_response(
+            system_prompt=sys_prompt,
+            chat_history=[Message(role="user", content=prompt)],
+            output_schema=cast(type[BaseModel], unified_model),
+            temperature=0.7,
+        )
+
+        self._track_task(t_id, t_label, TaskState.DONE)
+        return res
+
+    async def _async_extract_remaining_cat(
+        self, cat: CategoryName, generated_context: dict[str, Any], sys_prompt: str, builder: SchemaBuilder
+    ) -> BaseModel:
+        t_id, t_label = SetupTask.chargen(str(cat))
+        self._track_task(t_id, t_label, TaskState.RUNNING)
+
+        cat_model = builder.build_creation_model_for_category(cat)
+        prompt = f"""
 ### TASK: POPULATE CATEGORY: {cat.upper()}
 You are populating the `{cat}` section of the character sheet.
 
@@ -235,36 +267,11 @@ You are populating the `{cat}` section of the character sheet.
 - Fill in values for the `{cat}` category that fit the concept and rules, and make logical sense given the previously generated data.
 - Output ONLY the `{cat}` category data.
 """
-                    def extract_remaining_cat(p=prompt, cm=cat_model):
-                        return self.llm.get_structured_response(
-                            system_prompt=sys_prompt,
-                            chat_history=[Message(role="user", content=p)],
-                            output_schema=cm,
-                            temperature=0.7,
-                        )
-                    future_cat = executor.submit(extract_remaining_cat)
-                    cat_data = future_cat.result()
-                    self._track_task(t_id, t_label, TaskState.DONE)
+        res = await self.llm.async_get_structured_response(
+            system_prompt=sys_prompt,
+            chat_history=[Message(role="user", content=prompt)],
+            output_schema=cat_model,
+            temperature=0.7,
+        )
+        return res
 
-                    cat_raw = cat_data.model_dump()
-                    raw_combined[cat] = cat_raw
-                    generated_context[cat] = cat_raw
-                except Exception as e:
-                    logger.error(f"Failed to generate category '{cat}': {e}", exc_info=True)
-                    t_id, t_label = SetupTask.chargen(cat)
-                    self._track_task(t_id, t_label, TaskState.DONE)
-
-            # Adds the empty Status category
-            raw_combined[CategoryName.STATUS] = {}
-
-            # 6. Expand to Full Data using manifest/prefabs
-            try:
-                full_values = builder.convert_simplified_to_full(raw_combined)
-                return full_values
-
-            except Exception as e:
-                logger.error(f"Manifest-based generation failed: {e}", exc_info=True)
-                raise
-        finally:
-            if own_executor:
-                executor.shutdown()

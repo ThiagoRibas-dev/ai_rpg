@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
-from collections.abc import Generator
+from collections.abc import AsyncGenerator
 from typing import TYPE_CHECKING, Any, cast
 
 import openai
@@ -32,6 +33,7 @@ class OpenAIConnector(LLMConnector):
     """
 
     def __init__(self):
+        super().__init__()
         self.base_url = os.environ.get("OPENAI_API_BASE_URL")
         self.api_key = os.environ.get("OPENAI_API_KEY")
         self.model = os.environ.get("OPENAI_API_MODEL")
@@ -45,6 +47,7 @@ class OpenAIConnector(LLMConnector):
             logger.error("OPENAI_API_MODEL environment variable not set.")
             raise ValueError("OPENAI_API_MODEL environment variable not set.")
         self.client = openai.OpenAI(base_url=self.base_url, api_key=self.api_key)
+        self.async_client = openai.AsyncOpenAI(base_url=self.base_url, api_key=self.api_key)
 
     def _convert_chat_history_to_messages(
         self, chat_history: list[Message]
@@ -92,9 +95,9 @@ class OpenAIConnector(LLMConnector):
             messages.append(cast("ChatCompletionMessageParam", message_dict))
         return messages
 
-    def get_streaming_response(
+    async def async_get_streaming_response(
         self, system_prompt: str, chat_history: list[Message]
-    ) -> Generator[str, None, None]:
+    ) -> AsyncGenerator[str, None]:
         messages: list[ChatCompletionMessageParam] = [
             cast("ChatCompletionSystemMessageParam", {"role": MessageRole.SYSTEM, "content": system_prompt})
         ]
@@ -112,24 +115,25 @@ class OpenAIConnector(LLMConnector):
                 "stop": ["<|im_end|>", "<|im_end|"]
             }
 
-        stream = cast(Any, self.client.chat.completions).create(
-            model=self.model or "gpt-4o",
-            messages=messages,
-            stream=True,
-            stop=["<|im_end|>"],
-            extra_body=extra_params,
-        )
-        for chunk in stream:
-            typed_chunk = cast("ChatCompletionChunk", chunk)
-            if (
-                typed_chunk.choices
-                and len(typed_chunk.choices) > 0
-                and typed_chunk.choices[0].delta
-                and typed_chunk.choices[0].delta.content
-            ):
-                yield typed_chunk.choices[0].delta.content
+        async with self.semaphore:
+            stream = await cast(Any, self.async_client.chat.completions).create(
+                model=self.model or "gpt-4o",
+                messages=messages,
+                stream=True,
+                stop=["<|im_end|>"],
+                extra_body=extra_params,
+            )
+            async for chunk in stream:
+                typed_chunk = cast("ChatCompletionChunk", chunk)
+                if (
+                    typed_chunk.choices
+                    and len(typed_chunk.choices) > 0
+                    and typed_chunk.choices[0].delta
+                    and typed_chunk.choices[0].delta.content
+                ):
+                    yield typed_chunk.choices[0].delta.content
 
-    def get_structured_response(
+    async def async_get_structured_response(
         self,
         system_prompt: str,
         chat_history: list[Message],
@@ -163,19 +167,23 @@ class OpenAIConnector(LLMConnector):
                 "stop": ["<|im_end|>", "<|im_end|"]
             }
 
-        resp = cast(Any, self.client.chat.completions).create(
-            model=self.model or "gpt-4o",
-            messages=messages,
-            max_completion_tokens=-1,
-            temperature=temperature,
-            top_p=top_p,
-            response_format={
-                "type": "json_schema",
-                "schema": json_schema,
-            },
-            stop=["<|im_end|>"],
-            extra_body=extra_params,
-        )
+        async with self.semaphore:
+            resp = await asyncio.wait_for(
+                cast(Any, self.async_client.chat.completions).create(
+                    model=self.model or "gpt-4o",
+                    messages=messages,
+                    max_completion_tokens=-1,
+                    temperature=temperature,
+                    top_p=top_p,
+                    response_format={
+                        "type": "json_schema",
+                        "schema": json_schema,
+                    },
+                    stop=["<|im_end|>"],
+                    extra_body=extra_params,
+                ),
+                timeout=self.timeout
+            )
 
         if resp is None:
             raise ValueError("OpenAI returned None response.")
@@ -261,7 +269,7 @@ class OpenAIConnector(LLMConnector):
             for item in schema:
                 self._recursive_clean(item)
 
-    def chat_with_tools(
+    async def async_chat_with_tools(
         self,
         system_prompt: str,
         chat_history: list[Message],
@@ -284,14 +292,18 @@ class OpenAIConnector(LLMConnector):
                 "stop": ["<|im_end|>", "<|im_end|"]
             }
 
-        response = cast(Any, self.client.chat.completions).create(
-            model=self.model or "gpt-4o",
-            messages=messages,
-            tools=tools,
-            tool_choice="auto" if tools else None,
-            temperature=0.25,
-            extra_body=extra_params,
-        )
+        async with self.semaphore:
+            response = await asyncio.wait_for(
+                cast(Any, self.async_client.chat.completions).create(
+                    model=self.model or "gpt-4o",
+                    messages=messages,
+                    tools=tools,
+                    tool_choice="auto" if tools else None,
+                    temperature=0.25,
+                    extra_body=extra_params,
+                ),
+                timeout=self.timeout
+            )
 
         if response is None:
              return LLMResponse(content=None, tool_calls=None)

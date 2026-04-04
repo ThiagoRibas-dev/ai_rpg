@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import asyncio
 import logging
 from collections.abc import Callable
 from typing import Any, cast
@@ -45,15 +48,14 @@ class WorldGenService:
     def extract_world_data(
         self, world_info: str, stream: LoreStream | None = None, executor=None
     ) -> WorldExtraction:
+        """Synchronous wrapper for the async world extraction pipeline."""
+        return asyncio.run(self.async_extract_world_data(world_info, stream))
+
+    async def async_extract_world_data(
+        self, world_info: str, stream: LoreStream | None = None
+    ) -> WorldExtraction:
         if not world_info.strip():
             world_info = "A generic fantasy tavern."
-
-        from concurrent.futures import ThreadPoolExecutor
-
-        own_executor = False
-        if executor is None:
-            executor = ThreadPoolExecutor(max_workers=3)
-            own_executor = True
 
         try:
             # Register initial tasks - we show all potential World Gen tasks upfront
@@ -63,7 +65,7 @@ class WorldGenService:
 
             # --- LAYER 0: THE LENS (Genre & Tone) ---
             self._track_task(SetupTask.WORLDGEN_GENRE.id, SetupTask.WORLDGEN_GENRE.label, TaskState.RUNNING)
-            genre_res = cast(GenreToneExtraction, self.llm.get_structured_response(
+            genre_res = cast(GenreToneExtraction, await self.llm.async_get_structured_response(
                 WORLD_DATA_EXTRACTION_SYSTEM_PROMPT.format(
                     description=world_info,
                     format=GenreToneExtraction.model_json_schema()
@@ -75,7 +77,7 @@ class WorldGenService:
 
             # --- LAYER 1: THE MASTER INDEX ---
             self._track_task(SetupTask.WORLDGEN_INDEX.id, SetupTask.WORLDGEN_INDEX.label, TaskState.RUNNING)
-            index_res = cast(WorldIndexExtraction, self.llm.get_structured_response(
+            index_res = cast(WorldIndexExtraction, await self.llm.async_get_structured_response(
                 WORLD_DATA_EXTRACTION_SYSTEM_PROMPT.format(
                     description=world_info,
                     format=WorldIndexExtraction.model_json_schema()
@@ -105,17 +107,15 @@ class WorldGenService:
                 WorldCategory.MISC:     SetupTask.WORLDGEN_REMNANTS
             }
 
-            futures = []
-            # Map of future -> SetupTask ID for tracking
-            future_to_id = {}
+            tasks = []
+            task_ids = []
 
-            # SECOND PASS: Dispatch all batches to threadpool or mark as Skipped
+            # Dispatch all batches to asyncio.gather or mark as Skipped
             for cat_type, task in type_to_task.items():
                 if cat_type in batches:
                     names = batches[cat_type]
-                    f = executor.submit(self._extract_batch, world_info, names, cat_type)
-                    future_to_id[f] = task.id
-                    futures.append(f)
+                    tasks.append(self.async_extract_batch(world_info, names, cat_type))
+                    task_ids.append(task.id)
                     self._track_task(task.id, task.label, TaskState.RUNNING)
                 else:
                     # Category found empty in Deep Scan - mark as DONE so it clears from PENDING
@@ -126,15 +126,16 @@ class WorldGenService:
                         stream.set_npcs([])
 
             # --- WAIT & COLLECT ---
-            from concurrent.futures import as_completed
+            # Fire all parallel requests at once.
+            # Exceptions will propagate and fail the whole batch as requested.
+            results = await asyncio.gather(*tasks)
+
             all_locations = []
             all_npcs = []
             all_lore = []
 
-            for f in as_completed(futures):
-                task_id = future_to_id[f]
-                res = f.result()
-
+            for idx, res in enumerate(results):
+                task_id = task_ids[idx]
                 if isinstance(res, LocationListExtraction):
                     all_locations.extend(res.locations)
                 elif isinstance(res, NpcListExtraction):
@@ -168,11 +169,8 @@ class WorldGenService:
                 stream.set_error(e)
             logger.error(f"World Extraction Pipeline Failed: {e}", exc_info=True)
             raise
-        finally:
-            if own_executor:
-                executor.shutdown()
 
-    def _extract_batch(self, world_info: str, names: list[str], type: str) -> Any:
+    async def async_extract_batch(self, world_info: str, names: list[str], type: str) -> Any:
         """Universal batch extractor for Locations, NPCs, or Lore."""
         schema_map = {
             "location": LocationListExtraction,
@@ -186,7 +184,7 @@ class WorldGenService:
             names=", ".join(names)
         )
 
-        res = self.llm.get_structured_response(
+        res = await self.llm.async_get_structured_response(
             WORLD_DATA_EXTRACTION_SYSTEM_PROMPT.format(
                 description=world_info,
                 format=target_schema.model_json_schema()
@@ -219,6 +217,7 @@ class WorldGenService:
                 guidance=guidance,
             )
             sys_prompt = "You are an expert Game Master beginning a new adventure."
+            # We use the sync wrapper here for simplicity as it's a single call
             gen = self.llm.get_streaming_response(sys_prompt, [Message(role="user", content=prompt)])
             res = "".join(gen)
             self._track_task(SetupTask.OPENING_CRAWL.id, SetupTask.OPENING_CRAWL.label, TaskState.DONE)
@@ -226,3 +225,4 @@ class WorldGenService:
         except Exception:
             self._track_task(SetupTask.OPENING_CRAWL.id, SetupTask.OPENING_CRAWL.label, TaskState.DONE)
             return "You stand ready. What do you do?"
+

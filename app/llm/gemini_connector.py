@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
 import logging
 import os
-from collections.abc import Generator
+from collections.abc import AsyncGenerator
 from typing import Any, cast
 
 from google import genai
@@ -20,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 class GeminiConnector(LLMConnector):
     def __init__(self):
+        super().__init__()
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("GEMINI_API_KEY environment variable not set.")
@@ -135,9 +137,9 @@ class GeminiConnector(LLMConnector):
 
         return contents
 
-    def get_streaming_response(
+    async def async_get_streaming_response(
         self, system_prompt: str, chat_history: list[Message]
-    ) -> Generator[str, None, None]:
+    ) -> AsyncGenerator[str, None]:
         contents = self._convert_chat_history_to_contents(chat_history)
         if not contents:
             contents.append(types.Content(role="user", parts=[types.Part.from_text(text="Please proceed.")]))
@@ -159,18 +161,19 @@ class GeminiConnector(LLMConnector):
 
         generation_config = types.GenerateContentConfig(**config)
 
-        # Cast to Any to bypass complex tool-call overloads that block Mypy
-        response = cast(Any, self.client.models).generate_content_stream(
-            model=self.model_name or "gemini-2.0-flash",
-            contents=cast(Any, contents),
-            config=generation_config,
-        )
-        for chunk in response:
-            chunk_text = getattr(chunk, "text", None)
-            if chunk_text:
-                yield str(chunk_text)
+        async with self.semaphore:
+            # Cast to Any to bypass complex tool-call overloads that block Mypy
+            response = await cast(Any, self.client.aio.models).generate_content_stream(
+                model=self.model_name or "gemini-2.0-flash",
+                contents=cast(Any, contents),
+                config=generation_config,
+            )
+            async for chunk in response:
+                chunk_text = getattr(chunk, "text", None)
+                if chunk_text:
+                    yield str(chunk_text)
 
-    def get_structured_response(
+    async def async_get_structured_response(
         self,
         system_prompt: str,
         chat_history: list[Message],
@@ -198,11 +201,15 @@ class GeminiConnector(LLMConnector):
                 thinking_budget=self.default_thinking_budget
             )
 
-        response = self.client.models.generate_content(
-            model=self.model_name or "gemini-flash-latest",
-            contents=cast(Any, contents),
-            config=generation_config
-        )
+        async with self.semaphore:
+            response = await asyncio.wait_for(
+                self.client.aio.models.generate_content(
+                    model=self.model_name or "gemini-flash-latest",
+                    contents=cast(Any, contents),
+                    config=generation_config
+                ),
+                timeout=self.timeout
+            )
 
         if response.parsed:
             return output_schema.model_validate(response.parsed)
@@ -217,7 +224,7 @@ class GeminiConnector(LLMConnector):
 
         raise ValueError("Gemini returned empty response (blocked or error).")
 
-    def chat_with_tools(
+    async def async_chat_with_tools(
         self,
         system_prompt: str,
         chat_history: list[Message],
@@ -249,11 +256,15 @@ class GeminiConnector(LLMConnector):
 
         generation_config = types.GenerateContentConfig(**config_args)
 
-        response = self.client.models.generate_content(
-            model=self.model_name or "gemini-flash-latest",
-            contents=cast(Any, contents),
-            config=generation_config
-        )
+        async with self.semaphore:
+            response = await asyncio.wait_for(
+                self.client.aio.models.generate_content(
+                    model=self.model_name or "gemini-flash-latest",
+                    contents=cast(Any, contents),
+                    config=generation_config
+                ),
+                timeout=self.timeout
+            )
 
         content_text = ""
         thought_text = ""
