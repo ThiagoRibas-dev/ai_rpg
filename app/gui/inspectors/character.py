@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from nicegui import ui
 
@@ -10,6 +12,10 @@ from app.setup.setup_manifest import SetupManifest
 
 from .rendering_mixin import RenderingMixin
 
+if TYPE_CHECKING:
+    from app.core.orchestrator import Orchestrator
+    from app.database.db_manager import DBManager
+
 logger = logging.getLogger(__name__)
 
 
@@ -19,12 +25,12 @@ class CharacterInspector(RenderingMixin):
     Adapts to SystemManifest (Lego Protocol).
     """
 
-    def __init__(self, db_manager, orchestrator):
+    def __init__(self, db_manager: DBManager, orchestrator: Orchestrator):
         self.db = db_manager
         self.orchestrator = orchestrator
-        self.session_id = None
-        self.container = None
-        self.entity_key = "player"
+        self.session_id: int | None = None
+        self.container: ui.column | None = None
+        self.entity_key: str = "player"
 
     def set_session(self, session_id: int):
         self.session_id = session_id
@@ -42,8 +48,12 @@ class CharacterInspector(RenderingMixin):
             return
 
         # 1. Fetch Entity
+        if not self.db:
+            return
         entity = get_entity(self.session_id, self.db, "character", self.entity_key)
         if not entity:
+            with self.container:
+                 ui.label(f"Entity '{self.entity_key}' not found.").classes("text-gray-500 italic")
             return
 
         # 2. Fetch Manifest (Source of Truth)
@@ -51,7 +61,7 @@ class CharacterInspector(RenderingMixin):
         manifest_id = setup_data.get("manifest_id")
         manifest = None
 
-        if manifest_id:
+        if manifest_id and self.db.manifests:
             manifest = self.db.manifests.get_by_id(manifest_id)
 
         if not manifest:
@@ -194,6 +204,10 @@ class CharacterInspector(RenderingMixin):
             return
 
         from app.services.manual_edit_service import ManualEditService
+
+        if self.session_id is None:
+            ui.notify("No session active", type="negative")
+            return
 
         service = ManualEditService(
             self.db,

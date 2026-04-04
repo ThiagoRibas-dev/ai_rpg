@@ -23,7 +23,9 @@ def handler(
     # Build minimal "recent_messages" so MemoryRetriever can score keywords/semantic
     recent = [Message(role="user", content=query)]
 
-    mems = mr.get_relevant(sess, recent_messages=recent, kinds=kinds, limit=limit)
+    from app.models.vocabulary import MemoryKind
+    kind_enums = [MemoryKind(k) for k in kinds] if kinds else None
+    mems = mr.get_relevant(sess, recent_messages=recent, kinds=kind_enums, limit=limit)
     text = mr.format_for_prompt(mems, title="RETRIEVED CONTEXT")
 
     # Extract memory IDs from the MemoryKind objects

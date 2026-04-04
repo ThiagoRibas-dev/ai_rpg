@@ -1,14 +1,27 @@
+from __future__ import annotations
+
 import json
 import logging
 import os
 from collections.abc import Generator
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 import openai
 from pydantic import BaseModel, ValidationError
 
 from app.llm.llm_connector import LLMConnector, LLMResponse
 from app.models.message import Message
+from app.models.vocabulary import MessageRole
+
+if TYPE_CHECKING:
+    from openai.types.chat import (
+        ChatCompletion,
+        ChatCompletionChunk,
+        ChatCompletionMessageParam,
+        ChatCompletionSystemMessageParam,
+        ChatCompletionUserMessageParam,
+    )
+
 
 logger = logging.getLogger(__name__)
 
@@ -35,17 +48,17 @@ class OpenAIConnector(LLMConnector):
 
     def _convert_chat_history_to_messages(
         self, chat_history: list[Message]
-    ) -> list[dict[str, Any]]:
-        messages = []
+    ) -> list[ChatCompletionMessageParam]:
+        messages: list[ChatCompletionMessageParam] = []
         for msg in chat_history:
-            message_dict = {"role": msg.role}
+            message_dict: dict[str, Any] = {"role": msg.role}
 
             # Handle Content (allow None if it's a pure tool call)
             if msg.content is not None:
                 message_dict["content"] = msg.content
 
             # Handle Assistant Tool Calls
-            if msg.role == "assistant" and msg.tool_calls:
+            if msg.role == MessageRole.ASSISTANT and msg.tool_calls:
                 # Convert our internal normalized format back to OpenAI API format
                 openai_tool_calls = []
                 for tc in msg.tool_calls:
@@ -64,7 +77,7 @@ class OpenAIConnector(LLMConnector):
                     message_dict["content"] = None
 
             # Handle Tool Results
-            if msg.role == "tool":
+            if msg.role == MessageRole.TOOL:
                 if not msg.tool_call_id:
                     # Fallback for legacy messages or errors
                     logger.warning("Message with role 'tool' missing 'tool_call_id'.")
@@ -76,16 +89,20 @@ class OpenAIConnector(LLMConnector):
                 if msg.name:
                     message_dict["name"] = msg.name
 
-            messages.append(message_dict)
+            messages.append(cast("ChatCompletionMessageParam", message_dict))
         return messages
 
     def get_streaming_response(
         self, system_prompt: str, chat_history: list[Message]
     ) -> Generator[str, None, None]:
-        messages = [{"role": "system", "content": system_prompt}]
+        messages: list[ChatCompletionMessageParam] = [
+            cast("ChatCompletionSystemMessageParam", {"role": MessageRole.SYSTEM, "content": system_prompt})
+        ]
         converted_history = self._convert_chat_history_to_messages(chat_history)
         if not converted_history:
-            converted_history.append({"role": "user", "content": "Please proceed."})
+            converted_history.append(
+                cast("ChatCompletionUserMessageParam", {"role": MessageRole.USER, "content": "Please proceed."})
+            )
         messages.extend(converted_history)
 
         extra_params={
@@ -95,20 +112,22 @@ class OpenAIConnector(LLMConnector):
                 "stop": ["<|im_end|>", "<|im_end|"]
             }
 
-        stream = self.client.chat.completions.create(
-            model=self.model,
+        stream = cast(Any, self.client.chat.completions).create(
+            model=self.model or "gpt-4o",
             messages=messages,
             stream=True,
             stop=["<|im_end|>"],
             extra_body=extra_params,
         )
         for chunk in stream:
+            typed_chunk = cast("ChatCompletionChunk", chunk)
             if (
-                chunk.choices
-                and chunk.choices[0].delta
-                and chunk.choices[0].delta.content
+                typed_chunk.choices
+                and len(typed_chunk.choices) > 0
+                and typed_chunk.choices[0].delta
+                and typed_chunk.choices[0].delta.content
             ):
-                yield chunk.choices[0].delta.content
+                yield typed_chunk.choices[0].delta.content
 
     def get_structured_response(
         self,
@@ -118,10 +137,14 @@ class OpenAIConnector(LLMConnector):
         temperature: float = 0.5,
         top_p: float = 0.9,
     ) -> BaseModel:
-        messages = [{"role": "system", "content": system_prompt}]
+        messages: list[ChatCompletionMessageParam] = [
+            cast("ChatCompletionSystemMessageParam", {"role": MessageRole.SYSTEM, "content": system_prompt})
+        ]
         converted_history = self._convert_chat_history_to_messages(chat_history)
         if not converted_history:
-            converted_history.append({"role": "user", "content": "Please proceed."})
+            converted_history.append(
+                cast("ChatCompletionUserMessageParam", {"role": MessageRole.USER, "content": "Please proceed."})
+            )
         messages.extend(converted_history)
 
         # Generate and clean the schema to satisfy strict backends
@@ -140,8 +163,8 @@ class OpenAIConnector(LLMConnector):
                 "stop": ["<|im_end|>", "<|im_end|"]
             }
 
-        resp = self.client.chat.completions.create(
-            model=self.model,
+        resp = cast(Any, self.client.chat.completions).create(
+            model=self.model or "gpt-4o",
             messages=messages,
             max_completion_tokens=-1,
             temperature=temperature,
@@ -154,7 +177,17 @@ class OpenAIConnector(LLMConnector):
             extra_body=extra_params,
         )
 
-        content = resp.choices[0].message.content
+        if resp is None:
+            raise ValueError("OpenAI returned None response.")
+
+        typed_resp = cast("ChatCompletion", resp)
+        if not typed_resp.choices or len(typed_resp.choices) == 0:
+            raise ValueError("OpenAI returned no choices.")
+
+        content = typed_resp.choices[0].message.content
+        if content is None:
+            raise ValueError("OpenAI returned empty content.")
+
 
         try:
             # Parse and validate
@@ -234,10 +267,14 @@ class OpenAIConnector(LLMConnector):
         chat_history: list[Message],
         tools: list[dict[str, Any]],
     ) -> LLMResponse:
-        messages = [{"role": "system", "content": system_prompt}]
+        messages: list[ChatCompletionMessageParam] = [
+            cast("ChatCompletionSystemMessageParam", {"role": MessageRole.SYSTEM, "content": system_prompt})
+        ]
         converted_history = self._convert_chat_history_to_messages(chat_history)
         if not converted_history:
-            converted_history.append({"role": "user", "content": "Please proceed."})
+            converted_history.append(
+                cast("ChatCompletionUserMessageParam", {"role": MessageRole.USER, "content": "Please proceed."})
+            )
         messages.extend(converted_history)
 
         extra_params={
@@ -247,16 +284,24 @@ class OpenAIConnector(LLMConnector):
                 "stop": ["<|im_end|>", "<|im_end|"]
             }
 
-        response = self.client.chat.completions.create(
-            model=self.model,
+        response = cast(Any, self.client.chat.completions).create(
+            model=self.model or "gpt-4o",
             messages=messages,
             tools=tools,
             tool_choice="auto" if tools else None,
-            temperature=0.,
+            temperature=0.25,
             extra_body=extra_params,
         )
 
-        message = response.choices[0].message
+        if response is None:
+             return LLMResponse(content=None, tool_calls=None)
+
+        typed_resp = cast("ChatCompletion", response)
+        if not typed_resp.choices or len(typed_resp.choices) == 0:
+            return LLMResponse(content=None, tool_calls=None)
+
+        message = typed_resp.choices[0].message
+
         tool_calls_data = []
 
         if message.tool_calls:

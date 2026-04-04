@@ -1,9 +1,10 @@
+from __future__ import annotations
+
 import logging
 import os
-from typing import Any
+from typing import Any, cast
 
 import chromadb
-from chromadb.api.types import Where
 from chromadb.config import Settings
 from fastembed import TextEmbedding
 
@@ -44,7 +45,8 @@ class VectorStore:
             self.embed_model = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
 
     def _embed(self, text: str) -> list[float]:
-        return next(iter(self.embed_model.embed([text]))).tolist()
+        embeddings = list(self.embed_model.embed([text]))
+        return [float(x) for x in embeddings[0].tolist()]
 
     # ==========================================================================
     # RULES (The New Layer)
@@ -80,8 +82,8 @@ class VectorStore:
         try:
             self.rules_collection.upsert(
                 ids=ids,
-                embeddings=embeddings,
-                metadatas=metadatas,
+                embeddings=embeddings,  # type: ignore[arg-type]
+                metadatas=metadatas,  # type: ignore[arg-type]
                 documents=documents
             )
             logger.info(f"Indexed {len(rules)} rules for Ruleset {ruleset_id}")
@@ -96,18 +98,23 @@ class VectorStore:
         embedding = self._embed(query)
 
         results = self.rules_collection.query(
-            query_embeddings=[embedding],
+            query_embeddings=[embedding],  # type: ignore[arg-type]
             n_results=k,
-            where={"ruleset_id": {"$eq": ruleset_id}}
+            where={"ruleset_id": {"$eq": ruleset_id}}  # type: ignore[dict-item]
         )
 
         hits = []
-        if results["ids"] and results["ids"][0]:
-            for i, _ in enumerate(results["ids"][0]):
+        res_ids = results.get("ids")
+        res_docs = results.get("documents")
+        res_metas = results.get("metadatas")
+        res_dists = results.get("distances")
+
+        if res_ids and res_ids[0] and res_docs and res_docs[0] and res_metas and res_metas[0]:
+            for i, _ in enumerate(res_ids[0]):
                 hits.append({
-                    "content": results["documents"][0][i],
-                    "name": results["metadatas"][0][i]["name"],
-                    "distance": results["distances"][0][i] if results["distances"] else 0
+                    "content": res_docs[0][i],
+                    "name": res_metas[0][i].get("name", "Unknown") if isinstance(res_metas[0][i], dict) else "Unknown",
+                    "distance": res_dists[0][i] if res_dists and res_dists[0] else 0
                 })
         return hits
 
@@ -121,7 +128,7 @@ class VectorStore:
             doc_id = f"{session_id}_{round_number}"
             self.turn_collection.add(
                 ids=[doc_id],
-                embeddings=[embedding],
+                embeddings=[embedding],  # type: ignore[arg-type]
                 metadatas=[{
                     "session_id": session_id,
                     "prompt_id": prompt_id,
@@ -129,30 +136,35 @@ class VectorStore:
                     "summary": summary,
                     "tags": ",".join(tags),
                     "importance": importance,
-                }]
+                }]  # type: ignore[list-item]
             )
         except Exception as e:
             logger.error(f"Error adding turn: {e}")
 
     def search_relevant_turns(self, session_id: int, query_text: str, top_k: int = 5, min_importance: int = 2) -> list[dict[str, Any]]:
         embedding = self._embed(query_text)
-        where_clause: Where = {
+        where_clause = cast(Any, {
             "$and": [
                 {"session_id": {"$eq": session_id}},
                 {"importance": {"$gte": min_importance}},
             ]
-        }
+        })
         results = self.turn_collection.query(
-            query_embeddings=[embedding], n_results=top_k, where=where_clause
+            query_embeddings=[embedding], n_results=top_k, where=where_clause  # type: ignore[arg-type]
         )
         formatted = []
-        if results["ids"] and results["ids"][0]:
-            for _i, meta in enumerate(results["metadatas"][0]):
+        res_ids = results.get("ids")
+        res_metas = results.get("metadatas")
+
+        if res_ids and res_ids[0] and res_metas and res_metas[0]:
+            for _i, meta in enumerate(res_metas[0]):
+                if not isinstance(meta, dict):
+                    continue
                 formatted.append({
-                    "round_number": meta["round_number"],
-                    "summary": meta["summary"],
-                    "tags": meta["tags"].split(","),
-                    "importance": meta["importance"]
+                    "round_number": meta.get("round_number", 0),
+                    "summary": meta.get("summary", ""),
+                    "tags": str(meta.get("tags", "")).split(","),
+                    "importance": meta.get("importance", 0)
                 })
         return formatted
 
@@ -162,14 +174,14 @@ class VectorStore:
             doc_id = f"{session_id}:{memory_id}"
             self.memories_collection.upsert(
                 ids=[doc_id],
-                embeddings=[emb],
+                embeddings=[emb],  # type: ignore[arg-type]
                 metadatas=[{
                     "session_id": session_id,
                     "memory_id": memory_id,
                     "kind": kind,
                     "tags": ",".join(tags),
                     "priority": priority,
-                }]
+                }]  # type: ignore[list-item]
             )
         except Exception as e:
             logger.error(f"upsert_memory failed: {e}")
@@ -178,31 +190,49 @@ class VectorStore:
         if not query_text.strip():
             return []
         emb = self._embed(query_text)
-        where_clause: Where = {
+        where_clause = {
             "$and": [
                 {"session_id": {"$eq": session_id}},
                 {"priority": {"$gte": min_priority}},
+                {"kind": {"$ne": "turn_metadata"}},
             ]
         }
-        res = self.memories_collection.query(
-            query_embeddings=[emb], n_results=k, where=where_clause
+        res = cast(Any, self.memories_collection).query(
+            query_embeddings=[emb], n_results=k, where=cast(Any, where_clause)
         )
         out = []
-        if res["ids"] and res["ids"][0]:
-            for i, md in enumerate(res["metadatas"][0]):
+        res_ids = res.get("ids")
+        res_metas = res.get("metadatas")
+        res_docs = res.get("documents")
+        res_dists = res.get("distances")
+
+        if res_ids and res_ids[0] and res_metas and res_metas[0] and res_docs and res_docs[0]:
+            for i, md in enumerate(res_metas[0]):
+                if not isinstance(md, dict):
+                    continue
                 out.append({
-                    "memory_id": md["memory_id"],
-                    "kind": md["kind"],
-                    "content": res["documents"][0][i], # Return content too
-                    "tags": md["tags"].split(",") if md["tags"] else [],
-                    "distance": res["distances"][0][i] if res["distances"] else 0
+                    "memory_id": md.get("memory_id"),
+                    "kind": md.get("kind"),
+                    "content": res_docs[0][i], # Return content too
+                    "tags": str(md.get("tags", "")).split(",") if md.get("tags") else [],
+                    "distance": res_dists[0][i] if res_dists and res_dists[0] else 0
                 })
         return out
 
     def delete_session_data(self, session_id: int):
-        # Implementation of deletions (omitted for brevity but implied same as before)
-        pass
+        """Removes all turns and memories for the given session."""
+        try:
+            self.turn_collection.delete(where=cast(Any, {"session_id": {"$eq": session_id}}))
+            self.memories_collection.delete(where=cast(Any, {"session_id": {"$eq": session_id}}))
+            logger.info(f"Deleted all vector data for Session {session_id}")
+        except Exception as e:
+            logger.error(f"delete_session_data failed: {e}")
 
     def delete_memory(self, session_id: int, memory_id: int):
-        # Implementation of deletion
-        pass
+        """Removes a specific memory by its generated ID."""
+        try:
+            doc_id = f"{session_id}:{memory_id}"
+            self.memories_collection.delete(ids=[doc_id])
+            logger.debug(f"Deleted vector memory {doc_id}")
+        except Exception as e:
+            logger.error(f"delete_memory failed: {e}")

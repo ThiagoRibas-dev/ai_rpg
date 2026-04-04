@@ -1,5 +1,5 @@
 import logging
-from typing import Any
+from typing import Any, cast
 
 from simpleeval import simple_eval
 
@@ -17,7 +17,8 @@ def safe_evaluate(expression: str, context: dict[str, Any]) -> int | float:
                 safe_context[k] = float(v)
             except (ValueError, TypeError):
                 safe_context[k] = 0
-        return simple_eval(expression, names=safe_context)
+        result = simple_eval(expression, names=safe_context)
+        return cast(int | float, result)
     except Exception as e:
         logger.warning(f"Math error '{expression}': {e}")
         return 0

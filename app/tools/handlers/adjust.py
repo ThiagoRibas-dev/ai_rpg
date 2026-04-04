@@ -1,13 +1,17 @@
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
+from app.models.vocabulary import EntityKey, EntityType
 from app.prefabs.manifest import SystemManifest
 from app.prefabs.validation import get_path, set_path, validate_entity
 from app.services.state_service import get_entity, set_entity
 
+if TYPE_CHECKING:
+    from app.database.db_manager import DBManager
+
 logger = logging.getLogger(__name__)
 
-def handler(path: str, delta: int | float, target: str = "player", reason: str = "", **context: Any) -> dict:
+def handler(path: str, delta: int | float, target: str = EntityKey.PLAYER, reason: str = "", **context: Any) -> dict:
     """
     Handler for 'adjust' tool.
     Applies delta to a numeric field, then runs full validation pipeline.
@@ -17,7 +21,12 @@ def handler(path: str, delta: int | float, target: str = "player", reason: str =
     # Executor passes the full manifest object here
     manifest: SystemManifest | None = context.get("manifest")
 
-    entity_type = "character"
+    if not isinstance(session_id, int) or db is None:
+        return {"error": "Missing session_id or db_manager in context"}
+
+    db = cast("DBManager", db)
+
+    entity_type = EntityType.CHARACTER
     entity_key = target
     target_path = path
 

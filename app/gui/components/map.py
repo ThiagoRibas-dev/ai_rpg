@@ -1,16 +1,30 @@
+from __future__ import annotations
+
+import logging
 import math
+from typing import TYPE_CHECKING, Any, cast
 
 from nicegui import ui
 
+if TYPE_CHECKING:
+    from app.database.db_manager import DBManager
+    from app.gui.bridge import NiceGUIBridge
+
+
+logger = logging.getLogger(__name__)
+
 
 class MapComponent:
-    def __init__(self, bridge, db_manager):
+    tactical_data: dict[str, Any]
+    world_data: dict[str, Any]
+
+    def __init__(self, bridge: NiceGUIBridge, db_manager: DBManager):
         self.bridge = bridge
         self.db = db_manager
-        self.container = None
-        self.content = None
-        self.mode = "tactical"  # 'tactical' or 'world'
-        self.session_id = None
+        self.container: ui.column | None = None
+        self.content: ui.html | None = None
+        self.mode: str = "tactical"  # 'tactical' or 'world'
+        self.session_id: int | None = None
 
         self.tactical_data = {"width": 5, "height": 5, "entities": {}, "terrain": {}}
         self.world_data = {"center": None, "neighbors": {}}
@@ -30,23 +44,25 @@ class MapComponent:
             from app.services.state_service import get_entity
 
             scene = get_entity(self.session_id, self.db, "scene", "active_scene")
+            if not scene:
+                return
 
-            if scene and "tactical_map" in scene:
-                tmap = scene["tactical_map"]
+            if scene.get("tactical_map"):
+                tmap = cast(dict[str, Any], scene["tactical_map"])
                 entities = {}
-                if "positions" in tmap:
+                if tmap.get("positions"):
                     for k, v in tmap["positions"].items():
                         entities[v] = k
 
                 self.tactical_data = {
-                    "width": tmap.get("width", 5),
-                    "height": tmap.get("height", 5),
+                    "width": int(tmap.get("width", 5)),
+                    "height": int(tmap.get("height", 5)),
                     "terrain": tmap.get("terrain", {}),
                     "entities": entities,
                 }
 
-            if scene and "location_key" in scene:
-                loc_key = scene["location_key"]
+            if "location_key" in scene:
+                loc_key = str(scene["location_key"])
                 loc = get_entity(self.session_id, self.db, "location", loc_key)
                 if loc:
                     self.world_data = {
@@ -56,7 +72,7 @@ class MapComponent:
 
             self.redraw()
         except Exception as e:
-            print(f"Map refresh error: {e}")
+            logger.error(f"Map refresh error: {e}", exc_info=True)
 
     def render(self):
         with ui.column().classes("w-full h-full p-0 gap-0"):
@@ -102,9 +118,10 @@ class MapComponent:
 
         self.content.set_content(svg)
 
-    def _generate_tactical_svg(self):
-        w, h = self.tactical_data.get("width", 5), self.tactical_data.get("height", 5)
-        entities = self.tactical_data.get("entities", {})
+    def _generate_tactical_svg(self) -> str:
+        w = int(self.tactical_data.get("width", 5))
+        h = int(self.tactical_data.get("height", 5))
+        entities = cast(dict[str, str], self.tactical_data.get("entities", {}))
         cell_size = 50
         svg_w, svg_h = w * cell_size, h * cell_size
 
@@ -143,9 +160,9 @@ class MapComponent:
         svg_parts.append("</svg>")
         return "".join(svg_parts)
 
-    def _generate_world_svg(self):
-        center_key = self.world_data.get("center", "Unknown")
-        neighbors = self.world_data.get("neighbors", {})
+    def _generate_world_svg(self) -> str:
+        center_key = str(self.world_data.get("center", "Unknown"))
+        neighbors = cast(dict[str, Any], self.world_data.get("neighbors", {}))
 
         cx, cy = 200, 150
         radius = 100

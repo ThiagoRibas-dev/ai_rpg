@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import base64
 import json
 import logging
 import os
 from collections.abc import Generator
-from typing import Any
+from typing import Any, cast
 
 from google import genai
 from google.genai import types
@@ -11,6 +13,7 @@ from pydantic import BaseModel
 
 from app.llm.llm_connector import LLMConnector, LLMResponse
 from app.models.message import Message
+from app.models.vocabulary import MessageRole
 
 logger = logging.getLogger(__name__)
 
@@ -53,18 +56,19 @@ class GeminiConnector(LLMConnector):
         contents = []
 
         for msg in chat_history:
-            if msg.role == "system":
+            if msg.role == MessageRole.SYSTEM:
                 continue
 
             # --- 1. Handle User Messages ---
-            if msg.role == "user":
+            if msg.role == MessageRole.USER:
+                content_text = msg.content or ""
                 contents.append(types.Content(
                     role="user",
-                    parts=[types.Part.from_text(text=msg.content)]
+                    parts=[types.Part.from_text(text=content_text)]
                 ))
 
             # --- 2. Handle Assistant (Model) Messages ---
-            elif msg.role == "assistant":
+            elif msg.role == MessageRole.ASSISTANT:
                 parts = []
 
                 # B. Text Content
@@ -78,36 +82,37 @@ class GeminiConnector(LLMConnector):
                         text=msg.thought,
                     ))
 
-                # D. Tool Calls + Thought Signature
-                if msg.tool_calls:
                     # Decode the stored base64 thought_signature back to bytes.
-                    sig_bytes = None
+                    sig_bytes: bytes | None = None
                     if getattr(msg, 'thought_signature', None):
                         try:
-                            sig_bytes = base64.b64decode(msg.thought_signature)
+                            # Cast to str because we know the signature is stored as base64 string
+                            sig_str = cast(str, msg.thought_signature)
+                            sig_bytes = base64.b64decode(sig_str)
                         except Exception:
                             sig_bytes = None
 
                     # Gemini API requires the signature ONLY on the first function call
-                    for idx, tool_call in enumerate(msg.tool_calls):
-                        part_args = {
-                            "function_call": types.FunctionCall(
-                                name=tool_call["name"],
-                                args=tool_call["arguments"]
-                            )
-                        }
+                    t_calls = msg.tool_calls or []
+                    for idx, tool_call in enumerate(t_calls):
+                        fc = types.FunctionCall(
+                            name=tool_call["name"],
+                            args=tool_call["arguments"]
+                        )
                         if idx == 0 and sig_bytes:
-                            part_args["thought_signature"] = sig_bytes
-
-                        parts.append(types.Part(**part_args))
+                            # Use constructor directly to avoid ambiguous dict unpacking
+                            parts.append(types.Part(function_call=fc, thought_signature=sig_bytes))
+                        else:
+                            parts.append(types.Part(function_call=fc))
 
                 if parts:
                     contents.append(types.Content(role="model", parts=parts))
 
             # --- 3. Handle Tool Results ---
-            elif msg.role == "tool":
+            elif msg.role == MessageRole.TOOL:
                 try:
-                    response_data = json.loads(msg.content)
+                    tool_content = msg.content or "{}"
+                    response_data = json.loads(tool_content)
                 except Exception:
                     response_data = {"result": msg.content}
 
@@ -115,12 +120,16 @@ class GeminiConnector(LLMConnector):
                     response_data = {"result": response_data}
 
                 part = types.Part.from_function_response(
-                    name=msg.name,
+                    name=msg.name or "unknown_tool",
                     response=response_data
                 )
 
                 if contents and contents[-1].role == "user":
-                    contents[-1].parts.append(part)
+                    target_parts = contents[-1].parts
+                    if target_parts is not None:
+                        target_parts.append(part)
+                    else:
+                        contents[-1].parts = [part]
                 else:
                     contents.append(types.Content(role="user", parts=[part]))
 
@@ -142,21 +151,24 @@ class GeminiConnector(LLMConnector):
             "safety_settings": self.default_safety_settings,
         }
         # If model supports thinking, we add the config
-        if "flash" in self.model_name.lower() or "thought" in self.model_name.lower():
+        model_nm = self.model_name or ""
+        if "flash" in model_nm.lower() or "thought" in model_nm.lower():
              config["thinking_config"] = types.ThinkingConfig(
                 thinking_budget=self.default_thinking_budget
             )
 
         generation_config = types.GenerateContentConfig(**config)
 
-        response = self.client.models.generate_content_stream(
-            model=self.model_name,
-            contents=contents,
+        # Cast to Any to bypass complex tool-call overloads that block Mypy
+        response = cast(Any, self.client.models).generate_content_stream(
+            model=self.model_name or "gemini-2.0-flash",
+            contents=cast(Any, contents),
             config=generation_config,
         )
         for chunk in response:
-            if getattr(chunk, "text", None):
-                yield chunk.text
+            chunk_text = getattr(chunk, "text", None)
+            if chunk_text:
+                yield str(chunk_text)
 
     def get_structured_response(
         self,
@@ -180,13 +192,16 @@ class GeminiConnector(LLMConnector):
             safety_settings=self.default_safety_settings,
         )
 
-        if "flash" in self.model_name.lower() or "thought" in self.model_name.lower():
+        model_lower = (self.model_name or "").lower()
+        if "flash" in model_lower or "thought" in model_lower:
              generation_config.thinking_config = types.ThinkingConfig(
                 thinking_budget=self.default_thinking_budget
             )
 
         response = self.client.models.generate_content(
-            model=self.model_name, contents=contents, config=generation_config
+            model=self.model_name or "gemini-flash-latest",
+            contents=cast(Any, contents),
+            config=generation_config
         )
 
         if response.parsed:
@@ -220,13 +235,14 @@ class GeminiConnector(LLMConnector):
         config_args = {
             "system_instruction": [types.Part.from_text(text=system_prompt)],
             "tools": [gemini_tool],
-            "temperature": 0.7,
+            "temperature": 0.5,
             "max_output_tokens": self.default_max_tokens,
             "safety_settings": self.default_safety_settings,
         }
 
         # Check for model thinking capabilities
-        if "flash" in self.model_name.lower() or "thought" in self.model_name.lower():
+        model_lower = (self.model_name or "").lower()
+        if "flash" in model_lower or "thought" in model_lower:
              config_args["thinking_config"] = types.ThinkingConfig(
                 thinking_budget=self.default_thinking_budget
             )
@@ -234,7 +250,9 @@ class GeminiConnector(LLMConnector):
         generation_config = types.GenerateContentConfig(**config_args)
 
         response = self.client.models.generate_content(
-            model=self.model_name, contents=contents, config=generation_config
+            model=self.model_name or "gemini-flash-latest",
+            contents=cast(Any, contents),
+            config=generation_config
         )
 
         content_text = ""
@@ -242,23 +260,39 @@ class GeminiConnector(LLMConnector):
         thought_sig = None
         tool_calls = []
 
-        if response.candidates and response.candidates[0].content.parts:
+        if (
+            response.candidates
+            and len(response.candidates) > 0
+            and response.candidates[0].content
+            and response.candidates[0].content.parts
+        ):
             for part in response.candidates[0].content.parts:
+                if part is None:
+                    continue
+
                 if getattr(part, "thought", None) and getattr(part, "text", None):
-                    thought_text += part.text
+                    thought_text += str(part.text)
                 elif getattr(part, "text", None):
-                    content_text += part.text
+                    content_text += str(part.text)
 
                 # Capture thought_signature (bytes) from any part that has it
-                if getattr(part, "thought_signature", None) and thought_sig is None:
-                    thought_sig = base64.b64encode(part.thought_signature).decode("ascii")
+                t_sig = getattr(part, "thought_signature", None)
+                if t_sig and thought_sig is None:
+                    thought_sig = base64.b64encode(cast(bytes, t_sig)).decode(
+                        "ascii"
+                    )
 
                 if part.function_call:
-                    tool_calls.append({
-                        "name": part.function_call.name,
-                        "arguments": dict(part.function_call.args),
-                        "id": "call_gemini_" + part.function_call.name
-                    })
+                    tool_calls.append(
+                        {
+                            "name": part.function_call.name,
+                            "arguments": dict(part.function_call.args)
+                            if part.function_call.args
+                            else {},
+                            "id": "call_gemini_" + str(part.function_call.name),
+                        }
+                    )
+
 
         return LLMResponse(
             content=content_text,

@@ -53,13 +53,13 @@ class MemoryRetriever:
         # 1. EXTRACT PRIMARY CONTEXT
         # Fetch last message and last AI response to build the query context
         query_parts = []
-        if len(recent_messages) >= 2:
+        if recent_messages and len(recent_messages) >= 2:
             last_ai = next((m for m in reversed(recent_messages[:-1]) if m.role == "assistant"), None)
             if last_ai and last_ai.content:
                 query_parts.append(last_ai.content[-3000:])
 
         if recent_messages and recent_messages[-1].role == "user":
-            query_parts.append(recent_messages[-1].content)
+            query_parts.append(recent_messages[-1].content or "")
 
         recent_text = " ".join(query_parts) if query_parts else "Start of session"
         keywords = self.extract_keywords(recent_text)

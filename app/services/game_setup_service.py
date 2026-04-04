@@ -1,11 +1,11 @@
 import datetime
 import json
 import logging
-from typing import Any
+from typing import Any, cast
 
 from app.models.game_session import GameSession
 from app.models.session import Session
-from app.models.vocabulary import MemoryKind
+from app.models.vocabulary import CategoryName, EntityKey, EntityType, GameMode, MemoryKind
 from app.prefabs.manifest import SystemManifest
 from app.prefabs.validation import validate_entity
 from app.services.state_service import set_entity
@@ -32,8 +32,8 @@ class GameSetupService:
     ) -> GameSession:
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M")
         c_name = "Player"
-        if sheet_values and "identity" in sheet_values:
-            c_name = sheet_values["identity"].get("name", "Player")
+        if sheet_values and CategoryName.IDENTITY in sheet_values:
+            c_name = sheet_values[CategoryName.IDENTITY].get("name", "Player")
         elif hasattr(char_data, "name"):
             c_name = char_data.name
 
@@ -80,29 +80,29 @@ class GameSetupService:
         entity_data = sheet_values or {}
         if not entity_data and char_data:
             entity_data = self._map_legacy_char_data(char_data)
-        if "identity" not in entity_data:
-            entity_data["identity"] = {"name": c_name}
+        if CategoryName.IDENTITY not in entity_data:
+            entity_data[CategoryName.IDENTITY] = {"name": c_name}
 
         validated_entity, _ = validate_entity(entity_data, manifest)
         validated_entity["name"] = c_name
         validated_entity["scene_state"] = {"zone_id": None, "is_hidden": False}
 
         for cat in [
-            "meta",
-            "identity",
-            "attributes",
-            "skills",
-            "resources",
-            "inventory",
-            "features",
-            "progression",
-            "connections",
-            "narrative",
+            CategoryName.META,
+            CategoryName.IDENTITY,
+            CategoryName.ATTRIBUTES,
+            CategoryName.SKILLS,
+            CategoryName.RESOURCES,
+            CategoryName.INVENTORY,
+            CategoryName.FEATURES,
+            CategoryName.PROGRESSION,
+            CategoryName.CONNECTIONS,
+            CategoryName.NARRATIVE,
         ]:
             if cat not in validated_entity:
                 validated_entity[cat] = {}
 
-        set_entity(game_session.id, self.db, "character", "player", validated_entity)
+        set_entity(game_session.id, self.db, EntityType.CHARACTER, EntityKey.PLAYER, validated_entity)
 
         # 3. Register Manifest
         manifest_db_id = None
@@ -154,23 +154,23 @@ class GameSetupService:
         # 5. World
         self._apply_world_extraction(game_session.id, world_data, manifest_db_id)
 
-        game_session.game_mode = "GAMEPLAY"
+        game_session.game_mode = GameMode.GAMEPLAY
         self.db.sessions.update(game_session)
-        return game_session
+        return cast(GameSession, game_session)
 
-    def _map_legacy_char_data(self, char_data) -> dict:
-        values = {
-            "identity": {"name": getattr(char_data, "name", "Player")},
-            "attributes": {},
-            "inventory": {"backpack": []},
+    def _map_legacy_char_data(self, char_data) -> dict[str, Any]:
+        values: dict[str, Any] = {
+            CategoryName.IDENTITY: {"name": getattr(char_data, "name", "Player")},
+            CategoryName.ATTRIBUTES: {},
+            CategoryName.INVENTORY: {"backpack": []},
         }
         if hasattr(char_data, "suggested_stats") and isinstance(
             char_data.suggested_stats, dict
         ):
-            values["attributes"] = char_data.suggested_stats
+            values[CategoryName.ATTRIBUTES] = char_data.suggested_stats
         if hasattr(char_data, "inventory") and isinstance(char_data.inventory, list):
             for item in char_data.inventory:
-                values["inventory"]["backpack"].append({"name": item, "qty": 1})
+                values[CategoryName.INVENTORY]["backpack"].append({"name": item, "qty": 1})
         return values
 
     def _apply_world_extraction(
@@ -184,7 +184,7 @@ class GameSetupService:
             "type": loc.type,
             "connections": {},
         }
-        set_entity(session_id, self.db, "location", loc.key, loc_data)
+        set_entity(session_id, self.db, EntityType.LOCATION, loc.key, loc_data)
 
         context = {"session_id": session_id, "db_manager": self.db}
         for neighbor in world_data.adjacent_locations:
@@ -195,7 +195,7 @@ class GameSetupService:
             except Exception:
                 pass
 
-        scene = {"members": ["character:player"], "location_key": loc.key}
+        scene = {"members": [f"{EntityType.CHARACTER}:{EntityKey.PLAYER}"], "location_key": loc.key}
         for npc in world_data.initial_npcs:
             key = f"npc_{npc.name.lower().replace(' ', '_')}"
             self._create_npc_entity(
@@ -206,8 +206,8 @@ class GameSetupService:
                 manifest_id,
                 disposition=npc.initial_disposition,
             )
-            scene["members"].append(f"character:{key}")
-        set_entity(session_id, self.db, "scene", "active_scene", scene)
+            scene["members"].append(f"{EntityType.CHARACTER}:{key}")
+        set_entity(session_id, self.db, EntityType.SCENE, EntityKey.ACTIVE_SCENE, scene)
 
         for mem in world_data.lore:
             try:
@@ -257,11 +257,11 @@ class GameSetupService:
             "inventory": {},
             "scene_state": {"zone_id": None},
         }
-        set_entity(session_id, self.db, "character", key, npc_dict)
+        set_entity(session_id, self.db, EntityType.CHARACTER, key, npc_dict)
         set_entity(
             session_id,
             self.db,
-            "npc_profile",
+            EntityType.NPC_PROFILE,
             key,
             {
                 "personality_traits": [],

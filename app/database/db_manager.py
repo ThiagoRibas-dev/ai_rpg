@@ -1,15 +1,21 @@
-import sqlite3
+from __future__ import annotations
 
-from app.database.repositories import (
-    GameStateRepository,
-    ManifestRepository,
-    MemoryRepository,
-    PromptRepository,
-    RulesetRepository,
-    SessionRepository,
-    StatTemplateRepository,
-    TurnMetadataRepository,
-)
+import sqlite3
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.database.repositories import (
+        GameStateRepository,
+        ManifestRepository,
+        MemoryRepository,
+        PromptRepository,
+        RulesetRepository,
+        SessionRepository,
+        StatTemplateRepository,
+        TurnMetadataRepository,
+    )
+
+
 
 
 class DBManager:
@@ -23,7 +29,7 @@ class DBManager:
 
     def __init__(self, db_path: str):
         self.db_path = db_path
-        self.conn = None
+        self.conn: sqlite3.Connection | None = None
 
         # Repositories (initialized in __enter__)
         self.prompts: PromptRepository | None = None
@@ -49,16 +55,19 @@ class DBManager:
         self.conn.row_factory = sqlite3.Row
 
         # Initialize all repositories
-        self.prompts = PromptRepository(self.conn)
-        self.sessions = SessionRepository(self.conn)
-        self.memories = MemoryRepository(self.conn)
-        self.game_state = GameStateRepository(self.conn)
-        self.turn_metadata = TurnMetadataRepository(self.conn)
-        self.rulesets = RulesetRepository(self.conn)
-        self.stat_templates = StatTemplateRepository(self.conn)
-        self.manifests = ManifestRepository(self.conn)
+        from app.database import repositories
+
+        self.prompts = repositories.PromptRepository(self.conn)
+        self.sessions = repositories.SessionRepository(self.conn)
+        self.memories = repositories.MemoryRepository(self.conn)
+        self.game_state = repositories.GameStateRepository(self.conn)
+        self.turn_metadata = repositories.TurnMetadataRepository(self.conn)
+        self.rulesets = repositories.RulesetRepository(self.conn)
+        self.stat_templates = repositories.StatTemplateRepository(self.conn)
+        self.manifests = repositories.ManifestRepository(self.conn)
 
         return self
+
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.conn:
@@ -96,6 +105,8 @@ class DBManager:
 
     def _create_indexes(self):
         """Create all database indexes."""
+        if not self.conn:
+            return
         cursor = self.conn.cursor()
         cursor.execute(
             "CREATE INDEX IF NOT EXISTS idx_memories_session_id ON memories(session_id);"
@@ -107,3 +118,4 @@ class DBManager:
             "CREATE INDEX IF NOT EXISTS idx_turn_metadata_session_id ON turn_metadata(session_id);"
         )
         self.conn.commit()
+

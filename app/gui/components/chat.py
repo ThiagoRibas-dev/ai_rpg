@@ -1,23 +1,34 @@
+from __future__ import annotations
+
 import json
+from typing import TYPE_CHECKING
 
 from nicegui import ui
 
 from app.gui.theme import Theme
 
+if TYPE_CHECKING:
+    from app.core.orchestrator import Orchestrator
+    from app.gui.bridge import NiceGUIBridge
+    from app.gui.controls.session_list import SessionListComponent
+    from app.models.message import Message
+
+from app.models.vocabulary import MessageRole
+
 
 class ChatComponent:
-    def __init__(self, orchestrator, bridge, session_manager):
+    def __init__(self, orchestrator: Orchestrator, bridge: NiceGUIBridge, session_manager: SessionListComponent):
         self.orchestrator = orchestrator
         self.bridge = bridge
         self.session_manager = session_manager
 
         # UI References
-        self.container = None
-        self.input_area = None
-        self.scroll_area = None
-        self.nav_container = None
-        self.send_btn = None
-        self.stop_btn = None
+        self.container: ui.column | None = None
+        self.input_area: ui.textarea | None = None
+        self.scroll_area: ui.scroll_area | None = None
+        self.nav_container: ui.row | None = None
+        self.send_btn: ui.button | None = None
+        self.stop_btn: ui.button | None = None
 
         self.bridge.register_chat(self)
 
@@ -97,31 +108,32 @@ class ChatComponent:
         self.container.clear()
 
         session = self.orchestrator.session
-        if not session:
+        if not session or not session.history:
             return
+
 
         with self.container:
             for index, msg in enumerate(session.history):
-                if msg.role == "tool":
+                if msg.role == MessageRole.TOOL:
                     continue
 
-                if msg.role == "user":
+                if msg.role == MessageRole.USER:
                     name = "Player"
-                elif msg.role == "assistant":
+                elif msg.role == MessageRole.ASSISTANT:
                     name = "Game Master"
-                elif msg.role == "system":
+                elif msg.role == MessageRole.SYSTEM:
                     name = "System"
                 else:
-                    name = msg.role.capitalize()
+                    name = str(msg.role).capitalize()
 
                 self._render_interactive_message(index, msg, name)
 
         self._scroll_down()
 
-    def _render_interactive_message(self, index: int, msg, name: str):
-        sent = msg.role == "user"
+    def _render_interactive_message(self, index: int, msg: Message, name: str):
+        sent = msg.role == MessageRole.USER
 
-        if msg.role == "thought":
+        if msg.role == MessageRole.THOUGHT:
             with ui.row().classes("w-full justify-start"):
                 with ui.card().classes(
                     "bg-yellow-900/20 border border-yellow-700/50 p-2 w-full max-w-3xl"
@@ -129,11 +141,13 @@ class ChatComponent:
                     ui.label("💭 Thinking...").classes(
                         "text-xs text-yellow-500 font-bold mb-1"
                     )
-                    ui.markdown(msg.content).classes("text-sm text-yellow-200 italic")
+                    thought_text = msg.thought or ""
+                    ui.markdown(thought_text).classes("text-sm text-yellow-200 italic")
             return
 
-        if msg.role == "system":
-            self.add_system_message(msg.content)
+        if msg.role == MessageRole.SYSTEM:
+            if msg.content:
+                self.add_system_message(msg.content)
             return
 
         # Custom Chat Bubble Implementation
@@ -158,17 +172,20 @@ class ChatComponent:
 
                 with bubble:
                     # Context Menu attached to the bubble
+                    content_container = ui.column().classes("w-full p-0 m-0 gap-1")
                     with ui.context_menu():
-                        ui.menu_item("Edit", on_click=lambda: self._toggle_edit_mode(content_container, index, msg))
+                        # Use a local variable to capture content_container for the lambda
+                        current_container = content_container
+                        ui.menu_item("Edit", on_click=lambda: self._toggle_edit_mode(current_container, index, msg))
                         ui.menu_item("Delete", on_click=lambda: self._delete_message(index)).classes("text-red-400")
                         if not sent:
                             ui.separator()
                             ui.menu_item("Regenerate from here", on_click=lambda: self._regenerate_from(index))
 
-                    content_container = ui.column().classes("w-full p-0 m-0 gap-1")
                     with content_container:
+                        msg_content = msg.content or ""
                         # Removed prose-invert colors to allow inheritance, kept prose structure
-                        ui.markdown(msg.content).classes(
+                        ui.markdown(msg_content).classes(
                             "w-full min-w-0 break-words break-all whitespace-pre-wrap prose prose-invert max-w-none [&_p]:m-0 text-sm [&_*]:text-inherit"
                         )
 
@@ -199,39 +216,53 @@ class ChatComponent:
 
     def _save_edit(self, index, new_content):
         session = self.orchestrator.session
+        if not session:
+            return
+
         if 0 <= index < len(session.history):
             session.history[index].content = new_content
             game_session = self.session_manager.get_active_session()
             if game_session:
                 game_session.session_data = session.to_json()
-                self.session_manager.db.sessions.update(game_session)
-                ui.notify("Message updated")
+                if self.session_manager.db and self.session_manager.db.sessions:
+                    self.session_manager.db.sessions.update(game_session)
+                    ui.notify("Message updated")
             self.load_history()
+
 
     def _delete_message(self, index):
         session = self.orchestrator.session
+        if not session:
+            return
+
         if 0 <= index < len(session.history):
             session.history.pop(index)
             game_session = self.session_manager.get_active_session()
             if game_session:
                 game_session.session_data = session.to_json()
-                self.session_manager.db.sessions.update(game_session)
-                ui.notify("Message deleted")
+                if self.session_manager.db and self.session_manager.db.sessions:
+                    self.session_manager.db.sessions.update(game_session)
+                    ui.notify("Message deleted")
             self.load_history()
+
 
     def _regenerate_from(self, index):
         session = self.orchestrator.session
+        if not session:
+            return
         if 0 <= index < len(session.history):
             target_msg = session.history[index]
-            if target_msg.role == "assistant":
+            if target_msg.role == MessageRole.ASSISTANT:
                 session.history = session.history[:index]
-            elif target_msg.role == "user":
+            elif target_msg.role == MessageRole.USER:
                 session.history = session.history[: index + 1]
 
             game_session = self.session_manager.get_active_session()
             if game_session:
                 game_session.session_data = session.to_json()
-                self.session_manager.db.sessions.update(game_session)
+                if self.session_manager.db and self.session_manager.db.sessions:
+                    self.session_manager.db.sessions.update(game_session)
+
 
                 # Reset stop flag and set new turn ID
                 self.set_generating(True)
@@ -242,11 +273,12 @@ class ChatComponent:
                 self.orchestrator.active_turn_id = new_turn_id
                 self.orchestrator.bridge.set_active_turn(new_turn_id)
 
-                last_user_msg = ""
+                last_user_msg: str = ""
                 if session.history and session.history[-1].role == "user":
-                    last_user_msg = session.history[-1].content
+                    last_user_msg = session.history[-1].content or ""
 
                 if last_user_msg:
+                    import threading
                     thread = threading.Thread(
                         target=self.orchestrator._background_execute,
                         args=(game_session, last_user_msg, new_turn_id),
@@ -256,12 +288,13 @@ class ChatComponent:
 
             self.load_history()
 
+
     def add_message(self, name: str, text: str, role: str):
         if not self.container:
             return
         with self.container:
-            sent = role == "user"
-            if role == "thought":
+            sent = role == MessageRole.USER
+            if role == MessageRole.THOUGHT:
                 with ui.row().classes("w-full justify-start"):
                     with ui.card().classes(
                         "bg-yellow-900/20 border border-yellow-700/50 p-2 w-full max-w-3xl"
@@ -269,7 +302,7 @@ class ChatComponent:
                         ui.label("💭 Thinking...").classes(
                             "text-xs text-yellow-500 font-bold mb-1"
                         )
-                        ui.markdown(text).classes("text-sm text-yellow-200 italic")
+                        ui.markdown(text or "").classes("text-sm text-yellow-200 italic")
             else:
                 # Use same bubble styling as _render_interactive_message
                 row_classes = "w-full justify-end" if sent else "w-full justify-start"
@@ -288,7 +321,7 @@ class ChatComponent:
                             bubble.classes(Theme.chat_bubble_received + " rounded-tl-none")
 
                         with bubble:
-                            ui.markdown(text).classes(
+                            ui.markdown(text or "").classes(
                                 "w-full min-w-0 break-words break-all whitespace-pre-wrap prose prose-invert max-w-none [&_p]:m-0 text-sm [&_*]:text-inherit"
                             )
         self._scroll_down()
@@ -427,15 +460,20 @@ class ChatComponent:
         self._scroll_down()
 
     def handle_choice(self, text):
-        self.input_area.value = text
-        self.handle_enter()
+        if self.input_area:
+            self.input_area.value = text
+            self.handle_enter()
+
 
     def handle_enter(self):
+        if not self.input_area:
+            return
         text = self.input_area.value
         if not text.strip():
             return
 
         self.input_area.value = ""
+
 
         # FIX: Do NOT add message here. The Orchestrator adds it to the queue via plan_and_execute.
         # self.add_message("You", text, "user")

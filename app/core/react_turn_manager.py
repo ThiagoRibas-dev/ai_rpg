@@ -55,13 +55,14 @@ class ReActTurnManager:
             manifest = thread_db_manager.manifests.get_by_id(manifest_id)
         # If manifest is not loaded/valid, show error to the user
         if not manifest:
-            error_msg = (
+            system_error = (
                 "⚠️ Game system not configured. "
                 "Please select a game system in the Session Setup before playing."
             )
+            self.logger.error(system_error)
             self.ui_queue.put({
                 "type": "error",
-                "message": error_msg,
+                "message": system_error,
                 "turn_id": turn_id,
             })
             return
@@ -282,13 +283,13 @@ class ReActTurnManager:
                             )
                             working_history.append(tool_msg)
                         except Exception as e:
-                            error_msg = Message(
+                            tool_error = Message(
                                 role="tool",
                                 tool_call_id=call_id,
                                 name=name,
                                 content=json.dumps({"error": str(e)}, indent=2),
                             )
-                            working_history.append(error_msg)
+                            working_history.append(tool_error)
                             self.ui_queue.put(
                                 {
                                     "type": "tool_result",
@@ -298,13 +299,13 @@ class ReActTurnManager:
                                 }
                             )
                     else:
-                        error_msg = Message(
+                        tool_error = Message(
                             role="tool",
                             tool_call_id=call_id,
                             name=name,
                             content=json.dumps({"error": f"Tool '{name}' not found."}, indent=2),
                         )
-                        working_history.append(error_msg)
+                        working_history.append(tool_error)
                 continue
 
         # --- 5B. LOOP EXHAUSTION GUARD ---
@@ -314,7 +315,7 @@ class ReActTurnManager:
             )
             # Make one final streaming response call to force a text response
             try:
-                fallback_response = self.llm_connector.stream_response(
+                fallback_response = self.llm_connector.get_streaming_response(
                     system_prompt=turn_system_prompt,
                     chat_history=working_history,
                 )

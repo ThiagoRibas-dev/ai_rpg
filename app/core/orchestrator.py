@@ -125,7 +125,8 @@ class Orchestrator:
         if not game_session:
             return
         game_session.session_data = final_session_state.to_json()
-        db_manager.sessions.update(game_session)
+        if db_manager.sessions:
+            db_manager.sessions.update(game_session)
         self.session = final_session_state
         self.session.id = game_session.id
 
@@ -160,10 +161,10 @@ class Orchestrator:
 
         last_user_msg = ""
         if history and history[-1].role == "user":
-            last_user_msg = history[-1].content
+            last_user_msg = history[-1].content or ""
 
-        self.session.session_data = self.session.to_json()
-        game_session.session_data = self.session.to_json()
+        if self.session:
+            game_session.session_data = self.session.to_json()
 
         with DBManager(self.db_path) as db:
             db.sessions.update(game_session)

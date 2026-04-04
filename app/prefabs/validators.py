@@ -23,7 +23,8 @@ def validate_int(value: Any, config: dict[str, Any]) -> int:
         max: int (default: no maximum)
         default: int (default: 0)
     """
-    default = config.get("default", 0)
+    default = int(config.get("default", 0))
+    # Coerced defaults are int, no-any-return fixed
 
     # Coerce to int
     if value is None:
@@ -100,8 +101,8 @@ def validate_step_die(value: Any, config: dict[str, Any]) -> str:
         chain: List[str] (default: ["d4", "d6", "d8", "d10", "d12"])
         default: str (default: first in chain)
     """
-    chain = config.get("chain", ["d4", "d6", "d8", "d10", "d12"])
-    default = config.get("default", chain[0] if chain else "d6")
+    chain = [str(d) for d in config.get("chain", ["d4", "d6", "d8", "d10", "d12"])]
+    default = str(config.get("default", chain[0] if chain else "d6"))
 
     if value is None:
         return default
@@ -114,7 +115,7 @@ def validate_step_die(value: Any, config: dict[str, Any]) -> str:
     if val_str in chain_lower:
         # Return with original casing from chain
         idx = chain_lower.index(val_str)
-        return chain[idx]
+        return str(chain[idx])
 
     return default
 
@@ -172,7 +173,7 @@ def validate_ladder(value: Any, config: dict[str, Any]) -> dict[str, Any]:
     val = max(min_val, min(max_val, val))
 
     # Lookup label
-    label = labels.get(val, str(val))
+    label = str(labels.get(val, str(val)))
 
     return {"value": val, "label": label}
 
@@ -185,7 +186,7 @@ def validate_bool(value: Any, config: dict[str, Any]) -> bool:
     Config:
         default: bool (default: False)
     """
-    default = config.get("default", False)
+    default = bool(config.get("default", False))
 
     if value is None:
         return default
@@ -211,7 +212,7 @@ def validate_text(value: Any, config: dict[str, Any]) -> str:
         max_length: int (optional)
         options: List[str] (optional, strict enum)
     """
-    default = config.get("default", "")
+    default = str(config.get("default", ""))
 
     if value is None:
         return default
@@ -289,8 +290,8 @@ def validate_counter(value: Any, config: dict[str, Any]) -> int:
         min: int (default: 0)
         default: int (default: 0)
     """
-    min_val = config.get("min", 0)
-    default = config.get("default", 0)
+    min_val = int(config.get("min", 0))
+    default = int(config.get("default", 0))
 
     if value is None:
         return default
@@ -435,7 +436,7 @@ def validate_weighted(value: Any, config: dict[str, Any]) -> list[dict[str, Any]
 
 def get_default_int(config: dict[str, Any]) -> int:
     """Get default value for VAL_INT."""
-    return config.get("default", 0)
+    return int(config.get("default", 0))
 
 
 def get_default_compound(config: dict[str, Any]) -> dict[str, int]:
@@ -445,8 +446,8 @@ def get_default_compound(config: dict[str, Any]) -> dict[str, int]:
 
 def get_default_step_die(config: dict[str, Any]) -> str:
     """Get default value for VAL_STEP_DIE."""
-    chain = config.get("chain", ["d4", "d6", "d8", "d10", "d12"])
-    return config.get("default", chain[0] if chain else "d6")
+    chain = list(config.get("chain", ["d4", "d6", "d8", "d10", "d12"]))
+    return str(config.get("default", chain[0] if chain else "d6"))
 
 
 def get_default_ladder(config: dict[str, Any]) -> dict[str, Any]:
@@ -456,12 +457,12 @@ def get_default_ladder(config: dict[str, Any]) -> dict[str, Any]:
 
 def get_default_bool(config: dict[str, Any]) -> bool:
     """Get default value for VAL_BOOL."""
-    return config.get("default", False)
+    return bool(config.get("default", False))
 
 
 def get_default_text(config: dict[str, Any]) -> str:
     """Get default value for VAL_TEXT."""
-    return config.get("default", "")
+    return str(config.get("default", ""))
 
 
 def get_default_pool(config: dict[str, Any]) -> dict[str, int]:
@@ -472,7 +473,7 @@ def get_default_pool(config: dict[str, Any]) -> dict[str, int]:
 
 def get_default_counter(config: dict[str, Any]) -> int:
     """Get default value for RES_COUNTER."""
-    return config.get("default", 0)
+    return int(config.get("default", 0))
 
 
 def get_default_track(config: dict[str, Any]) -> list[bool]:

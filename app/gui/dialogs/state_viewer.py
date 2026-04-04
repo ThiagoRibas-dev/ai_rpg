@@ -1,3 +1,5 @@
+from typing import Any
+
 from nicegui import ui
 
 
@@ -28,7 +30,7 @@ class StateViewerDialog:
     def _get_full_state(self):
         raw_state = self.db.game_state.get_all(self.session_id)
         # Simplify structure for viewing: { type: { key: data } }
-        clean = {}
+        clean: dict[str, Any] = {}
         for etype, items in raw_state.items():
             clean[etype] = {}
             for key, val in items.items():

@@ -91,7 +91,10 @@ class ToolRegistry:
         ]
 
         for pkg, pkg_name in search_packages:
-            path = Path(pkg.__file__).parent
+            pkg_file = getattr(pkg, "__file__", None)
+            if not pkg_file:
+                continue
+            path = Path(pkg_file).resolve().parent
 
             for _, module_name, _ in pkgutil.iter_modules([str(path)]):
                 if module_name.startswith("_"):
@@ -161,7 +164,7 @@ class ToolRegistry:
 
         required = [r for r in schema.get("required", []) if r != "name"]
 
-        parameters_schema = {"type": "object"}
+        parameters_schema: dict[str, Any] = {"type": "object", "properties": {}, "required": []}
         if properties:
             parameters_schema["properties"] = properties
         if required:

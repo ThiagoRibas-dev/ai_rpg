@@ -1,17 +1,27 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import time
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 from nicegui import ui
 
 from app.models.prompt import Prompt
 from app.setup.manifest_extractor import ManifestExtractor
 
+if TYPE_CHECKING:
+    from app.core.orchestrator import Orchestrator
+    from app.database.db_manager import DBManager
+
+
 logger = logging.getLogger(__name__)
 
 
 class PromptEditorDialog:
-    def __init__(self, db_manager, orchestrator, prompt: Prompt = None, on_save=None):
+    def __init__(self, db_manager: DBManager, orchestrator: Orchestrator, prompt: Prompt | None = None, on_save: Callable | None = None):
+
         self.db = db_manager
         self.orchestrator = orchestrator
         self.prompt = prompt
@@ -28,13 +38,13 @@ class PromptEditorDialog:
         if prompt and prompt.template_manifest:
             self.manifest_json = prompt.template_manifest
 
-        self.status_label = None
-        self.gen_btn = None
+        self.status_label: ui.label | None = None
+        self.gen_btn: ui.button | None = None
 
         # Extraction State
-        self.extraction_start_time = None
-        self.current_status_msg = ""
-        self.status_timer = None
+        self.extraction_start_time: float | None = None
+        self.current_status_msg: str = ""
+        self.status_timer: ui.timer | None = None
 
     def open(self):
         with (
@@ -92,8 +102,11 @@ class PromptEditorDialog:
                         ui.icon("settings_system_daydream").classes("text-gray-400")
 
                         # Load manifests for dropdown
-                        manifests = self.db.manifests.get_all()
-                        options = {m["id"]: m["name"] for m in manifests}
+                        manifests: list[Any] = []
+                        if self.db and self.db.manifests:
+                            manifests = self.db.manifests.get_all()
+                        options = {m.id: m.name for m in manifests}
+
 
                         ui.select(
                             options,
@@ -139,10 +152,13 @@ class PromptEditorDialog:
     def _load_system_template(self, e):
         """Loads a selected manifest into the JSON editor."""
         manifest_id = e.value
+        if not self.db or not self.db.manifests:
+            return
         manifest = self.db.manifests.get_by_id(manifest_id)
 
         if manifest:
             self.manifest_json = manifest.to_json()
+
 
             # If rules text is empty, add a placeholder so the user knows rules are loaded
             if not self.rules.strip():
@@ -155,7 +171,8 @@ class PromptEditorDialog:
             ui.notify("Please enter Rules text on the left first.", type="warning")
             return
 
-        self.gen_btn.disable()
+        if self.gen_btn:
+            self.gen_btn.disable()
         self.extraction_start_time = time.time()
         self.current_status_msg = "Initializing..."
 
@@ -169,12 +186,13 @@ class PromptEditorDialog:
             self.status_timer.cancel()
             self.status_timer = None
 
-        elapsed = time.time() - self.extraction_start_time
-        self.status_label.set_text(f"Complete! ({elapsed:.1f}s)")
-        self.gen_btn.enable()
+        if self.extraction_start_time and self.status_label and self.gen_btn:
+            elapsed = time.time() - self.extraction_start_time
+            self.status_label.set_text(f"Complete! ({elapsed:.1f}s)")
+            self.gen_btn.enable()
 
     def _refresh_status_ui(self):
-        if self.extraction_start_time:
+        if self.extraction_start_time and self.status_label:
             elapsed = time.time() - self.extraction_start_time
             self.status_label.set_text(f"{self.current_status_msg} ({elapsed:.1f}s)")
 
@@ -210,11 +228,14 @@ class PromptEditorDialog:
             self.prompt.content = self.content
             self.prompt.rules_document = self.rules
             self.prompt.template_manifest = self.manifest_json
-            self.db.prompts.update(self.prompt)
+            if self.db and self.db.prompts:
+                self.db.prompts.update(self.prompt)
         else:
-            self.db.prompts.create(
-                self.name, self.content, self.rules, self.manifest_json
-            )
+            if self.db and self.db.prompts:
+                self.db.prompts.create(
+                    self.name, self.content, self.rules, self.manifest_json
+                )
+
 
         if self.on_save:
             self.on_save()

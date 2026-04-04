@@ -45,7 +45,7 @@ class ManifestRepository(BaseRepository):
         self._commit()
 
         if cursor.lastrowid:
-            return cursor.lastrowid
+            return int(cursor.lastrowid)
         raise ValueError("Failed to create manifest")
 
     def update(self, manifest_id: int, manifest: SystemManifest):
@@ -67,8 +67,8 @@ class ManifestRepository(BaseRepository):
             # We need the numeric ID to update
             row = self._fetchone("SELECT id FROM manifests WHERE system_id = ?", (manifest.id,))
             if row:
-                self.update(row["id"], manifest)
-                return row["id"]
+                self.update(int(row["id"]), manifest)
+                return int(row["id"])
 
         return self.create(manifest, is_builtin=True)
 

@@ -195,7 +195,7 @@ def evaluate(
                 eval_context[identifier] = 0.0
 
         # Add safe functions
-        eval_context.update(SAFE_FUNCTIONS)
+        eval_context.update(SAFE_FUNCTIONS)  # type: ignore[arg-type]
 
         # Evaluate
         result = simple_eval(prepared, names=eval_context)
@@ -261,7 +261,7 @@ def validate_formula(formula: str, available_paths: set) -> str | None:
         # Create dummy context with all paths set to 1
         dummy_context = {path: 1.0 for path in available_paths}
         dummy_context.update({_path_to_identifier(p): 1.0 for p in available_paths})
-        dummy_context.update(SAFE_FUNCTIONS)
+        dummy_context.update(SAFE_FUNCTIONS)  # type: ignore[arg-type]
 
         prepared = _prepare_formula(formula, set(dummy_context.keys()))
         simple_eval(prepared, names=dummy_context)

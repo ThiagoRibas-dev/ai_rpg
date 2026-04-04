@@ -1,20 +1,30 @@
+from __future__ import annotations
+
+import logging
+from typing import TYPE_CHECKING, Any
+
 from nicegui import ui
 
 from app.gui.dialogs.prompt_editor import PromptEditorDialog
 from app.gui.dialogs.setup_wizard import SetupWizard
 
+if TYPE_CHECKING:
+    from app.core.orchestrator import Orchestrator
+    from app.database.db_manager import DBManager
+    from app.gui.controls.session_list import SessionListComponent
+
 
 class PromptListComponent:
-    def __init__(self, db_manager, orchestrator, session_list_ref):
+    def __init__(self, db_manager: DBManager, orchestrator: Orchestrator, session_list_ref: SessionListComponent):
         self.db = db_manager
         self.orchestrator = orchestrator
         self.session_list = session_list_ref
-        self.container = None
+        self.container: ui.column | None = None
 
         # Reusable session delete dialog state
-        self.delete_dialog = None
-        self.delete_dialog_label = None
-        self._session_to_delete = None
+        self.delete_dialog: ui.dialog | None = None
+        self.delete_dialog_label: ui.label | None = None
+        self._session_to_delete: Any = None
 
     def render(self):
         self.container = ui.column().classes("w-full gap-2")
@@ -35,7 +45,10 @@ class PromptListComponent:
             return
 
         self.container.clear()
+        if not self.db or not self.db.prompts:
+            return
         prompts = self.db.prompts.get_all()
+
         active_session = self.session_list.get_active_session()
 
         with self.container:
@@ -51,7 +64,10 @@ class PromptListComponent:
                 return
 
             for prompt in prompts:
+                if not self.db.sessions:
+                    continue
                 sessions = self.db.sessions.get_by_prompt(prompt.id)
+
 
                 with ui.expansion(prompt.name, icon="description").classes(
                     "w-full bg-slate-800 border border-slate-700 rounded"
@@ -137,12 +153,15 @@ class PromptListComponent:
         dialog.open()
 
     def edit_prompt(self, prompt):
+        if not self.db or not self.db.prompts:
+            return
         # Fetch full prompt data (get_all is usually lightweight)
         full_prompt = self.db.prompts.get_by_id(prompt.id)
-        dialog = PromptEditorDialog(
-            self.db, self.orchestrator, prompt=full_prompt, on_save=self.refresh
-        )
-        dialog.open()
+        if full_prompt:
+            dialog = PromptEditorDialog(
+                self.db, self.orchestrator, prompt=full_prompt, on_save=self.refresh
+            )
+            dialog.open()
 
     def delete_prompt(self, prompt):
         # Confirm
@@ -159,14 +178,19 @@ class PromptListComponent:
         dialog.open()
 
     def _do_delete(self, prompt, dialog):
-        self.db.prompts.delete(prompt.id)
+        if self.db and self.db.prompts:
+            self.db.prompts.delete(prompt.id)
         dialog.close()
+
         self.refresh()
         ui.notify(f"Deleted {prompt.name}")
 
     def start_wizard(self, prompt):
+        if not self.db or not self.db.prompts:
+            return
         # Load full prompt to get template manifest
         full_prompt = self.db.prompts.get_by_id(prompt.id)
+
 
         def _on_complete():
             # 1) Refresh the Systems & Saves list so the new session appears
@@ -177,9 +201,11 @@ class PromptListComponent:
             #    so orchestrator.session.id should be the new GameSession ID.
             sess_model = self.orchestrator.session
             if sess_model and sess_model.id:
-                new_game_session = self.db.sessions.get_by_id(sess_model.id)
-                if new_game_session:
-                    self.session_list.load_session(new_game_session)
+                if self.db and self.db.sessions:
+                    new_game_session = self.db.sessions.get_by_id(sess_model.id)
+                    if new_game_session:
+                        self.session_list.load_session(new_game_session)
+
 
         wizard = SetupWizard(
             self.db,
@@ -196,9 +222,11 @@ class PromptListComponent:
 
             def save():
                 session.name = name_input.value
-                self.db.sessions.update(session)
+                if self.db and self.db.sessions:
+                    self.db.sessions.update(session)
                 self.refresh()
                 dialog.close()
+
 
             with ui.row().classes("w-full justify-end"):
                 ui.button("Cancel", on_click=dialog.close).props("flat")
@@ -206,7 +234,6 @@ class PromptListComponent:
         dialog.open()
 
     def clone_session(self, session):
-        import logging
 
         logger = logging.getLogger(__name__)
 
@@ -215,6 +242,9 @@ class PromptListComponent:
             ui.notify("Cloning... please wait.")
 
             # 1. Duplicate Session Row
+            if not self.db or not self.db.sessions:
+                raise ValueError("Database or SessionsRepository not initialized")
+
             new_sess = self.db.sessions.create(
                 name=new_name,
                 session_data=session.session_data,
@@ -222,13 +252,19 @@ class PromptListComponent:
                 setup_phase_data=session.setup_phase_data,
             )
 
+
             # 2. Clone Game State
+            if not self.db.game_state:
+                raise ValueError("GameStateRepository not initialized")
             state_data = self.db.game_state.get_all(session.id)
             for etype, items in state_data.items():
                 for key, val in items.items():
                     self.db.game_state.set_entity(new_sess.id, etype, key, val["data"])
 
+
             # 3. Clone & Re-Index Memories
+            if not self.db.memories:
+                raise ValueError("MemoryRepository not initialized")
             mems = self.db.memories.get_by_session(session.id)
             vs = self.orchestrator.vector_store
 
@@ -241,6 +277,7 @@ class PromptListComponent:
                     tags=m.tags_list(),
                     fictional_time=m.fictional_time,
                 )
+
                 if vs:
                     try:
                         vs.upsert_memory(
@@ -255,6 +292,8 @@ class PromptListComponent:
                         logger.error(f"Failed to re-index memory {new_mem.id}: {e}")
 
             # 4. Clone & Re-Index Turn Metadata
+            if not self.db.turn_metadata:
+                raise ValueError("TurnMetadataRepository not initialized")
             turns = self.db.turn_metadata.get_all(session.id)
             for t in turns:
                 new_turn_id = self.db.turn_metadata.create(
@@ -265,6 +304,7 @@ class PromptListComponent:
                     tags=t["tags"],
                     importance=t["importance"],
                 )
+
 
                 if vs:
                     try:
@@ -296,7 +336,6 @@ class PromptListComponent:
 
     def _execute_delete_session(self):
         """Called when the user confirms deletion in the dialog."""
-        import logging
 
         logger = logging.getLogger(__name__)
 
@@ -307,7 +346,8 @@ class PromptListComponent:
             return
 
         # 1. Delete SQL Data
-        self.db.sessions.delete(session.id)
+        if self.db and self.db.sessions:
+             self.db.sessions.delete(session.id)
 
         # 2. Delete Vector Data
         vs = self.orchestrator.vector_store
@@ -323,7 +363,7 @@ class PromptListComponent:
         active = self.session_list.get_active_session()
         if active and active.id == session.id:
             self.session_list._active_session = None
-            if self.session_list.chat_component:
+            if self.session_list.chat_component and self.session_list.chat_component.container:
                 self.session_list.chat_component.container.clear()
 
         # Reset state and close dialog

@@ -32,7 +32,7 @@ class FieldDef:
     usage_hint: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        result = {
+        result: dict[str, Any] = {
             "path": self.path,
             "label": self.label,
             "prefab": self.prefab,

@@ -1,6 +1,6 @@
 import logging
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 from app.llm.llm_connector import LLMConnector
 from app.models.message import Message
@@ -63,26 +63,26 @@ class WorldGenService:
 
             # --- LAYER 0: THE LENS (Genre & Tone) ---
             self._track_task(SetupTask.WORLDGEN_GENRE.id, SetupTask.WORLDGEN_GENRE.label, TaskState.RUNNING)
-            genre_res = self.llm.get_structured_response(
+            genre_res = cast(GenreToneExtraction, self.llm.get_structured_response(
                 WORLD_DATA_EXTRACTION_SYSTEM_PROMPT.format(
                     description=world_info,
                     format=GenreToneExtraction.model_json_schema()
                 ),
                 [Message(role="user", content=EXTRACT_WORLD_GENRE_TONE_PROMPT)],
                 GenreToneExtraction,
-            )
+            ))
             self._track_task(SetupTask.WORLDGEN_GENRE.id, SetupTask.WORLDGEN_GENRE.label, TaskState.DONE)
 
             # --- LAYER 1: THE MASTER INDEX ---
             self._track_task(SetupTask.WORLDGEN_INDEX.id, SetupTask.WORLDGEN_INDEX.label, TaskState.RUNNING)
-            index_res = self.llm.get_structured_response(
+            index_res = cast(WorldIndexExtraction, self.llm.get_structured_response(
                 WORLD_DATA_EXTRACTION_SYSTEM_PROMPT.format(
                     description=world_info,
                     format=WorldIndexExtraction.model_json_schema()
                 ),
                 [Message(role="user", content=EXTRACT_WORLD_INDEX_PROMPT)],
                 WorldIndexExtraction,
-            )
+            ))
             self._track_task(SetupTask.WORLDGEN_INDEX.id, SetupTask.WORLDGEN_INDEX.label, TaskState.DONE)
 
             # --- LAYER 2: PARALLEL BATCH EXTRACTION ---

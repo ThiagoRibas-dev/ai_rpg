@@ -95,7 +95,8 @@ class LoreEditorDialog:
         self.edit_content = memory.content
         self.edit_tags = ", ".join(memory.tags_list())
 
-        self.edit_container.classes(remove="hidden")
+        if self.edit_container:
+            self.edit_container.classes(remove="hidden")
         self.refresh_list()  # To update active highlight
 
     def create_new(self):
@@ -126,5 +127,6 @@ class LoreEditorDialog:
             return
         self.db.memories.delete(self.selected_mem.id)
         self.selected_mem = None
-        self.edit_container.classes(add="hidden")
+        if self.edit_container:
+            self.edit_container.classes(add="hidden")
         self.refresh_list()

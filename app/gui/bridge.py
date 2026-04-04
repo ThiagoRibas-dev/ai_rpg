@@ -1,8 +1,31 @@
 import logging
 import queue
-from typing import Any
+from typing import Any, TypedDict
+
+from app.models.vocabulary import UIComponentID
 
 logger = logging.getLogger(__name__)
+
+
+class UIMessage(TypedDict, total=False):
+    type: str
+    turn_id: str | None
+    role: str
+    content: str
+    name: str
+    args: dict[str, Any]
+    result: Any
+    spec: str
+    total: int
+    rolls: list[int]
+    choices: list[str]
+    text: str
+    memory_ids: list[int]
+    exits: list[int]
+    data: dict[str, Any]
+    new_time: str
+    new_mode: str
+    message: str
 
 
 class MockElement:
@@ -20,10 +43,11 @@ class MockElement:
 
 class NiceGUIBridge:
     def __init__(self):
-        self.ui_queue = queue.Queue()
-        self.chat_component = None
-        self.inspector_component = None
-        self.map_component = None
+        self.ui_queue: queue.Queue[UIMessage] = queue.Queue()
+        self._registry: dict[UIComponentID, Any] = {}
+        self.chat_component: Any = None
+        self.inspector_component: Any = None
+        self.map_component: Any = None
 
         # Lifecycle Management
         self.active_turn_id: str | None = None
@@ -36,12 +60,15 @@ class NiceGUIBridge:
         self._last_input = ""
 
     def register_chat(self, component):
+        self._registry[UIComponentID.CHAT] = component
         self.chat_component = component
 
     def register_inspector(self, component):
+        self._registry[UIComponentID.INSPECTOR] = component
         self.inspector_component = component
 
     def register_map(self, component):
+        self._registry[UIComponentID.MAP] = component
         self.map_component = component
 
     def register_header_labels(self, session_lbl, time_lbl, mode_lbl):
@@ -78,10 +105,12 @@ class NiceGUIBridge:
             while not self.ui_queue.empty():
                 msg = self.ui_queue.get_nowait()
                 await self._dispatch_message(msg)
+        except queue.Empty:
+            pass
         except Exception as e:
             logger.error(f"Error processing UI queue: {e}", exc_info=True)
 
-    async def _dispatch_message(self, msg: dict[str, Any]):
+    async def _dispatch_message(self, msg: UIMessage):
         # --- LIFECYCLE FILTER ---
         # If the message is tagged with a turn_id, check if it matches the active one.
         # Messages without a turn_id (system events) are allowed through.

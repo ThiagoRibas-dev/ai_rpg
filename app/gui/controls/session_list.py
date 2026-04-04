@@ -1,32 +1,44 @@
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING, Any
 
 from nicegui import ui
 
 from app.gui.components.context_editor import ContextEditor
 from app.gui.dialogs.lore_editor import LoreEditorDialog
 
+if TYPE_CHECKING:
+    from app.core.orchestrator import Orchestrator
+    from app.database.db_manager import DBManager
+    from app.database.models import GameSession
+    from app.gui.components.chat import ChatComponent
+    from app.gui.components.map import MapComponent
+    from app.gui.inspectors.manager import InspectorManager
+
+
 logger = logging.getLogger(__name__)
 
 
 class SessionListComponent:
-    def __init__(self, db_manager, inspector_ref, orchestrator_ref):
+    def __init__(self, db_manager: DBManager, inspector_ref: InspectorManager, orchestrator_ref: Orchestrator):
         self.db = db_manager
         self.inspector = inspector_ref
         self.orchestrator = orchestrator_ref
-        self._active_session = None
-        self.container = None
-        self.chat_component = None
-        self.map_component = None
+        self._active_session: GameSession | None = None
+        self.container: ui.column | None = None
+        self.chat_component: ChatComponent | None = None
+        self.map_component: MapComponent | None = None
 
         # Sub-components
         self.context_editor = ContextEditor(db_manager)
 
         # Game tab integration (set from main.py)
-        self.game_session_label = None
-        self.game_location_label = None
-        self.tabs = None
-        self.game_tab = None
-        self.chats_tab = None
+        self.game_session_label: Any = None
+        self.game_location_label: Any = None
+        self.tabs: Any = None
+        self.game_tab: Any = None
+        self.chats_tab: Any = None
 
     def set_chat_component(self, chat):
         self.chat_component = chat
@@ -50,8 +62,13 @@ class SessionListComponent:
         )
 
     def refresh(self):
+        if not self.container:
+            return
         self.container.clear()
+        if not self.db or not self.db.sessions:
+            return
         sessions = self.db.sessions.get_all()
+
 
         with self.container:
             if not sessions:
@@ -118,18 +135,20 @@ class SessionListComponent:
         if getattr(self, "game_location_label", None):
             loc_name = "Unknown"
             try:
-                scene = self.db.game_state.get_entity(
-                    session.id, "scene", "active_scene"
-                )
-                if scene and "location_key" in scene:
-                    loc_key = scene["location_key"]
-                    loc = self.db.game_state.get_entity(session.id, "location", loc_key)
-                    if loc:
-                        loc_name = loc.get("name", loc_key)
-                    else:
-                        loc_name = loc_key
+                if self.db.game_state:
+                    scene = self.db.game_state.get_entity(
+                        session.id, "scene", "active_scene"
+                    )
+                    if scene and "location_key" in scene:
+                        loc_key = scene["location_key"]
+                        loc = self.db.game_state.get_entity(session.id, "location", loc_key)
+                        if loc:
+                            loc_name = loc.get("name", loc_key)
+                        else:
+                            loc_name = loc_key
             except Exception as e:
                 logger.error(f"Failed to load location for session {session.id}: {e}")
+
             self.game_location_label.set_text(f"Location: {loc_name}")
 
         # Switch to Game tab in the right drawer if wired
@@ -148,9 +167,11 @@ class SessionListComponent:
 
             def save():
                 session.name = name_input.value
-                self.db.sessions.update(session)
+                if self.db and self.db.sessions:
+                    self.db.sessions.update(session)
                 self.refresh()
                 dialog.close()
+
 
             with ui.row().classes("w-full justify-end"):
                 ui.button("Cancel", on_click=dialog.close).props("flat")
@@ -164,6 +185,8 @@ class SessionListComponent:
             ui.notify("Cloning... please wait.")
 
             # 1. Duplicate Session Row
+            if not self.db or not self.db.sessions:
+                raise ValueError("Database or SessionsRepository not initialized")
             new_sess = self.db.sessions.create(
                 name=new_name,
                 session_data=session.session_data,
@@ -171,14 +194,20 @@ class SessionListComponent:
                 setup_phase_data=session.setup_phase_data,
             )
 
+
             # 2. Clone Game State
+            if not self.db.game_state:
+                raise ValueError("GameStateRepository not initialized")
             state_data = self.db.game_state.get_all(session.id)
             for etype, items in state_data.items():
                 for key, val in items.items():
                     # val is {'data': ..., 'version': ...}
                     self.db.game_state.set_entity(new_sess.id, etype, key, val["data"])
 
+
             # 3. Clone & Re-Index Memories
+            if not self.db.memories:
+                raise ValueError("MemoryRepository not initialized")
             mems = self.db.memories.get_by_session(session.id)
             vs = self.orchestrator.vector_store
 
@@ -191,6 +220,7 @@ class SessionListComponent:
                     tags=m.tags_list(),
                     fictional_time=m.fictional_time,
                 )
+
                 # Re-Index into ChromaDB
                 if vs:
                     try:
@@ -206,6 +236,8 @@ class SessionListComponent:
                         logger.error(f"Failed to re-index memory {new_mem.id}: {e}")
 
             # 4. Clone & Re-Index Turn Metadata (History Search)
+            if not self.db.turn_metadata:
+                raise ValueError("TurnMetadataRepository not initialized")
             turns = self.db.turn_metadata.get_all(session.id)
             for t in turns:
                 # 't' is a dict from get_all
@@ -219,6 +251,7 @@ class SessionListComponent:
                     ],  # get_all returns list/dict, create handles json dump
                     importance=t["importance"],
                 )
+
 
                 if vs:
                     try:
@@ -254,7 +287,9 @@ class SessionListComponent:
 
     def _delete_action(self, session, dialog):
         # 1. Delete SQL Data (Cascades usually handle state, but let's be safe)
-        self.db.sessions.delete(session.id)
+        if self.db and self.db.sessions:
+            self.db.sessions.delete(session.id)
+
 
         # 2. Delete Vector Data
         if self.orchestrator.vector_store:
@@ -271,8 +306,8 @@ class SessionListComponent:
 
         if self._active_session and self._active_session.id == session.id:
             self._active_session = None
-            if self.chat_component:
-                self.chat_component.container.clear()
+            if (chat := self.chat_component) and (cont := chat.container):
+                cont.clear()
 
         dialog.close()
         self.refresh()

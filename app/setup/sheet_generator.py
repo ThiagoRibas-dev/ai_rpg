@@ -1,10 +1,16 @@
+from __future__ import annotations
+
 import json
 import logging
-from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
-from pydantic import create_model
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from app.setup.schemas import LoreStream, WorldExtraction
+
+from pydantic import BaseModel, create_model
 
 from app.llm.llm_connector import LLMConnector
 from app.models.message import Message
@@ -12,7 +18,9 @@ from app.models.vocabulary import CHARGEN_BRANCH_CATEGORIES, CategoryName, Charg
 from app.prefabs.manifest import SystemManifest
 from app.prompts.templates import CHARACTER_CREATION_SYSTEM_PROMPT, EXTRACT_CHARACTER_BATCH_PROMPT
 from app.setup.schema_builder import SchemaBuilder
-from app.setup.schemas import LoreStream, WorldExtraction
+
+if TYPE_CHECKING:
+    from app.setup.schemas import LoreStream, WorldExtraction
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +29,8 @@ logger = logging.getLogger(__name__)
 # Batch 1 (Foundations) runs first, building the core identity.
 # Batch 2 runs next, splitting into Fluff (Narrative/Descriptive) and Crunch (Mechanics/Stats).
 
-CHARGEN_BATCHES: list[dict[str, list[str]]] = [
+CHARGEN_BATCHES: list[dict[ChargenBranch, list[CategoryName]]] = [
+
     {
         ChargenBranch.BASE: CHARGEN_BRANCH_CATEGORIES[ChargenBranch.BASE],
     },
@@ -110,19 +119,21 @@ class SheetGenerator:
                 for branch_name in batch_dict.keys():
                     # Only register if at least one category in the branch is in the manifest
                     if any(c in manifest_cats for c in batch_dict[branch_name]):
-                        t_id, t_label = SetupTask.chargen(branch_name.lower())
+                        t_id, t_label = SetupTask.chargen(str(branch_name).lower())
                         self._track_task(t_id, t_label, TaskState.PENDING)
                     else:
                         # Branch not in this manifest - skip it upfront
-                        t_id, t_label = SetupTask.chargen(branch_name.lower())
+                        t_id, t_label = SetupTask.chargen(str(branch_name).lower())
                         self._track_task(t_id, t_label, TaskState.DONE)
+
 
             # Register any remaining categories not covered by main batches
             batch_cats = set().union(*(set(cats) for cats in CHARGEN_BRANCH_CATEGORIES.values()))
             remaining_cats = manifest_cats - batch_cats
             for cat in remaining_cats:
-                t_id, t_label = SetupTask.chargen(cat)
+                t_id, t_label = SetupTask.chargen(str(cat))
                 self._track_task(t_id, t_label, TaskState.PENDING)
+
 
             for batch_dict in CHARGEN_BATCHES:
                 # Filter categories present in the manifest
@@ -141,8 +152,9 @@ class SheetGenerator:
                 # Snapshot the context for this batch
                 context_snapshot = json.dumps(generated_context, indent=2)
 
-                def extract_branch(branch_name: str, branch_cats: list[str], ctx_snap: str = context_snapshot):
-                    t_id, t_label = SetupTask.chargen(branch_name.lower())
+                def extract_branch(branch_name: ChargenBranch, branch_cats: list[CategoryName], ctx_snap: str = context_snapshot):
+                    t_id, t_label = SetupTask.chargen(str(branch_name).lower())
+
 
                     # --- ASYNC CONTEXT INJECTION (NPCs for Background) ---
                     injected_npcs = None
@@ -154,12 +166,13 @@ class SheetGenerator:
                     self._track_task(t_id, t_label, TaskState.RUNNING)
 
                     # 1. Dynamically assemble a unified Pydantic model for this branch
-                    fields = {}
+                    fields: dict[str, Any] = {}
                     for cat in branch_cats:
-                        CatModel = builder.build_creation_model_for_category(cat)
-                        fields[cat] = (CatModel, ...)
+                        cat_model = builder.build_creation_model_for_category(cat)
+                        fields[cat] = (cat_model, ...)
 
-                    UnifiedModel = create_model(f"Unified{branch_name}", **fields)
+                    unified_model = create_model(f"Unified{branch_name}", **fields) # type: ignore[arg-type]
+
 
                     # 1. Get filtered hints for these specific categories
                     hints_batch = builder.get_creation_prompt_hints(branch_cats)
@@ -179,9 +192,10 @@ class SheetGenerator:
                     res = self.llm.get_structured_response(
                         system_prompt=sys_prompt,
                         chat_history=[Message(role="user", content=prompt)],
-                        output_schema=UnifiedModel,
+                        output_schema=cast(type[BaseModel], unified_model),
                         temperature=0.7,
                     )
+
                     self._track_task(t_id, t_label, TaskState.DONE)
                     return branch_name, branch_cats, res
 
@@ -204,9 +218,10 @@ class SheetGenerator:
             remaining = manifest_cats - set(raw_combined.keys())
             for cat in remaining:
                 try:
-                    t_id, t_label = SetupTask.chargen(cat)
+                    t_id, t_label = SetupTask.chargen(str(cat))
                     self._track_task(t_id, t_label, TaskState.RUNNING)
-                    CatModel = builder.build_creation_model_for_category(cat)
+
+                    cat_model = builder.build_creation_model_for_category(cat)
                     prompt = f"""
 ### TASK: POPULATE CATEGORY: {cat.upper()}
 You are populating the `{cat}` section of the character sheet.
@@ -220,7 +235,7 @@ You are populating the `{cat}` section of the character sheet.
 - Fill in values for the `{cat}` category that fit the concept and rules, and make logical sense given the previously generated data.
 - Output ONLY the `{cat}` category data.
 """
-                    def extract_remaining_cat(p=prompt, cm=CatModel):
+                    def extract_remaining_cat(p=prompt, cm=cat_model):
                         return self.llm.get_structured_response(
                             system_prompt=sys_prompt,
                             chat_history=[Message(role="user", content=p)],

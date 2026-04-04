@@ -53,7 +53,7 @@ class SessionRepository(BaseRepository):
             prompt_id=prompt_id,
             memory="",
             authors_note="",
-            game_mode="SETUP",
+            game_mode="CAMPAIGN",
             setup_phase_data=setup_phase_data,
         )
 

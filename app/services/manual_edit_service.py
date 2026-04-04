@@ -41,6 +41,8 @@ class ManualEditService:
         Returns:
             A dict with "success" and optional "message" or "error".
         """
+        if not self.db.sessions:
+            return {"success": False, "error": "Internal server error: sessions not available."}
         game_session = self.db.sessions.get_by_id(session_id)
         if not game_session:
             return {"success": False, "error": "Session not found."}
@@ -55,9 +57,12 @@ class ManualEditService:
         )
 
         # Get Manifest for validation context
-        setup_data = SetupManifest(self.db).get_manifest(session_id)
-        manifest_id = setup_data.get("manifest_id")
-        manifest = self.db.manifests.get_by_id(manifest_id) if manifest_id else None
+        manifest = None
+        if self.db.sessions and self.db.manifests:
+             setup_data = SetupManifest(self.db).get_manifest(session_id)
+             manifest_id = setup_data.get("manifest_id")
+             if manifest_id:
+                  manifest = self.db.manifests.get_by_id(manifest_id)
 
         # Execute via ToolExecutor (this triggers ValidationPipeline)
         executor = ToolExecutor(

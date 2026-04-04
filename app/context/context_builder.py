@@ -101,6 +101,9 @@ class ContextBuilder:
 
     def _build_manifest_context(self) -> str:
         """Generates the cheat sheet for the active game system."""
+        if not self.manifest:
+            return ""
+
         lines = [f"# SYSTEM: {self.manifest.name}\n"]
 
         # Engine (Table-fied)

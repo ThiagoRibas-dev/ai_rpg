@@ -1,11 +1,22 @@
+from __future__ import annotations
+
+import typing
+
 from nicegui import ui
+
+if typing.TYPE_CHECKING:
+    from app.database.db_manager import DBManager
+
 
 
 class ContextEditor:
-    def __init__(self, db_manager):
+    text_area: ui.textarea | None
+    status_label: ui.label | None
+
+    def __init__(self, db_manager: DBManager):
         self.db = db_manager
-        self.session_id = None
-        self.container = None
+        self.session_id: int | None = None
+        self.container: ui.column | None = None
         self.text_area = None
         self.status_label = None
 
@@ -18,20 +29,28 @@ class ContextEditor:
             return
 
         # Fetch current note
+        if not self.db.sessions:
+            return
         sess = self.db.sessions.get_by_id(self.session_id)
-        if sess:
+        if sess and self.text_area:
             self.text_area.value = sess.authors_note or ""
 
     def save(self):
-        if not self.session_id:
+        if not self.session_id or not self.text_area or not self.status_label:
             return
 
         new_note = self.text_area.value
-        self.db.sessions.update_context(self.session_id, "", new_note)
+        if self.db.sessions:
+            self.db.sessions.update_context(self.session_id, "", new_note)
 
         # Visual feedback
         self.status_label.text = "Saved!"
-        ui.timer(2.0, lambda: self.status_label.set_text(""))
+
+        def clear_status():
+            if self.status_label:
+                self.status_label.set_text("")
+
+        ui.timer(2.0, clear_status, once=True)
 
     def render(self):
         with ui.column().classes("w-full gap-2 mt-4 border-t border-slate-700 pt-4"):

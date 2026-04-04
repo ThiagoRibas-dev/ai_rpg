@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import logging
-from typing import Any
+from collections.abc import Sequence
+from typing import Any, cast
 
 from pydantic import BaseModel, ConfigDict, Field, create_model
 
@@ -66,7 +69,7 @@ class SchemaBuilder:
         category_models: dict[str, Any] = {}
 
         for cat, fields in fields_by_cat.items():
-            model_fields: dict[str, tuple[type, Field]] = {}
+            model_fields: dict[str, Any] = {}
 
             for field in fields:
                 py_type, default = self._get_simplified_type_and_default(field)
@@ -109,22 +112,28 @@ class SchemaBuilder:
                 continue
 
             # 2.1 Category Model: not strict internally to allow future expansion
-            CatModel = create_model(
+            cat_model = create_model(
                 f"{cat.title()}Creation",
                 __config__=ConfigDict(),
-                **model_fields,
+                **cast(dict[str, Any], model_fields),
             )
-            category_models[cat] = (CatModel, Field(..., description=f"{cat.title()} category"))
+            category_models[cat] = (
+                cat_model,
+                Field(..., description=f"{cat.title()} category"),
+            )
+
 
         # 3. Root Model: strict, no extra top-level categories
-        CreationModel = create_model(
+        creation_model = create_model(
             "CharacterCreation",
             __config__=ConfigDict(extra="forbid"),
-            **category_models,
+            **cast(dict[str, Any], category_models),
         )
 
-        self._cache[cache_key] = CreationModel
-        return CreationModel
+
+        typed_model = cast(type[BaseModel], creation_model)
+        self._cache[cache_key] = typed_model
+        return typed_model
 
     def build_creation_model_for_category(self, category: str) -> type[BaseModel]:
         """Builds a strict Pydantic model for a single category."""
@@ -133,7 +142,7 @@ class SchemaBuilder:
             return self._cache[cache_key]
 
         fields = [f for f in self.manifest.fields if f.category == category]
-        model_fields: dict[str, tuple[type, Field]] = {}
+        model_fields: dict[str, Any] = {}
 
         for field in fields:
             if field.formula or field.max_formula:
@@ -160,18 +169,20 @@ class SchemaBuilder:
                 model_fields["concept"] = (str, Field("", description="High Concept / Elevator Pitch"))
 
         if not model_fields:
-            CatModel = create_model(f"{category.title()}Creation", __config__=ConfigDict(extra="forbid"))
-            self._cache[cache_key] = CatModel
-            return CatModel
+            cat_model = create_model(f"{category.title()}Creation", __config__=ConfigDict(extra="forbid"))
+            self._cache[cache_key] = cat_model
+            return cat_model
 
-        CatModel = create_model(
+        cat_model = create_model(
             f"{category.title()}Creation",
             __config__=ConfigDict(extra="forbid"),
-            **model_fields,
+            **cast(dict[str, Any], model_fields),
         )
 
-        self._cache[cache_key] = CatModel
-        return CatModel
+
+        typed_model = cast(type[BaseModel], cat_model)
+        self._cache[cache_key] = typed_model
+        return typed_model
 
     def build_prefab_schema_reference(self) -> str:
         """Builds a markdown reference for all Prefab data shapes to guide the LLM."""
@@ -256,8 +267,9 @@ class SchemaBuilder:
             # SPECIAL CASE: structured list items (e.g. spell_slots)
             item_shape = field_def.config.get(ConfigKey.ITEM_SHAPE)
             if p == PrefabID.CONT_LIST and item_shape:
-                ItemModel = self._build_item_model(field_def)
-                return list[ItemModel], []  # default empty list
+                item_model = self._build_item_model(field_def)
+                return list[item_model], []  # type: ignore[valid-type]
+
 
             # Default behaviour: list of simple names/tags
             return list[str], []
@@ -309,11 +321,11 @@ class SchemaBuilder:
 
         return value
 
-    def get_creation_prompt_hints(self, categories: list[str] | None = None) -> str:
+    def get_creation_prompt_hints(self, categories: Sequence[str] | None = None) -> str:
         """Returns text explaining the fields to the AI, optionally filtered by category."""
         return self.get_filtered_path_hints(categories) if categories else self.manifest.get_path_hints()
 
-    def get_filtered_path_hints(self, categories: list[str]) -> str:
+    def get_filtered_path_hints(self, categories: Sequence[str]) -> str:
         """Returns hint text ONLY for the requested categories."""
         lines = ["## VALID PATHS FOR THIS BATCH"]
         from app.prefabs.registry import PREFABS
@@ -359,7 +371,7 @@ class SchemaBuilder:
             return self._cache[cache_key]  # type: ignore[return-value]
 
         item_shape: dict[str, str] = field_def.config.get(ConfigKey.ITEM_SHAPE, {})
-        model_fields: dict[str, tuple[type, Field]] = {}
+        model_fields: dict[str, Any] = {}
 
         for name, type_name in item_shape.items():
             if type_name == "int":
@@ -373,10 +385,12 @@ class SchemaBuilder:
             desc = f"{field_def.label} - {name.replace('_', ' ').title()}"
             model_fields[name] = (py_type, Field(default, description=desc))
 
-        ItemModel = create_model(
+        item_model = create_model(
             f"{field_def.path.replace('.', '_').title()}Item",
             __config__=ConfigDict(extra="forbid"),
-            **model_fields,
+            **cast(dict[str, Any], model_fields),
         )
-        self._cache[cache_key] = ItemModel
-        return ItemModel
+
+        typed_model = cast(type[BaseModel], item_model)
+        self._cache[cache_key] = typed_model
+        return typed_model

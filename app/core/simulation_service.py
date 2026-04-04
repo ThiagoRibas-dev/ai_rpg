@@ -2,6 +2,7 @@
 # --- NEW FILE ---
 
 import logging
+from typing import cast
 
 from app.llm.llm_connector import LLMConnector
 from app.llm.schemas import WorldTickOutcome
@@ -43,7 +44,7 @@ class SimulationService:
                 chat_history=[Message(role="user", content=prompt)],
                 output_schema=WorldTickOutcome,
             )
-            return outcome
+            return cast("WorldTickOutcome | None", outcome)
         except Exception as e:
             self.logger.error(
                 f"Just-In-Time simulation failed for NPC {npc_name}: {e}",

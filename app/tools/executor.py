@@ -56,7 +56,9 @@ class ToolExecutor:
             ctx.update(extra_context)
 
         for _i, call in enumerate(tool_calls[:tool_budget]):
-            tool_name = call.name
+            tool_name = getattr(call, "name", "unknown")
+            if isinstance(tool_name, property): # Fallback for some Pydantic versions
+                 tool_name = call.__class__.model_fields["name"].default
 
             # Notify UI
             if self.ui_queue:

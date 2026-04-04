@@ -1,6 +1,6 @@
 import json
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 
 @dataclass
@@ -20,10 +20,10 @@ class SetupManifest:
 
     def get_manifest(self, session_id: int) -> dict[str, Any]:
         session = self.db.sessions.get_by_id(session_id)
-        if not session.setup_phase_data:
+        if not session or not session.setup_phase_data:
             return self._empty_manifest()
         try:
-            return json.loads(session.setup_phase_data)
+            return cast(dict[str, Any], json.loads(session.setup_phase_data))
         except json.JSONDecodeError:
             return self._empty_manifest()
 

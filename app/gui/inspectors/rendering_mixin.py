@@ -1,22 +1,25 @@
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from nicegui import ui
 
-from app.models.vocabulary import ConfigKey, FieldKey, PrefabID
+from app.models.vocabulary import ConfigKey, FieldKey, ManifestValueType, PrefabID
 from app.prefabs.validation import get_path
 from app.services.state_service import get_entity
+
+if TYPE_CHECKING:
+    from app.core.orchestrator import Orchestrator
+    from app.database.db_manager import DBManager
 
 
 class RenderingMixin:
     """
     Shared rendering logic for inspectors (Lego Protocol).
-    Assumes inheriting class has:
-    - self.db: DBManager
-    - self.session_id: Optional[int]
-    - self.orchestrator: Any
-    - _handle_field_save(path, value): updates the state
     """
+    db: "DBManager"
+    orchestrator: "Orchestrator"
+    session_id: int | None
+    entity_key: str
 
     def _detect_pool_keys(self, item: Any) -> tuple[str | None, str | None]:
         """Identifies current/max key pairs in a dict."""
@@ -106,9 +109,9 @@ class RenderingMixin:
         """Helper to get just the label part of an agnostic item."""
         if not isinstance(item, dict):
             return str(item)
-        item_shape = config.get(ConfigKey.ITEM_SHAPE, {}) if config else {}
+        item_shape: dict[str, str] = config.get(ConfigKey.ITEM_SHAPE, {}) if config else {}
         for key, type_name in item_shape.items():
-            if type_name == "str" and key in item:
+            if type_name == ManifestValueType.STR and key in item:
                 return str(item[key])
         for key in [FieldKey.NAME, FieldKey.LABEL]:
             if item.get(key):
@@ -139,7 +142,7 @@ class RenderingMixin:
         # Try manifest hint first
         label_key = None
         for key, type_name in item_shape.items():
-            if type_name == "str" and key in item:
+            if type_name == ManifestValueType.STR and key in item:
                 label_key = key
                 break
 
@@ -172,6 +175,8 @@ class RenderingMixin:
             if k in used_keys:
                 continue
             if isinstance(v, int | float | bool):
+                if not self.db:
+                    continue
                 fmt_v = self._format_item_agnostic(v)
                 vals.append(f"{k}:{fmt_v}")
 
@@ -182,7 +187,7 @@ class RenderingMixin:
             return f"{label_part} ({val_part})"
         return label_part or val_part or "???"
 
-    def _render_pool_widget(self, label: str, path: str, val: Any, config: dict | None = None, mini: bool = False, keys: tuple[str, str] | None = None):
+    def _render_pool_widget(self, label: str, path: str, val: Any, config: dict | None = None, mini: bool = False, keys: tuple[str | None, str | None] | None = None):
         if not isinstance(val, dict):
             val = {}
 
@@ -272,6 +277,8 @@ class RenderingMixin:
 
         # Fetch current entity stats
         entity_key = getattr(self, "entity_key", "player")
+        if not self.db:
+             return
         entity = get_entity(self.session_id, self.db, "character", entity_key)
         if not entity:
             return
@@ -287,10 +294,10 @@ class RenderingMixin:
                 return
 
             # Fallback to old heuristic if detection fails
-            curr_key, _ = self._detect_pool_keys(full_val)
-            if curr_key:
-                new_val = full_val.get(curr_key, 0) + delta
-                self._handle_field_save(f"{path}.{curr_key}", new_val)
+            alt_curr, _ = self._detect_pool_keys(full_val)
+            if alt_curr:
+                new_val = full_val.get(alt_curr, 0) + delta
+                self._handle_field_save(f"{path}.{alt_curr}", new_val)
                 return
 
         # It's a simple int or counter

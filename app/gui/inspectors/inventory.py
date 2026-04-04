@@ -1,22 +1,29 @@
-from typing import Any
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 
 from nicegui import ui
 
-from app.models.vocabulary import PrefabID
+from app.models.vocabulary import CategoryName, PrefabID
 from app.prefabs.validation import get_path
+from app.services.manual_edit_service import ManualEditService
 from app.services.state_service import get_entity
 from app.setup.setup_manifest import SetupManifest
 
 from .rendering_mixin import RenderingMixin
 
+if TYPE_CHECKING:
+    from app.core.orchestrator import Orchestrator
+    from app.database.db_manager import DBManager
+
 
 class InventoryInspector(RenderingMixin):
-    def __init__(self, db_manager, orchestrator):
+    def __init__(self, db_manager: DBManager, orchestrator: Orchestrator):
         self.db = db_manager
         self.orchestrator = orchestrator
-        self.session_id = None
-        self.container = None
-        self.entity_key = "player"
+        self.session_id: int | None = None
+        self.container: ui.column | None = None
+        self.entity_key: str = "player"
 
     def set_session(self, session_id: int):
         self.session_id = session_id
@@ -32,14 +39,18 @@ class InventoryInspector(RenderingMixin):
                 ui.label("No Session").classes("text-gray-500 italic")
             return
 
+        if not self.db:
+            return
         entity = get_entity(self.session_id, self.db, "character", "player")
         if not entity:
-            return
+             with self.container:
+                 ui.label("Character 'player' not found.").classes("text-gray-500 italic")
+             return
 
         # Fetch Manifest
         setup_data = SetupManifest(self.db).get_manifest(self.session_id)
         manifest_id = setup_data.get("manifest_id")
-        manifest = self.db.manifests.get_by_id(manifest_id) if manifest_id else None
+        manifest = self.db.manifests.get_by_id(manifest_id) if manifest_id and self.db.manifests else None
 
         # Find list fields
         lists_to_render = []  # (label, items)
@@ -47,7 +58,9 @@ class InventoryInspector(RenderingMixin):
         if manifest:
             # Look for CONT_LIST or CONT_WEIGHTED
             for f in manifest.fields:
-                if f.prefab in [PrefabID.CONT_LIST, PrefabID.CONT_WEIGHTED]:
+                is_list = f.prefab in [PrefabID.CONT_LIST, PrefabID.CONT_WEIGHTED]
+                is_inv = f.category == CategoryName.INVENTORY or f.path.startswith("inventory")
+                if is_list and is_inv:
                     items = get_path(entity, f.path)
                     if isinstance(items, list):
                         lists_to_render.append((f.label, items))
@@ -143,8 +156,13 @@ class InventoryInspector(RenderingMixin):
 
     def _handle_field_save(self, path: str, new_value: Any):
         """Standard save handler required by RenderingMixin."""
+        if not self.db:
+             return
+        if self.session_id is None:
+            ui.notify("No session active", type="negative")
+            return
+
         # Generic update for any field (lists or pools)
-        from app.services.manual_edit_service import ManualEditService
         service = ManualEditService(self.db, self.orchestrator.tool_registry, self.orchestrator.vector_store)
         result = service.update_field(
             session_id=self.session_id,
@@ -157,14 +175,33 @@ class InventoryInspector(RenderingMixin):
             ui.notify("Inventory updated")
             self.refresh()
         else:
-            ui.notify(result.get("error"), type="negative")
+            ui.notify(str(result.get("error", "Unknown error")), type="negative")
+
+    def _remove_item(self, path: str, index: int):
+        """Remove an item from a list at a specific index."""
+        if not self.db or not self.session_id:
+            return
+
+        entity = get_entity(self.session_id, self.db, "character", self.entity_key)
+        if not entity:
+            return
+
+        items = get_path(entity, path)
+        if not isinstance(items, list) or index >= len(items):
+            return
+
+        # Remove the item
+        items.pop(index)
+
+        # Save the updated list
+        self._handle_field_save(path, items)
 
     def _edit_item(self, path, index, current_val):
         """Open editor for a specific item in a list."""
         self._open_editor(f"Edit Item #{index+1}", f"{path}.{index}", "VAL_JSON", current_val)
 
     def trigger_action(self, verb: str, item_name: str):
-        if not self.session_id or not self.orchestrator:
+        if not self.session_id or not self.orchestrator or not self.db or not self.db.sessions:
             return
         game_session = self.db.sessions.get_by_id(self.session_id)
         if not game_session:

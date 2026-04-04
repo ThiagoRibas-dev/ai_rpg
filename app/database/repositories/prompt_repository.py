@@ -41,7 +41,7 @@ class PromptRepository(BaseRepository):
         )
         self._commit()
         return Prompt(
-            id=cursor.lastrowid,
+            id=int(cursor.lastrowid) if cursor.lastrowid is not None else 0,
             name=name,
             content=content,
             rules_document=rules_document,

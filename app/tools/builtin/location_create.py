@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 from app.services.state_service import get_entity, set_entity
 
@@ -35,9 +35,9 @@ def handler(
     db = context["db_manager"]
 
     existing = get_entity(session_id, db, "location", key)
-    connections = existing.get("connections", {}) if existing else {}
+    connections: dict[str, Any] = cast(dict[str, Any], (existing.get("connections", {}) if existing else {}))
 
-    location_data = {
+    location_data: dict[str, Any] = {
         "name": name_display,
         "description_visual": description_visual,
         "description_sensory": description_sensory,

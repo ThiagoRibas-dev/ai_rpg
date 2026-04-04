@@ -37,7 +37,7 @@ class StatTemplateRepository(BaseRepository):
         )
         self._commit()
         if cursor.lastrowid:
-            return cursor.lastrowid
+            return int(cursor.lastrowid)
         raise ValueError("Failed to create stat template")
 
     def get_by_id(self, template_id: int) -> dict | None:
@@ -46,7 +46,10 @@ class StatTemplateRepository(BaseRepository):
         )
         if row:
             try:
-                return json.loads(row["data_json"])
+                data = json.loads(row["data_json"])
+                if isinstance(data, dict):
+                    return data
+                return None
             except Exception:
                 return None
         return None

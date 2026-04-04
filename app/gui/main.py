@@ -1,5 +1,7 @@
 import logging
 import os
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Protocol, cast
 
 from nicegui import app, ui
 
@@ -16,37 +18,50 @@ from app.gui.inspectors.manager import InspectorManager
 from app.gui.theme import Theme
 from app.services.manifest_service import seed_builtin_manifests
 
+if TYPE_CHECKING:
+    class CustomApp(Protocol):
+        db_manager: DBManager
+        bridge: NiceGUIBridge
+        orchestrator: Orchestrator
+        def on_shutdown(self, callback: Callable) -> None: ...
+        def shutdown(self) -> None: ...
+
+    # Cast app to CustomApp for type checking
+    _app = cast("CustomApp", app)
+else:
+    _app = app
+
 logger = logging.getLogger(__name__)
 
 
 def init_gui(db_path: str):
     # 1. Initialize DB & Seed Manifests
-    app.db_manager = DBManager(db_path)
-    app.db_manager.__enter__()
-    app.db_manager.create_tables()
+    _app.db_manager = DBManager(db_path)
+    _app.db_manager.__enter__()
+    _app.db_manager.create_tables()
     seed_builtin_manifests(db_path)
 
     # 2. Init Core Systems
-    app.bridge = NiceGUIBridge()
-    app.orchestrator = Orchestrator(app.bridge, db_path)
+    _app.bridge = NiceGUIBridge()
+    _app.orchestrator = Orchestrator(_app.bridge, db_path)
 
     @ui.page("/")
     def main_page():
         Theme.apply_global_styles()
 
         # --- Init Components ---
-        inspector_mgr = InspectorManager(app.db_manager, app.orchestrator)
-        app.bridge.register_inspector(inspector_mgr)
+        inspector_mgr = InspectorManager(_app.db_manager, _app.orchestrator)
+        _app.bridge.register_inspector(inspector_mgr)
 
         session_list = SessionListComponent(
-            app.db_manager, inspector_mgr, app.orchestrator
+            _app.db_manager, inspector_mgr, _app.orchestrator
         )
         prompt_list = PromptListComponent(
-            app.db_manager, app.orchestrator, session_list
+            _app.db_manager, _app.orchestrator, session_list
         )
-        chat_comp = ChatComponent(app.orchestrator, app.bridge, session_list)
+        chat_comp = ChatComponent(_app.orchestrator, _app.bridge, session_list)
 
-        map_comp = MapComponent(app.bridge, app.db_manager)
+        map_comp = MapComponent(_app.bridge, _app.db_manager)
         session_list.set_map_component(map_comp)
         session_list.set_chat_component(chat_comp)
 
@@ -59,8 +74,8 @@ def init_gui(db_path: str):
                 active_session = session_list.get_active_session()
                 if active_session:
                     map_comp.set_session(active_session.id)
-                elif app.orchestrator.session and app.orchestrator.session.id:
-                    map_comp.set_session(app.orchestrator.session.id)
+                elif _app.orchestrator.session and _app.orchestrator.session.id:
+                    map_comp.set_session(_app.orchestrator.session.id)
                 else:
                     # fallback: just let MapComponent pull whatever it can
                     map_comp.refresh_from_db()
@@ -99,7 +114,7 @@ def init_gui(db_path: str):
                 sess_lbl = ui.label("No Session")
                 time_lbl = ui.label("")
                 mode_lbl = ui.label("")
-                app.bridge.register_header_labels(sess_lbl, time_lbl, mode_lbl)
+                _app.bridge.register_header_labels(sess_lbl, time_lbl, mode_lbl)
 
             ui.space()
 
@@ -107,7 +122,7 @@ def init_gui(db_path: str):
             ui.button(icon="fullscreen", on_click=lambda: toggle_zen()).props(
                 "flat round dense"
             )
-            ui.button(icon="power_settings_new", on_click=app.shutdown).props(
+            ui.button(icon="power_settings_new", on_click=_app.shutdown).props(
                 "flat dense round color=red"
             )
 
@@ -196,14 +211,14 @@ def init_gui(db_path: str):
                 chat_comp.render()
 
         # Polling Loop
-        ui.timer(0.1, app.bridge.process_queue)
+        ui.timer(0.1, _app.bridge.process_queue)
 
     async def cleanup():
         print("🛑 Shutting down...")
-        if hasattr(app, "db_manager") and app.db_manager.conn:
-            app.db_manager.__exit__(None, None, None)
+        if hasattr(_app, "db_manager") and _app.db_manager.conn:
+            _app.db_manager.__exit__(None, None, None)
 
-    app.on_shutdown(cleanup)
+    _app.on_shutdown(cleanup)
 
 
 def run(db_path: str):

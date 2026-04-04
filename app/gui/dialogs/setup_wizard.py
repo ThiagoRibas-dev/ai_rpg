@@ -59,9 +59,11 @@ class SetupWizard:
             ),
         ):
             with ui.row().classes("w-full items-center justify-between"):
-                ui.label(f"New Game: {self.prompt.name}").classes(
+                prompt_name = self.prompt.name if self.prompt else "New Game"
+                ui.label(f"New Game: {prompt_name}").classes(
                     "text-xl font-bold text-white"
                 )
+
                 ui.button(icon="close", on_click=self.dialog.close).props(
                     "flat dense round"
                 )
@@ -143,9 +145,10 @@ class SetupWizard:
                             self.error_msg = ui.label("Error").classes(
                                 "text-red-400 text-center"
                             )
-                            ui.button("Back", on_click=self.stepper.previous).props(
+                            ui.button("Back", on_click=lambda: self.stepper.previous() if self.stepper else None).props(
                                 "flat"
                             )
+
 
                         with ui.stepper_navigation():
                             self.btn_review = ui.button(
@@ -160,13 +163,16 @@ class SetupWizard:
                         ui.button("Start Game", on_click=self.finish).classes(
                             "bg-green-600"
                         )
-                        ui.button("Back", on_click=self.stepper.previous).props("flat")
+                        ui.button("Back", on_click=lambda: self.stepper.previous() if self.stepper else None).props("flat")
+
 
         self.dialog.open()
 
     async def run_generation(self):
-        self.stepper.next()
+        if self.stepper:
+            self.stepper.next()
         self.is_generating = True
+
 
         # Reset UI
         self.generation_tracking_container.classes(remove="hidden")
@@ -188,8 +194,10 @@ class SetupWizard:
             self._prepare_review_data()
             self._render_review()
             self.btn_review.classes(remove="hidden")
-            self.stepper.next()
+            if self.stepper:
+                self.stepper.next()
         else:
+
             # Error state handled in _execute_pipeline wrapper, but we update UI here
             self.generation_tracking_container.classes(add="hidden")
             self.error_container.classes(remove="hidden")
@@ -258,11 +266,12 @@ class SetupWizard:
 
             # 1. Load System Manifest from the prompt, if present
             manifest = None
-            if self.prompt.template_manifest:
+            if self.prompt and self.prompt.template_manifest:
                 try:
                     manifest = SystemManifest.from_json(self.prompt.template_manifest)
                 except Exception as e:
                     logger.warning(f"Failed to load SystemManifest from prompt: {e}")
+
 
             def run_chargen(llm_executor, stream=None):
                 if manifest:
@@ -271,9 +280,10 @@ class SetupWizard:
                         manifest,
                         self.input_char,
                         stream=stream,
-                        rules_text=self.prompt.rules_document,
+                        rules_text=self.prompt.rules_document if self.prompt else "",
                         executor=llm_executor,
                     )
+
                     val_entity, _ = validate_entity(raw, manifest)
                     return val_entity
                 return {"identity": {"name": "Player"}}
@@ -314,14 +324,18 @@ class SetupWizard:
                 self.generated_values = None
 
             # 3. Opening Crawl
-            world_service = WorldGenService(connector, task_callback=self._track_task)
+            if self.preview_entity and self.extracted_world:
+                world_service = WorldGenService(connector, task_callback=self._track_task)
 
-            class DummyChar:
-                name = (self.preview_entity.get("identity") or {}).get("name", "Player")
+                prev_ent = self.preview_entity  # Narrow type
+                class DummyChar:
+                    name = (prev_ent.get("identity") or {}).get("name", "Player")
 
-            self.generated_opening = world_service.generate_opening_crawl(
-                DummyChar(), self.extracted_world, self.input_world
-            )
+                self.generated_opening = world_service.generate_opening_crawl(
+                    DummyChar(), self.extracted_world, self.input_world
+                )
+            else:
+                self.generated_opening = "The journey begins..."
 
             return True
 
@@ -358,12 +372,14 @@ class SetupWizard:
                         ui.label("Starting Location").classes(
                             "text-xs font-bold text-gray-500 uppercase"
                         )
-                        ui.input(label="Location Name").bind_value(
-                            self.extracted_world.starting_location, "name"
-                        ).classes("w-full mb-2")
-                        ui.textarea(label="Description").bind_value(
-                            self.extracted_world.starting_location, "description_visual"
-                        ).classes("w-full mb-4").props("rows=3")
+                        if self.extracted_world:
+                            ui.input(label="Location Name").bind_value(
+                                self.extracted_world.starting_location, "name"
+                            ).classes("w-full mb-2")
+                            ui.textarea(label="Description").bind_value(
+                                self.extracted_world.starting_location, "description_visual"
+                            ).classes("w-full mb-4").props("rows=3")
+
                         with ui.row().classes("w-full justify-between items-center"):
                             ui.label("World Lore & Secrets").classes(
                                 "text-xs font-bold text-gray-500 uppercase"
@@ -453,7 +469,7 @@ class SetupWizard:
         display = definition.get("display", {})
         label = display.get("label", key)
         widget = display.get("widget", "text")
-        cat_data = self.generated_values[cat]
+        cat_data = (self.generated_values or {}).get(cat, {})
 
         if container_type == "atom":
             if widget in ["number", "die", "ladder"]:
@@ -519,9 +535,11 @@ class SetupWizard:
                 LoreData(kind=MemoryKind.LORE, content=content, priority=3, tags=tags)
             )
 
-        self.extracted_world.lore = final_lore
+        if self.extracted_world:
+            self.extracted_world.lore = final_lore
 
         service = GameSetupService(self.db, self.orchestrator.vector_store)
+
 
         try:
             game_session = service.create_game(

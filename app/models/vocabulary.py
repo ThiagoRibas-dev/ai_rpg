@@ -4,6 +4,14 @@ from enum import Enum, StrEnum
 # MEMORY KINDS
 # ---------------------------------------------------------------------------
 
+class MemoryUITab(StrEnum):
+    ALL = "All"
+    EPISODIC = "Episodic"
+    FACTS = "Facts"
+    LORE = "Lore"
+    PREFERENCES = "Preferences"
+    RULES = "Rules"
+
 class MemoryKind(StrEnum):
     EPISODIC = "episodic"
     SEMANTIC = "semantic"
@@ -176,3 +184,61 @@ CHARGEN_BRANCH_CATEGORIES = {
     ChargenBranch.DERIVED: [CategoryName.COMBAT, CategoryName.RESOURCES, CategoryName.INVENTORY],
     ChargenBranch.BACKGROUND: [CategoryName.CONNECTIONS, CategoryName.NARRATIVE]
 }
+# ---------------------------------------------------------------------------
+# SYSTEM & UI IDENTIFIERS
+# ---------------------------------------------------------------------------
+
+class SystemService(StrEnum):
+    DB_MANAGER = "db_manager"
+    ORCHESTRATOR = "orchestrator"
+    BRIDGE = "bridge"
+    STATE_SERVICE = "state_service"
+
+
+class UIComponentID(StrEnum):
+    CHAT = "chat"
+    MAP = "map"
+    INSPECTOR = "inspector"
+    SESSION_LIST = "session_list"
+    PROMPT_LIST = "prompt_list"
+
+
+class EntityType(StrEnum):
+    CHARACTER = "character"
+    SCENE = "scene"
+    LOCATION = "location"
+    QUEST = "quest"
+    MEMORY = "memory"
+    NPC_PROFILE = "npc_profile"
+
+
+class EntityKey(StrEnum):
+    PLAYER = "player"
+    ACTIVE_SCENE = "active_scene"
+
+class GameMode(StrEnum):
+    GAMEPLAY = "GAMEPLAY"
+    SETUP = "SETUP"
+
+
+# ---------------------------------------------------------------------------
+# MESSAGE ROLES
+# ---------------------------------------------------------------------------
+
+class MessageRole(StrEnum):
+    USER = "user"
+    ASSISTANT = "assistant"
+    SYSTEM = "system"
+    TOOL = "tool"
+    THOUGHT = "thought"
+
+
+# ---------------------------------------------------------------------------
+# MANIFEST VALUE TYPES
+# ---------------------------------------------------------------------------
+
+class ManifestValueType(StrEnum):
+    STR = "str"
+    INT = "int"
+    FLOAT = "float"
+    BOOL = "bool"

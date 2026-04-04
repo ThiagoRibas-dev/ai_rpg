@@ -49,7 +49,12 @@ class MemoryRepository(BaseRepository):
             (session_id, kind, content, priority, tags_json, fictional_time),
         )
         self._commit()
-        return self.get_by_id(cursor.lastrowid)
+        if cursor.lastrowid is None:
+            raise RuntimeError("Failed to retrieve lastrowid after memory creation.")
+        memory = self.get_by_id(int(cursor.lastrowid))
+        if memory is None:
+            raise RuntimeError(f"Failed to retrieve memory after creation with ID {cursor.lastrowid}")
+        return memory
 
     def get_by_id(self, memory_id: int) -> Memory | None:
         row = self._fetchone("""SELECT * FROM memories WHERE id = ?""", (memory_id,))
@@ -122,7 +127,10 @@ class MemoryRepository(BaseRepository):
             f"UPDATE memories SET {', '.join(updates)} WHERE id = ?", tuple(params)
         )
         self._commit()
-        return self.get_by_id(memory_id)
+        memory = self.get_by_id(memory_id)
+        if memory is None:
+            raise RuntimeError(f"Failed to retrieve memory after update with ID {memory_id}")
+        return memory
 
     def delete(self, memory_id: int):
         self._execute("DELETE FROM memories WHERE id = ?", (memory_id,))

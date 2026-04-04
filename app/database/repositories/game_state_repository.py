@@ -39,7 +39,10 @@ class GameStateRepository(BaseRepository):
         )
         if row and row["state_data"]:
             try:
-                return json.loads(row["state_data"])
+                data = json.loads(row["state_data"])
+                if isinstance(data, dict):
+                    return data
+                return {}
             except json.JSONDecodeError:
                 return {}
         return {}
@@ -96,7 +99,7 @@ class GameStateRepository(BaseRepository):
             except json.JSONDecodeError:
                 continue
 
-        return results
+        return dict(results)
 
     def delete_entity(self, session_id: int, entity_type: str, entity_key: str):
         """Delete a specific entity."""

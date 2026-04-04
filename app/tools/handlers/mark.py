@@ -1,13 +1,17 @@
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
+from app.models.vocabulary import EntityKey, EntityType
 from app.prefabs.manifest import SystemManifest
 from app.prefabs.validation import get_path, set_path, validate_entity
 from app.services.state_service import get_entity, set_entity
 
+if TYPE_CHECKING:
+    from app.database.db_manager import DBManager
+
 logger = logging.getLogger(__name__)
 
-def handler(path: str, count: int = 1, target: str = "player", **context: Any) -> dict:
+def handler(path: str, count: int = 1, target: str = EntityKey.PLAYER, **context: Any) -> dict:
     """
     Handler for 'mark' tool.
     Manipulates tracks, then runs validation.
@@ -16,7 +20,12 @@ def handler(path: str, count: int = 1, target: str = "player", **context: Any) -
     db = context.get("db_manager")
     manifest: SystemManifest | None = context.get("manifest")
 
-    entity_type = "character"
+    if not isinstance(session_id, int) or db is None:
+        return {"error": "Missing session_id or db_manager in context"}
+
+    db = cast("DBManager", db)
+
+    entity_type = EntityType.CHARACTER
     entity_key = target
 
     entity = get_entity(session_id, db, entity_type, entity_key)

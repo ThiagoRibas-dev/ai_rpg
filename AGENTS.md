@@ -8,8 +8,11 @@ This document provides a technical overview of the Solo Text AI-RPG framework, o
 
 **Atomic Edits:** Avoid editing whole files at once. Edit specific, targeted snippets. Be aware of replacing snippets that exist in multiple parts of a file. Keep files small (<500 lines); split if necessary. If a file becomes too large or contains too many disparate functions, break it into smaller, logically organized individual files.
 
+**Imports:** Never use **inline imports** (imports inside functions or methods). All imports must be at the top of the file to maintain structural clarity and prevent hidden circular dependency issues, unless strictly required for late-binding or emergency dependency resolution.
+
 **Code Quality & Strong Typing:** Run `.\run_checks.bat` after batches of changes.
 - **Strong Typing:** Use type hints everywhere. Favor Pydantic models for structured data. Avoid `Any` and use `NewType` or dedicated classes for domain-specific IDs (e.g., `SessionID`, `EntityID`).
+    - **Pydantic & Mypy:** To ensure Mypy correctly identifies default values while preserving Pydantic metadata, use the `Annotated[T, Field(...)] = default` pattern. This prevents "Missing named argument" errors in model constructors.
 - **Error Handling:** Never use silent exceptions (`try/except: pass`). Always log errors with the appropriate level (`logger.error` for critical failures, `logger.warning` for degradations) and provide an informative message to help with debugging.
 
 **Deterministic Rendering:** UI components must not "guess" how to render data. Always prioritize the `SystemManifest` (via `item_shape`) over heuristics. Use the 3-layer detection algorithm (Schema → Shape → Heuristics) to ensure accuracy.
@@ -21,6 +24,8 @@ This document provides a technical overview of the Solo Text AI-RPG framework, o
 **Code Reuse & Centralization:** Prioritize DRY (Don't Repeat Yourself).
 - **Extract Logic:** If logic is used in more than one place (e.g., calculating a modifier or parsing a path), extract it into a utility function or a service method.
 - **Centralize Systems:** Avoid duplicating complex logic across different layers (e.g., UI vs. Backend). Use shared services for state manipulation or UI-agnostic operations.
+
+**Communication Beat:** When performing long tasks, stop every so often to report the current progress, reiterate the next steps, and question the user for any adjustments.
 
 ## Core Concepts
 
@@ -62,6 +67,7 @@ A turn is executed by `ReActTurnManager.execute_turn` in a background thread.
 
 3.  **Final Narrative:**
     *   Once the AI determines the action is complete, it generates a final narrative response describing the outcome to the player.
+    *   **Communication Beat:** When performing long tasks, stop every so often to report the current progress, reiterate the next steps, and question the user for any adjustments.
 
 4.  **Post-Processing:**
     *   **Suggestions:** A lightweight call generates 3-5 distinct choices for the player.

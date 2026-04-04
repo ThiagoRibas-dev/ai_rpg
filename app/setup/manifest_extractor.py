@@ -1,6 +1,7 @@
 import logging
 import re
 from collections.abc import Callable
+from typing import ClassVar, cast
 
 from app.llm.llm_connector import LLMConnector
 from app.models.message import Message
@@ -31,7 +32,10 @@ from app.setup.schemas import (
 logger = logging.getLogger(__name__)
 
 class ManifestExtractor:
-    KNOWN_SYSTEM_IDS = {
+    # Maps user-provided system names to canonical internal IDs.
+    # This ensures that different variations (e.g. "D&D 3.5e" vs "Dungeons & Dragons 3.5e")
+    # always resolve to the same profile ID (dnd_3_5e).
+    KNOWN_SYSTEM_IDS: ClassVar[dict[str, str]] = {
         "dungeons & dragons 3.5e": "dnd_3_5e",
         "dungeons and dragons 3.5e": "dnd_3_5e",
     }
@@ -131,8 +135,9 @@ class ManifestExtractor:
         messages = [Message(role="user", content=EXTRACT_MECHANICS_PROMPT)]
         for attempt in range(3):
             try:
-                return self.llm.get_structured_response(prompt, messages, MechanicsExtraction, 0.3)
+                return cast(MechanicsExtraction, self.llm.get_structured_response(prompt, messages, MechanicsExtraction, 0.3))
             except Exception as e:
+
                 logger.warning(f"Mechanics extraction failed (attempt {attempt+1}/3): {e}")
                 if attempt == 2:
                     return MechanicsExtraction(
@@ -146,6 +151,17 @@ class ManifestExtractor:
                     )
                 messages.append(Message(role="assistant", content="I provided an invalid JSON response."))
                 messages.append(Message(role="user", content=f"Validation failed: {e}. Please fix the errors and try again. Provide ONLY valid JSON."))
+
+        return MechanicsExtraction(
+            system_name="Extracted System",
+            dice_notation="1d20",
+            resolution_mechanic="Unknown",
+            success_condition="Unknown",
+            crit_rules="None",
+            fumble_rules="",
+            aliases={},
+        )
+
 
     def _extract_field_group(
         self,
@@ -163,7 +179,7 @@ class ManifestExtractor:
 
         for attempt in range(3):
             try:
-                result = self.llm.get_structured_response(prompt, messages, ExtractedFieldList, 0.4)
+                result = cast(ExtractedFieldList, self.llm.get_structured_response(prompt, messages, ExtractedFieldList, 0.4))
                 allowed = {str(c) for c in cats}
                 filtered = [f for f in result.fields if str(f.category) in allowed]
 
@@ -172,6 +188,7 @@ class ManifestExtractor:
                     logger.info(f"Dropped out-of-batch fields for cats {cats}: {dropped}")
 
                 return filtered
+
             except Exception as e:
                 logger.warning(f"Field extraction failed for cats {cats} (attempt {attempt+1}/3): {e}")
                 if attempt == 2:
@@ -179,11 +196,15 @@ class ManifestExtractor:
                 messages.append(Message(role="assistant", content="I provided an invalid JSON response."))
                 messages.append(Message(role="user", content=f"Validation failed: {e}. Please fix the errors and try again. Provide ONLY valid JSON."))
 
+        return []
+
+
     def _extract_procedures(self, prompt: str) -> dict[str, str]:
         messages = [Message(role="user", content=EXTRACT_PROCEDURES_PROMPT)]
         for attempt in range(3):
             try:
-                return self.llm.get_structured_response(prompt, messages, ProceduresExtraction, 0.5).model_dump()
+                res = cast(ProceduresExtraction, self.llm.get_structured_response(prompt, messages, ProceduresExtraction, 0.5))
+                return res.model_dump()
             except Exception as e:
                 logger.warning(f"Procedures extraction failed (attempt {attempt+1}/3): {e}")
                 if attempt == 2:
@@ -191,11 +212,14 @@ class ManifestExtractor:
                 messages.append(Message(role="assistant", content="I provided an invalid JSON response."))
                 messages.append(Message(role="user", content=f"Validation failed: {e}. Please fix the errors and try again. Provide ONLY valid JSON."))
 
+        return {}
+
+
     def _extract_rules(self, prompt: str) -> list[RuleDef]:
         messages = [Message(role="user", content=EXTRACT_RULES_PROMPT)]
         for attempt in range(3):
             try:
-                res = self.llm.get_structured_response(prompt, messages, RuleListExtraction, 0.5)
+                res = cast(RuleListExtraction, self.llm.get_structured_response(prompt, messages, RuleListExtraction, 0.5))
                 return [RuleDef(name=r.name, content=r.content, tags=r.tags) for r in res.rules]
             except Exception as e:
                 logger.warning(f"Rule extraction failed (attempt {attempt+1}/3): {e}")
@@ -203,6 +227,9 @@ class ManifestExtractor:
                     return []
                 messages.append(Message(role="assistant", content="I provided an invalid JSON response."))
                 messages.append(Message(role="user", content=f"Validation failed: {e}. Please fix the errors and try again. Provide ONLY valid JSON."))
+
+        return []
+
 
     def _assemble(self, mech, fields, procs, rules) -> SystemManifest:
         # Deduplicate by path; last one wins

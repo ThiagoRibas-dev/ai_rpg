@@ -1,16 +1,23 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from nicegui import ui
 
 from app.gui.dialogs.memory_editor import MemoryEditorDialog
-from app.models.vocabulary import MemoryKind
+from app.models.vocabulary import MemoryKind, MemoryUITab
+
+if TYPE_CHECKING:
+    from app.database.db_manager import DBManager
 
 
 class MemoryInspector:
-    def __init__(self, db_manager):
+    def __init__(self, db_manager: DBManager):
         self.db = db_manager
-        self.session_id = None
-        self.container = None
-        self.search_term = ""
-        self.active_tab = "All"
+        self.session_id: int | None = None
+        self.container: ui.column | None = None
+        self.search_term: str = ""
+        self.active_tab: MemoryUITab = MemoryUITab.ALL
 
         # Stats Labels
         self.lbl_episodic = None
@@ -35,33 +42,30 @@ class MemoryInspector:
             return
 
         # 1. Fetch Stats
+        if not self.db or not self.db.memories:
+            return
         stats = self.db.memories.get_statistics(self.session_id)
         counts = stats.get("by_kind", {})
 
         # 2. Fetch Data (Filtered)
-        if self.active_tab == "All":
-            kind_filter = None
-        elif self.active_tab == "Facts":
-            kind_filter = MemoryKind.SEMANTIC
-        elif self.active_tab == "Preferences":
-            kind_filter = MemoryKind.USER_PREF
-        elif self.active_tab == "Rules":
-            kind_filter = MemoryKind.RULE
-        # Episodic, Lore, or any future tab where label == kind title-cased
-        # Enums don't have .lower() on the class, only instances, so handle matching text
-        elif self.active_tab == "Episodic":
+        kind_filter: MemoryKind | None = None
+        if self.active_tab == MemoryUITab.EPISODIC:
             kind_filter = MemoryKind.EPISODIC
-        elif self.active_tab == "Lore":
+        elif self.active_tab == MemoryUITab.LORE:
             kind_filter = MemoryKind.LORE
-        else:
-            kind_filter = self.active_tab.lower()
+        elif self.active_tab == MemoryUITab.FACTS:
+            kind_filter = MemoryKind.SEMANTIC
+        elif self.active_tab == MemoryUITab.PREFERENCES:
+            kind_filter = MemoryKind.USER_PREF
+        elif self.active_tab == MemoryUITab.RULES:
+            kind_filter = MemoryKind.RULE
 
         memories = self.db.memories.query(
             self.session_id,
             kind=kind_filter,
             query_text=self.search_term if self.search_term else None,
             limit=50,
-        )
+        ) if self.db and self.db.memories else []
 
         with self.container:
             # --- Stats Header ---
@@ -85,18 +89,14 @@ class MemoryInspector:
             )
 
             # Tabs
-            # Initialize with current active_tab to avoid spurious refresh
-            with (
-                ui.tabs(value=self.active_tab)
-                .classes("w-full text-xs")
-                .on_value_change(self._on_tab_change)
-            ):
-                ui.tab("All")
-                ui.tab("Episodic")
-                ui.tab("Facts")  # semantic
-                ui.tab("Lore")  # lore
-                ui.tab("Preferences")  # user_pref
-                ui.tab("Rules")  # rule
+            with ui.tabs().classes("w-full text-xs").on_value_change(self._on_tab_change) as tabs:
+                ui.tab(MemoryUITab.ALL)
+                ui.tab(MemoryUITab.EPISODIC)
+                ui.tab(MemoryUITab.FACTS)  # semantic
+                ui.tab(MemoryUITab.LORE)  # lore
+                ui.tab(MemoryUITab.PREFERENCES)  # user_pref
+                ui.tab(MemoryUITab.RULES)  # rule
+                tabs.value = self.active_tab
 
             # --- List ---
             with ui.scroll_area().classes("h-[500px] w-full pr-2"):
@@ -163,6 +163,8 @@ class MemoryInspector:
         dialog.open()
 
     def delete_memory(self, memory):
+        if not self.db or not self.db.memories:
+            return
         self.db.memories.delete(memory.id)
         ui.notify("Memory deleted")
         self.refresh()

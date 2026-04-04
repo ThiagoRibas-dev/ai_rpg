@@ -25,7 +25,7 @@ class BaseRepository(ABC):
     def _fetchone(self, query: str, params: tuple = ()) -> sqlite3.Row | None:
         """Execute and fetch one result."""
         cursor = self._execute(query, params)
-        return cursor.fetchone()
+        return cursor.fetchone()  # type: ignore[no-any-return]
 
     def _fetchall(self, query: str, params: tuple = ()) -> list[sqlite3.Row]:
         """Execute and fetch all results."""

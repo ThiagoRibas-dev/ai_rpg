@@ -1,13 +1,20 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from nicegui import ui
 
 from app.services.state_service import get_all_of_type
 
+if TYPE_CHECKING:
+    from app.database.db_manager import DBManager
+
 
 class QuestInspector:
-    def __init__(self, db_manager):
+    def __init__(self, db_manager: DBManager):
         self.db = db_manager
-        self.session_id = None
-        self.container = None
+        self.session_id: int | None = None
+        self.container: ui.column | None = None
 
     def set_session(self, session_id: int):
         self.session_id = session_id
@@ -21,6 +28,8 @@ class QuestInspector:
         if not self.session_id:
             return
 
+        if not self.db:
+            return
         quests = get_all_of_type(self.session_id, self.db, "quest")
 
         with self.container:
