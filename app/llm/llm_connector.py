@@ -23,10 +23,21 @@ class LLMResponse:
 class LLMConnector(ABC):
     def __init__(self):
         # Concurrency limit for parallel setup tasks (World/Char Gen)
-        max_workers = int(os.environ.get("SETUP_MAX_WORKERS", 5))
-        self.semaphore = asyncio.Semaphore(max_workers)
+        self._max_workers = int(os.environ.get("SETUP_MAX_WORKERS", 5))
+        self._semaphore: asyncio.Semaphore | None = None
         # Global timeout for any single LLM call (default 5 minutes)
-        self.timeout = int(os.environ.get("LLM_TIMEOUT", 300))
+        self.timeout = float(os.environ.get("LLM_TIMEOUT", 300))
+
+    @property
+    def semaphore(self) -> asyncio.Semaphore:
+        """Lazy initialization of the semaphore to ensure it's bound to the correct event loop."""
+        if self._semaphore is None:
+            self._semaphore = asyncio.Semaphore(self._max_workers)
+        return self._semaphore
+
+    @semaphore.setter
+    def semaphore(self, value: asyncio.Semaphore):
+        self._semaphore = value
 
     # --- Synchronous Interface (for Turn Manager) ---
 

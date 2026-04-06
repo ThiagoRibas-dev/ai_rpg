@@ -22,6 +22,9 @@ simpleeval
 # Embeddings
 fastembed
 
+# NLP
+nltk
+
 # GUI
 nicegui>=1.4.0
 pywebview

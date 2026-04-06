@@ -37,12 +37,17 @@ class VectorStore:
 
         # Embed Model
         model_name = os.environ.get("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
+
+        # Setup local cache dir for the embedding model to avoid redundant network downloads
+        cache_dir = os.path.join(persist_directory, "models")
+        os.makedirs(cache_dir, exist_ok=True)
+
         try:
-            self.embed_model = TextEmbedding(model_name=model_name)
-            logger.info(f"VectorStore initialized with {model_name}")
+            self.embed_model = TextEmbedding(model_name=model_name, cache_dir=cache_dir)
+            logger.info(f"VectorStore initialized with {model_name} (cached in {cache_dir})")
         except Exception as e:
             logger.error(f"Failed to load embedding model: {e}")
-            self.embed_model = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
+            self.embed_model = TextEmbedding(model_name="BAAI/bge-small-en-v1.5", cache_dir=cache_dir)
 
     def _embed(self, text: str) -> list[float]:
         embeddings = list(self.embed_model.embed([text]))

@@ -46,7 +46,7 @@ class WorldGenService:
         logger.info(f"[WorldGen] {label} -> {state}")
 
     def extract_world_data(
-        self, world_info: str, stream: LoreStream | None = None, executor=None
+        self, world_info: str, stream: LoreStream | None = None
     ) -> WorldExtraction:
         """Synchronous wrapper for the async world extraction pipeline."""
         return asyncio.run(self.async_extract_world_data(world_info, stream))
@@ -95,9 +95,10 @@ class WorldGenService:
                 batches[item.type].append(item.name)
 
             # Mapping for all possible lore categories to their SetupTasks (for UI)
+            # IMPORTANT: Reordered to put NPC first so it dispatches immediately for LoreStream fulfillment
             type_to_task = {
-                WorldCategory.LOCATION: SetupTask.WORLDGEN_ATLAS,
                 WorldCategory.NPC:      SetupTask.WORLDGEN_DRAMATIS,
+                WorldCategory.LOCATION: SetupTask.WORLDGEN_ATLAS,
                 WorldCategory.SYSTEMS:  SetupTask.WORLDGEN_CODEX,
                 WorldCategory.RACES:    SetupTask.WORLDGEN_PEOPLES,
                 WorldCategory.FACTIONS: SetupTask.WORLDGEN_POWER,
@@ -192,9 +193,28 @@ class WorldGenService:
             [Message(role="user", content=prompt)],
             target_schema,
         )
+
+        # --- Programmatic Tag Injection ---
+        # Ensure 'type' is the first tag for all extracted entities
+        entities: list[Any] = []
+        if isinstance(res, LocationListExtraction):
+            entities = res.locations
+        elif isinstance(res, NpcListExtraction):
+            entities = res.npcs
+        elif isinstance(res, LoreListExtraction):
+            entities = res.lore
+
+        for entity in entities:
+            if hasattr(entity, "tags"):
+                # Normalize tags to lowercase and ensure 'type' is at index 0
+                tag_to_add = type.lower()
+                if tag_to_add in entity.tags:
+                    entity.tags.remove(tag_to_add)
+                entity.tags.insert(0, tag_to_add)
+
         return res
 
-    def generate_opening_crawl(
+    async def async_generate_opening_crawl(
         self, char: Any, world: WorldExtraction, guidance: str = ""
     ) -> str:
         self._track_task(SetupTask.OPENING_CRAWL.id, SetupTask.OPENING_CRAWL.label, TaskState.PENDING)
@@ -217,9 +237,14 @@ class WorldGenService:
                 guidance=guidance,
             )
             sys_prompt = "You are an expert Game Master beginning a new adventure."
-            # We use the sync wrapper here for simplicity as it's a single call
-            gen = self.llm.get_streaming_response(sys_prompt, [Message(role="user", content=prompt)])
-            res = "".join(gen)
+
+            # Use async streaming directly
+            gen = self.llm.async_get_streaming_response(sys_prompt, [Message(role="user", content=prompt)])
+            full_text = []
+            async for chunk in gen:
+                full_text.append(chunk)
+
+            res = "".join(full_text)
             self._track_task(SetupTask.OPENING_CRAWL.id, SetupTask.OPENING_CRAWL.label, TaskState.DONE)
             return res
         except Exception:

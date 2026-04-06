@@ -7,11 +7,14 @@ from pydantic import BaseModel
 from app.context.context_builder import ContextBuilder
 from app.context.memory_retriever import MemoryRetriever
 from app.context.state_context import StateContextBuilder
+from app.core.metadata.turn_metadata_service import TurnMetadataService
 from app.core.simulation_service import SimulationService
+from app.database.db_manager import DBManager
 from app.llm.schemas import TurnMetadata, TurnSuggestions
 from app.models.game_session import GameSession
 from app.models.message import Message
 from app.models.session import Session
+from app.models.vocabulary import MessageRole
 from app.setup.setup_manifest import SetupManifest
 from app.tools.executor import ToolExecutor
 from app.tools.schemas import Adjust, ContextRetrieve, LocationCreate, Mark, Move, Note, NpcSpawn, Roll, Set, StateQuery
@@ -118,13 +121,14 @@ class ReActTurnManager:
             rag_text_for_ui = mem_retriever.format_for_prompt(mems)
 
             # Append the rag context as a tool return message
-            tool_return_message = Message(
-                role="tool",
-                name="rag_context",
-                content=rag_text_for_ui,
-                turn_id=turn_id,
-            )
-            working_history.append(tool_return_message)
+            if rag_text_for_ui:
+                tool_return_message = Message(
+                    role="tool",
+                    name="rag_context",
+                    content=rag_text_for_ui,
+                    turn_id=turn_id,
+                )
+                working_history.append(tool_return_message)
 
             # Flatten memory IDs for the UI queue
             flat_mem_ids = [m.id for cat_mems in mems.values() for m in cat_mems]
@@ -168,7 +172,7 @@ class ReActTurnManager:
                     tool["function"]["description"] = desc
 
         # Appends the list of available tools to the working history
-        tools_defs = "Autonomously use the following tools to perform actions, retrieve information, create, or modify game elements, etc.\n\n```available_tools\n"
+        tools_defs = "Use the following tools to create or modify game elements, retrieve or confirm information, etc.\nProactively and autonomously use each tool one or more times when needed.\n\n```available_tools\n"
         for tool in llm_tools:
             name = tool["function"]["name"]
             desc = tool["function"]["description"].strip()
@@ -177,15 +181,26 @@ class ReActTurnManager:
             tools_defs += f"- **{name}**: {desc}\n"
         tools_defs += "\n```"
 
-        tool_message = Message(
-            role="tool",
-            name="available_tools",
-            content=tools_defs,
-            turn_id=turn_id,
-        )
-        working_history.append(tool_message)
-
         # --- 5. ACTION LOOP ---
+        # create a copy of the working_history to manipulate the last User message without affecting the original working_history
+        working_history_request = list(working_history)
+
+        # Instead of a dedicated tool message, we append it to the User's last message
+        if tools_defs:
+            if working_history_request and working_history_request[-1].role == MessageRole.USER:
+                # validates if .content is None
+                if working_history_request[-1].content is None:
+                    working_history_request[-1].content = ""
+                working_history_request[-1].content += f"\n\n---\n\n{tools_defs}"
+            else:
+                working_history_request.append(
+                    Message(
+                        role=MessageRole.USER,
+                        content=tools_defs,
+                        turn_id=turn_id,
+                    )
+                )
+
         loop_count = 0
         narrative_text = ""
         while loop_count < MAX_REACT_LOOPS:
@@ -198,7 +213,7 @@ class ReActTurnManager:
             try:
                 response = self.llm_connector.chat_with_tools(
                     system_prompt=turn_system_prompt,
-                    chat_history=working_history,
+                    chat_history=working_history_request,
                     tools=llm_tools,
                 )
             except Exception as e:
@@ -207,19 +222,20 @@ class ReActTurnManager:
                 raise e
 
             assistant_msg = Message(
-                role="assistant",
+                role=MessageRole.ASSISTANT,
                 content=response.content,
                 thought=response.thought,
                 thought_signature=response.thought_signature,
                 tool_calls=response.tool_calls,
             )
             working_history.append(assistant_msg)
+            working_history_request.append(assistant_msg)
 
             if response.content and not response.tool_calls:
                 self.ui_queue.put(
                     {
                         "type": "message_bubble",
-                        "role": "assistant",
+                        "role": MessageRole.ASSISTANT,
                         "content": response.content,
                         "turn_id": turn_id,
                     }
@@ -260,6 +276,7 @@ class ReActTurnManager:
                             extra_ctx = {
                                 "simulation_service": sim_service,
                                 "manifest": manifest,  # PASS MANIFEST TO TOOLS
+                                "pre_fetched_mems": mems if 'mems' in locals() else None,
                             }
                             result, _ = executor.execute(
                                 [pydantic_model],
@@ -276,20 +293,22 @@ class ReActTurnManager:
                                 else {"error": "No result returned"}
                             )
                             tool_msg = Message(
-                                role="tool",
+                                role=MessageRole.TOOL,
                                 tool_call_id=call_id,
                                 name=name,
                                 content=json.dumps(res_data, indent=2),
                             )
                             working_history.append(tool_msg)
+                            working_history_request.append(tool_msg)
                         except Exception as e:
                             tool_error = Message(
-                                role="tool",
+                                role=MessageRole.TOOL,
                                 tool_call_id=call_id,
                                 name=name,
                                 content=json.dumps({"error": str(e)}, indent=2),
                             )
                             working_history.append(tool_error)
+                            working_history_request.append(tool_error)
                             self.ui_queue.put(
                                 {
                                     "type": "tool_result",
@@ -300,12 +319,13 @@ class ReActTurnManager:
                             )
                     else:
                         tool_error = Message(
-                            role="tool",
+                            role=MessageRole.TOOL,
                             tool_call_id=call_id,
                             name=name,
                             content=json.dumps({"error": f"Tool '{name}' not found."}, indent=2),
                         )
                         working_history.append(tool_error)
+                        working_history_request.append(tool_error)
                 continue
 
         # --- 5B. LOOP EXHAUSTION GUARD ---
@@ -317,14 +337,14 @@ class ReActTurnManager:
             try:
                 fallback_response = self.llm_connector.get_streaming_response(
                     system_prompt=turn_system_prompt,
-                    chat_history=working_history,
+                    chat_history=working_history_request,
                 )
                 narrative_text = "".join(fallback_response)
                 if narrative_text:
                     self.ui_queue.put(
                         {
                             "type": "message_bubble",
-                            "role": "assistant",
+                            "role": MessageRole.ASSISTANT,
                             "content": narrative_text,
                             "turn_id": turn_id,
                         }
@@ -340,12 +360,12 @@ class ReActTurnManager:
         try:
             # Prepare minimal history for suggestions
             final_history = list(working_history)
-            if not any(m.content == narrative_text for m in final_history if m.role == "assistant"):
-                 final_history.append(Message(role="assistant", content=narrative_text))
+            if not any(m.content == narrative_text for m in final_history if m.role == MessageRole.ASSISTANT):
+                 final_history.append(Message(role=MessageRole.ASSISTANT, content=narrative_text))
 
             final_history.append(
                 Message(
-                    role="user",
+                    role=MessageRole.USER,
                     content="Write 3-5 action options the Player could take next, in first person, in the format: \"I do X\", \"I go to Y\", etc. Return strictly as JSON.",
                 )
             )
@@ -364,7 +384,7 @@ class ReActTurnManager:
 
         # --- 7. PERSISTENCE (NARRATIVE) ---
         if narrative_text.strip():
-            session_in_thread.add_message("assistant", narrative_text)
+            session_in_thread.add_message(MessageRole.ASSISTANT, narrative_text)
 
         self.orchestrator._update_game_in_thread(
             game_session, thread_db_manager, session_in_thread
@@ -412,12 +432,12 @@ class ReActTurnManager:
         try:
             # Prepare metadata context
             final_history = list(working_history)
-            if not any(m.content == narrative_text for m in final_history if m.role == "assistant"):
-                 final_history.append(Message(role="assistant", content=narrative_text))
+            if not any(m.content == narrative_text for m in final_history if m.role == MessageRole.ASSISTANT):
+                 final_history.append(Message(role=MessageRole.ASSISTANT, content=narrative_text))
 
             final_history.append(
                 Message(
-                    role="user",
+                    role=MessageRole.USER,
                     content=(
                         "Summarize this scene, generate tags that describe the scene, and provide an importance rating.\n"
                         "1. Provide a concise 1-3 sentence summary.\n"
@@ -436,8 +456,6 @@ class ReActTurnManager:
             )
 
             # Persist with new DB connection
-            from app.core.metadata.turn_metadata_service import TurnMetadataService
-            from app.database.db_manager import DBManager
             with DBManager(self.orchestrator.db_path) as db:
                 turnmeta = TurnMetadataService(db, self.vector_store)
 
@@ -470,9 +488,9 @@ class ReActTurnManager:
         if not summary:
             return history
         # Determine first real role
-        first_real_role = history[0].role if history else "user"
+        first_real_role = history[0].role if history else MessageRole.USER
         # Choose opposite role to preserve alternation (user-user / assistant-assistant avoidance)
-        prefix_role = "assistant" if first_real_role == "user" else "user"
+        prefix_role = MessageRole.ASSISTANT if first_real_role == MessageRole.USER else MessageRole.USER
         prefix = Message(
             role=prefix_role,
             content=f"# STORY SO FAR\n{summary}",

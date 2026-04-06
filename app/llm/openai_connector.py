@@ -46,8 +46,8 @@ class OpenAIConnector(LLMConnector):
         if not self.model:
             logger.error("OPENAI_API_MODEL environment variable not set.")
             raise ValueError("OPENAI_API_MODEL environment variable not set.")
-        self.client = openai.OpenAI(base_url=self.base_url, api_key=self.api_key)
-        self.async_client = openai.AsyncOpenAI(base_url=self.base_url, api_key=self.api_key)
+        self.client = openai.OpenAI(base_url=self.base_url, api_key=self.api_key, timeout=self.timeout)
+        self.async_client = openai.AsyncOpenAI(base_url=self.base_url, api_key=self.api_key, timeout=self.timeout)
 
     def _convert_chat_history_to_messages(
         self, chat_history: list[Message]
@@ -299,7 +299,7 @@ class OpenAIConnector(LLMConnector):
                     messages=messages,
                     tools=tools,
                     tool_choice="auto" if tools else None,
-                    temperature=0.25,
+                    temperature=0.5,
                     extra_body=extra_params,
                 ),
                 timeout=self.timeout

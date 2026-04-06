@@ -142,7 +142,7 @@ class ChatComponent:
                         "text-xs text-yellow-500 font-bold mb-1"
                     )
                     thought_text = msg.thought or ""
-                    ui.markdown(thought_text).classes("text-sm text-yellow-200 italic")
+                    ui.markdown(thought_text).classes("text-sm text-yellow-200 italic chat-markdown")
             return
 
         if msg.role == MessageRole.SYSTEM:
@@ -184,9 +184,9 @@ class ChatComponent:
 
                     with content_container:
                         msg_content = msg.content or ""
-                        # Removed prose-invert colors to allow inheritance, kept prose structure
+                        # Added chat-markdown for custom line-height and header sizes
                         ui.markdown(msg_content).classes(
-                            "w-full min-w-0 break-words break-all whitespace-pre-wrap prose prose-invert max-w-none [&_p]:m-0 text-sm [&_*]:text-inherit"
+                            "w-full min-w-0 break-words break-all chat-markdown prose prose-invert max-w-none text-sm [&_*]:text-inherit"
                         )
 
                     # Edit Button (visible on hover)
@@ -302,7 +302,7 @@ class ChatComponent:
                         ui.label("💭 Thinking...").classes(
                             "text-xs text-yellow-500 font-bold mb-1"
                         )
-                        ui.markdown(text or "").classes("text-sm text-yellow-200 italic")
+                        ui.markdown(text or "").classes("text-sm text-yellow-200 italic chat-markdown")
             else:
                 # Use same bubble styling as _render_interactive_message
                 row_classes = "w-full justify-end" if sent else "w-full justify-start"
@@ -322,7 +322,7 @@ class ChatComponent:
 
                         with bubble:
                             ui.markdown(text or "").classes(
-                                "w-full min-w-0 break-words break-all whitespace-pre-wrap prose prose-invert max-w-none [&_p]:m-0 text-sm [&_*]:text-inherit"
+                                "w-full min-w-0 break-words break-all chat-markdown prose prose-invert max-w-none text-sm [&_*]:text-inherit"
                             )
         self._scroll_down()
 
@@ -436,7 +436,7 @@ class ChatComponent:
                 ) as exp:
                     exp.classes("text-blue-400 font-medium")
                     with ui.column().classes("p-2 gap-1"):
-                        ui.markdown(text).classes("text-xs text-gray-400 prose prose-invert max-w-none")
+                        ui.markdown(text).classes("text-xs text-gray-400 chat-markdown prose prose-invert max-w-none")
                         if memory_ids:
                              ui.label(f"IDs: {memory_ids}").classes("text-[10px] text-gray-600 font-mono mt-1")
 

@@ -211,11 +211,37 @@ class GameSetupService:
 
         for mem in world_data.lore:
             try:
-                self.db.memories.create(
-                    session_id, mem.kind, mem.content, mem.priority, mem.tags
+                # Prepend name to content for better RAG context (matches Rule pattern)
+                full_content = f"{mem.name}: {mem.content}"
+
+                # Inject name as the second tag (after the category/type)
+                tags = list(mem.tags)
+                if mem.name not in tags:
+                    if len(tags) > 1:
+                        tags.insert(1, mem.name)
+                    else:
+                        tags.append(mem.name)
+
+                created_mem = self.db.memories.create(
+                    session_id, mem.kind, full_content, mem.priority, tags
                 )
-            except Exception:
-                pass
+
+                # Index in Vector Store for RAG
+                if self.vs:
+                    try:
+                        self.vs.upsert_memory(
+                            session_id=session_id,
+                            memory_id=created_mem.id,
+                            text=created_mem.content,
+                            kind=created_mem.kind,
+                            tags=created_mem.tags_list(),
+                            priority=created_mem.priority,
+                        )
+                    except Exception as e:
+                        logger.warning(f"VS Indexing failed for lore {created_mem.id}: {e}")
+
+            except Exception as e:
+                logger.error(f"Failed to create/index lore memory {mem.name}: {e}")
 
         # 6. Seed Entity Index
         from app.services.entity_index import _ensure_index, add_location, add_memory, add_npc
@@ -233,7 +259,8 @@ class GameSetupService:
 
         # Lore memories
         for mem in world_data.lore:
-            title = mem.content[:60].replace("\n", " ")
+            title = f"{mem.name}: {mem.content[:50]}" if mem.name else mem.content[:60]
+            title = title.replace("\n", " ")
             add_memory(session_id, self.db, mem.kind, title)
 
     def _create_npc_entity(

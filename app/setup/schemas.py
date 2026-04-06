@@ -1,10 +1,10 @@
+import asyncio
 import re
-from concurrent.futures import Future
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from app.models.vocabulary import CategoryName, MemoryKind, PrefabID, WorldCategory
+from app.models.vocabulary import CategoryName, MemoryKind, PrefabID, WorldCategory, WORLD_GEN_TAG
 
 # ---------------------------------------------------------------------------
 # PREFAB / MANIFEST EXTRACTION SCHEMAS
@@ -131,6 +131,9 @@ class NpcData(BaseModel):
         "neutral",
         description="The NPC's initial attitude toward the player accounting for eprsonal history (or lack thereof), faction affiliation, place of origin, and other such factors.",
     )
+    tags: list[str] = Field(
+        default_factory=list, description="Tags associated with this NPC."
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -190,6 +193,9 @@ class LocationData(BaseModel):
     type: str = Field(
         ...,
         description="indoor, outdoor, structure, district, etc.",
+    )
+    tags: list[str] = Field(
+        default_factory=list, description="Tags associated with this location."
     )
 
     @model_validator(mode="before")
@@ -254,12 +260,16 @@ class LocationData(BaseModel):
 
 class LoreData(BaseModel):
     model_config = {"extra": "forbid"}
+    name: str = Field(
+        ...,
+        description="The name of the lore entity or topic.",
+    )
     content: str = Field(
         ...,
         description="The content/fact/detail about the world.",
     )
     tags: list[str] = Field(
-        ...,
+        default_factory=list,
         description="Categories or keywords associated with this lore item.",
     )
     priority: int = 3
@@ -280,15 +290,25 @@ class LoreData(BaseModel):
             data.setdefault("tags", [])
             data.setdefault("priority", 3)
             data.setdefault("kind", MemoryKind.LORE)
+
+            # Ensure name exists
+            if "name" not in data:
+                # Use first tag if available, or first 20 chars of content
+                if data["tags"]:
+                    data["name"] = str(data["tags"][0]).title()
+                else:
+                    data["name"] = data["content"][:20] + "..."
+
             return data
 
         # Backend shape: {"category": "...", "details": "..."}
         if isinstance(data, dict) and "details" in data:
-            category = str(data.get("category") or "world_gen")
+            category = str(data.get("category") or WORLD_GEN_TAG)
             details = str(data["details"])
             return {
+                "name": category.title(),
                 "content": details,
-                "tags": [category, "world_gen"],
+                "tags": [category, WORLD_GEN_TAG],
                 "priority": 3,
                 "kind": MemoryKind.LORE,
             }
@@ -297,7 +317,7 @@ class LoreData(BaseModel):
         if isinstance(data, str):
             return {
                 "content": data,
-                "tags": ["world_gen"],
+                "tags": [WORLD_GEN_TAG],
                 "priority": 3,
                 "kind": MemoryKind.LORE,
             }
@@ -432,19 +452,28 @@ class LoreStream:
     """
     Asynchronous coordination object for sharing world data with character generation.
     """
+
     def __init__(self):
-        self._npc_future: Future[list[NpcData]] = Future()
+        self._npc_future: asyncio.Future[list[NpcData]] | None = None
+
+    def _ensure_future(self) -> asyncio.Future[list[NpcData]]:
+        if self._npc_future is None:
+            self._npc_future = asyncio.get_event_loop().create_future()
+        return self._npc_future
 
     def set_npcs(self, npcs: list[NpcData]):
         """Fulfills the promise of NPC data."""
-        if not self._npc_future.done():
-            self._npc_future.set_result(npcs)
+        fut = self._ensure_future()
+        if not fut.done():
+            fut.set_result(npcs)
 
     def set_error(self, exc: Exception):
         """Propagates failure to any waiting consumers."""
-        if not self._npc_future.done():
-            self._npc_future.set_exception(exc)
+        fut = self._ensure_future()
+        if not fut.done():
+            fut.set_exception(exc)
 
-    def get_npcs(self) -> list[NpcData]:
+    async def get_npcs(self) -> list[NpcData]:
         """Blocks until NPCs are available and returns them."""
-        return self._npc_future.result()
+        fut = self._ensure_future()
+        return await fut

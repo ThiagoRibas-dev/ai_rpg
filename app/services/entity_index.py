@@ -110,33 +110,50 @@ def smart_truncate(text: str, max_len: int = 90) -> str:
 
 
 def render_index(index: dict) -> str:
-    """Format the index as a compact markdown block for prompt injection."""
-    lines = [
-        f"Use `{StateQuery.model_fields['name'].default}` or `{ContextRetrieve.model_fields['name'].default}` to look up full details.\n"
-    ]
+    """Format the index as a compact markdown block for prompt injection, using separate tables per type."""
+    sections = []
 
-    table_rows = []
+    # helper for creating tables
+    def _make_table(title: str, rows: list[str], id_col="ID") -> str:
+        if not rows:
+            return ""
+        table = [
+            f"### {title}",
+            f"| {id_col} | Snippet |",
+            "| :--- | :--- |"
+        ]
+        table.extend(rows)
+        return "\n".join(table)
 
     # 1. Locations
+    loc_rows = []
     for key, desc in index.get("locations", {}).items():
         summary = smart_truncate(desc)
-        table_rows.append(f"| Location | `{key}` | {summary} |")
+        loc_rows.append(f"| `{key}` | {summary} |")
+    if loc_rows:
+        sections.append(_make_table("Location Index", loc_rows))
 
     # 2. NPCs
+    npc_rows = []
     for key, desc in index.get("npcs", {}).items():
         summary = smart_truncate(desc)
-        table_rows.append(f"| NPC | `{key}` | {summary} |")
+        npc_rows.append(f"| `{key}` | {summary} |")
+    if npc_rows:
+        sections.append(_make_table("NPC Index", npc_rows))
 
     # 3. Memories (Lore, Rules, etc.)
     for kind in MemoryKind:
         entries = index.get(kind.value, [])
+        mem_rows = []
         for title in entries:
             summary = smart_truncate(title)
-            table_rows.append(f"| {kind.value.title()} | - | {summary} |")
+            # Use Topic/Topic if it's better, but let's stick to ID/Snippet for consistency with Entity ID
+            mem_rows.append(f"| - | {summary} |")
+        if mem_rows:
+            sections.append(_make_table(f"{kind.value.title()} Index", mem_rows))
 
-    if table_rows:
-        lines.append("| Type | Entity ID | Summary |")
-        lines.append("| :--- | :--- | :--- |")
-        lines.extend(table_rows)
+    if not sections:
+        return ""
 
-    return "\n".join(lines)
+    header = f"Use `{StateQuery.model_fields['name'].default}` or `{ContextRetrieve.model_fields['name'].default}` to look up full details.\n"
+    return header + "\n\n".join(sections)

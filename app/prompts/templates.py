@@ -100,7 +100,7 @@ You are an expert World Builder and Game Master who is aware of the world, the m
 
 ## CORE PRINCIPLES
 1. **Extraction Only**: Your goal is to extract, organize, connect, and sometimes extrapolate data from the provided Source Material.
-2. **Contextual Awareness**: When provided with a list of already recorded entries (Reference Context), use that list to ensure logical consistency and to build connections.
+2. **Contextual Awareness**: When provided with a list of already recorded entries (Reference Context), use that list to ensure logical consistency and to build connections instead of returning the same information again.
 3. **No Redundancy**: NEVER repeat or re-extract information that is already listed in the Reference Context. Focus exclusively on discovering NEW details from the Source Material.
 4. **Atomicity (One Entity = One Record)**: Do not fragment information about a single entity into multiple entries. Each entry must be self-contained and include all relevant sub-details found in the material.
 
@@ -118,23 +118,39 @@ Analyze the source material and determine:
 1. **Sub-genre** (be specific, e.g. 'Epic Fantasy', 'Cyberpunk Noir').
 2. **Atmospheric Tone** (keywords, e.g. 'grim', 'hopeful', 'mysterious').
 """
+
 EXTRACT_WORLD_INDEX_PROMPT = """
-Perform an exhaustive "Discovery Scan" of the provided source material.
-Identify every unique Location, NPC, and significant Lore topic.
+Efficiently create a list indexing every unique Location, NPC, and significant information (Lore) entry of the provided source material.
 
-For each item, determine its Type according to these rules:
+Return a JSON list of objects with 'name' and 'type' of each entry, E.g.
+```json
+[
+    {
+        "name": "The Shire",
+        "type": "location"
+    },
+    {
+        "name": "Frodo Baggins",
+        "type": "npc"
+    }
+]
+```
+and so on.
 
-1. **location**: Physical sites, settlements, geographic landmarks, or buildings.
+For each item/entry, determine its Type according to these rules:
+
+1. **location**: Physical sites, settlements, countries, cities, villages, towns, geographic landmarks, structures, or buildings.
 2. **npc**: Specific named individuals, unique legendary creatures, or distinct characters.
 3. **systems**: Foundational laws of reality (Magic, Tech, Physics) and Cosmology (Deities, Planes).
-4. **races**: Biological species, lineages, ancestries, and their physiological traits.
-5. **factions**: Organizations, religions (as institutions), guilds, military orders, or governments.
-6. **history**: Named historical events, eras, wars, cataclysms, and timelines.
+4. **races**: Biological species, lineages, ancestries, and their traits.
+5. **factions**: Organizations, religions (as institutions), guilds, military orders, governments, or political entities.
+6. **history**: Named historical events, eras, wars, cataclysms, timelines, and other such historical events.
 7. **culture**: Social norms, traditions, daily life, folklore, and etiquette.
 8. **status**: Current rumors, active local conflicts, impending threats, or plot hooks.
-9. **misc**: Anything significant that does not fit into the above buckets.
+9. **misc**: Anything elses significant that does not fit into the above buckets.
 
-Return a JSON list of objects with 'name' and 'type'.
+These entries should not overlap. For example, a city should not be listed as location, culture, and a faction.
+
 """
 
 EXTRACT_WORLD_DETAILS_PROMPT = """
@@ -147,13 +163,11 @@ Extract full, exhaustive records for only these specific entities:
 ## INSTRUCTIONS
 - If type is **LOCATION**: Focus on 'description_visual', 'description_sensory', and 'type' (indoor/outdoor/etc).
 - If type is **NPC**: Focus on 'visual_description', 'stat_template' (Civilian/Warrior/etc), and 'initial_disposition'.
-- If type is any **LORE** category (Systems, Races, Factions, etc): Extract the 'content' as a detailed paragraph. Use the category name as one of the tags.
+- If type is any **LORE** category (Systems, Races, Factions, etc): Extract the 'name' and the 'content' for the entry. The 'content' should be a detailed paragraph describing it within the context of the world.
 
 Do NOT extract entities not listed in the TARGET ENTITIES list.
 Ensure each entry is self-contained and descriptive.
 """
-
-
 
 OPENING_CRAWL_PROMPT = """
 Write a short, compelling, 2nd-person opening scene that situates the Player's character according to the provided context, unless the User provides their own opening scene.

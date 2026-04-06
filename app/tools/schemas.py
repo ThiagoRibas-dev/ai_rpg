@@ -150,12 +150,12 @@ class LocationCreate(BaseModel):
 
 class ContextRetrieve(BaseModel):
     """
-    Retrieve relevant piece of information (lore, rules, events, etc) based on the query text.
+    Retrieve relevant information (lore, rules, events, etc) from the codex based on the query text.
     """
 
     name: Literal["context.retrieve"] = "context.retrieve"
     query: str = Field(
-        ..., description="Query text (usually derived from last user action)."
+        ..., description="Query text (tags, natural language, etc)."
     )
     kinds: list[MemoryKind] = Field(
         default_factory=lambda: [MemoryKind.EPISODIC, MemoryKind.SEMANTIC, MemoryKind.LORE, MemoryKind.RULE]

@@ -1,6 +1,11 @@
 from enum import Enum, StrEnum
 
 # ---------------------------------------------------------------------------
+# GLOBAL CONSTANTS & TAGS
+# ---------------------------------------------------------------------------
+WORLD_GEN_TAG = "world_gen"
+
+# ---------------------------------------------------------------------------
 # MEMORY KINDS
 # ---------------------------------------------------------------------------
 
@@ -143,14 +148,14 @@ class TaskState(StrEnum):
 
 class SetupTask(Enum):
     WORLDGEN_GENRE     = ("worldgen_genre", "Genre & Tone")
-    WORLDGEN_INDEX     = ("worldgen_index", "Deep Scan (Index)")
-    WORLDGEN_ATLAS     = ("worldgen_atlas", "Atlas (Locations)")
-    WORLDGEN_CODEX     = ("worldgen_codex", "Codex (Systems)")
-    WORLDGEN_PEOPLES   = ("worldgen_peoples", "Peoples (Biology)")
+    WORLDGEN_INDEX     = ("worldgen_index", "Deep Scan (Indexing)")
+    WORLDGEN_ATLAS     = ("worldgen_atlas", "Locations")
+    WORLDGEN_CODEX     = ("worldgen_codex", "Systems")
+    WORLDGEN_PEOPLES   = ("worldgen_peoples", "Peoples")
     WORLDGEN_POWER     = ("worldgen_power", "Power & Politics")
-    WORLDGEN_CHRONICLE = ("worldgen_chronicle", "Chronicle (History)")
+    WORLDGEN_CHRONICLE = ("worldgen_chronicle", "History")
     WORLDGEN_CULTURE   = ("worldgen_culture", "Culture & Life")
-    WORLDGEN_DRAMATIS  = ("worldgen_dramatis", "Dramatis Personae")
+    WORLDGEN_DRAMATIS  = ("worldgen_dramatis", "NPCs")
     WORLDGEN_STATUS    = ("worldgen_status", "Current Status")
     WORLDGEN_REMNANTS  = ("worldgen_remnants", "Unresolved Lore")
     OPENING_CRAWL      = ("opening_crawl", "Opening Crawl")

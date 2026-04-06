@@ -23,20 +23,51 @@ def handler(
     # Build minimal "recent_messages" so MemoryRetriever can score keywords/semantic
     recent = [Message(role="user", content=query)]
 
+    # 1. Capture Pre-fetched Context
+    pre_fetched: dict[str, list[Any]] = context.get("pre_fetched_mems") or {}
+    exclude_ids = []
+    for mem_list in pre_fetched.values():
+        for mem in mem_list:
+            if hasattr(mem, "id"):
+                exclude_ids.append(mem.id)
+            elif isinstance(mem, dict) and "id" in mem:
+                exclude_ids.append(mem["id"])
+
+    # 2. Retrieve NEW context
     from app.models.vocabulary import MemoryKind
     kind_enums = [MemoryKind(k) for k in kinds] if kinds else None
-    mems = mr.get_relevant(sess, recent_messages=recent, kinds=kind_enums, limit=limit)
-    text = mr.format_for_prompt(mems, title="RETRIEVED CONTEXT")
 
-    # Extract memory IDs from the MemoryKind objects
+    new_mems = mr.get_relevant(
+        sess,
+        recent_messages=recent,
+        kinds=kind_enums,
+        limit=limit,
+        exclude_ids=exclude_ids
+    )
+
+    # 3. Consolidate: Pre-fetched + New
+    consolidated = {}
+    # Start with pre-fetched
+    for k, v in pre_fetched.items():
+        consolidated[k] = list(v)
+
+    # Add new (already filtered by exclude_ids)
+    for k, v in new_mems.items():
+        if k not in consolidated:
+            consolidated[k] = []
+        consolidated[k].extend(v)
+
+    # 4. Format for prompt
+    text = mr.format_for_prompt(consolidated, title="RETRIEVED CONTEXT")
+
+    # Extract ALL memory IDs for the metadata
     memory_ids = []
-    if mems:
-        for mem_list in mems.values():
-            for mem in mem_list:
-                if hasattr(mem, 'id'):
-                    memory_ids.append(mem.id)
-                elif isinstance(mem, dict) and 'id' in mem:
-                    memory_ids.append(mem['id'])
+    for mem_list in consolidated.values():
+        for mem in mem_list:
+            if hasattr(mem, 'id'):
+                memory_ids.append(mem.id)
+            elif isinstance(mem, dict) and 'id' in mem:
+                memory_ids.append(mem['id'])
 
     return {
         "query": query,

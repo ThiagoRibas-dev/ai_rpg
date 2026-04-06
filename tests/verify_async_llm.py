@@ -20,9 +20,7 @@ class TestSchema(BaseModel):
 async def test_parallel_execution(connector: LLMConnector):
     logger.info("--- Testing Parallel Execution & Semaphore ---")
 
-    # Temporarily set a strict semaphore for testing
-    test_limit = 2
-    connector.semaphore = asyncio.Semaphore(test_limit)
+    # Respect the configured semaphore
     connector.timeout = 20 # 20 seconds for test
 
     prompts = [

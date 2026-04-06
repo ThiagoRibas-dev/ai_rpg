@@ -10,6 +10,7 @@ from typing import Any, cast
 
 from google import genai
 from google.genai import types
+from google.genai.types import HttpOptions
 from pydantic import BaseModel
 
 from app.llm.llm_connector import LLMConnector, LLMResponse
@@ -30,7 +31,10 @@ class GeminiConnector(LLMConnector):
         if not self.model_name:
             self.model_name = "gemini-flash-latest" # Updated default
 
-        self.client = genai.Client(api_key=api_key)
+        self.client = genai.Client(
+            api_key=api_key,
+            http_options=HttpOptions(timeout=self.timeout)
+        )
         self.default_max_tokens = 65535
         self.default_thinking_budget = 12000
         self.default_safety_settings = [

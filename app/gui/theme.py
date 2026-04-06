@@ -39,6 +39,28 @@ class Theme:
                     word-wrap: break-word !important;
                     max-width: 100%;
                 }
+
+                /* Compact Chat Markdown */
+                .chat-markdown {
+                    line-height: 1.4 !important;
+                    text-align: justify !important;
+                }
+                .chat-markdown h1, .chat-markdown h2, .chat-markdown h3, .chat-markdown p, .chat-markdown li {
+                    white-space: pre-wrap !important;
+                }
+                .chat-markdown h1 { font-size: 1.2rem !important; font-weight: bold; margin: 8px 0 4px 0 !important; line-height: 1.2 !important; }
+                .chat-markdown h2 { font-size: 1.1rem !important; font-weight: bold; margin: 8px 0 4px 0 !important; line-height: 1.2 !important; }
+                .chat-markdown h3 { font-size: 1.0rem !important; font-weight: bold; margin: 6px 0 3px 0 !important; line-height: 1.2 !important; }
+                .chat-markdown p { margin-bottom: 6px !important; }
+                .chat-markdown p:last-child { margin-bottom: 0 !important; }
+                .chat-markdown ul, .chat-markdown ol { margin: 4px 0 !important; padding-left: 1.5rem !important; }
+                .chat-markdown li { margin-bottom: 2px !important; }
+                .chat-markdown blockquote {
+                    border-left: 3px solid #475569;
+                    padding-left: 10px;
+                    font-italic: italic;
+                    margin: 4px 0 !important;
+                }
             </style>
         """)
 

@@ -5,7 +5,7 @@ import time
 
 from nicegui import ui
 
-from app.models.vocabulary import MemoryKind, TaskState
+from app.models.vocabulary import MemoryKind, TaskState, WORLD_GEN_TAG
 from app.prefabs.manifest import SystemManifest
 from app.prefabs.validation import validate_entity
 from app.services.game_setup_service import GameSetupService
@@ -173,7 +173,6 @@ class SetupWizard:
             self.stepper.next()
         self.is_generating = True
 
-
         # Reset UI
         self.generation_tracking_container.classes(remove="hidden")
         self.error_container.classes(add="hidden")
@@ -184,7 +183,7 @@ class SetupWizard:
         self.status_timer = ui.timer(0.2, self._update_timer_ui)
 
         # Run Pipeline
-        success = await asyncio.to_thread(self._execute_pipeline)
+        success = await self._execute_pipeline()
 
         if self.status_timer:
             self.status_timer.cancel()
@@ -257,65 +256,53 @@ class SetupWizard:
                 else:
                     task["elapsed"] = now - task["start"]
 
-    def _execute_pipeline(self):
+    async def _execute_pipeline(self):
         try:
-            import os
-            from concurrent.futures import ThreadPoolExecutor, as_completed
-
             connector = self.orchestrator._get_llm_connector()
 
             # 1. Load System Manifest from the prompt, if present
             manifest = None
             if self.prompt and self.prompt.template_manifest:
                 try:
+                    # Sync, but extremely fast
                     manifest = SystemManifest.from_json(self.prompt.template_manifest)
                 except Exception as e:
                     logger.warning(f"Failed to load SystemManifest from prompt: {e}")
 
-
-            def run_chargen(llm_executor, stream=None):
+            async def run_chargen(stream=None):
                 if manifest:
                     sheet_gen = SheetGenerator(connector, task_callback=self._track_task)
-                    raw = sheet_gen.generate_from_manifest(
+                    raw = await sheet_gen.async_generate_from_manifest(
                         manifest,
                         self.input_char,
                         stream=stream,
                         rules_text=self.prompt.rules_document if self.prompt else "",
-                        executor=llm_executor,
                     )
 
                     val_entity, _ = validate_entity(raw, manifest)
                     return val_entity
                 return {"identity": {"name": "Player"}}
 
-            def run_worldgen(llm_executor, stream=None):
+            async def run_worldgen(stream=None):
                 world_service = WorldGenService(connector, task_callback=self._track_task)
-                return world_service.extract_world_data(
-                    self.input_world, stream=stream, executor=llm_executor
+                return await world_service.async_extract_world_data(
+                    self.input_world, stream=stream
                 )
 
             stream = LoreStream()
-            max_workers = int(os.environ.get("SETUP_MAX_WORKERS", "2"))
-            with ThreadPoolExecutor(max_workers=max_workers) as llm_executor:
-                with ThreadPoolExecutor(max_workers=2) as pipeline_executor:
-                    # Launch both in parallel
-                    futures = {
-                        pipeline_executor.submit(run_chargen, llm_executor, stream): "character",
-                        pipeline_executor.submit(run_worldgen, llm_executor, stream): "world"
-                    }
 
-                    for future in as_completed(futures):
-                        try:
-                            result = future.result()
-                            if futures[future] == "character":
-                                self.preview_entity = result
-                            else:
-                                self.extracted_world = result
-                        except Exception as e:
-                            logger.error(f"Pipeline task '{futures[future]}' failed: {e}")
-                            # Signal error to stream to unblock other tasks if they are waiting
-                            stream.set_error(e)
-                            raise
+            # Parallelize extraction using asyncio.gather for true async parallelism
+            try:
+                char_coro = run_chargen(stream)
+                world_coro = run_worldgen(stream)
+
+                char_results, world_results = await asyncio.gather(char_coro, world_coro)
+                self.preview_entity = char_results
+                self.extracted_world = world_results
+            except Exception as e:
+                logger.error(f"Generation tasks failed: {e}")
+                stream.set_error(e)
+                raise
 
             self.manifest = manifest
             if manifest:
@@ -331,7 +318,7 @@ class SetupWizard:
                 class DummyChar:
                     name = (prev_ent.get("identity") or {}).get("name", "Player")
 
-                self.generated_opening = world_service.generate_opening_crawl(
+                self.generated_opening = await world_service.async_generate_opening_crawl(
                     DummyChar(), self.extracted_world, self.input_world
                 )
             else:
@@ -348,9 +335,9 @@ class SetupWizard:
         if self.extracted_world:
             self.lore_ui_items = []
             for lore in self.extracted_world.lore:
-                tags_str = ", ".join(lore.tags) if lore.tags else "world_gen"
+                tags_str = ", ".join(lore.tags) if lore.tags else WORLD_GEN_TAG
                 self.lore_ui_items.append(
-                    {"content": lore.content, "tags_str": tags_str}
+                    {"name": lore.name, "content": lore.content, "tags_str": tags_str}
                 )
 
     def _render_review(self):
@@ -406,18 +393,21 @@ class SetupWizard:
                 with ui.row().classes(
                     "w-full items-start gap-2 bg-slate-900 p-2 rounded"
                 ):
+                    ui.input(label="Name").bind_value(item, "name").classes(
+                        "w-1/4"
+                    ).props("dense")
                     ui.textarea(label="Fact/Event").bind_value(item, "content").classes(
                         "flex-grow"
                     ).props("rows=2 dense")
                     ui.input(label="Tags").bind_value(item, "tags_str").classes(
-                        "w-1/4"
+                        "w-1/5"
                     ).props("dense")
                     ui.button(
                         icon="delete", on_click=lambda i=index: self._delete_lore_row(i)
                     ).props("flat dense color=red round").classes("mt-2")
 
     def _add_lore_row(self):
-        self.lore_ui_items.append({"content": "", "tags_str": "world_gen"})
+        self.lore_ui_items.append({"name": "New Lore", "content": "", "tags_str": WORLD_GEN_TAG})
         self._render_lore_list()
 
     def _delete_lore_row(self, index):
@@ -528,11 +518,17 @@ class SetupWizard:
                 continue
             tags_str = item.get("tags_str", "")
             tags = [t.strip() for t in tags_str.split(",") if t.strip()]
-            if "world_gen" not in tags:
-                tags.append("world_gen")
+            if WORLD_GEN_TAG not in tags:
+                tags.append(WORLD_GEN_TAG)
             # Using LoreData to match expected structure
             final_lore.append(
-                LoreData(kind=MemoryKind.LORE, content=content, priority=3, tags=tags)
+                LoreData(
+                    name=item.get("name", "Unnamed Lore"),
+                    kind=MemoryKind.LORE,
+                    content=content,
+                    priority=3,
+                    tags=tags,
+                )
             )
 
         if self.extracted_world:

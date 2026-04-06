@@ -212,7 +212,7 @@ class SheetGenerator:
             # stream.get_npcs() is documented as fulfilling once NPCs are available.
             # In a truly async world, this should be awaited if get_npcs() is async.
             # For now, we assume bridge logic or we keep it sync if it's a simple list.
-            injected_npcs = stream.get_npcs() if stream else []
+            injected_npcs = await stream.get_npcs() if stream else []
             logger.info(f"Branch '{branch_name}' received {len(injected_npcs)} NPCs.")
 
         self._track_task(t_id, t_label, TaskState.RUNNING)
