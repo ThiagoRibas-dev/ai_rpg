@@ -247,46 +247,13 @@ class ChatComponent:
 
 
     def _regenerate_from(self, index):
-        session = self.orchestrator.session
-        if not session:
+        if not self.orchestrator.session:
             return
-        if 0 <= index < len(session.history):
-            target_msg = session.history[index]
-            if target_msg.role == MessageRole.ASSISTANT:
-                session.history = session.history[:index]
-            elif target_msg.role == MessageRole.USER:
-                session.history = session.history[: index + 1]
 
-            game_session = self.session_manager.get_active_session()
-            if game_session:
-                game_session.session_data = session.to_json()
-                if self.session_manager.db and self.session_manager.db.sessions:
-                    self.session_manager.db.sessions.update(game_session)
-
-
-                # Reset stop flag and set new turn ID
-                self.set_generating(True)
-                import threading
-                import uuid
-
-                new_turn_id = uuid.uuid4().hex
-                self.orchestrator.active_turn_id = new_turn_id
-                self.orchestrator.bridge.set_active_turn(new_turn_id)
-
-                last_user_msg: str = ""
-                if session.history and session.history[-1].role == "user":
-                    last_user_msg = session.history[-1].content or ""
-
-                if last_user_msg:
-                    import threading
-                    thread = threading.Thread(
-                        target=self.orchestrator._background_execute,
-                        args=(game_session, last_user_msg, new_turn_id),
-                        daemon=True,
-                    )
-                    thread.start()
-
-            self.load_history()
+        game_session = self.session_manager.get_active_session()
+        if game_session:
+            self.set_generating(True)
+            self.orchestrator.regenerate_from_index(game_session, index)
 
 
     def add_message(self, name: str, text: str, role: str):

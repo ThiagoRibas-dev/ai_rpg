@@ -120,22 +120,8 @@ Analyze the source material and determine:
 """
 
 EXTRACT_WORLD_INDEX_PROMPT = """
-Efficiently create a list indexing every unique Location, NPC, and significant information (Lore) entry of the provided source material.
-
-Return a JSON list of objects with 'name' and 'type' of each entry, E.g.
-```json
-[
-    {
-        "name": "The Shire",
-        "type": "location"
-    },
-    {
-        "name": "Frodo Baggins",
-        "type": "npc"
-    }
-]
-```
-and so on.
+Create a comprehensive list indexing every unique Location, NPC, and significant information (Lore) entry of the provided source material, taking care to avoid duplicating information.
+For example, a city should not be listed as location, culture, and a faction.
 
 For each item/entry, determine its Type according to these rules:
 
@@ -149,7 +135,21 @@ For each item/entry, determine its Type according to these rules:
 8. **status**: Current rumors, active local conflicts, impending threats, or plot hooks.
 9. **misc**: Anything elses significant that does not fit into the above buckets.
 
-These entries should not overlap. For example, a city should not be listed as location, culture, and a faction.
+
+Return a JSON list of objects with 'name' and 'type' of each entry, E.g.
+```json
+[
+    {
+        "name": "The Shire",
+        "type": "location"
+    },
+    {
+        "name": "Frodo Baggins",
+        "type": "npc"
+    },...
+]
+```
+and so on.
 
 """
 

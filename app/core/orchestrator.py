@@ -59,6 +59,25 @@ class Orchestrator:
         self.active_turn_id = None
         self.bridge.set_active_turn(None)
 
+    def _start_turn_thread(
+        self, session: GameSession, user_input: str, turn_name: str = "Turn"
+    ):
+        """Common logic for setting up turn IDs and starting the background thread."""
+        self.stop_event.clear()
+        self.active_turn_id = uuid.uuid4().hex
+        self.bridge.set_active_turn(self.active_turn_id)
+
+        # Notify UI that we are thinking
+        self.ui_queue.put({"type": "planning_started", "turn_id": self.active_turn_id})
+
+        thread = threading.Thread(
+            target=self._background_execute,
+            args=(session, user_input, self.active_turn_id),
+            daemon=True,
+            name=f"{turn_name}-{session.id}-{self.active_turn_id}",
+        )
+        thread.start()
+
     def plan_and_execute(self, session: GameSession):
         logger.debug("Starting plan_and_execute (non-blocking)")
 
@@ -71,34 +90,23 @@ class Orchestrator:
         if not user_input or not self.session:
             return
 
-        # 2. Generate Turn ID
-        self.active_turn_id = uuid.uuid4().hex
-        self.bridge.set_active_turn(self.active_turn_id)
-
-        # 3. Optimistic UI update (tagged with turn_id)
+        # 2. Add message to internal state
         self.session.add_message("user", user_input)
+        
+        # 3. Optimistic UI update (shows the user's message immediately)
         self.ui_queue.put(
             {
                 "type": "message_bubble",
                 "role": "user",
                 "content": user_input,
-                "turn_id": self.active_turn_id,
             }
         )
         self.bridge.clear_input()
 
         session.session_data = self.session.to_json()
 
-        # Reset stop flag before starting
-        self.stop_event.clear()
-
-        thread = threading.Thread(
-            target=self._background_execute,
-            args=(session, user_input, self.active_turn_id),
-            daemon=True,
-            name=f"Turn-{session.id}-{self.active_turn_id}",
-        )
-        thread.start()
+        # 4. Start Thread
+        self._start_turn_thread(session, user_input)
 
     def _background_execute(
         self, game_session: GameSession, user_input: str, turn_id: str
@@ -157,32 +165,60 @@ class Orchestrator:
             )
             return
 
+        # 1. Cancel running turn
+        if self.active_turn_id:
+            self.stop_generation()
+
+        # 2. Clip History
         history.pop()
 
         last_user_msg = ""
         if history and history[-1].role == "user":
             last_user_msg = history[-1].content or ""
 
-        if self.session:
-            game_session.session_data = self.session.to_json()
+        game_session.session_data = self.session.to_json()
 
         with DBManager(self.db_path) as db:
             db.sessions.update(game_session)
 
+        # 3. Refresh UI & Start
         self.ui_queue.put({"type": "history_changed"})
 
-        # Reset stop flag and set new turn ID
-        self.stop_event.clear()
-        self.active_turn_id = uuid.uuid4().hex
-        self.bridge.set_active_turn(self.active_turn_id)
+        if last_user_msg:
+            self._start_turn_thread(game_session, last_user_msg, turn_name="Reroll")
+
+    def regenerate_from_index(self, game_session: GameSession, index: int):
+        """Clips history at the specified index and restarts generation."""
+        if not self.session or not (0 <= index < len(self.session.history)):
+            return
+
+        # 1. Cancel running turn
+        if self.active_turn_id:
+            self.stop_generation()
+
+        # 2. Clip History
+        target_msg = self.session.history[index]
+        if target_msg.role == "assistant":
+            # If targeting an assistant message, we clip THAT message and below
+            self.session.history = self.session.history[:index]
+        else:
+            # If targeting a user message, we clip everything AFTER it
+            self.session.history = self.session.history[: index + 1]
+
+        game_session.session_data = self.session.to_json()
+
+        with DBManager(self.db_path) as db:
+            db.sessions.update(game_session)
+
+        # 3. Refresh UI & Start
+        self.ui_queue.put({"type": "history_changed"})
+
+        last_user_msg = ""
+        if self.session.history and self.session.history[-1].role == "user":
+            last_user_msg = self.session.history[-1].content or ""
 
         if last_user_msg:
-            thread = threading.Thread(
-                target=self._background_execute,
-                args=(game_session, last_user_msg, self.active_turn_id),
-                daemon=True,
-            )
-            thread.start()
+            self._start_turn_thread(game_session, last_user_msg, turn_name="Regen")
 
     def undo_last_turn(self, game_session: GameSession):
         """Deletes the last Assistant response AND the last User message."""

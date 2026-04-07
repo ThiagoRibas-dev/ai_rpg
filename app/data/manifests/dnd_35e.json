@@ -235,19 +235,19 @@
             "usage_hint": "Optional. List of specific spells currently prepared in Vancian slots (e.g., Wizard, Cleric)."
         },
         {
-            "path": "resources.limited_uses",
-            "label": "Limited Use Features",
+            "path": "resources.ability_pools",
+            "label": "Ability Pools",
             "prefab": "CONT_LIST",
             "category": "resources",
             "config": {
                 "item_shape": {
-                    "feature_name": "str",
+                    "ability_name": "str",
                     "uses_max": "int",
                     "uses_current": "int",
                     "refresh_rate": "str"
                 }
             },
-            "usage_hint": "Each entry is one feature with uses or cooldowns, such as Turn Undead, Rage, SLAs/PLAs, ShadowCasting Mysteries, Vestige abilities, abilities from feats, etc."
+            "usage_hint": "Each entry is one feature or abilities with uses or cooldowns, such as Turn Undead, Rage, SLAs/PLAs, ShadowCasting Mysteries, Vestige abilities, abilities from feats, etc."
         },
         {
             "path": "resources.alternative_pools",
