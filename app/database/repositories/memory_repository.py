@@ -30,6 +30,47 @@ class MemoryRepository(BaseRepository):
             );
             """
         )
+
+        # 1. Create FTS Virtual Table
+        cursor.execute(
+            """
+            CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts
+            USING fts5(content, tags, content=memories, content_rowid=id, tokenize='porter');
+            """
+        )
+
+        # 2. Add Triggers to keep FTS strictly synced with main table (External Content Pattern)
+        cursor.execute(
+            """
+            CREATE TRIGGER IF NOT EXISTS memories_ai AFTER INSERT ON memories BEGIN
+              INSERT INTO memories_fts(rowid, content, tags) VALUES (new.id, new.content, new.tags);
+            END;
+            """
+        )
+        cursor.execute(
+            """
+            CREATE TRIGGER IF NOT EXISTS memories_ad AFTER DELETE ON memories BEGIN
+              INSERT INTO memories_fts(memories_fts, rowid, content, tags) VALUES('delete', old.id, old.content, old.tags);
+            END;
+            """
+        )
+        cursor.execute(
+            """
+            CREATE TRIGGER IF NOT EXISTS memories_au AFTER UPDATE ON memories BEGIN
+              INSERT INTO memories_fts(memories_fts, rowid, content, tags) VALUES('delete', old.id, old.content, old.tags);
+              INSERT INTO memories_fts(rowid, content, tags) VALUES (new.id, new.content, new.tags);
+            END;
+            """
+        )
+
+        # 3. Handle backwards compatibility (one-time sync for existing rows missing from FTS)
+        cursor.execute(
+            """
+            INSERT INTO memories_fts(rowid, content, tags)
+            SELECT id, content, tags FROM memories
+            WHERE id NOT IN (SELECT rowid FROM memories_fts);
+            """
+        )
         self.conn.commit()
 
     def create(
@@ -143,3 +184,26 @@ class MemoryRepository(BaseRepository):
         )
         by_kind = {row["kind"]: row["count"] for row in rows}
         return {"by_kind": by_kind}
+
+    def search_bm25(
+        self, session_id: int, query_text: str, limit: int = 15
+    ) -> list[tuple[Memory, float]]:
+        """Search memories using BM25 ranking via FTS5."""
+        # Format for FTS5 (escape quotes, simple OR query for robustness)
+        words = [w for w in query_text.replace('"', "").split() if w.isalnum()]
+        if not words:
+            return []
+
+        fts_query = " OR ".join(words)
+
+        # We invert the bm25 score so that higher = better for downstream logic
+        query = """
+            SELECT m.*, -bm25(memories_fts) as score
+            FROM memories_fts fts
+            JOIN memories m ON fts.rowid = m.id
+            WHERE memories_fts MATCH ? AND m.session_id = ?
+            ORDER BY bm25(memories_fts)
+            LIMIT ?
+        """
+        rows = self._fetchall(query, (fts_query, session_id, limit))
+        return [(Memory(**dict(r)), float(r["score"])) for r in rows]

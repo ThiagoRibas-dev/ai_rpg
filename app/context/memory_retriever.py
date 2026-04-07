@@ -7,7 +7,7 @@ from typing import Any
 import nltk
 
 from app.models.message import Message
-from app.models.vocabulary import MemoryKind, WORLD_GEN_TAG
+from app.models.vocabulary import WORLD_GEN_TAG, MemoryKind
 
 # Retrieval and Budget Limits
 VS_FETCH_LIMIT = 20
@@ -35,6 +35,10 @@ EPISODIC_DEDUP_PENALTY = 200
 
 # Tags that are applied universally and provide zero discriminative value for retrieval
 NON_DISCRIMINATIVE_TAGS = {WORLD_GEN_TAG}
+
+# FTS Scoring Constants
+FTS_HIT_BONUS = 80
+FTS_MULTIPLIER = 10
 
 
 class MemoryRetriever:
@@ -78,7 +82,7 @@ class MemoryRetriever:
         if not self.nltk_ready:
             self.logger.warning("!!NLTK not ready. Falling back to regex.")
             return words
-        
+
         tagged = nltk.pos_tag(words)
 
         # NLTK Penn Treebank tags for Nouns and Verbs
@@ -98,6 +102,7 @@ class MemoryRetriever:
         active_tags: set[str],
         keywords: list[str],
         sem_hits: list[dict[str, Any]],
+        fts_hits: dict[int, dict[str, Any]],
         exclude_ids: list[int] | None,
         limit: int,
     ) -> list[Any]:
@@ -110,13 +115,19 @@ class MemoryRetriever:
             if mem and mem.kind == kind:
                 candidates[mem.id] = mem
 
-        # 2. Fetch from DB by tags
+        # 2. Fetch natively from FTS Hits
+        for data in fts_hits.values():
+            mem = data["mem"]
+            if mem and mem.kind == kind:
+                candidates[mem.id] = mem
+
+        # 3. Fetch from DB by tags
         if active_tags:
             tag_mems = self.db.memories.query(session_id, kind=kind, tags=list(active_tags), limit=DB_FETCH_LIMIT_TAGS)
             for m in tag_mems:
                 candidates[m.id] = m
 
-        # 3. Fetch highest priority natively
+        # 4. Fetch highest priority natively
         high_pri = self.db.memories.query(session_id, kind=kind, limit=DB_FETCH_LIMIT_PRIORITY)
         for m in high_pri:
             candidates[m.id] = m
@@ -134,14 +145,19 @@ class MemoryRetriever:
             mem_tags = {t.lower() for t in mem.tags_list()}
             score += len(active_tags & mem_tags) * TAG_OVERLAP_BONUS
 
-            # Keyword overlap boost (Uses NLTK Keywords)
+            # Keyword overlap boost (Legacy NLTK intersection - kept as fallback/supplement)
             if keywords:
                 mem_words = set(self.extract_keywords(mem.content))
                 overlap = len(set(keywords) & mem_words)
                 score += overlap * KEYWORD_RELEVANCE_BONUS
 
+            # Semantic Boost
             if mem.id in hit_ids:
                 score += SEMANTIC_HIT_BONUS
+
+            # FTS BM25 Boost
+            if mem.id in fts_hits:
+                score += FTS_HIT_BONUS + (fts_hits[mem.id]["score"] * FTS_MULTIPLIER)
 
             if score >= MIN_CODEX_SCORE_THRESHOLD: # Minimum filter
                 scored.append((score, mem))
@@ -157,6 +173,7 @@ class MemoryRetriever:
         kinds: list[MemoryKind] | None = None,
         limit: int | None = None,
         exclude_ids: list[int] | None = None,
+        explicit_query: str | None = None,
     ) -> dict[str, list[Any]]:
         """
         Retrieve relevant memories using Tag Funnel and Dual-System Retrieval.
@@ -165,19 +182,39 @@ class MemoryRetriever:
         if not session or not session.id:
             return {}
 
-        # 1. EXTRACT PRIMARY CONTEXT
-        # Fetch last message and last AI response to build the query context
-        query_parts = []
-        if recent_messages and len(recent_messages) >= 2:
-            last_ai = next((m for m in reversed(recent_messages[:-1]) if m.role == "assistant"), None)
-            if last_ai and last_ai.content:
-                query_parts.append(last_ai.content[:500])
+        # 1. EXTRACT OR USE QUERY
+        fts_search_text = ""
+        keywords = []
 
-        if recent_messages and recent_messages[-1].role == "user":
-            query_parts.append(recent_messages[-1].content or "")
+        if explicit_query:
+            # If a tool provides a specific search string, we use it directly for FTS
+            fts_search_text = explicit_query
+            # We still might want keywords for legacy scoring bits if needed,
+            # but usually explicit_query is enough
+        else:
+            # Passive retrieval path: build query from recent history
+            query_parts = []
+            if recent_messages and len(recent_messages) >= 2:
+                last_ai = next((m for m in reversed(recent_messages[:-1]) if m.role == "assistant"), None)
+                if last_ai and last_ai.content:
+                    query_parts.append(last_ai.content[:500])
 
-        recent_text = "\n".join(query_parts) if query_parts else "Start of session"
-        keywords = self.extract_keywords(recent_text)
+            if recent_messages and recent_messages[-1].role == "user":
+                query_parts.append(recent_messages[-1].content or "")
+
+            recent_text = "\n".join(query_parts) if query_parts else "Start of session"
+            keywords = self.extract_keywords(recent_text)
+            fts_search_text = " ".join(keywords)
+
+        # 2. RUN SEARCHES (FTS + Vector)
+        fts_hits: dict[int, dict[str, Any]] = {}
+        if fts_search_text:
+            try:
+                bm25_results = self.db.memories.search_bm25(session.id, fts_search_text, limit=DB_FETCH_LIMIT_PRIORITY)
+                for mem, score in bm25_results:
+                    fts_hits[mem.id] = {"mem": mem, "score": score}
+            except Exception as e:
+                self.logger.warning(f"FTS search failed: {e}")
 
         # 2. GATHER CONTEXTUAL TAGS
         active_tags = set(extra_tags or [])
@@ -219,7 +256,7 @@ class MemoryRetriever:
         if kinds is not None:
              codex_kinds = [k for k in codex_kinds if k in kinds]
 
-        result_dict = {
+        result_dict: dict[MemoryKind, list[Any]] = {
             MemoryKind.RULE: [],
             MemoryKind.LORE: [],
             MemoryKind.USER_PREF: [],
@@ -237,7 +274,7 @@ class MemoryRetriever:
 
         for k in codex_kinds:
             result_dict[k] = self._fetch_codex_kind(
-                session.id, k, active_tags, keywords, sem_hits, exclude_ids, limit=budgets.get(k, 2)
+                session.id, k, active_tags, keywords, sem_hits, fts_hits, exclude_ids, limit=budgets.get(k, 2)
             )
 
         # 4. CHRONICLE RETRIEVAL (Episodic)
@@ -250,15 +287,24 @@ class MemoryRetriever:
                 if mem and mem.kind == MemoryKind.EPISODIC:
                     candidates_ep[mem.id] = mem
 
+            # Fetch natives from FTS Hits (Episodic)
+            for data in fts_hits.values():
+                mem = data["mem"]
+                if mem and mem.kind == MemoryKind.EPISODIC:
+                    candidates_ep[mem.id] = mem
+
             # Fetch candidate episodic memories
             episodic_mems = self.db.memories.query(session.id, kind=MemoryKind.EPISODIC, limit=DB_FETCH_LIMIT_EPISODIC)
             for m in episodic_mems:
                 candidates_ep[m.id] = m
 
             hit_ids_ep = {m.id for m in candidates_ep.values() if m.id in hit_ids}
+            fts_ids_ep = {m.id for m in candidates_ep.values() if m.id in fts_hits}
 
             # Create history fingerprint for deduplication
-            history_words = set(self.extract_keywords(" ".join(m.content for m in history[-10:] if m.content)))
+            history_mems = [m for m in history if m.content]
+            history_content = " ".join(str(m.content) for m in history_mems[-10:] if m.content is not None)
+            history_words = set(self.extract_keywords(history_content))
 
             scored_episodic = []
             for mem in candidates_ep.values():
@@ -267,6 +313,10 @@ class MemoryRetriever:
                 score = 0
                 if mem.id in hit_ids_ep:
                     score += SEMANTIC_HIT_BONUS
+
+                if mem.id in fts_ids_ep:
+                    score += FTS_HIT_BONUS + (fts_hits[mem.id]["score"] * FTS_MULTIPLIER)
+
                 if mem.priority >= 4:
                     score += EPISODIC_PRIORITY_BONUS
 

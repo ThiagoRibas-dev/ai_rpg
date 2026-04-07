@@ -92,7 +92,7 @@ class Orchestrator:
 
         # 2. Add message to internal state
         self.session.add_message("user", user_input)
-        
+
         # 3. Optimistic UI update (shows the user's message immediately)
         self.ui_queue.put(
             {

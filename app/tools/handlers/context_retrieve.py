@@ -1,7 +1,6 @@
 from typing import Any
 
 from app.context.memory_retriever import MemoryRetriever
-from app.models.message import Message
 from app.models.session import Session
 
 
@@ -20,13 +19,12 @@ def handler(
     sess = Session("synthetic_retrieval")
     sess.id = session_id
 
-    # Build minimal "recent_messages" so MemoryRetriever can score keywords/semantic
-    recent = [Message(role="user", content=query)]
-
     # 1. Capture Pre-fetched Context
     pre_fetched: dict[str, list[Any]] = context.get("pre_fetched_mems") or {}
     exclude_ids = []
     for mem_list in pre_fetched.values():
+        if not mem_list:
+            continue
         for mem in mem_list:
             if hasattr(mem, "id"):
                 exclude_ids.append(mem.id)
@@ -39,10 +37,11 @@ def handler(
 
     new_mems = mr.get_relevant(
         sess,
-        recent_messages=recent,
+        recent_messages=[],
         kinds=kind_enums,
         limit=limit,
-        exclude_ids=exclude_ids
+        exclude_ids=exclude_ids,
+        explicit_query=query
     )
 
     # 3. Consolidate: Pre-fetched + New

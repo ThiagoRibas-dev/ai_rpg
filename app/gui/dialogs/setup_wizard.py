@@ -5,7 +5,7 @@ import time
 
 from nicegui import ui
 
-from app.models.vocabulary import MemoryKind, TaskState, WORLD_GEN_TAG
+from app.models.vocabulary import WORLD_GEN_TAG, MemoryKind, TaskState
 from app.prefabs.manifest import SystemManifest
 from app.prefabs.validation import validate_entity
 from app.services.game_setup_service import GameSetupService

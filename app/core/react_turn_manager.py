@@ -221,15 +221,15 @@ class ReActTurnManager:
                     return
                 raise e
 
-            assistant_msg = Message(
-                role=MessageRole.ASSISTANT,
+            tool_msg = Message(
+                role=MessageRole.TOOL,
                 content=response.content,
                 thought=response.thought,
                 thought_signature=response.thought_signature,
                 tool_calls=response.tool_calls,
             )
-            working_history.append(assistant_msg)
-            working_history_request.append(assistant_msg)
+            working_history.append(tool_msg)
+            working_history_request.append(tool_msg)
 
             if response.content and not response.tool_calls:
                 self.ui_queue.put(

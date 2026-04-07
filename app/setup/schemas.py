@@ -4,7 +4,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from app.models.vocabulary import CategoryName, MemoryKind, PrefabID, WorldCategory, WORLD_GEN_TAG
+from app.models.vocabulary import WORLD_GEN_TAG, CategoryName, MemoryKind, PrefabID, WorldCategory
 
 # ---------------------------------------------------------------------------
 # PREFAB / MANIFEST EXTRACTION SCHEMAS
