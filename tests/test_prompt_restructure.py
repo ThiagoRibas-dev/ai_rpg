@@ -32,15 +32,16 @@ class TestPromptRestructure(unittest.TestCase):
         }
         res = render_index(index)
         # Headers
-        self.assertIn("### Location Index", res)
-        self.assertIn("### NPC Index", res)
+        self.assertIn("use `state.query` or `context.retrieve` to look up full details.".lower(), res.lower())
+        self.assertIn("### Locations Index", res)
+        self.assertIn("### NPCs Index", res)
         self.assertIn("### Lore Index", res)
         self.assertIn("| ID | Snippet |", res)
 
         # Rows (Two-column format)
         self.assertIn("| `town_1` | A sunny village near the sea. |", res)
         self.assertIn("| `guard_1` | A stern man with a rusty sword. |", res)
-        self.assertIn("| - | The history of the world is long. |", res)
+        self.assertIn("|  | The history of the world is long. |", res)
 
     def test_engine_table_rendering(self):
         eng = EngineConfig(

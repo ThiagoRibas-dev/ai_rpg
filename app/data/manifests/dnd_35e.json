@@ -1183,192 +1183,148 @@
     "rules": [
         {
             "name": "Core d20 Check Mechanic",
-            "content": "For attacks, skill checks, and many special actions, roll 1d20, add all relevant modifiers, and compare the total to a Difficulty Class (DC) or an opposing roll. If the result meets or exceeds the target number, the attempt succeeds; otherwise it fails.",
-            "tags": [
-                "core",
-                "resolution"
-            ]
+            "content": "For attacks (combat.melee_attack_bonus/combat.ranged_attack_bonus), skill checks (e.g., skills.diplomacy), and many special actions, roll 1d20, add all relevant modifiers, and compare the total to a Difficulty Class (DC) or an opposing roll. If the result meets or exceeds the target number, the attempt succeeds; otherwise it fails.",
+            "tags": ["core", "resolution"]
         },
         {
             "name": "Ability Scores and Modifiers",
-            "content": "The six abilities—Strength, Dexterity, Constitution, Intelligence, Wisdom, and Charisma—usually range from 3 to 18 for adventurers. Each ability has a modifier equal to (score − 10) ÷ 2, rounded down. That modifier applies to many rolls and derived statistics.",
-            "tags": [
-                "core",
-                "abilities"
-            ]
+            "content": "The six abilities—attributes.str (Strength), attributes.dex (Dexterity), attributes.con (Constitution), attributes.int (Intelligence), attributes.wis (Wisdom), and attributes.cha (Charisma)—usually range from 3 to 18 for adventurers. Each ability has a modifier equal to (score − 10) ÷ 2, rounded down. That modifier applies to relevant rolls: attributes.str.modifier to combat.melee_attack_bonus/skills.climb; attributes.dex.modifier to combat.ranged_attack_bonus/combat.ac; attributes.con.modifier to resources.hp/combat.save_fortitude; attributes.int.modifier to skill points/knowledge skills; attributes.wis.modifier to combat.save_will/skills.spot; attributes.cha.modifier to social skills/turning undead.",
+            "tags": ["core", "abilities"]
         },
         {
             "name": "Attack Rolls and Armor Class",
-            "content": "To hit in combat, roll 1d20 and add your attack bonus. For melee attacks this is typically base attack bonus + Strength modifier + size and other modifiers; for ranged attacks use base attack bonus + Dexterity modifier + size and range modifiers. If the total is at least the target’s Armor Class, the attack hits.",
-            "tags": [
-                "combat",
-                "attack"
-            ]
+            "content": "To hit in combat, roll 1d20 and add your attack bonus. For melee attacks this is typically combat.base_attack_bonus + attributes.str.modifier + size modifier + other modifiers; for ranged attacks use combat.base_attack_bonus + attributes.dex.modifier + size modifier + range modifiers. If the total is at least the target’s combat.ac, the attack hits.",
+            "tags": ["combat", "attack"]
         },
         {
             "name": "Critical Hits and Automatic Misses",
-            "content": "On an attack roll, a natural 20 always hits and usually threatens a critical hit; roll again with the same modifiers to confirm. If that roll would also hit, multiply the damage by the weapon’s critical multiplier. A natural 1 on an attack roll is always a miss. Extra damage dice, such as from sneak attack, are not multiplied.",
-            "tags": [
-                "combat",
-                "critical"
-            ]
+            "content": "On an attack roll, a natural 20 always hits and usually threatens a critical hit; roll again with the same modifiers to confirm. If that roll would also hit, multiply the damage by the weapon’s critical multiplier. A natural 1 on an attack roll is always a miss. Extra damage dice (e.g., sneak attack) are not multiplied.",
+            "tags": ["combat", "critical"]
         },
         {
             "name": "Saving Throws",
-            "content": "Fortitude, Reflex, and Will saves protect against unusual or magical effects. Each save is a d20 + a save bonus based on class and level plus a key ability modifier (Constitution for Fortitude, Dexterity for Reflex, Wisdom for Will). A natural 1 is always a failed save; a natural 20 is always a successful save.",
-            "tags": [
-                "defense",
-                "saving_throws"
-            ]
+            "content": "Fortitude (combat.save_fortitude), Reflex (combat.save_reflex), and Will (combat.save_will) saves protect against unusual or magical effects. Each save is a d20 + base save bonus + key ability modifier: Con for Fortitude, Dex for Reflex, Wis for Will. A natural 1 is always a failed save; a natural 20 is always a successful save.",
+            "tags": ["defense", "saving_throws"]
         },
         {
             "name": "Hit Points, Dying, and Death",
-            "content": "Hit points measure how much injury a character can sustain. At 0 HP, a character is disabled and can take only a move or standard action per round, losing 1 HP if they act. From -1 to -9 HP the character is dying, losing 1 HP each round until stabilized. At -10 HP, the character is dead.",
-            "tags": [
-                "combat",
-                "hp"
-            ]
+            "content": "Hit points (resources.hp) measure how much injury a character can sustain. At 0 HP, a character is disabled (1 action = -1 HP). From -1 to -9 HP the character is dying (stabilize via Heal DC15 or 10% chance/round). At -10 HP, the character is dead.",
+            "tags": ["combat", "hp"]
         },
         {
             "name": "Skills, Ranks, and Synergy",
-            "content": "Skill checks are d20 + total skill bonus, which includes ranks, ability modifier, and modifiers like synergy or circumstance. Class skills cost 1 point per rank with a maximum of level + 3; cross-class skills cost 2 points per rank with half the maximum. Having 5 ranks in certain skills grants +2 synergy bonuses on related skills.",
-            "tags": [
-                "skills",
-                "advancement"
-            ]
+            "content": "Skill checks are d20 + total skill bonus (ranks + ability modifier + misc). Class skills cost 1 point per rank with a maximum of progression.level +3; cross-class skills cost 2 points per rank with half the maximum. Having 5 ranks in certain skills grants +2 synergy bonuses on related skills.",
+            "tags": ["skills", "advancement"]
+        },
+        {
+            "name": "Cross-Class Skill Limits",
+            "content": "Class skills allow you to invest up to (progression.level +3) ranks, with 1 skill point per rank. Cross-class skills (skills not on your class list) cost 2 skill points per rank, and you can invest a maximum of (progression.level +3)/2 ranks (rounded down).",
+            "tags": ["skills", "progression"]
+        },
+        {
+            "name": "Take 10 and Take 20",
+            "content": "When not threatened or distracted, you can choose to Take 10 on a skill check: treat the result as 10 + your total skill bonus (e.g., skills.disable_device) instead of rolling. For tasks that allow time and no risk of failure, you can Take 20: spend 20× the normal time, and treat the result as 20 + your total skill bonus (auto-succeeds if DC ≤20 + your bonus).",
+            "tags": ["skills", "resolution"]
+        },
+        {
+            "name": "Aid Another",
+            "content": "You can assist an ally with a skill check or attack roll. For a skill check, make a DC10 check of the same skill; if successful, your ally gains +2 to their check. For an attack roll, spend a standard action to make a DC10 melee attack against the target; if successful, your ally gains +2 to their next attack against that target.",
+            "tags": ["skills", "combat", "teamwork"]
         },
         {
             "name": "Feats and Prerequisites",
-            "content": "Feats are binary talents that allow special actions or bonuses. All characters gain feats at 1st level and every three levels thereafter (3rd, 6th, 9th, etc.), with additional bonus feats from certain classes or races. Many feats require prerequisites such as minimum ability scores, base attack bonus, or other feats.",
-            "tags": [
-                "feats",
-                "builds"
-            ]
+            "content": "Feats (features.feats) are binary talents that allow special actions or bonuses. All characters gain feats at 1st level and every three levels thereafter (3rd/6th/9th/etc.), with additional bonus feats from certain classes or races. Many feats require prerequisites such as minimum ability scores, combat.base_attack_bonus, or other feats.",
+            "tags": ["feats", "builds"]
         },
         {
             "name": "Levels, XP, and Ability Increases",
-            "content": "Characters earn experience points for defeating monsters and overcoming challenges. Upon reaching certain XP totals, they gain levels, improving hit points, base attack bonus, saving throws, skills, and class features. Every four levels (4th, 8th, 12th, 16th, and 20th), a character also gains +1 to any one ability score.",
-            "tags": [
-                "progression",
-                "xp"
-            ]
+            "content": "Characters earn experience points (progression.xp) for defeating monsters and overcoming challenges. Upon reaching thresholds, they gain levels (progression.level), improving resources.hp (HD roll + attributes.con.modifier), combat.base_attack_bonus, saves, skills, and class features. Every four levels (4th/8th/12th/16th/20th), a character gains +1 to any one ability score.",
+            "tags": ["progression", "xp"]
         },
         {
             "name": "Spellcasting and Spell DCs",
-            "content": "Spellcasting uses limited daily spell slots by class and level. Prepared casters (clerics, druids, wizards) choose specific spells each day; spontaneous casters (sorcerers, bards) know a fixed list but cast flexibly. The saving throw DC against a spell is 10 + spell level + the caster’s relevant ability modifier.",
-            "tags": [
-                "magic",
-                "spells"
-            ]
+            "content": "Spellcasting uses limited daily slots (resources.spell_slots_tracking). Prepared casters choose spells daily (resources.spells_prepared); spontaneous casters know a fixed list (resources.spells_known). The saving throw DC against a spell is 10 + spell level + relevant ability modifier (Int for wizards, Wis for clerics, Cha for sorcerers, etc).",
+            "tags": ["magic", "spells"]
+        },
+        {
+            "name": "Spell Components",
+            "content": "Most spells require components: Verbal (V) (must speak clearly), Somatic (S) (free hands to gesture; armor may cause combat.arcane_spell_failure), Material (M) (cheap components are free; costly ones tracked in inventory.gear), or XP (rare, reduces progression.xp temporarily).",
+            "tags": ["magic", "spells", "inventory"]
         },
         {
             "name": "Initiative, Surprise, and the Surprise Round",
-            "content": "At the start of combat, each creature rolls initiative (1d20 + initiative bonus). Creatures that are unaware of their opponents are surprised and do not act in the surprise round. In the surprise round, only those who are not surprised may take a single standard or move action (plus free actions). After the surprise round, all creatures act in initiative order each full round.",
-            "tags": [
-                "combat",
-                "initiative",
-                "surprise"
-            ]
+            "content": "At the start of combat, each creature rolls initiative (1d20 + attributes.dex.modifier). Unaware creatures are surprised and skip the surprise round. In the surprise round, only aware creatures take a single standard/move action. Afterward, act in initiative order each full round.",
+            "tags": ["combat", "initiative", "surprise"]
         },
         {
             "name": "Attacks of Opportunity",
-            "content": "Certain actions in melee provoke attacks of opportunity from threatening enemies, such as moving out of a threatened square, making a ranged attack in melee, or casting a spell without casting defensively. An attack of opportunity is a single melee attack made at your normal attack bonus. A creature normally gets one attack of opportunity per round, though the Combat Reflexes feat allows more.",
-            "tags": [
-                "combat",
-                "attacks_of_opportunity"
-            ]
+            "content": "Certain actions provoke attacks of opportunity: moving out of a threatened square, casting a spell without defensive concentration, or standing from prone. An attack of opportunity is a single melee attack at your normal bonus. Combat Reflexes feat allows more than one per round.",
+            "tags": ["combat", "attacks_of_opportunity"]
         },
         {
             "name": "5-Foot Steps and Movement in Combat",
-            "content": "In combat, a creature that does not otherwise move during its turn can take a 5-foot step as a free action. This 5-foot step does not provoke attacks of opportunity. Any additional movement beyond that uses your move action and may provoke attacks of opportunity when leaving threatened squares.",
-            "tags": [
-                "combat",
-                "movement"
-            ]
+            "content": "In combat, a creature that does not otherwise move can take a 5-foot step as a free action (no attacks of opportunity). Additional movement uses your move action and may provoke attacks of opportunity when leaving threatened squares.",
+            "tags": ["combat", "movement"]
+        },
+        {
+            "name": "Size Modifiers",
+            "content": "Creature size affects statistics: \\n - Fine: +8 combat.ac/attack, +16 skills.hide, -16 combat.grapple_bonus \\n - Diminutive: +4 combat.ac/attack, +12 skills.hide, -12 combat.grapple_bonus \\n - Tiny: +2 combat.ac/attack, +8 skills.hide, -8 combat.grapple_bonus \\n - Small: +1 combat.ac/attack, +4 skills.hide, -4 combat.grapple_bonus \\n - Medium: 0 modifiers \\n - Large: -1 combat.ac/attack, -4 skills.hide, +4 combat.grapple_bonus \\n - Huge: -2 combat.ac/attack, -8 skills.hide, +8 combat.grapple_bonus \\n - Gargantuan: -4 combat.ac/attack, -12 skills.hide, +12 combat.grapple_bonus \\n - Colossal: -8 combat.ac/attack, -16 skills.hide, +16 combat.grapple_bonus",
+            "tags": ["combat", "skills", "size"]
         },
         {
             "name": "Flanking and Flat-Footed",
-            "content": "Two allies flank a foe when they threaten it from opposite sides in melee. Each flanking attacker gains a +2 bonus on attack rolls against that foe. A creature is flat-footed before it has acted in combat or when otherwise denied its Dexterity bonus to AC; attackers gain their usual benefits from the target’s loss of Dex bonus, and some abilities (such as sneak attack) apply.",
-            "tags": [
-                "combat",
-                "flanking"
-            ]
+            "content": "Two allies flank a foe when threatening from opposite sides; each gains +2 to attack rolls. A creature is flat-footed before acting or denied Dex bonus to combat.ac (combat.ac_flat_footed), making them vulnerable to sneak attack.",
+            "tags": ["combat", "flanking"]
         },
         {
             "name": "Common Combat Maneuvers",
-            "content": "Special combat maneuvers like bull rush, disarm, grapple, overrun, sunder, and trip follow specific procedures and often provoke attacks of opportunity unless special feats are used. They typically require a melee touch attack followed by opposed checks such as Strength checks, opposed attack rolls, or grapple checks. Success inflicts control effects (knocking prone, moving foes, seizing weapons, etc.) instead of or in addition to damage.",
-            "tags": [
-                "combat",
-                "maneuvers"
-            ]
+            "content": "Special maneuvers (bull rush, disarm, grapple) follow specific procedures and often provoke attacks of opportunity unless feats are used. They typically require a melee touch attack followed by opposed checks (Strength, attack, or combat.grapple_bonus) to inflict control effects.",
+            "tags": ["combat", "maneuvers"]
         },
         {
             "name": "Cover, Concealment, and Ranged Attacks",
-            "content": "Obstacles and terrain between attacker and target can provide cover or concealment. Cover grants a bonus to AC and Reflex saves, while concealment (such as fog or shadows) grants a miss chance. Total cover blocks line of effect entirely; total concealment blocks line of sight and imposes a 50% miss chance. Ranged and area attacks must account for these modifiers when resolving hits.",
-            "tags": [
-                "combat",
-                "ranged",
-                "cover"
-            ]
+            "content": "Cover grants AC/Reflex bonuses; concealment (fog/shadows) grants a miss chance. Total cover blocks line of effect entirely; total concealment blocks sight and imposes a 50% miss chance.",
+            "tags": ["combat", "ranged", "cover"]
         },
         {
             "name": "Casting Spells in Combat and Concentration",
-            "content": "Casting a spell usually provokes attacks of opportunity from adjacent foes unless you cast defensively. If damaged or otherwise distracted while casting, you must make a Concentration check or lose the spell. Casting defensively (avoiding attacks of opportunity) raises the Concentration DC but lets you cast without provoking if you succeed.",
-            "tags": [
-                "magic",
-                "concentration",
-                "combat"
-            ]
+            "content": "Casting a spell usually provokes attacks of opportunity unless you cast defensively. If damaged while casting, make a Concentration check (15 + spell level + damage taken) or lose the spell. Defensive casting raises the DC but avoids provoking attacks.",
+            "tags": ["magic", "concentration", "combat"]
         },
         {
             "name": "Damage Reduction, Energy Resistance, and Immunities",
-            "content": "Some creatures reduce or ignore certain forms of damage. Damage reduction (DR) subtracts a fixed amount from physical attacks unless they are of a specific type (such as magic, silver, or adamantine). Energy resistance reduces damage from specific energy types (acid, cold, electricity, fire, sonic) by a stated amount. Immunities make a creature unaffected by particular damage types, effects, or conditions unless specified otherwise.",
-            "tags": [
-                "defense",
-                "damage_reduction"
-            ]
+            "content": "Damage Reduction (DR) subtracts fixed physical damage unless the attack uses a specific type (magic/silver/adamantine). Energy resistance reduces acid/cold/electricity/fire/sonic damage. Immunities make creatures unaffected by specific damage types or conditions.",
+            "tags": ["defense", "damage_reduction"]
         },
         {
             "name": "Conditions and Status Effects",
-            "content": "Many spells and abilities inflict conditions like blinded, deafened, dazzled, fatigued, exhausted, frightened, shaken, stunned, paralyzed, prone, or entangled. Conditions stack with normal damage and often modify a creature’s AC, movement, attack rolls, saving throws, or skill checks until they are removed or the effect ends.",
-            "tags": [
-                "status",
-                "conditions"
-            ]
+            "content": "Conditions (status.conditions) like blinded, fatigued, or prone modify combat.ac, movement, attack rolls, or saves until removed. Stack with normal damage to hinder creatures.",
+            "tags": ["status", "conditions"]
         },
         {
             "name": "Natural Healing and Rest",
-            "content": "Without magic, characters regain hit points through rest. A full night’s rest (8 hours) restores 1 hit point per character level. Complete bed rest over a full day can restore additional hit points. Ability damage heals more slowly and usually requires magic or extended rest to recover fully.",
-            "tags": [
-                "healing",
-                "downtime"
-            ]
+            "content": "A full night’s rest restores 1 HP per progression.level. Complete bed rest restores additional HP. Ability damage heals slowly or via magic.",
+            "tags": ["healing", "downtime"]
         },
         {
             "name": "Turn or Rebuke Undead",
-            "content": "Certain divine classes (such as clerics and paladins) can turn or rebuke undead. Turning forces undead within range to flee, cower, or be destroyed based on the turning check and turning damage rolled; rebuking instead forces them to cower or come under the caster’s control. The power and number of undead affected depend on class level and Charisma modifier.",
-            "tags": [
-                "magic",
-                "divine",
-                "undead"
-            ]
+            "content": "Divine classes (clerics/paladins) can turn/rebuke undead. Turning forces undead to flee/be destroyed; rebuking controls them. Power depends on class level and attributes.cha.modifier.",
+            "tags": ["magic", "divine", "undead"]
         },
         {
             "name": "Magic Item Creation and XP Costs",
-            "content": "Crafting magic items requires specific item creation feats, sufficient caster level, access to required spells, and time and gold. Most permanent magic items cost XP and gold to craft; the creator must spend XP equal to 1/25 of the item’s market price, plus raw materials costing half that price. Failing creation rolls can waste time and resources.",
-            "tags": [
-                "magic_items",
-                "crafting"
-            ]
+            "content": "Crafting magic items requires item creation feats, caster level, spells, time, and gold. Permanent items cost XP equal to 1/25 of market price, plus raw materials costing half that price. Track spent XP in progression.xp.",
+            "tags": ["magic_items", "crafting"]
         },
         {
             "name": "Armor Check Penalty and Arcane Spell Failure",
-            "content": "Medium and heavy armors and shields impose an armor check penalty on many physical skills such as Balance, Climb, Hide, Jump, Move Silently, Sleight of Hand, and Tumble. Arcane spellcasters wearing armor also risk arcane spell failure: whenever they cast an arcane spell with somatic components, they must roll; failure causes the spell to be lost without effect.",
-            "tags": [
-                "armor",
-                "skills",
-                "magic"
-            ]
+            "content": "Medium/heavy armors impose combat.armor_check_penalty on physical skills (balance/climb/hide). Arcane casters wearing armor risk combat.arcane_spell_failure % when casting spells with somatic components.",
+            "tags": ["armor", "skills", "magic"]
+        },
+        {
+            "name": "Encumbrance and Movement Speed",
+            "content": "Carrying weight (inventory.carried_weight) affects combat.speed: unencumbered = full speed; medium load = -10ft; heavy load = -20ft. Tiny/small races have lower base speeds and corresponding reductions.",
+            "tags": ["inventory", "combat", "movement"]
         }
     ]
 }

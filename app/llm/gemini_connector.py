@@ -160,7 +160,8 @@ class GeminiConnector(LLMConnector):
         model_nm = self.model_name or ""
         if "flash" in model_nm.lower() or "thought" in model_nm.lower():
              config["thinking_config"] = types.ThinkingConfig(
-                thinking_budget=self.default_thinking_budget
+                thinking_budget=self.default_thinking_budget,
+                include_thoughts=True
             )
 
         generation_config = types.GenerateContentConfig(**config)
@@ -202,7 +203,8 @@ class GeminiConnector(LLMConnector):
         model_lower = (self.model_name or "").lower()
         if "flash" in model_lower or "thought" in model_lower:
              generation_config.thinking_config = types.ThinkingConfig(
-                thinking_budget=self.default_thinking_budget
+                thinking_budget=self.default_thinking_budget,
+                include_thoughts=True
             )
 
         async with self.semaphore:

@@ -206,4 +206,9 @@ class MemoryRepository(BaseRepository):
             LIMIT ?
         """
         rows = self._fetchall(query, (fts_query, session_id, limit))
-        return [(Memory(**dict(r)), float(r["score"])) for r in rows]
+        results = []
+        for r in rows:
+            data = dict(r)
+            score = float(data.pop("score"))
+            results.append((Memory(**data), score))
+        return results

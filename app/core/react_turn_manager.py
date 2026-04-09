@@ -76,7 +76,9 @@ class ReActTurnManager:
         mem_retriever = MemoryRetriever(
             thread_db_manager, self.vector_store, self.logger
         )
-        sim_service = SimulationService(self.llm_connector, self.logger)
+        sim_service = SimulationService(
+            self.llm_connector, self.logger, stop_event=self.orchestrator.stop_event
+        )
         # Pass Manifest to Context Builder
         context_builder = ContextBuilder(
             thread_db_manager,
@@ -165,21 +167,23 @@ class ReActTurnManager:
                 if tool["function"]["name"] == "roll":
                     eng = manifest.engine
                     desc = (
-                        f"Roll dice. SYSTEM: Dice='{eng.dice}'. "
+                        f"{tool['function']['description']}\n"
+                        f"SYSTEM: Dice='{eng.dice}'. "
                         f"Mechanic='{eng.mechanic}'. "
-                        f"Crit='{eng.crit}'."
+                        f"Crit='{eng.crit}'.\n"
+                        "You must use this tool any time a dice roll is involved. Never 'simulate' a roll."
                     )
                     tool["function"]["description"] = desc
 
         # Appends the list of available tools to the working history
-        tools_defs = "Use the following tools to create or modify game elements, retrieve or confirm information, etc.\nProactively and autonomously use each tool one or more times when needed.\n\n```available_tools\n"
+        tools_defs = "You have access to the following tools to retrieve or confirm information, roll dice, create or modify Game State, etc.\n\n```available_tools\n"
         for tool in llm_tools:
             name = tool["function"]["name"]
             desc = tool["function"]["description"].strip()
             # Clean up docstring formatting
             desc = " ".join(desc.split())
             tools_defs += f"- **{name}**: {desc}\n"
-        tools_defs += "\n```"
+        tools_defs += "\n```\n\nFeel free to constantly use the dice tool to make decisions, create entropy, simulate outcomes.\n\nYou should proactively decide which tools/functions to use and when.\n"
 
         # --- 5. ACTION LOOP ---
         # create a copy of the working_history to manipulate the last User message without affecting the original working_history
@@ -215,11 +219,21 @@ class ReActTurnManager:
                     system_prompt=turn_system_prompt,
                     chat_history=working_history_request,
                     tools=llm_tools,
+                    stop_event=self.orchestrator.stop_event,
                 )
+            except InterruptedError:
+                self.ui_queue.put(
+                    {"type": "error", "message": "Stopped by user.", "turn_id": turn_id}
+                )
+                return
             except Exception as e:
                 if self.orchestrator.stop_event.is_set():
                     return
                 raise e
+
+            if not response.content and not response.tool_calls:
+                self.logger.warning(f"Empty response from LLM for turn {turn_id}")
+                continue
 
             tool_msg = Message(
                 role=MessageRole.TOOL,
@@ -240,7 +254,7 @@ class ReActTurnManager:
                         "turn_id": turn_id,
                     }
                 )
-                narrative_text = response.content
+                narrative_text += f"\n{response.content}"
                 break
 
             if response.tool_calls:
@@ -258,7 +272,8 @@ class ReActTurnManager:
                 if response.content:
                     self.ui_queue.put(
                         {
-                            "type": "thought_bubble",
+                            "type": "message_bubble",
+                            "role": MessageRole.ASSISTANT,
                             "content": response.content,
                             "turn_id": turn_id,
                         }
@@ -338,8 +353,11 @@ class ReActTurnManager:
                 fallback_response = self.llm_connector.get_streaming_response(
                     system_prompt=turn_system_prompt,
                     chat_history=working_history_request,
+                    stop_event=self.orchestrator.stop_event,
                 )
                 narrative_text = "".join(fallback_response)
+            except InterruptedError:
+                return
                 if narrative_text:
                     self.ui_queue.put(
                         {
@@ -366,7 +384,7 @@ class ReActTurnManager:
             final_history.append(
                 Message(
                     role=MessageRole.USER,
-                    content="Write 3-5 action options the Player could take next, in first person, in the format: \"I do X\", \"I go to Y\", etc. Return strictly as JSON.",
+                    content="Simmulate 3-5 brief, concise, and short responses as if the Player wrote them (E.g. 'I do X', 'I go to Y', 'What is Z?', etc.), based on the narrative above. Return strictly as JSON.",
                 )
             )
 
@@ -376,6 +394,7 @@ class ReActTurnManager:
                 chat_history=final_history,
                 output_schema=TurnSuggestions,
                 temperature=0.7,
+                stop_event=self.orchestrator.stop_event,
             )
             choices = list(suggestions_out.choices or [])
 
@@ -453,6 +472,7 @@ class ReActTurnManager:
                 chat_history=final_history,
                 output_schema=TurnMetadata,
                 temperature=0.5,
+                stop_event=self.orchestrator.stop_event,
             )
 
             # Persist with new DB connection

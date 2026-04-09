@@ -140,12 +140,12 @@ class LocationCreate(BaseModel):
     Create a new location and define its visual/sensory details and neighbors (connection to other locations).
     """
     name: Literal["location.create"] = "location.create"
-    key: str = Field(...)
-    name_display: str = Field(...)
-    description_visual: str = Field(...)
-    description_sensory: str = Field(...)
-    type: str = Field(...)
-    neighbors: dict[str, str] = Field(default_factory=dict)
+    key: str = Field(..., description="Unique key for the location, eg loc_tavern, loc_werehouse, etc.")
+    name_display: str = Field(..., description="Display name for the location.")
+    description_visual: str = Field(..., description="Visual description of the location.")
+    description_sensory: str = Field(..., description="Sensory description of the location.")
+    location_type: str = Field(..., description="Type of location (e.g. 'wilderness', 'dungeon', 'town').")
+    neighbors: dict[str, str] = Field(default_factory=dict, description="Neighbors of the location, eg {'north': 'loc_werehouse', 'south': 'loc_tavern'}.")
 
 
 class ContextRetrieve(BaseModel):

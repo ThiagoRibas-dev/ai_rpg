@@ -27,7 +27,7 @@ def handler(
     name_display: str,
     description_visual: str,
     description_sensory: str,
-    type: str,
+    location_type: str,
     neighbors: dict[str, str] | None = None,
     **context: Any,
 ) -> dict:
@@ -41,7 +41,7 @@ def handler(
         "name": name_display,
         "description_visual": description_visual,
         "description_sensory": description_sensory,
-        "type": type,
+        "location_type": location_type,
         "connections": connections,
     }
 
@@ -82,7 +82,7 @@ def handler(
 
     # Update Entity Index
     from app.services.entity_index import add_location as index_add_location
-    index_add_location(session_id, db, key, f"{name_display} ({type})")
+    index_add_location(session_id, db, key, f"{name_display} ({location_type})")
 
     return {
         "success": True,

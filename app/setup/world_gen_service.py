@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections import defaultdict
 from collections.abc import Callable
 from typing import Any, cast
 
@@ -89,7 +90,6 @@ class WorldGenService:
 
             # --- LAYER 2: PARALLEL BATCH EXTRACTION ---
             # Group items by type for batching
-            from collections import defaultdict
             batches = defaultdict(list)
             for item in index_res.items:
                 batches[item.type].append(item.name)

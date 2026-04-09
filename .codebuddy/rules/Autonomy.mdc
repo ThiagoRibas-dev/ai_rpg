@@ -1,0 +1,10 @@
+---
+description: 
+alwaysApply: true
+enabled: true
+updatedAt: 2026-04-08T03:49:32.062Z
+provider: 
+---
+
+Always write an implementation plan and ask the User for feedback and permission to proceed.
+Only start working after the User has given his agreement.

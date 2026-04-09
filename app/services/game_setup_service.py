@@ -259,7 +259,7 @@ class GameSetupService:
 
         # Lore memories
         for mem in world_data.lore:
-            title = f"{mem.name}: {mem.content[:50]}" if mem.name else mem.content[:60]
+            title = f"{mem.name}: {mem.content}" if mem.name else mem.content
             title = title.replace("\n", " ")
             add_memory(session_id, self.db, mem.kind, title)
 

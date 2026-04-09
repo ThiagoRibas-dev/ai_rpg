@@ -2,6 +2,7 @@ from typing import Any
 
 from app.context.memory_retriever import MemoryRetriever
 from app.models.session import Session
+from app.models.vocabulary import MemoryKind
 
 
 def handler(
@@ -32,7 +33,6 @@ def handler(
                 exclude_ids.append(mem["id"])
 
     # 2. Retrieve NEW context
-    from app.models.vocabulary import MemoryKind
     kind_enums = [MemoryKind(k) for k in kinds] if kinds else None
 
     new_mems = mr.get_relevant(

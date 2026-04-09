@@ -1,0 +1,9 @@
+---
+description: 
+alwaysApply: true
+enabled: true
+updatedAt: 2026-04-08T03:48:21.960Z
+provider: 
+---
+
+LookaFind the AGENTS.md in the root dir and load the definitions, workflows, and rules from there.

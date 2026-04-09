@@ -4,6 +4,7 @@ from app.models.game_session import GameSession
 from app.models.message import Message
 from app.models.session import Session
 from app.prefabs.manifest import SystemManifest
+from app.services.entity_index import get_index, render_index
 
 
 class ContextBuilder:
@@ -75,23 +76,23 @@ class ContextBuilder:
         # 1. World Index (The Directory)
         index_text = self._build_entity_index(game_session.id)
         if index_text:
-            sections.append(self._wrap_section("\n---\nTRUNCATED REFERENCE INDEXES", index_text))
+            sections.append(self._wrap_section("REFERENCE INDEXES (truncated entries)", index_text))
 
         # 2. Active Quests
         quests_text = self.state_builder.build_active_quests(game_session.id)
         if quests_text:
-            sections.append(self._wrap_section("\n---\nACTIVE QUESTS", quests_text))
+            sections.append(self._wrap_section("ACTIVE QUESTS", quests_text))
 
         # 3. Current Scene (Unified Spatial + Roster)
         scene_text = self._build_scene_block(game_session.id)
         if scene_text:
-            sections.append(self._wrap_section("\n---\nCURRENT SCENE", scene_text))
+            sections.append(self._wrap_section("CURRENT SCENE", scene_text))
 
         # 4. Character Sheet (The Player's Personal Stats)
         if self.manifest:
             char_text = self.state_builder.build_character_sheet(game_session.id, self.manifest)
             if char_text:
-                sections.append(self._wrap_section("\n---\nPLAYER CHARACTER SHEET", char_text))
+                sections.append(self._wrap_section("PLAYER CHARACTER SHEET", char_text))
 
         return "\n\n".join(sections)
 
@@ -112,7 +113,6 @@ class ContextBuilder:
 
     def _build_entity_index(self, session_id: int) -> str:
         try:
-            from app.services.entity_index import get_index, render_index
             index = get_index(session_id, self.db)
             if index:
                 return render_index(index)

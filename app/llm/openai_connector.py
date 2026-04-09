@@ -95,6 +95,31 @@ class OpenAIConnector(LLMConnector):
             messages.append(cast("ChatCompletionMessageParam", message_dict))
         return messages
 
+    def _extract_reasoning(self, data: Any) -> str | None:
+        """
+        Helper to extract reasoning/thought from a message or delta object.
+        Supports multiple common field names used by different providers.
+        """
+        if data is None:
+            return None
+
+        # 1. Attribute access (for pydantic/typed objects)
+        # DeepSeek/OpenAI: reasoning_content, OpenRouter: reasoning, Claude: thinking
+        for key in ["reasoning_content", "reasoning", "thinking"]:
+            val = getattr(data, key, None)
+        if val:
+                return str(val)
+
+        # 2. Dictionary fallback (for raw API data or dynamic types)
+        if isinstance(data, dict):
+            return data.get("reasoning_content") or data.get("reasoning") or data.get("thinking")
+
+        # 3. Special handled cases for some providers that nest thinking (e.g. Mistral)
+        # data.choices[0].delta.content[0].thinking[0].text
+        # handled manually if needed, but the primary keys cover most.
+
+        return None
+
     async def async_get_streaming_response(
         self, system_prompt: str, chat_history: list[Message]
     ) -> AsyncGenerator[str, None]:
@@ -112,6 +137,7 @@ class OpenAIConnector(LLMConnector):
                 # "chat_template_kwargs": {"enable_thinking": False},
                 # "thinking": { "type": "disabled", "budget_tokens": 0 },
                 "top_k": 50,
+                "include_thoughts": True,
                 "stop": ["<|im_end|>", "<|im_end|"]
             }
 
@@ -123,15 +149,29 @@ class OpenAIConnector(LLMConnector):
                 stop=["<|im_end|>"],
                 extra_body=extra_params,
             )
+            has_started_reasoning = False
+            has_started_content = False
             async for chunk in stream:
                 typed_chunk = cast("ChatCompletionChunk", chunk)
-                if (
-                    typed_chunk.choices
-                    and len(typed_chunk.choices) > 0
-                    and typed_chunk.choices[0].delta
-                    and typed_chunk.choices[0].delta.content
-                ):
-                    yield typed_chunk.choices[0].delta.content
+                if typed_chunk.choices and len(typed_chunk.choices) > 0:
+                    delta = typed_chunk.choices[0].delta
+
+                    # 1. Capture and yield reasoning
+                    reasoning = self._extract_reasoning(delta)
+                    if reasoning:
+                        if not has_started_reasoning:
+                            yield "💭 "
+                            has_started_reasoning = True
+                        yield reasoning
+
+                    # 2. Capture and yield content
+                    if delta.content:
+                        if not has_started_content:
+                            if has_started_reasoning:
+                                # Add a separator if reasoning preceded content
+                                yield "\n\n---\n\n"
+                            has_started_content = True
+                        yield delta.content
 
     async def async_get_structured_response(
         self,
@@ -164,6 +204,7 @@ class OpenAIConnector(LLMConnector):
                     "type": "json_object",
                     "schema": json_schema,
                 },
+                "include_thoughts": True,
                 "stop": ["<|im_end|>", "<|im_end|"]
             }
 
@@ -192,9 +233,16 @@ class OpenAIConnector(LLMConnector):
         if not typed_resp.choices or len(typed_resp.choices) == 0:
             raise ValueError("OpenAI returned no choices.")
 
-        content = typed_resp.choices[0].message.content
+        message = typed_resp.choices[0].message
+        content = message.content
         if content is None:
             raise ValueError("OpenAI returned empty content.")
+
+        # Capture reasoning even in structured response if available
+        # Note: most providers don't support reasoning+json_schema yet, but some do.
+        # We don't have a place to return 'thought' here as we return the validated model,
+        # but we can log it or let the caller handle it if LLMResponse was returned.
+        # For now, capturing content for validation.
 
 
         try:
@@ -289,6 +337,7 @@ class OpenAIConnector(LLMConnector):
                 # "chat_template_kwargs": {"enable_thinking": False},
                 # "thinking": { "type": "disabled", "budget_tokens": 0 },
                 "top_k": 50,
+                "include_thoughts": True,
                 "stop": ["<|im_end|>", "<|im_end|"]
             }
 
@@ -313,6 +362,7 @@ class OpenAIConnector(LLMConnector):
             return LLMResponse(content=None, tool_calls=None)
 
         message = typed_resp.choices[0].message
+        thought_text = self._extract_reasoning(message)
 
         tool_calls_data = []
 
@@ -329,5 +379,6 @@ class OpenAIConnector(LLMConnector):
 
         return LLMResponse(
             content=message.content,
+            thought=thought_text if thought_text else None,
             tool_calls=tool_calls_data if tool_calls_data else None
         )

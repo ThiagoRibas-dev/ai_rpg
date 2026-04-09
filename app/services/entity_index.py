@@ -92,7 +92,7 @@ def smart_truncate(text: str, max_len: int = 90) -> str:
     if len(text) <= max_len:
         return text
 
-    # Initial truncation
+    # Gets the first max_len chars
     subset = text[:max_len]
 
     # Look for last period, comma, or space
@@ -102,7 +102,7 @@ def smart_truncate(text: str, max_len: int = 90) -> str:
         last_idx = max(last_idx, idx)
 
     if last_idx > 0:
-        # Return truncated text stripped of the separator, plus ellipsis
+        # Truncates the text, removes the last separator and adds ellipsis
         return subset[:last_idx].rstrip("., ") + "..."
 
     # Fallback to hard truncation if no boundary found
@@ -120,9 +120,8 @@ def render_index(index: dict) -> str:
         table = [
             f"### {title}",
             f"| {id_col} | Snippet |",
-            "| :--- | :--- |"
+            *rows,
         ]
-        table.extend(rows)
         return "\n".join(table)
 
     # 1. Locations
@@ -131,7 +130,7 @@ def render_index(index: dict) -> str:
         summary = smart_truncate(desc)
         loc_rows.append(f"| `{key}` | {summary} |")
     if loc_rows:
-        sections.append(_make_table("Location Index", loc_rows))
+        sections.append(_make_table("Locations Index", loc_rows))
 
     # 2. NPCs
     npc_rows = []
@@ -139,18 +138,17 @@ def render_index(index: dict) -> str:
         summary = smart_truncate(desc)
         npc_rows.append(f"| `{key}` | {summary} |")
     if npc_rows:
-        sections.append(_make_table("NPC Index", npc_rows))
+        sections.append(_make_table("NPCs Index", npc_rows))
 
     # 3. Memories (Lore, Rules, etc.)
     for kind in MemoryKind:
-        entries = index.get(kind.value, [])
         mem_rows = []
-        for title in entries:
-            summary = smart_truncate(title)
-            # Use Topic/Topic if it's better, but let's stick to ID/Snippet for consistency with Entity ID
-            mem_rows.append(f"| - | {summary} |")
+        for key in index.get(kind.value, []):
+            summary = smart_truncate(key)
+            mem_rows.append(f"|  | {summary} |")
         if mem_rows:
-            sections.append(_make_table(f"{kind.value.title()} Index", mem_rows))
+            title = f"{kind.value.title()} Index"
+            sections.append(_make_table(title, mem_rows))
 
     if not sections:
         return ""

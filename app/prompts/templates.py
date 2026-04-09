@@ -125,7 +125,7 @@ For example, a city should not be listed as location, culture, and a faction.
 
 For each item/entry, determine its Type according to these rules:
 
-1. **location**: Physical sites, settlements, countries, cities, villages, towns, geographic landmarks, structures, or buildings.
+1. **location**: Physical sites, settlements, countries, nations, cities, towns, villages, geographic landmarks, notable structures or buildings, etc.
 2. **npc**: Specific named individuals, unique legendary creatures, or distinct characters.
 3. **systems**: Foundational laws of reality (Magic, Tech, Physics) and Cosmology (Deities, Planes).
 4. **races**: Biological species, lineages, ancestries, and their traits.

@@ -10,17 +10,21 @@ from app.models.message import Message
 from app.models.vocabulary import WORLD_GEN_TAG, MemoryKind
 
 # Retrieval and Budget Limits
-VS_FETCH_LIMIT = 20
+VS_FETCH_LIMIT = 50
 VS_MIN_SIMILARITY_THRESHOLD = 0.45
 DB_FETCH_LIMIT_TAGS = 50
-DB_FETCH_LIMIT_PRIORITY = 20
+DB_FETCH_LIMIT_PRIORITY = 10
 DB_FETCH_LIMIT_EPISODIC = 50
 
 # General Scoring Constants
 CODEX_PRIORITY_BUMP = 30
 TAG_OVERLAP_BONUS = 40
-KEYWORD_RELEVANCE_BONUS = 15
+KEYWORD_RELEVANCE_BONUS = 30
 SEMANTIC_HIT_BONUS = 100
+
+# FTS Scoring Constants
+FTS_HIT_BONUS = 80
+FTS_MULTIPLIER = 10
 
 # Specific Codex Constants
 MIN_CODEX_SCORE_THRESHOLD = 30
@@ -35,10 +39,6 @@ EPISODIC_DEDUP_PENALTY = 200
 
 # Tags that are applied universally and provide zero discriminative value for retrieval
 NON_DISCRIMINATIVE_TAGS = {WORLD_GEN_TAG}
-
-# FTS Scoring Constants
-FTS_HIT_BONUS = 80
-FTS_MULTIPLIER = 10
 
 
 class MemoryRetriever:
@@ -90,7 +90,7 @@ class MemoryRetriever:
 
         return list({
             w for w, pos in tagged
-            if pos in valid_pos
+            if pos in valid_pos and w not in stop_words
             and len(w) >= min_length
             and w.isalpha()
         })
@@ -202,7 +202,7 @@ class MemoryRetriever:
             if recent_messages and recent_messages[-1].role == "user":
                 query_parts.append(recent_messages[-1].content or "")
 
-            recent_text = "\n".join(query_parts) if query_parts else "Start of session"
+            recent_text = "\n\n".join(query_parts) if query_parts else "Start of session"
             keywords = self.extract_keywords(recent_text)
             fts_search_text = " ".join(keywords)
 
@@ -269,7 +269,7 @@ class MemoryRetriever:
              budgets = {k: limit for k in codex_kinds}
              episodic_limit = limit
         else:
-             budgets = {MemoryKind.RULE: 5, MemoryKind.LORE: 5, MemoryKind.SEMANTIC: 1, MemoryKind.USER_PREF: 1}
+             budgets = {MemoryKind.RULE: 4, MemoryKind.LORE: 6, MemoryKind.SEMANTIC: 1, MemoryKind.USER_PREF: 1}
              episodic_limit = 3
 
         for k in codex_kinds:

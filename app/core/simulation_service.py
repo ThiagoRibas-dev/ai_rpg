@@ -2,6 +2,7 @@
 # --- NEW FILE ---
 
 import logging
+import threading
 from typing import cast
 
 from app.llm.llm_connector import LLMConnector
@@ -16,9 +17,15 @@ class SimulationService:
     Handles the just-in-time, on-demand simulation of an NPC's off-screen
     actions when they become relevant to the current scene.
     """
-    def __init__(self, llm: LLMConnector, logger: logging.Logger):
+    def __init__(
+        self,
+        llm: LLMConnector,
+        logger: logging.Logger,
+        stop_event: threading.Event | None = None,
+    ):
         self.llm = llm
         self.logger = logger
+        self.stop_event = stop_event
 
     def simulate_npc_downtime(
         self, npc_name: str, profile: NpcProfile, current_time: str
@@ -43,6 +50,7 @@ class SimulationService:
                 system_prompt="You are a World Simulation Engine.",
                 chat_history=[Message(role="user", content=prompt)],
                 output_schema=WorldTickOutcome,
+                stop_event=self.stop_event,
             )
             return cast("WorldTickOutcome | None", outcome)
         except Exception as e:
