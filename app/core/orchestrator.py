@@ -13,6 +13,7 @@ from app.llm.llm_connector import LLMConnector
 from app.llm.openai_connector import OpenAIConnector
 from app.models.game_session import GameSession
 from app.models.session import Session
+from app.models.vocabulary import UIEventType
 from app.tools.registry import ToolRegistry
 
 logger = logging.getLogger(__name__)
@@ -68,7 +69,7 @@ class Orchestrator:
         self.bridge.set_active_turn(self.active_turn_id)
 
         # Notify UI that we are thinking
-        self.ui_queue.put({"type": "planning_started", "turn_id": self.active_turn_id})
+        self.ui_queue.put({"type": UIEventType.PLANNING_STARTED, "turn_id": self.active_turn_id})
 
         thread = threading.Thread(
             target=self._background_execute,
@@ -94,11 +95,11 @@ class Orchestrator:
         self.session.add_message("user", user_input)
 
         # 3. Optimistic UI update (shows the user's message immediately)
-        self.ui_queue.put(
-            {
-                "type": "message_bubble",
+        self.ui_queue.put({
+                "type": UIEventType.MESSAGE_BUBBLE,
                 "role": "user",
                 "content": user_input,
+                "index": len(self.session.history) - 1,
             }
         )
         self.bridge.clear_input()
@@ -119,9 +120,9 @@ class Orchestrator:
                 self.turn_manager.execute_turn(game_session, thread_db_manager, turn_id)
         except Exception as e:
             logger.error(f"Turn failed: {e}", exc_info=True)
-            self.ui_queue.put({"type": "error", "message": str(e), "turn_id": turn_id})
+            self.ui_queue.put({"type": UIEventType.ERROR, "message": str(e), "turn_id": turn_id})
         finally:
-            self.ui_queue.put({"type": "turn_complete", "turn_id": turn_id})
+            self.ui_queue.put({"type": UIEventType.TURN_COMPLETE, "turn_id": turn_id})
 
     def _update_game_in_thread(
         self,
@@ -159,7 +160,7 @@ class Orchestrator:
         if history[-1].role != "assistant":
             self.ui_queue.put(
                 {
-                    "type": "error",
+                    "type": UIEventType.ERROR,
                     "message": "Cannot reroll: Last message was not from AI.",
                 }
             )
@@ -182,7 +183,7 @@ class Orchestrator:
             db.sessions.update(game_session)
 
         # 3. Refresh UI & Start
-        self.ui_queue.put({"type": "history_changed"})
+        self.ui_queue.put({"type": UIEventType.HISTORY_CHANGED})
 
         if last_user_msg:
             self._start_turn_thread(game_session, last_user_msg, turn_name="Reroll")
@@ -211,7 +212,7 @@ class Orchestrator:
             db.sessions.update(game_session)
 
         # 3. Refresh UI & Start
-        self.ui_queue.put({"type": "history_changed"})
+        self.ui_queue.put({"type": UIEventType.HISTORY_CHANGED})
 
         last_user_msg = ""
         if self.session.history and self.session.history[-1].role == "user":
@@ -237,4 +238,4 @@ class Orchestrator:
         with DBManager(self.db_path) as db:
             db.sessions.update(game_session)
 
-        self.ui_queue.put({"type": "history_changed"})
+        self.ui_queue.put({"type": UIEventType.HISTORY_CHANGED})

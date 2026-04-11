@@ -217,6 +217,26 @@ class EntityType(StrEnum):
     NPC_PROFILE = "npc_profile"
 
 
+class UIEventType(StrEnum):
+    TOOL_RESULT = "tool_result"
+    TOOL_CALL = "tool_call"
+    MESSAGE_BUBBLE = "message_bubble"
+    THOUGHT_BUBBLE = "thought_bubble"
+    DICE_ROLL = "dice_roll"
+    CHOICES = "choices"
+    RAG_CONTEXT = "rag_context"
+    UPDATE_NAV = "update_nav"
+    MAP_UPDATE = "map_update"
+    TURN_COMPLETE = "turn_complete"
+    STATE_CHANGED = "state_changed"
+    REFRESH_MEMORY_INSPECTOR = "refresh_memory_inspector"
+    PLANNING_STARTED = "planning_started"
+    HISTORY_CHANGED = "history_changed"
+    ERROR = "error"
+    UPDATE_GAME_TIME = "update_game_time"
+    UPDATE_GAME_MODE = "update_game_mode"
+
+
 class EntityKey(StrEnum):
     PLAYER = "player"
     ACTIVE_SCENE = "active_scene"

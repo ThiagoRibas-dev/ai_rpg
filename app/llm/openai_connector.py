@@ -17,11 +17,17 @@ from app.models.vocabulary import MessageRole
 if TYPE_CHECKING:
     from openai.types.chat import (
         ChatCompletion,
+        ChatCompletionAssistantMessageParam,
         ChatCompletionChunk,
         ChatCompletionMessageParam,
+        ChatCompletionMessageToolCallParam,
         ChatCompletionSystemMessageParam,
+        ChatCompletionToolMessageParam,
         ChatCompletionUserMessageParam,
     )
+
+    class OpenAIToolMessageParam(ChatCompletionToolMessageParam, total=False):
+        name: str
 
 
 logger = logging.getLogger(__name__)
@@ -52,19 +58,37 @@ class OpenAIConnector(LLMConnector):
     def _convert_chat_history_to_messages(
         self, chat_history: list[Message]
     ) -> list[ChatCompletionMessageParam]:
-        messages: list[ChatCompletionMessageParam] = []
+        raw_messages: list[ChatCompletionMessageParam] = []
+        send_thoughts = os.environ.get("LLM_SEND_THOUGHTS", "false").lower() == "true"
+
         for msg in chat_history:
+            # Skip messages with role 'thought' - thoughts should be inline in assistant role
+            if msg.role == MessageRole.THOUGHT:
+                continue
+
             message_dict: dict[str, Any] = {"role": msg.role}
 
             # Handle Content (allow None if it's a pure tool call)
-            if msg.content is not None:
-                message_dict["content"] = msg.content
+            content = msg.content or ""
+
+            # Check if we should inject thoughts into content
+            if send_thoughts and msg.role == MessageRole.ASSISTANT and msg.thought:
+                # Format: [Thought] ... [/Thought] Narrative
+                content = f"[Thought]\n{msg.thought}\n[/Thought]\n\n{content}".strip()
+
+            if content:
+                message_dict["content"] = content
+            elif msg.content is None and not msg.tool_calls:
+                 # Standardize empty content to None if no tool calls
+                 message_dict["content"] = None
 
             # Handle Assistant Tool Calls
             if msg.role == MessageRole.ASSISTANT and msg.tool_calls:
-                # Convert our internal normalized format back to OpenAI API format
-                openai_tool_calls = []
+                # Explicitly type the list of tool calls
+                openai_tool_calls: list[ChatCompletionMessageToolCallParam] = []
+
                 for tc in msg.tool_calls:
+                    # Mypy will verify this dictionary matches the ToolCall definition
                     openai_tool_calls.append({
                         "id": tc.get("id", "call_unknown"),
                         "type": "function",
@@ -73,27 +97,85 @@ class OpenAIConnector(LLMConnector):
                             "arguments": json.dumps(tc["arguments"]) if isinstance(tc["arguments"], dict) else tc["arguments"]
                         }
                     })
-                message_dict["tool_calls"] = openai_tool_calls
 
-                # OpenAI sometimes requires content to be null if missing
-                if "content" not in message_dict:
-                    message_dict["content"] = None
+                # Cast or annotate the message_dict to the specific Assistant param type
+                assistant_msg: ChatCompletionAssistantMessageParam = {
+                    "role": "assistant",
+                    "content": content or None,
+                    "tool_calls": openai_tool_calls
+                }
+                raw_messages.append(assistant_msg)
+                continue
 
             # Handle Tool Results
             if msg.role == MessageRole.TOOL:
-                if not msg.tool_call_id:
-                    # Fallback for legacy messages or errors
-                    logger.warning("Message with role 'tool' missing 'tool_call_id'.")
-                    message_dict["tool_call_id"] = "unknown_call_id"
-                else:
-                    message_dict["tool_call_id"] = msg.tool_call_id
-
-                # Some local servers (and OpenAI) allow/expect 'name'
+                # Mypy usually doesn't allow 'name' in ChatCompletionToolMessageParam,
+                # but some providers (and older OpenAI specs) support it for labeling.
+                tool_msg: OpenAIToolMessageParam = {
+                    "role": "tool",
+                    "tool_call_id": msg.tool_call_id or "unknown",
+                    "content": msg.content or "",
+                }
+                # Some providers like 'name' in tool messages
                 if msg.name:
-                    message_dict["name"] = msg.name
+                    tool_msg["name"] = msg.name
 
-            messages.append(cast("ChatCompletionMessageParam", message_dict))
-        return messages
+                raw_messages.append(tool_msg)
+                continue
+
+            # Fallback for regular messages (User, System, or simple Assistant)
+            raw_messages.append(cast("ChatCompletionMessageParam", message_dict))
+
+        return self._merge_consecutive_messages(raw_messages)
+
+    def _merge_consecutive_messages(
+        self, messages: list[ChatCompletionMessageParam]
+    ) -> list[ChatCompletionMessageParam]:
+        """
+        Merges consecutive messages with the same role (user, assistant, system).
+        Skips merging for 'tool' role as OpenAI requires them to stay separate.
+        """
+        if not messages:
+            return []
+
+        merged: list[dict[str, Any]] = []
+
+        for msg in messages:
+            msg_dict = cast(dict[str, Any], msg)
+            role = msg_dict.get("role")
+
+            if not merged:
+                merged.append(msg_dict.copy())
+                continue
+
+            prev = merged[-1]
+            # Roles to merge: system, user, assistant. Skip tool.
+            if role == prev.get("role") and role in [MessageRole.USER, MessageRole.ASSISTANT, MessageRole.SYSTEM]:
+                # 1. Merge Content
+                content = msg_dict.get("content")
+                prev_content = prev.get("content")
+
+                if content:
+                    if prev_content:
+                        prev["content"] = f"{prev_content}\n\n{content}"
+                    else:
+                        prev["content"] = content
+
+                # 2. Merge Tool Calls (for assistant)
+                if role == MessageRole.ASSISTANT:
+                    tool_calls = msg_dict.get("tool_calls")
+                    if tool_calls:
+                        if "tool_calls" not in prev:
+                            prev["tool_calls"] = []
+                        prev["tool_calls"].extend(tool_calls)
+
+                        # Ensure content is None if it was empty (OpenAI requirement)
+                        if not prev.get("content"):
+                            prev["content"] = None
+            else:
+                merged.append(msg_dict.copy())
+
+        return cast(list["ChatCompletionMessageParam"], merged)
 
     def _extract_reasoning(self, data: Any) -> str | None:
         """

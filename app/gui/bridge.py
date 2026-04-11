@@ -2,19 +2,20 @@ import logging
 import queue
 from typing import Any, TypedDict
 
-from app.models.vocabulary import UIComponentID
+from app.models.vocabulary import MessageRole, UIComponentID, UIEventType
 
 logger = logging.getLogger(__name__)
 
 
 class UIMessage(TypedDict, total=False):
-    type: str
+    type: str | UIEventType
     turn_id: str | None
-    role: str
+    role: str | MessageRole
     content: str
     name: str
     args: dict[str, Any]
     result: Any
+    is_error: bool
     spec: str
     total: int
     rolls: list[int]
@@ -123,29 +124,47 @@ class NiceGUIBridge:
         msg_type = msg.get("type")
 
         # --- Chat & Interaction ---
-        if msg_type in ["message_bubble", "thought_bubble"]:
+        if msg_type in [UIEventType.MESSAGE_BUBBLE, UIEventType.THOUGHT_BUBBLE]:
             if self.chat_component:
-                role = "assistant" if msg_type == "message_bubble" else "thought"
-                if "role" in msg:
-                    role = msg["role"]
+                role = MessageRole.ASSISTANT if msg_type == UIEventType.MESSAGE_BUBBLE else MessageRole.THOUGHT
+                msg_role = msg.get("role")
+                if msg_role:
+                    role = MessageRole(msg_role) if isinstance(msg_role, str) else msg_role
 
-                if role == "user":
+                if role == MessageRole.USER:
                     name = "Player"
-                elif role == "assistant":
+                elif role == MessageRole.ASSISTANT:
                     name = "Game Master"
-                elif role == "system":
+                elif role == MessageRole.SYSTEM:
                     name = "System"
                 else:
-                    name = role.capitalize()
+                    name = str(role).capitalize()
 
-                self.chat_component.add_message(name, msg.get("content", ""), role)
+                self.chat_component.add_message(
+                    name,
+                    msg.get("content", ""),
+                    role,
+                    index=msg.get("index"),
+                    message_data=msg.get("message_data")
+                )
 
-        elif msg_type == "tool_call":
+        elif msg_type == UIEventType.TOOL_CALL:
             if self.chat_component:
                 self.chat_component.add_tool_log(msg.get("name"), msg.get("args"))
 
-        elif msg_type == "tool_result":
+        elif msg_type == UIEventType.TOOL_RESULT:
             result = msg.get("result", {})
+            tool_name = msg.get("name", "Tool")
+            is_error = msg.get("is_error", False)
+
+            # Render a tool result expansion panel in the chat
+            if self.chat_component:
+                self.chat_component.add_tool_result(
+                    name=tool_name,
+                    content=result,
+                    is_error=is_error,
+                )
+
             # Location Banner Logic
             if isinstance(result, dict) and result.get("ui_event") == "location_change":
                 if self.chat_component:
@@ -154,28 +173,28 @@ class NiceGUIBridge:
                     )
                     self.chat_component.clear_navigation()
 
-        elif msg_type == "dice_roll":
+        elif msg_type == UIEventType.DICE_ROLL:
             if self.chat_component:
                 self.chat_component.add_dice_roll(
                     msg.get("spec"), msg.get("total"), msg.get("rolls")
                 )
 
-        elif msg_type == "choices":
+        elif msg_type == UIEventType.CHOICES:
             if self.chat_component:
                 self.chat_component.add_choices(msg.get("choices", []))
 
-        elif msg_type == "rag_context":
+        elif msg_type == UIEventType.RAG_CONTEXT:
             if self.chat_component:
                 self.chat_component.add_rag_context(
                     msg.get("text", ""), msg.get("memory_ids", [])
                 )
 
-        elif msg_type == "update_nav":
+        elif msg_type == UIEventType.UPDATE_NAV:
             if self.chat_component:
                 self.chat_component.update_navigation(msg.get("exits", []))
 
         # --- Visuals & State ---
-        elif msg_type == "map_update":
+        elif msg_type == UIEventType.MAP_UPDATE:
             if self.map_component:
                 raw = msg.get("data", {})
                 ui_entities = {v: k for k, v in raw.get("entities", {}).items()}
@@ -187,17 +206,17 @@ class NiceGUIBridge:
                 }
                 self.map_component.update_tactical(ui_data)
 
-        elif msg_type in ["turn_complete", "state_changed", "refresh_memory_inspector"]:
+        elif msg_type in [UIEventType.TURN_COMPLETE, UIEventType.STATE_CHANGED, UIEventType.REFRESH_MEMORY_INSPECTOR]:
             if self.inspector_component:
                 self.inspector_component.refresh()
             if self.map_component:
                 self.map_component.refresh_from_db()
 
             # Only stop "generating" when the turn is actually complete
-            if msg_type == "turn_complete" and self.chat_component:
+            if msg_type == UIEventType.TURN_COMPLETE and self.chat_component:
                 self.chat_component.set_generating(False)
 
-        elif msg_type == "planning_started":
+        elif msg_type == UIEventType.PLANNING_STARTED:
             if self.chat_component:
                 # show a generic thinking stub immediately
                 self.chat_component.add_message(
@@ -207,18 +226,18 @@ class NiceGUIBridge:
                 )
                 self.chat_component.set_generating(True)
 
-        elif msg_type == "history_changed":
+        elif msg_type == UIEventType.HISTORY_CHANGED:
             if self.chat_component:
                 self.chat_component.load_history()
 
-        elif msg_type == "error":
+        elif msg_type == UIEventType.ERROR:
             if self.chat_component:
-                self.chat_component.add_message("Error", msg.get("message"), "system")
+                self.chat_component.add_message("Error", msg.get("message"), MessageRole.SYSTEM)
                 self.chat_component.set_generating(False)
 
         # --- Header Updates ---
-        elif msg_type == "update_game_time":
+        elif msg_type == UIEventType.UPDATE_GAME_TIME:
             self.time_label.set_text(msg.get("new_time", ""))
 
-        elif msg_type == "update_game_mode":
+        elif msg_type == UIEventType.UPDATE_GAME_MODE:
             self.mode_label.set_text(msg.get("new_mode", ""))

@@ -27,6 +27,9 @@ This document provides a technical overview of the Solo Text AI-RPG framework, o
 
 **Communication Beat:** When performing long tasks, stop every so often to report the current progress, reiterate the next steps, and question the user for any adjustments.
 
+**Testing:** Never place temporary scripts or test code in `/tmp/`. Always use the `./tests/` directory for any testing related activities to ensure consistency and visibility.
+
+
 ## Core Concepts
 
 -   **Manifest-Driven Architecture:** The game system is defined by a JSON `SystemManifest`. This defines the stats (`VAL_INT`), resources (`RES_POOL`), and mechanics. The AI does not hallucinate rules; it follows the Manifest.

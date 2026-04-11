@@ -4,6 +4,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from app.models.vocabulary import UIEventType
 from app.tools.schemas import Note, Roll
 
 
@@ -65,7 +66,7 @@ class ToolExecutor:
                 try:
                     self.ui_queue.put(
                         {
-                            "type": "tool_call",
+                            "type": UIEventType.TOOL_CALL,
                             "name": tool_name,
                             "args": call.model_dump(exclude={"name"}),
                             "turn_id": turn_id,
@@ -82,7 +83,7 @@ class ToolExecutor:
                 if isinstance(call, Roll) and self.ui_queue:
                     self.ui_queue.put(
                         {
-                            "type": "dice_roll",
+                            "type": UIEventType.DICE_ROLL,
                             "spec": call.formula,
                             "rolls": result.get("rolls", []),
                             "total": result.get("total", 0),
@@ -102,7 +103,8 @@ class ToolExecutor:
                 if self.ui_queue:
                     self.ui_queue.put(
                         {
-                            "type": "tool_result",
+                            "type": UIEventType.TOOL_RESULT,
+                            "name": tool_name,
                             "result": result,
                             "is_error": False,
                             "turn_id": turn_id,
@@ -122,7 +124,8 @@ class ToolExecutor:
                 if self.ui_queue:
                     self.ui_queue.put(
                         {
-                            "type": "tool_result",
+                            "type": UIEventType.TOOL_RESULT,
+                            "name": tool_name,
                             "result": str(e),
                             "is_error": True,
                             "turn_id": turn_id,
@@ -143,13 +146,13 @@ class ToolExecutor:
             "inventory.add_item",
         ]:
             if self.ui_queue:
-                self.ui_queue.put({"type": "state_changed", "turn_id": turn_id})
+                self.ui_queue.put({"type": UIEventType.STATE_CHANGED, "turn_id": turn_id})
 
         # Memory -> Refresh Log
         if tool_name in ["note", "game.log", "memory.upsert"]:
             if self.ui_queue:
                 self.ui_queue.put(
-                    {"type": "refresh_memory_inspector", "turn_id": turn_id}
+                    {"type": UIEventType.REFRESH_MEMORY_INSPECTOR, "turn_id": turn_id}
                 )
 
         # Navigation
@@ -158,5 +161,5 @@ class ToolExecutor:
             exits = list((loc_data.get("connections") or {}).keys())
             if self.ui_queue:
                 self.ui_queue.put(
-                    {"type": "update_nav", "exits": exits, "turn_id": turn_id}
+                    {"type": UIEventType.UPDATE_NAV, "exits": exits, "turn_id": turn_id}
                 )

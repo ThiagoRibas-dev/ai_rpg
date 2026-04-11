@@ -1,6 +1,8 @@
 import json
 import logging
+import os
 import threading
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -14,7 +16,7 @@ from app.llm.schemas import TurnMetadata, TurnSuggestions
 from app.models.game_session import GameSession
 from app.models.message import Message
 from app.models.session import Session
-from app.models.vocabulary import MessageRole
+from app.models.vocabulary import MessageRole, UIEventType
 from app.setup.setup_manifest import SetupManifest
 from app.tools.executor import ToolExecutor
 from app.tools.schemas import Adjust, ContextRetrieve, LocationCreate, Mark, Move, Note, NpcSpawn, Roll, Set, StateQuery
@@ -64,7 +66,7 @@ class ReActTurnManager:
             )
             self.logger.error(system_error)
             self.ui_queue.put({
-                "type": "error",
+                "type": UIEventType.ERROR,
                 "message": system_error,
                 "turn_id": turn_id,
             })
@@ -108,36 +110,40 @@ class ReActTurnManager:
         working_history = list(chat_history)
         working_history = self._prepend_rolling_summary(game_session, working_history)
 
+        dynamic_context = context_builder.build_dynamic_context(
+            game_session, chat_history
+        )
+        turn_system_prompt = f"{static_instruction}\n\n{dynamic_context}"
+
         mems = mem_retriever.get_relevant(
             session_in_thread,
             recent_messages=working_history,
         )
 
-        dynamic_context = context_builder.build_dynamic_context(
-            game_session, chat_history, rag_memories=mems
-        )
-        turn_system_prompt = f"{static_instruction}\n\n{dynamic_context}"
+        # Staged synthetic tool messages — collected here, injected after a synthetic
+        # assistant message so the history is OpenAI-standard compliant.
+        synthetic_tool_messages: dict[str, Message] = {}
 
         if mems:
             # Emit UI event for debug visibility
             rag_text_for_ui = mem_retriever.format_for_prompt(mems)
 
-            # Append the rag context as a tool return message
+            # Stage the rag context as a synthetic tool return message
             if rag_text_for_ui:
-                tool_return_message = Message(
-                    role="tool",
-                    name="rag_context",
+                synthetic_tool_messages["passive_rag_context"] = Message(
+                    role=MessageRole.TOOL,
+                    tool_call_id="passive_rag_context",
+                    name="passive_rag_context",
                     content=rag_text_for_ui,
                     turn_id=turn_id,
                 )
-                working_history.append(tool_return_message)
 
             # Flatten memory IDs for the UI queue
             flat_mem_ids = [m.id for cat_mems in mems.values() for m in cat_mems]
 
             self.ui_queue.put(
                 {
-                    "type": "rag_context",
+                    "type": UIEventType.RAG_CONTEXT,
                     "text": rag_text_for_ui,
                     "memory_ids": flat_mem_ids,
                     "turn_id": turn_id,
@@ -176,41 +182,38 @@ class ReActTurnManager:
                     tool["function"]["description"] = desc
 
         # Appends the list of available tools to the working history
-        tools_defs = "You have access to the following tools to retrieve or confirm information, roll dice, create or modify Game State, etc.\n\n```available_tools\n"
+        tools_defs = "I have access to the following tools to retrieve or confirm information, roll dice, create or modify Game State, etc.\n\n```available_tools\n"
         for tool in llm_tools:
             name = tool["function"]["name"]
             desc = tool["function"]["description"].strip()
             # Clean up docstring formatting
             desc = " ".join(desc.split())
             tools_defs += f"- **{name}**: {desc}\n"
-        tools_defs += "\n```\n\nFeel free to constantly use the dice tool to make decisions, create entropy, simulate outcomes.\n\nYou should proactively decide which tools/functions to use and when.\n"
+        tools_defs += "\n```\n\nI will use the dice tool to make decisions, create entropy, simulate outcomes, etc.\n\nI will also proactively decide which tools/functions to use and when.\n"
+
+        # Stage the tool definitions as a synthetic tool return message
+        if tools_defs:
+            synthetic_tool_messages["available_tools"] = Message(
+                role=MessageRole.TOOL,
+                tool_call_id="tools_defs",
+                name="available_tools",
+                content=tools_defs,
+                turn_id=turn_id,
+            )
+
+        # Inject synthetic tool context (RAG, tool definitions, etc.)
+        working_history_request = self._get_request_history_with_synthetic_tools(
+            working_history, synthetic_tool_messages, turn_id
+        )
+
 
         # --- 5. ACTION LOOP ---
-        # create a copy of the working_history to manipulate the last User message without affecting the original working_history
-        working_history_request = list(working_history)
-
-        # Instead of a dedicated tool message, we append it to the User's last message
-        if tools_defs:
-            if working_history_request and working_history_request[-1].role == MessageRole.USER:
-                # validates if .content is None
-                if working_history_request[-1].content is None:
-                    working_history_request[-1].content = ""
-                working_history_request[-1].content += f"\n\n---\n\n{tools_defs}"
-            else:
-                working_history_request.append(
-                    Message(
-                        role=MessageRole.USER,
-                        content=tools_defs,
-                        turn_id=turn_id,
-                    )
-                )
-
         loop_count = 0
         narrative_text = ""
         while loop_count < MAX_REACT_LOOPS:
             if self.orchestrator.stop_event.is_set():
                 self.ui_queue.put(
-                    {"type": "error", "message": "Stopped by user.", "turn_id": turn_id}
+                    {"type": UIEventType.ERROR, "message": "Stopped by user.", "turn_id": turn_id}
                 )
                 return
             loop_count += 1
@@ -223,7 +226,7 @@ class ReActTurnManager:
                 )
             except InterruptedError:
                 self.ui_queue.put(
-                    {"type": "error", "message": "Stopped by user.", "turn_id": turn_id}
+                    {"type": UIEventType.ERROR, "message": "Stopped by user.", "turn_id": turn_id}
                 )
                 return
             except Exception as e:
@@ -235,27 +238,34 @@ class ReActTurnManager:
                 self.logger.warning(f"Empty response from LLM for turn {turn_id}")
                 continue
 
-            tool_msg = Message(
-                role=MessageRole.TOOL,
+            # We create the message using the actual model response data
+            # This is an ASSISTANT message (even if it only contains tool calls or thoughts)
+            llm_msg = Message(
+                role=MessageRole.ASSISTANT,
                 content=response.content,
                 thought=response.thought,
                 thought_signature=response.thought_signature,
                 tool_calls=response.tool_calls,
+                turn_id=turn_id,
             )
-            working_history.append(tool_msg)
-            working_history_request.append(tool_msg)
+            working_history.append(llm_msg)
+            working_history_request.append(llm_msg)
 
-            if response.content and not response.tool_calls:
-                self.ui_queue.put(
-                    {
-                        "type": "message_bubble",
-                        "role": MessageRole.ASSISTANT,
-                        "content": response.content,
-                        "turn_id": turn_id,
-                    }
-                )
-                narrative_text += f"\n{response.content}"
-                break
+            # Add the full llm_msg to history, not a stripped one
+            session_in_thread.history.append(llm_msg)
+            msg_index = len(session_in_thread.history) - 1
+            narrative_text += f"\n{response.content}"
+
+            self.ui_queue.put(
+                {
+                    "type": UIEventType.MESSAGE_BUBBLE,
+                    "role": MessageRole.ASSISTANT,
+                    "content": response.content,
+                    "index": msg_index,
+                    "message_data": llm_msg.model_dump(),
+                    "turn_id": turn_id,
+                }
+            )
 
             if response.tool_calls:
                 self.logger.info(
@@ -264,17 +274,8 @@ class ReActTurnManager:
                 if response.thought:
                     self.ui_queue.put(
                         {
-                            "type": "thought_bubble",
+                            "type": UIEventType.THOUGHT_BUBBLE,
                             "content": response.thought,
-                            "turn_id": turn_id,
-                        }
-                    )
-                if response.content:
-                    self.ui_queue.put(
-                        {
-                            "type": "message_bubble",
-                            "role": MessageRole.ASSISTANT,
-                            "content": response.content,
                             "turn_id": turn_id,
                         }
                     )
@@ -312,21 +313,28 @@ class ReActTurnManager:
                                 tool_call_id=call_id,
                                 name=name,
                                 content=json.dumps(res_data, indent=2),
+                                turn_id=turn_id,
                             )
                             working_history.append(tool_msg)
                             working_history_request.append(tool_msg)
+                            # CRITICAL: Persist tool messages to history!
+                            session_in_thread.history.append(tool_msg)
                         except Exception as e:
                             tool_error = Message(
                                 role=MessageRole.TOOL,
                                 tool_call_id=call_id,
                                 name=name,
                                 content=json.dumps({"error": str(e)}, indent=2),
+                                turn_id=turn_id,
                             )
                             working_history.append(tool_error)
                             working_history_request.append(tool_error)
+                            # Persist error result too
+                            session_in_thread.history.append(tool_error)
                             self.ui_queue.put(
                                 {
-                                    "type": "tool_result",
+                                    "type": UIEventType.TOOL_RESULT,
+                                    "name": name,
                                     "result": str(e),
                                     "is_error": True,
                                     "turn_id": turn_id,
@@ -338,10 +346,15 @@ class ReActTurnManager:
                             tool_call_id=call_id,
                             name=name,
                             content=json.dumps({"error": f"Tool '{name}' not found."}, indent=2),
+                            turn_id=turn_id,
                         )
                         working_history.append(tool_error)
                         working_history_request.append(tool_error)
+                        session_in_thread.history.append(tool_error)
                 continue
+            else:
+                # No more tools, we are done
+                break
 
         # --- 5B. LOOP EXHAUSTION GUARD ---
         if not narrative_text:
@@ -361,7 +374,7 @@ class ReActTurnManager:
                 if narrative_text:
                     self.ui_queue.put(
                         {
-                            "type": "message_bubble",
+                            "type": UIEventType.MESSAGE_BUBBLE,
                             "role": MessageRole.ASSISTANT,
                             "content": narrative_text,
                             "turn_id": turn_id,
@@ -401,9 +414,9 @@ class ReActTurnManager:
         except Exception as e:
             self.logger.warning(f"Turn suggestions generation failed: {e}")
 
-        # --- 7. PERSISTENCE (NARRATIVE) ---
-        if narrative_text.strip():
-            session_in_thread.add_message(MessageRole.ASSISTANT, narrative_text)
+        # --- 7. PERSISTENCE ---
+        # Note: Assistant messages were already added to session_in_thread.history
+        # incrementally during the ReAct loop to support live interactivity.
 
         self.orchestrator._update_game_in_thread(
             game_session, thread_db_manager, session_in_thread
@@ -412,7 +425,7 @@ class ReActTurnManager:
         if choices:
             self.ui_queue.put(
                 {
-                    "type": "choices",
+                    "type": UIEventType.CHOICES,
                     "choices": choices,
                     "turn_id": turn_id,
                 }
@@ -516,5 +529,78 @@ class ReActTurnManager:
             content=f"# STORY SO FAR\n{summary}",
         )
         return [prefix, *history]
+
+    def _get_request_history_with_synthetic_tools(
+        self,
+        working_history: list[Message],
+        synthetic_tool_messages: dict[str, Message],
+        turn_id: str,
+    ) -> list[Message]:
+        """
+        Prepares the chat history for the LLM request, injecting synthetic tool results.
+        Supports a compatibility mode for models/templates that struggle with strict
+        OpenAI tool alternation (Assistant tool_calls -> Tool results).
+        """
+        if not synthetic_tool_messages:
+            return list(working_history)
+
+        compat_mode = os.environ.get("SYNTHETIC_TOOLS_COMPAT_MODE", "false").lower() == "true"
+        working_history_request = list(working_history)
+
+        if compat_mode:
+            # COMPAT MODE: Append synthetic info to the last USER message
+            self.logger.debug("Using SYNTHETIC_TOOLS_COMPAT_MODE: Inlining tools into last User message.")
+            
+            # Format synthetic messages into a single block with specific headings
+            extra_context = ""
+            for tool_id, msg in synthetic_tool_messages.items():
+                if tool_id == "passive_rag_context":
+                    heading = "RELEVANT CONTEXT (RAG)"
+                elif tool_id == "available_tools":
+                    heading = "AVAILABLE TOOLS"
+                else:
+                    heading = f"ADDITIONAL CONTEXT: {tool_id.replace('_', ' ').upper()}"
+                
+                extra_context += f"\n\n---\n### {heading}\n{msg.content}\n"
+            
+            # Find the last USER message to append to
+            user_msg_index = -1
+            for i in range(len(working_history_request) - 1, -1, -1):
+                if working_history_request[i].role == MessageRole.USER:
+                    user_msg_index = i
+                    break
+            
+            if user_msg_index != -1:
+                # Append to existing message
+                original_content = working_history_request[user_msg_index].content or ""
+                working_history_request[user_msg_index] = working_history_request[user_msg_index].model_copy(
+                    update={"content": f"{original_content}{extra_context}"}
+                )
+            else:
+                # No user message? Prepend as a fake USER message instead of crashing
+                self.logger.warning("No USER message found for Compat Mode. Prepending as USER message.")
+                working_history_request.insert(0, Message(
+                    role=MessageRole.USER,
+                    content=f"IMPORTANT CONTEXT:{extra_context}",
+                    turn_id=turn_id
+                ))
+        else:
+            # STRICT MODE: Follow OpenAI standard (Assistant tool_calls -> Tool results)
+            synthetic_tool_calls: list[dict[str, Any]] = [
+                {"id": msg.tool_call_id, "name": msg.name or tool_id, "arguments": {}}
+                for tool_id, msg in synthetic_tool_messages.items()
+            ]
+            
+            # Append synthetic assistant message that "called" these tools
+            working_history_request.append(Message(
+                role=MessageRole.ASSISTANT,
+                content=None,
+                tool_calls=synthetic_tool_calls,
+                turn_id=turn_id,
+            ))
+            # Append the actual tool results
+            working_history_request.extend(synthetic_tool_messages.values())
+
+        return working_history_request
 
 
