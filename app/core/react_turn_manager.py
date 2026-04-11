@@ -550,7 +550,7 @@ class ReActTurnManager:
         if compat_mode:
             # COMPAT MODE: Append synthetic info to the last USER message
             self.logger.debug("Using SYNTHETIC_TOOLS_COMPAT_MODE: Inlining tools into last User message.")
-            
+
             # Format synthetic messages into a single block with specific headings
             extra_context = ""
             for tool_id, msg in synthetic_tool_messages.items():
@@ -560,16 +560,16 @@ class ReActTurnManager:
                     heading = "AVAILABLE TOOLS"
                 else:
                     heading = f"ADDITIONAL CONTEXT: {tool_id.replace('_', ' ').upper()}"
-                
+
                 extra_context += f"\n\n---\n### {heading}\n{msg.content}\n"
-            
+
             # Find the last USER message to append to
             user_msg_index = -1
             for i in range(len(working_history_request) - 1, -1, -1):
                 if working_history_request[i].role == MessageRole.USER:
                     user_msg_index = i
                     break
-            
+
             if user_msg_index != -1:
                 # Append to existing message
                 original_content = working_history_request[user_msg_index].content or ""
@@ -590,7 +590,7 @@ class ReActTurnManager:
                 {"id": msg.tool_call_id, "name": msg.name or tool_id, "arguments": {}}
                 for tool_id, msg in synthetic_tool_messages.items()
             ]
-            
+
             # Append synthetic assistant message that "called" these tools
             working_history_request.append(Message(
                 role=MessageRole.ASSISTANT,

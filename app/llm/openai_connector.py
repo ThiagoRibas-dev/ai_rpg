@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import os
+import weakref
 from collections.abc import AsyncGenerator
 from typing import TYPE_CHECKING, Any, cast
 
@@ -53,7 +54,23 @@ class OpenAIConnector(LLMConnector):
             logger.error("OPENAI_API_MODEL environment variable not set.")
             raise ValueError("OPENAI_API_MODEL environment variable not set.")
         self.client = openai.OpenAI(base_url=self.base_url, api_key=self.api_key, timeout=self.timeout)
-        self.async_client = openai.AsyncOpenAI(base_url=self.base_url, api_key=self.api_key, timeout=self.timeout)
+        self._async_clients: weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, openai.AsyncOpenAI] = weakref.WeakKeyDictionary()
+
+    def _get_async_client(self) -> openai.AsyncOpenAI:
+        """Returns an AsyncOpenAI client associated with the current event loop."""
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # Fallback for sync contexts or before loop starts
+            # Note: We don't cache this as it's not tied to a loop
+            return openai.AsyncOpenAI(base_url=self.base_url, api_key=self.api_key, timeout=self.timeout)
+
+        if loop not in self._async_clients:
+            logger.debug(f"Creating new AsyncOpenAI client for loop {id(loop)}")
+            self._async_clients[loop] = openai.AsyncOpenAI(
+                base_url=self.base_url, api_key=self.api_key, timeout=self.timeout
+            )
+        return self._async_clients[loop]
 
     def _convert_chat_history_to_messages(
         self, chat_history: list[Message]
@@ -224,7 +241,8 @@ class OpenAIConnector(LLMConnector):
             }
 
         async with self.semaphore:
-            stream = await cast(Any, self.async_client.chat.completions).create(
+            client = self._get_async_client()
+            stream = await cast(Any, client.chat.completions).create(
                 model=self.model or "gpt-4o",
                 messages=messages,
                 stream=True,
@@ -291,8 +309,9 @@ class OpenAIConnector(LLMConnector):
             }
 
         async with self.semaphore:
+            client = self._get_async_client()
             resp = await asyncio.wait_for(
-                cast(Any, self.async_client.chat.completions).create(
+                cast(Any, client.chat.completions).create(
                     model=self.model or "gpt-4o",
                     messages=messages,
                     max_completion_tokens=-1,
@@ -424,8 +443,9 @@ class OpenAIConnector(LLMConnector):
             }
 
         async with self.semaphore:
+            client = self._get_async_client()
             response = await asyncio.wait_for(
-                cast(Any, self.async_client.chat.completions).create(
+                cast(Any, client.chat.completions).create(
                     model=self.model or "gpt-4o",
                     messages=messages,
                     tools=tools,

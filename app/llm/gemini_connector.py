@@ -5,6 +5,7 @@ import base64
 import json
 import logging
 import os
+import weakref
 from collections.abc import AsyncGenerator
 from typing import Any, cast
 
@@ -31,10 +32,8 @@ class GeminiConnector(LLMConnector):
         if not self.model_name:
             self.model_name = "gemini-flash-latest" # Updated default
 
-        self.client = genai.Client(
-            api_key=api_key,
-            http_options=HttpOptions(timeout=self.timeout)
-        )
+        self._api_key = api_key
+        self._async_clients: weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, genai.Client] = weakref.WeakKeyDictionary()
         self.default_max_tokens = 65535
         self.default_thinking_budget = 12000
         self.default_safety_settings = [
@@ -55,6 +54,25 @@ class GeminiConnector(LLMConnector):
                 threshold="BLOCK_NONE",
             ),
         ]
+
+    def _get_async_client(self) -> genai.Client:
+        """Returns a genai.Client associated with the current event loop."""
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # Fallback for sync contexts or before loop starts
+            return genai.Client(
+                api_key=self._api_key,
+                http_options=HttpOptions(timeout=self.timeout)
+            )
+
+        if loop not in self._async_clients:
+            logger.debug(f"Creating new Gemini client for loop {id(loop)}")
+            self._async_clients[loop] = genai.Client(
+                api_key=self._api_key,
+                http_options=HttpOptions(timeout=self.timeout)
+            )
+        return self._async_clients[loop]
 
     def _convert_chat_history_to_contents(
         self, chat_history: list[Message]
@@ -168,7 +186,8 @@ class GeminiConnector(LLMConnector):
 
         async with self.semaphore:
             # Cast to Any to bypass complex tool-call overloads that block Mypy
-            response = await cast(Any, self.client.aio.models).generate_content_stream(
+            client = self._get_async_client()
+            response = await cast(Any, client.aio.models).generate_content_stream(
                 model=self.model_name or "gemini-2.0-flash",
                 contents=cast(Any, contents),
                 config=generation_config,
@@ -208,8 +227,9 @@ class GeminiConnector(LLMConnector):
             )
 
         async with self.semaphore:
+            client = self._get_async_client()
             response = await asyncio.wait_for(
-                self.client.aio.models.generate_content(
+                client.aio.models.generate_content(
                     model=self.model_name or "gemini-flash-latest",
                     contents=cast(Any, contents),
                     config=generation_config
@@ -263,8 +283,9 @@ class GeminiConnector(LLMConnector):
         generation_config = types.GenerateContentConfig(**config_args)
 
         async with self.semaphore:
+            client = self._get_async_client()
             response = await asyncio.wait_for(
-                self.client.aio.models.generate_content(
+                client.aio.models.generate_content(
                     model=self.model_name or "gemini-flash-latest",
                     contents=cast(Any, contents),
                     config=generation_config
