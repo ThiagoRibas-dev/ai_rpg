@@ -6,4 +6,4 @@ updatedAt: 2026-04-08T03:48:21.960Z
 provider: 
 ---
 
-LookaFind the AGENTS.md in the root dir and load the definitions, workflows, and rules from there.
+The first thing you should do is look for an AGENTS.md in the root dir and load the definitions, workflows, and rules from there.

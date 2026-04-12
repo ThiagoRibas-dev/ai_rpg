@@ -80,13 +80,20 @@ class TestPromptRestructure(unittest.TestCase):
 
             res = builder.build_character_sheet(1, mock_manifest)
 
+            import json
+            parsed = json.loads(res)
+
             # Verify Attributes table
-            self.assertIn("| Attribute | Score | Mod |", res)
-            self.assertIn("| Strength | 18 | +4 |", res)
+            self.assertIn("Attributes", parsed)
+            self.assertEqual(parsed["Attributes"]["str"]["score"], 18)
+            self.assertEqual(parsed["Attributes"]["str"]["mod"], 4)
+            self.assertEqual(parsed["Attributes"]["str"]["_label"], "Strength")
 
             # Verify Resources table
-            self.assertIn("| Resource | Current | Max |", res)
-            self.assertIn("| HP | 10 | 10 |", res)
+            self.assertIn("Resources", parsed)
+            self.assertEqual(parsed["Resources"]["hp"]["current"], 10)
+            self.assertEqual(parsed["Resources"]["hp"]["max"], 10)
+            self.assertEqual(parsed["Resources"]["hp"]["_label"], "HP")
 
     def test_context_builder_integration(self):
         """Ensures ContextBuilder can run its full dynamic pipeline without AttributeErrors."""

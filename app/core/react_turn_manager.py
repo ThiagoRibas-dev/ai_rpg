@@ -206,7 +206,6 @@ class ReActTurnManager:
             working_history, synthetic_tool_messages, turn_id
         )
 
-
         # --- 5. ACTION LOOP ---
         loop_count = 0
         narrative_text = ""
@@ -556,12 +555,19 @@ class ReActTurnManager:
             for tool_id, msg in synthetic_tool_messages.items():
                 if tool_id == "passive_rag_context":
                     heading = "RELEVANT CONTEXT (RAG)"
+                    # Prepend guidance to RAG section
+                    guidance = "This is a sample of information from the codex. Use it to inform your decisions."
+                    content_with_guidance = f"{guidance}\n\n{msg.content}"
                 elif tool_id == "available_tools":
                     heading = "AVAILABLE TOOLS"
+                    # Prepend guidance to tools section
+                    guidance = "These are the available tools. Use them proactively and autonomously as you see fit."
+                    content_with_guidance = f"{guidance}\n\n{msg.content}"
                 else:
                     heading = f"ADDITIONAL CONTEXT: {tool_id.replace('_', ' ').upper()}"
+                    content_with_guidance = msg.content or ""
 
-                extra_context += f"\n\n---\n### {heading}\n{msg.content}\n"
+                extra_context += f"\n\n---\n### {heading}\n{content_with_guidance}\n"
 
             # Find the last USER message to append to
             user_msg_index = -1
@@ -591,10 +597,16 @@ class ReActTurnManager:
                 for tool_id, msg in synthetic_tool_messages.items()
             ]
 
-            # Append synthetic assistant message that "called" these tools
+            # Build guidance content for the assistant message
+            guidance = (
+                "I will search the codex for relevant memories and proactively use the provided tools as needed. "
+                "I will autonomously decide which tools to use based on the current game state."
+            )
+
+            # Append synthetic assistant message that "called" these tools with guidance content
             working_history_request.append(Message(
                 role=MessageRole.ASSISTANT,
-                content=None,
+                content=guidance,
                 tool_calls=synthetic_tool_calls,
                 turn_id=turn_id,
             ))

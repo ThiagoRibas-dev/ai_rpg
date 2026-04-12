@@ -91,7 +91,7 @@ class ContextBuilder:
         if self.manifest:
             char_text = self.state_builder.build_character_sheet(game_session.id, self.manifest)
             if char_text:
-                sections.append(self._wrap_section("PLAYER CHARACTER SHEET", char_text))
+                sections.append(self._wrap_section("PLAYER CHARACTER STATE", char_text, lang="json"))
 
         return "\n\n".join(sections)
 
@@ -105,10 +105,21 @@ class ContextBuilder:
         # Engine (Table-fied)
         lines.append(f"**Engine Configuration**\n{self.manifest.get_engine_table()}\n")
 
-        # Valid Paths (The Vocabulary)
-        lines.append(self.manifest.get_path_hints())
+        # Prefab Usage Rules
+        lines.append(self._build_prefab_usage_rules())
 
         return "\n".join(lines)
+
+    def _build_prefab_usage_rules(self) -> str:
+        return (
+            "## PREFAB LOGIC GUIDE\n"
+            "The player's state is provided as a JSON dictionary mapping paths to their values. "
+            "Use this guide to understand how to interact with the different JSON shapes using your tools:\n"
+            "- **Resources (e.g. `\"hp\": {\"current\": 10, \"max\": 10}`)**: Use `adjust(path=\"<category>.<key>.current\", delta=X)` for damage/healing.\n"
+            "- **Compound Attributes (e.g. `\"str\": {\"score\": 15, \"mod\": 2}`)**: Use `set(path=\"<category>.<key>.score\", value=X)`. Modifiers update automatically.\n"
+            "- **Lists (e.g. `\"weapons\": {\"items\": [...]}`)**: Use `set(path=\"<category>.<key>.items[index].<field>\", value=X)` to modify list items.\n"
+            "- **Simple Values**: Use `set` or `adjust` directly on the `<category>.<key>` path.\n"
+        )
 
     def _build_entity_index(self, session_id: int) -> str:
         try:

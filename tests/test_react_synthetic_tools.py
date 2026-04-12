@@ -45,6 +45,9 @@ class TestReActSyntheticTools(unittest.TestCase):
         self.assertEqual(len(res), 3)
         self.assertEqual(res[1].role, MessageRole.ASSISTANT)
         self.assertEqual(res[2].role, MessageRole.TOOL)
+        # Verify assistant message contains guidance
+        self.assertIn("I will search the codex", res[1].content or "")
+        self.assertIn("proactively use the provided tools", res[1].content or "")
 
     @patch.dict(os.environ, {"SYNTHETIC_TOOLS_COMPAT_MODE": "true"})
     def test_get_history_compat_mode(self):
@@ -62,6 +65,8 @@ class TestReActSyntheticTools(unittest.TestCase):
         # Compat mode merges into last USER message
         self.assertEqual(len(res), 1)
         self.assertIn("### RELEVANT CONTEXT (RAG)", res[0].content or "")
+        # Verify RAG section contains guidance
+        self.assertIn("This is a sample of information from the codex", res[0].content or "")
 
     @patch.dict(os.environ, {"SYNTHETIC_TOOLS_COMPAT_MODE": "true"})
     def test_get_history_compat_mode_no_user_message(self):
@@ -78,6 +83,8 @@ class TestReActSyntheticTools(unittest.TestCase):
 
         self.assertEqual(len(res), 2)
         self.assertIn("### AVAILABLE TOOLS", res[0].content or "")
+        # Verify tools section contains guidance
+        self.assertIn("These are the available tools", res[0].content or "")
 
 
 if __name__ == "__main__":

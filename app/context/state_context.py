@@ -1,7 +1,7 @@
 import logging
 from typing import Any
 
-from app.models.vocabulary import FieldKey, PrefabID
+from app.models.vocabulary import FieldKey
 from app.prefabs.manifest import SystemManifest
 from app.prefabs.validation import get_path
 from app.services.state_service import get_entity
@@ -27,73 +27,51 @@ class StateContextBuilder:
 
 
     def build_character_sheet(self, session_id: int, manifest: SystemManifest) -> str:
-        """Renders character categories into clean Markdown tables based on Prefab type."""
+        """Renders character fields into a clean JSON structure."""
+        import json
         player = get_entity(session_id, self.db, "character", "player")
         if not player:
             return "No character data found."
 
-        name = player.get(FieldKey.NAME, "Player")
-        sections = [f"**Player Character**: {name}"]
+        sheet: dict[str, Any] = {}
 
         for category in manifest.get_categories():
             fields = manifest.get_fields_by_category(category)
             if not fields:
                 continue
 
-            prefabs = {f.prefab for f in fields}
-            rows = []
-            header = None
-            sep = None
+            # Ensure category dict exists
+            if category not in sheet:
+                sheet[category] = {}
 
-            if PrefabID.VAL_COMPOUND in prefabs:
-                header = "| Attribute | Score | Mod |"
-                sep = "| :--- | :--- | :--- |"
-                for f in fields:
-                    val = get_path(player, f.path)
-                    if isinstance(val, dict):
-                        score = val.get(FieldKey.SCORE, 0)
-                        mod = val.get(FieldKey.MOD, 0)
-                        rows.append(f"| {f.label} | {score} | {mod:+} |")
+            for f in fields:
+                # The path gives us the key under the category (e.g., 'str' for 'attributes.str')
+                # For paths like 'resources.hp', category='resources', key='hp'
+                path_parts = f.path.split('.')
+                if len(path_parts) > 1 and path_parts[0] == category:
+                    key = path_parts[1]
+                else:
+                    # fallback if path doesn't strictly match category (should not happen based on schema)
+                    key = path_parts[-1]
 
-            elif PrefabID.RES_POOL in prefabs:
-                header = "| Resource | Current | Max |"
-                sep = "| :--- | :--- | :--- |"
-                for f in fields:
-                    val = get_path(player, f.path)
-                    if isinstance(val, dict):
-                        curr = val.get(FieldKey.CURRENT, 0)
-                        mx = val.get(FieldKey.MAX, 0)
-                        rows.append(f"| {f.label} | {curr} | {mx} |")
+                val = get_path(player, f.path)
 
-            elif PrefabID.CONT_LIST in prefabs:
-                header = "| Item | Qty | Description/Tags |"
-                sep = "| :--- | :--- | :--- |"
-                for f in fields:
-                    val = get_path(player, f.path)
-                    if isinstance(val, list):
-                        for item in val:
-                            if isinstance(item, dict):
-                                i_name = item.get(FieldKey.NAME, "Item")
-                                i_qty = item.get(FieldKey.QTY, 1)
-                                i_desc = item.get("description") or item.get("tags") or ""
-                                if isinstance(i_desc, list):
-                                    i_desc = ", ".join(str(x) for x in i_desc)
-                                rows.append(f"| {i_name} | {i_qty} | {i_desc} |")
+                # Clone value to avoid modifying the entity directly
+                import copy
+                cloned_val = copy.deepcopy(val)
 
-            if header and rows:
-                sections.append(f"**{category.title()}**\n{header}\n{sep}\n" + "\n".join(rows))
-            else:
-                # Fallback for categories without a clear table prefab (e.g. Identity, Skills as tags)
-                cat_lines = []
-                for f in fields:
-                    val = get_path(player, f.path)
-                    rendered = self._render_field(val, f.prefab)
-                    if rendered:
-                        cat_lines.append(f"{f.label}: {rendered}")
-                if cat_lines:
-                    sections.append(f"**{category.title()}**: " + ", ".join(cat_lines))
+                # Attach _label
+                if isinstance(cloned_val, dict):
+                    cloned_val["_label"] = f.label
+                elif isinstance(cloned_val, list):
+                    # Wrap list if it's top-level
+                    cloned_val = {"_label": f.label, "items": cloned_val}
+                else:
+                    cloned_val = {"_label": f.label, "value": cloned_val}
 
-        return "\n\n".join(sections)
+                sheet[category][key] = cloned_val
+
+        return json.dumps(sheet, indent=2)
 
     def build_active_quests(self, session_id: int) -> str:
         """Renders active quests as a Markdown table."""
@@ -133,67 +111,4 @@ class StateContextBuilder:
             if rows:
                 return "| Entity ID | Name | Role/Status |\n| :--- | :--- | :--- |\n" + "\n".join(rows)
         return ""
-
-    def _render_field(self, value: Any, prefab: str) -> str:
-        """Render value based on prefab type for the LLM Context."""
-        if value is None:
-            return ""
-
-        if prefab == PrefabID.RES_POOL:
-            # Render as Current/Max
-            if isinstance(value, dict):
-                curr = value.get(FieldKey.CURRENT, 0)
-                mx = value.get(FieldKey.MAX, 0)
-                return f"{curr}/{mx}"
-            return str(value)
-
-        elif prefab == PrefabID.RES_TRACK:
-            # Render as visual dots: [x][x][ ]
-            if isinstance(value, list):
-                return "".join(["[x]" if x else "[ ]" for x in value])
-            return str(value)
-
-        elif prefab == PrefabID.VAL_COMPOUND:
-            # Render as Score (+Mod)
-            if isinstance(value, dict):
-                score = value.get(FieldKey.SCORE, 0)
-                mod = value.get(FieldKey.MOD, 0)
-                sign = "+" if mod >= 0 else ""
-                return f"{score} ({sign}{mod})"
-            return str(value)
-
-        elif prefab == PrefabID.VAL_LADDER:
-            # Render as +1 (Average)
-            if isinstance(value, dict):
-                val = value.get(FieldKey.VALUE, 0)
-                lbl = value.get(FieldKey.LABEL, "")
-                sign = "+" if val >= 0 else ""
-                return f"{sign}{val} ({lbl})"
-            return str(value)
-
-        elif prefab == PrefabID.CONT_LIST:
-            # Concise list: [Sword, Shield]
-            if isinstance(value, list):
-                items = []
-                for item in value:
-                    if isinstance(item, dict):
-                        name = item.get(FieldKey.NAME, "Item")
-                        qty = item.get(FieldKey.QTY, 1)
-                        if qty > 1:
-                            items.append(f"{name} x{qty}")
-                        else:
-                            items.append(name)
-                    else:
-                        items.append(str(item))
-                if not items:
-                    return "Empty"
-                return "[" + ", ".join(items) + "]"
-            return "[]"
-
-        elif prefab == PrefabID.CONT_TAGS:
-            if isinstance(value, list):
-                return "[" + ", ".join(str(v) for v in value) + "]"
-            return "[]"
-
-        return str(value)
 

@@ -2,6 +2,10 @@
 
 This document outlines the system architecture, data flow, and core components of the AI-RPG project.
 
+## Related Documentation
+
+- **[Architecture Flows](architecture-flows.md)**: Mermaid diagrams illustrating main application flows. Visual reference for understanding system architecture and data flows.
+
 ## System Architecture
 - GUI renders streamed tokens and inline tool events.
 - Orchestrator executes a per-turn pipeline: Plan → Tools → Narrative → Patches/Memories.

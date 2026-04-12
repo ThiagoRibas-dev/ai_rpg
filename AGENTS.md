@@ -105,6 +105,7 @@ Instead of generic JSON, data follows strict patterns defined in `app/prefabs/re
 
 ### Documentation Files
 - **[Architecture](docs/01_architecture.md)**: Turn workflow, RAG service, project structure.
+- **[Architecture Flows](docs/architecture-flows.md)**: Mermaid diagrams illustrating main application flows. **IMPORTANT:** After any architectural changes, update this file to keep the diagrams current.
 - **[LLM Connectors](docs/02_llm_connectors.md)**: Provider adapters and structured output strategies.
 - **[Database Schema](docs/03_database_schema.md)**: Core SQL table definitions.
 - **[GUI](docs/04_gui.md)**: NiceGUI layout and threading execution model.
