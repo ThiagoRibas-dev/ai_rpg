@@ -48,9 +48,9 @@ class Theme:
                 .chat-markdown h1, .chat-markdown h2, .chat-markdown h3, .chat-markdown p, .chat-markdown li {
                     white-space: pre-wrap !important;
                 }
-                .chat-markdown h1 { font-size: 1.2rem !important; font-weight: bold; margin: 8px 0 4px 0 !important; line-height: 1.2 !important; }
-                .chat-markdown h2 { font-size: 1.1rem !important; font-weight: bold; margin: 8px 0 4px 0 !important; line-height: 1.2 !important; }
-                .chat-markdown h3 { font-size: 1.0rem !important; font-weight: bold; margin: 6px 0 3px 0 !important; line-height: 1.2 !important; }
+                .chat-markdown h1 { font-size: 2rem !important; font-weight: bold; margin: 8px 0 4px 0 !important;  }
+                .chat-markdown h2 { font-size: 1.8rem !important; font-weight: bold; margin: 8px 0 4px 0 !important;  }
+                .chat-markdown h3 { font-size: 1.6rem !important; font-weight: bold; margin: 6px 0 3px 0 !important;  }
                 .chat-markdown p { margin-bottom: 6px !important; }
                 .chat-markdown p:last-child { margin-bottom: 0 !important; }
                 .chat-markdown ul, .chat-markdown ol { margin: 4px 0 !important; padding-left: 1.5rem !important; }

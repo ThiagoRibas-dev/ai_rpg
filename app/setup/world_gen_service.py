@@ -127,9 +127,15 @@ class WorldGenService:
                         stream.set_npcs([])
 
             # --- WAIT & COLLECT ---
-            # Fire all parallel requests at once.
-            # Exceptions will propagate and fail the whole batch as requested.
-            results = await asyncio.gather(*tasks)
+            # Fire all parallel requests at once using TaskGroup for fail-fast cancellation.
+            # If one task fails, all others are immediately cancelled.
+            tg_tasks = []
+            async with asyncio.TaskGroup() as tg:
+                for t in tasks:
+                    tg_tasks.append(tg.create_task(t))
+            
+            # Map results back from tasks
+            results = [t.result() for t in tg_tasks]
 
             all_locations = []
             all_npcs = []

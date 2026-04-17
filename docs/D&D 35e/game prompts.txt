@@ -18,6 +18,7 @@ After you confirm that you are satisfied, we can start the game!
 ```
 That will allow us to define the parameters of the start of the campaign in a more conversational way.
 
+
 ### World and Campaign Setting
 
 A sandbox, living world with themes, situations, characters, and events that arise naturally. A high fantasy world with late medieval aesthetics, much like the Forgotten Realms — vast, with many nations, biomes, cultures, and wonders. Magic is ever-present but not pervasive; most commoners live their entire lives without ever witnessing true magic.
@@ -35,30 +36,248 @@ This setting takes place on Isaldar, the seventh moon orbiting the Primeval Orb 
 	Elaria's Fate: The original world, Elaria, and potentially all of creation, was threatened by an entity of immense power known as the Annihilation. 
 	Divine Sacrifice: Unable to defeat it directly, the gods performed a ritual that created the Seal of the Six Moons, trapping the Annihilation within Elaria. This act cost the gods their lives.
 	Flight to Isaldar: Before their demise, the gods used the Aether to transport their followers to Isaldar, the seventh and last moon, which was previously inhabited by orcs and a long-forgotten civilization.
-	The Wound: The remains of the dead gods fell at the heart of Isaldar's main continent, Aldar, creating the vast supernatural desert known as The Wound (or The Scar). This event is the source of Divine Metal. 
+	The Wound: The remains of the dead gods fell at the heart of Isaldar's main continent, Aldar, creating a massive supernatural desert known as The Wound (or The Scar). This event is the source of Divine Metal.
 	Impending Doom: The Seal of the Six Moons weakens each time Isaldar's six sister moons align with Elaria. Many believe the Annihilation will eventually break free, and that new gods must rise — possibly from among the Luminaries. For most, it's a distant reality, or even an unknown.
 
 2. Major Powers, Key Locations, Regions, and Concepts
 
 	Isaldar (The Seventh Moon): The current world, orbiting the dead world of Elaria.
-	Aldar: The main continent, divided into Western and Eastern regions. Most major civilizations are located here.
-	Lamaraj: The massive island-continent far south of Aldar. A jagged mountain range known as the Karashan (the Broken Backbone) cuts diagonally across the landmass. North of the mountains lies a dense tropical jungle. To the south and east sprawls the Gomork, a vast primordial fungal jungle. The zones where these two ecosystems meet are sacred areas filled with half-devoured ruins of a long-vanished civilization. Two colossal ziggurats, the larger Ziggurat of Ashkar (210 meters tall) near the northern coast, the smaller Ziggurat of Mithrael (180 meters tall) deep within the Gomork, were built by a forgotten people. The capital (Lamaraj city), with buildings of fine masonry and enchanted wood, paved roads, and a large dock, surrounds the Ziggurat of Ashkar. Maintains active trade ports with Aldar but remains culturally insular. Due to the tropical climate and culture, clothing is extremely minimal — loincloths, wraps, harnesses are commonplace and often cover pratically nothing.
-	The Wound (The Scar): A vast, unearthly desert created by the gods' falling remains. Main source of Divine Metal and home to dangerous creatures and hardy chaotic Orc tribes.
+	Aldar: The main continent, divided into several distinct geopolitical and geographic regions. Most major civilizations are located here.
+	Lamaraj: The massive island-continent far south of Aldar. A jagged mountain range known as the Karashan (the Broken Backbone) cuts diagonally across the landmass. North of the mountains lies a dense tropical jungle. To the south and east sprawls the Gomork, a vast primordial fungal jungle. The zones where these two ecosystems meet are sacred areas filled with half-devoured ruins of a long-vanished civilization. Two colossal ziggurats, the larger Ziggurat of Ashkar (210 meters tall) near the northern coast, the smaller Ziggurat of Mithrael (180 meters tall) deep within the Gomork, were built by a forgotten people. The capital (Lamaraj city), with buildings of fine masonry and enchanted wood, paved roads, and a large dock, surrounds the Ziggurat of Ashkar. Maintains active trade ports with Aldar but remains culturally insular. Due to the tropical climate and culture, clothing is extremely minimal — loincloths, wraps, harnesses are commonplace and often cover practically nothing.
+	The Wound (The Scar): A vast, unearthly desert created by the gods' falling remains at the center-northeast of Aldar. Main source of Divine Metal, home to dangerous creatures, and hardy chaotic Orc tribes. The Wound encompasses the following subregions:
+		- Northern Lands: The northernmost reaches of The Wound, bordering the Sea of the Sleeping. A harsh, barren expanse with the Yergroth River running across it.
+		- Khazantar: The eastern frontier of The Wound, along the shore of the Sea of Pearl. A rugged coastal region.
+		- Desert of Cutting Winds: The interior southeastern desert of The Wound, inland from the Sea of Pearl. Known for its vicious, sand-laden winds.
+		- Aryavarta: A coastal belt region along the southern edge of The Wound, directly facing the Aldarian Sea. A trade-rich area.
+		- Haradath: The southwestern edge of The Wound, adjacent to the transition toward the Aldarian Sea. Notable for its undead swamps and corruption.
 	Divine Metal (Primordium): A rare, light, steel-strong metal with powerful anti-magic properties. It is the foundation of technomagic engineering known as The Craft. Some consider it sacrilegious.
 	The Craft / Technomagic: The blending of magic, alchemy, and Divine Metal craftsmanship. Technomancers create artifacts and constructs that blend metal and technology. Incompatible with traditional magic.
-	Luminaries: Individuals born with s spark of the dead gods' power, which can be used for extraordinary feats. Some believe they are destined to ascend as new gods.
+	Luminaries: Individuals born with a spark of the dead gods' power, which can be used for extraordinary feats. Some believe they are destined to ascend as new gods.
 	The Darkness: A terrifying phenomenon during lunar alignments when Elaria's shadow falls across Isaldar, causing fear and paranoia, empowering evil, and allowing creatures of the underworld to emerge.
-	Children of the Shadow (The Last Circle): Sinister spectral beings believed to be distorted elves from a parallel Isaldar consumed by the Annihilation ho escaped to the Plane of Shadows. They seek to plunge Isaldar into eternal darkness.
-	The Six Moons: Calazia, Radras, Manis, Urasia, Zaman, and Samerash. Each exerts influence on magic and on Half-Elves("Children of the Moon") born beneath them. Each moon is its own outer place and has unique characteristics (magic, distortion, fey connections, alien influence, shattered remnants, dragon-guarded secrets).
+	Children of the Shadow (The Last Circle): Sinister spectral beings believed to be distorted elves from a parallel Isaldar consumed by the Annihilation who escaped to the Plane of Shadows. They seek to plunge Isaldar into eternal darkness.
+	The Six Moons: Calazia, Radras, Manis, Urasia, Zaman, and Samerash. Each exerts influence on magic and on Half-Elves ("Children of the Moon") born beneath them. Each moon is its own outer place and has unique characteristics (magic, distortion, fey connections, alien influence, shattered remnants, dragon-guarded secrets).
 	Aether: The cosmic medium the gods used to transport entire populations to Isaldar.
-	Melkhar Empire (West Aldar): Most powerful kingdom in the west. Holds a monopoly on Primordium/Divine Metal. Focused on The Craft/Technomagic. Constantly warring for resources and expansion, facing Orcs and others near the Wound. Worships Melkhar.
-	Shining Principalities (West Aldar): Union of neutral/good/lawful kingdoms and free cities south of the Melkhar Empire, including notable centers like Mithraelis, Sanctuary, Duranthor, and the Fort of the Sacred Dawn. Diverse, encourages adventuring. Legalizes adventurer/mercenary work. The Fort of the Sacred Dawn serves as a barrier between the Principalities and the Ur-Akthar Protectorate, where many Paladins, Fighters, Clerics, Rangers, and other warriors fight the endless undead hordes.
-	Lamaraj (South Island-Continent): Matriarchal Orc nation worshipping Ashkar-Mithrael as two sun gods; a highly advances society of artificers, warriors, hunters, shamans, priests, builders, and golem crafters; value strength, unity, sexual agency and freedom for bonding, communion, teaching, and fun; are predominantly heterosexual; sex with family (not always for procreation, but sometimes makes family trees complicated), friends, allies, and beasts (usually pets, animal companions, familiars) are as casual and normalized as breathing; religious sex work starts early (around 11-12); submission in duels may involve sex. Short lifespans (considered adults at 15, elder at 40) and intense living. Two large ziggurats; A fungus jungle (Gomork) covers most of the island-continent and houses forest Elves and tribes of Goblinoids, Lizardfolk, and Duergar Dwarves; The capital of the nation, located in the northern coast, is also called Lamaraj and is built around the larger of the two ziggurats with buildings made of masonry and enchanted wood.
+	Melkhar Empire (Central Aldar): The most powerful kingdom in central Aldar. Holds a monopoly on Primordium/Divine Metal. Focused on The Craft/Technomagic. Constantly warring for resources and expansion, facing Orcs and others near The Wound. Worships Melkhar.
+	Shining Principalities (South-Central Aldar): Union of neutral/good/lawful kingdoms and free cities south of the Melkhar Empire and east of Cimeris. Notable centers include Mithraelis, Sanctuary, Duranthor, and the Fort of the Sacred Dawn. Diverse, encourages adventuring. Legalizes adventurer/mercenary work. The Fort of the Sacred Dawn serves as a critical barrier defending against undead forces emanating from Haradath (the undead swamps of The Wound to the east).
+	Shining Principalities (Detailed): A union of neutral/good/lawful kingdoms, free cities, and holy orders forming a defensive alliance. The Principalities are strategically positioned between the technologically advanced Melkhar Empire to the north and the undead-infested borders of The Wound to the east.
+	- Origins: Formed following the Great Collapse, when numerous independent city-states banded together to protect against threats from both the Wound's undead hordes and the Melkhar Empire's expansionist policies.
+	- Notable Cities:
+		- Mithraelis: The religious capital, home to the Great Temple of Ashkar-Mithrael. Center of the Celestial Church's western operations.
+		- Sanctuary: A neutral Free City known as a diplomatic hub where factions from across Aldar meet to negotiate treaties and resolve disputes.
+		- Duranthor: A trading powerhouse and manufacturing center, known for its armories and weapon crafting. Major supplier of equipment to adventurer parties.
+		- The Fort of the Sacred Dawn: The militarized western bastion of the Shining Principalities. Commanded by the Grand Marshal of the Dawn Guard, this fortress serves as the primary defensive line against undead incursions from Haradath and northern The Wound. The Fort's garrison consists primarily of Paladins, Fighters, Clerics, Rangers, and volunteer militias who swear oaths to defend the realm from corruption and evil.
+		- Concordia: The home of the Gnome community, famous for its philosophical academies, bardic circles, and artisan guilds.
+	- The Undead Wall: The Fort of the Sacred Dawn holds the line against endless hordes of undead that emerge from Haradath (part of The Wound to the northeast). This undead wall consists primarily of:
+		- Corporeal Undead: Zombies, skeletons, and death knights spawned from the corruption spreading from Haradath's corrupt swamps.
+		- Spectral Undead: Ghosts, wraiths, and specters that can pass through physical barriers.
+		- Lich Lords: Powerful necromantic entities that lead the undead formations and channel dark magic.
+		- sources: The undead forces originate from Haradath's necromantic corruption and from the deeper parts of The Wound where the dead gods' remains lie. The constant pressure on the Fort is a testament to the courage of the Dawn Guard who maintain the wall day and night.
+	- Cultural Identity: The Principalities are known for their diverse, cosmopolitan culture that encourages individual freedom, mercenary work, and adventurous spirit. Unlike the rigid hierarchies of other realms, the Principalities offer social mobility and meritocratic advancement. The legal framework explicitly permits adventurer and mercenary licensure, making the region a gathering point for heroes seeking glory and fortune.
+	- Military Structure: The Dawn Guard is the principal military organization, comprising volunteer knights, paladins tasked with defending the undead wall, and ranger bands that patrol the frontier. Each city maintains its own militia, but all swear fealty to the High Council of the Principalities.
+	- Game Implications: The Shining Principalities serves as a hub for player characters, offering quests ranging from undead-hunting expeditions to diplomatic missions. The undead wall provides a persistent threat level and adventure hook, while the diverse law environment supports character creation for adventurers of any disposition.
+	Lamaraj (South Island-Continent): Matriarchal Orc nation worshipping Ashkar-Mithrael as two sun gods; a highly advanced society of artificers, warriors, hunters, shamans, priests, builders, and golem crafters; value strength, unity, sexual agency and freedom for bonding, communion, teaching, and fun; are predominantly heterosexual; sex with family (not always for procreation, but sometimes makes family trees complicated), friends, allies, and beasts (usually pets, animal companions, familiars) are as casual and normalized as breathing; religious sex work starts early (around 11-12); submission in duels may involve sex. Short lifespans (considered adults at 15, elder at 40) and intense living. Two large ziggurats; A fungus jungle (Gomork) covers most of the island-continent and houses forest Elves and tribes of Goblinoids, Lizardfolk, and Duergar Dwarves; The capital of the nation, located in the northern coast, is also called Lamaraj and is built around the larger of the two ziggurats with buildings made of masonry and enchanted wood.
 	Holy Order of the Moons: Mystics who blame humans for the gods' deaths. First clerics, hearing echoes of the dead gods.
-	Celestial Lion Empire (East Aldar): Ruled by Yaksha nobility. Land of intricate politics. Resists invasion from Huan-Ti. Worships Gotheintor.
-	Ur-Akthar Protectorate (East Aldar): Realm of darkness, tyranny, ruled by diabolists/infernalists and necromancers. Worships Ur-Akthar. Constantly seeks expansion.
-	Other Western Aldar Regions: Cimeris (Amazons), Deydhor (Knight-Sorcerers), Onires (Elf forest), Karn (Dwarf realm), Talassia (Giant sea raiders), Vanidrad (Barbarian Vanyr tribes).
-	Other Eastern Aldar Regions: Haradath (Undead swamps), Wastes of Volkeslag (Warzone), Islands of the Sea Kings (Dru sailors), Zhao Khan (Merchant island), Shinmarash (Intrigue), Lands of the Dead, Eternal Ice Wastes (Northern Vanyr tribes).
+	Celestial Lion Empire (Eastern Continent-South): Occupies the southern portion of the Eastern Continent (the large landmass across the Aldarian Sea from Aldar). Ruled by Yaksha nobility. Land of intricate politics. The Celestial Lion Empire maintains defenses against northern threats. Worships Gotheintor.
+	Ur-Akthar Protectorate (Central-West Aldar): Realm of darkness, tyranny, ruled by diabolists/infernalists and necromancers. Worships Ur-Akthar. Constantly seeks expansion. Located in Central-West Aldar, bordering the Onires Forest and Cimeris.
+	Eastern Continent (The Land Across the Aldarian Sea): A separate major landmass to the southeast of Aldar, across the Aldarian Sea. Contains the following regions:
+		- Northern Lands: The northern extremity of the Eastern Continent, bordering the Sea of Pearl.
+		- Shinmarsh: A large central territory on the Eastern Continent, known for intrigue and political maneuvering. Central location with varied terrain.
+		- Huan: A coastal sub-region on the southeastern shore of the Eastern Continent. Major trading port and gateway to the Celestial Lion Empire.
+		- Celestial Lion Empire: The southern power of the Eastern Continent, occupying the land's southern third. Borders the Celestial Sea to the south. Contains the prominent landmark "Cities of the Immortals" along a central ridge.
+	Other Eastern Aldar and Isolated Regions: Haradath (Undead swamps - part of The Wound), Wastes of Volkeslag (Warzone in eastern frontier), Islands of the Sea Kings (Dru sailors in the Aldarian Sea or eastern waters), Zhao Khan (Merchant island in eastern waters), Shinmarash (Intrigue - part of Eastern Continent), Lands of the Dead (mysterious eastern territory), Eternal Ice Wastes (Northern Vanyr tribes in far northern regions).
+	Other Western Aldar Regions:
+		- Onires Forest (The Silent Expanse): A vast, ancient forest occupying west-central Aldar, situated between Vanidrad to the north, the Ur-Akthar Protectorate to the west, Cimeris to the southwest, and the Melkhar Empire to the east. The Onires is not merely a wilderness but functions as a sovereign entity in its own right, with its own cultural identity, political structure, and magical economy.
+			- Size and Scope: The Onires spans approximately 50,000 square miles, making it comparable in size to several medium-sized kingdoms. Its ancient trees reach heights of 200-400 feet, forming a canopy so dense that sunlight rarely penetrates to the forest floor.
+			- Political Structure: The forest is governed by the Corte do Silêncio Profundo (Court of the Deep Silence), an elven council that maintains neutrality in most exterior affairs. The Court consists of High Archmages, Elder Druids, and Circle Speakers who make decisions by consensus.
+			- Notable Settlements:
+				- Deyhdor: A major forest village near the western edge, known as a gateway for travelers and a hub for trade between elves and outsiders.
+				- Hidden Clearings: Dozens of secret elven settlements scattered throughout the depths of the forest, accessible only to those granted passage by the Court.
+			- Culture and Traditions: The elves of Onires practice the tradition of Daishin, where young elves leave the forest to explore the wider world for periods of several decades, returning with new knowledge and experiences. This tradition keeps the Onires connected to the outside world while maintaining seclusion.
+			- Magic and Guardians: The forest itself is steeped in ancient magic. Pathways shift, creatures that enter with ill intent become lost or turned back, and only those with pure motives find clear passage. The forest houses powerful fey creatures, ancient treants, and guardians tasked with protecting the elven settlements.
+			- Game Implications: Adventures in the Onires often involve diplomatic missions, quests to protect threatened areas, or investigations into corruption that may be infiltrating the forest's boundaries. The forest itself may act as a character in adventures, testing visitors' intentions.
+		- Karn (The Dwarf Realm): A rugged mountainous region in the north-central highlands, spanning a long belt from the borders of Vanidrad in the west to the edge of The Wound in the east. Karn is the primary dwelling place of dwarves on Isaldar.
+			- Size and Scope: Karn extends over approximately 80,000 square miles of mountainous and highland terrain. The Kolodram River flows through the southern regions, providing water and trade routes to the lowlands.
+			- Political Structure: Karn is organized as a federation of city-states, each ruled by a High Thane. The three major subregions are:
+				- Karnemoar: The western mining districts, known for their extensive iron and gold deposits.
+				- Karn Zurdin: The eastern trade hubs, controlling mountain passes that connect to the Melkhar Empire.
+				- High Lands of Rydaen: The northernmost subregion, a harsh but defensible highland known for its fortress-monasteries and warrior traditions.
+			- Culture and Traditions: Dwarves of Karn are mercenary, bellicose, and possess a Spartan-like spirit. They value craftsmanship above all else and maintain the tradition of crafting legendary weapons and armor. Many dwarves work as mercenaries for kingdoms across Aldar, charging substantial fees for their services.
+			- Economy and Trade: Karn controls the primary ore deposits of the continent. Dwarf smithies produce weapons and armor trusted throughout Isaldar. Trade with the Melkhar Empire is a primary economic activity, exchanging metalwork for the technomagic devices they produce.
+			- Game Implications: Dwarven quests often involve mining expeditions, defense against monsters that dwell in deep caverns, or diplomatic missions between city-states. Dwarf characters may have established mercenary connections or family obligations to city-state rulers.
+		- Cimeris (The Amazon Nation): A southwestern realm located between the Ur-Akthar Protectorate to the west, the Onires Forest to the north, and the Shining Principalities to the east. Cimeris is known for its female warrior culture.
+			- Size and Scope: Cimeris encompasses approximately 40,000 square miles of varied terrain, including the verdant Emerald Valleys in the southwest and forested highlands to the north.
+			- Political Structure: Cimeris is governed by a council of warrior matrons, with the title of "Queen of the Emerald Guard" held by the most skilled warrior. Leadership is earned through combat tournaments held annually in the capital city.
+			- Notable Features:
+				- Emerald Valleys: A series of fertile valleys that provide the agricultural base for Cimeris. These valleys are densely forested and protected by magical wards that detect any violence against the land.
+				- Fortress Monasteries: Scattered throughout Cimeris, these serve as training grounds for young warriors and storage for the nation's military supplies.
+			- Culture and Traditions: Cimerisian society is matrilineal, with women holding positions of power in all aspects of life. Both men and women are trained in combat, but women make up the warrior ranks. Combat is considered a sacred practice and is deeply integrated into the culture.
+			- Relations with Outsiders: Cimeris maintains a cautious but open stance toward outsiders. Visitors must swear oaths of non-violence upon entry and are subject to strict observation. The nation trades regularly with the Shining Principalities but maintains sovereignty.
+			- Game Implications: Adventures in Cimeris may involve diplomatic missions, training journeys for young warriors, or investigations into violence that threatens to infiltrate the region. Cimerisian characters may have family connections to the Warrior Matrons or be sworn protectors of the Emerald Valleys.
+		- Deydhor (The Knight-Sorcerers): A western region known forits unique tradition of warriors who are both skilled in combat and magical arts. Deydhor sits on the western frontier, bordering the Sea of Twilight.
+			- Size and Scope: Deydhor spans approximately 25,000 square miles along the western coastline. The region features jagged cliffs, deep forest pockets, and strategically positioned citadels.
+			- Political Structure: Deydhor is governed by the Corte das Folhas Ardentes (Court of Burning Leaves), a council of high knight-sorcerers who hold the title of Grand Master over their order. The council consists of twelve members, each representing a different magical tradition.
+			- Notable Features:
+				- Coastal Citadels: Heavy fortifications built into the cliffs, providing defense against sea-based attacks and controlling trade routes along the western coast.
+				- The Forges of Transformation: Magical workshops where knight-sorcerers imbue their weapons with both martial and arcane properties. These devices are highly sought after throughout Aldar.
+			- Culture and Traditions: Knight-sorcerers of Deydhor follow a code that balances martial prowess with magical precision. Unlike other mage-knight orders, they do not specialize in a single magical tradition but instead master multiple schools of magic, focusing on their application to combat.
+			- Training and Ascension: Young mages who wish to join the order must first prove their combat skills before receiving magical training. After achieving mastery in both fields, they must complete a journeyman quest that tests their ability to serve the realm in the field.
+			- Game Implications: Deydhor quests often involve protecting the coast from sea-based threats, investigating magical anomalies, or recovering lost arcane knowledge. Characters from Deydhor may be summoned for their unique expertise in combining magical and martial capabilities.
+	
+	## WORLD MAP
+
+	*Simplified ASCII Spatial Map - North is at the top.*
+
+	```text
+									[ SEA OF THE SLEEPING ]
+												^
+												|
+			(WEST)                                                      (EAST)
+	+-------------------+----------------------+---------------------------------------+
+	|   [TALASSIA]      |    [VANIDRAD]        |             [THE WOUND]               |
+	|       Island      |      Northwest       |       Huge Eastern Continent          |
+	|                   |                      |                                       |
+	|       +-----------+-----------+----------+---------------+-----------------------+
+	|       |      [ONIRES FOREST]  | [MELKHAR IMP.]           |   [NORTHERN LANDS]    |
+	|       |      Central-West     |      Central             |      [KHAZANTAR]      |
+	|       |      [UR-KTHAR]       |                          |   [DESERT OF          |
+	|       |      [PROTECTORATE]   |                          |   CUTTING WINDS]      |
+	|       |      Southwest        |                          |                       |
+	|       |       [CIMERIS]       |   [BRILHANTES]           |  [ARYAVARTA]          |
+	|       |      South-West       |   [PRINCIPALITY]         |  [HARADATH]           |
+	|       |                       |                          |  (Coastal Belt)       |
+	|       +-----------------------+------------+-------------+-------------+---------+
+	\                                                               /
+	\                                                             /
+	|                                                           |
+	|             [ SEA OF TWILIGHT ]      [ ALDARIAN SEA ]     |
+	|             (Western Ocean)          (Inner Basin)        |
+	|                                                           |
+	+-----------------------------------------------------------+
+								[SEA OF PEARL]
+								(Eastern Ocean)
+									|
+									v
+						+---------------------------+
+						|      [SHINMARASH]         |
+						|           [HUAN]          |
+						|                           |
+						| [CELESTIAL LION EMPIRE]   |  <-- Southeast Landmass
+						+---------------------------+
+								|
+								v
+					+----------------------------------------+
+					|         [ CELESTIAL SEA ]              |
+					|                                        |
+					|  [RIS-MALENTI]      [LAMARAJ]          |
+					|  [ARCHIPELAGO]      [ISLAND]           |
+					|                                        |
+					|  [UNEXPLORED ISLES]                    |
+					+----------------------------------------+
+	```
+
+	QUADRANT & COMPASS REFERENCE
+
+	Quadrants and directional keys for quick navigation and location reference.
+
+	NORTH (Top Edge)
+	- Ocean: Sea of the Sleeping (Borders all northern lands)
+	- Far West: Talassia (Island)
+	- West Coast: Vanidrad
+	- Central Highlands: Karn (Mountain belt separating North from Center)
+	- East Coast: The Wound (specifically Northern Lands & Khazantar)
+
+	WEST (Left Edge)
+	- Ocean: Sea of Twilight (Borders Vanidrad, Ur-Kthar, Cimeris)
+	- Landmark: Court of Burning Leaves (in Deydhor)
+	- Trade Routes: Western coastlines connect Ur-Kthar to Cimeris
+
+	CENTRAL (Interior)
+	- Major Forest: Onires Forest (Sits between Vanidrad, Ur-Kthar, and Melkhar)
+	- Central Power: Melkhar Empire (Heart of the main continent)
+	- River System: Kolodram River flows through Karn/Melkhar regions
+	- Mountain Range: The Wound (desert barrier) dominates northeast quadrant
+
+	SOUTH (Lower Edge of Mainland)
+	- Southwest: Ur-Kthar Protectorate → Cimeris
+	- South-Central: Shining Principalities
+	- Southeast Coast: Aryavarta & Haradath (Face the Aldarian Sea)
+
+	SOUTHEAST (Separate Landmass across the sea)
+	- Ocean: Aldarian Sea (Separates Mainland from this block)
+	- North: Northern Lands, Shinmarsh, Huan
+	- South: Celestial Lion Empire
+	- Feature: "Cities of the Immortals" ridge running through this landmass
+
+	FAR SOUTH (Bottom of Map)
+	- Ocean: Celestial Sea
+	- West Island Cluster: Ris-Malenti Archipelago
+	- Central Island: Lamaraj
+	- East Cluster: Unexplored Isles
+
+	EAST (Right Edge)
+	- Ocean: Sea of Pearl (Borders The Wound and Southeast Landmass)
+
+	AT A GLANCE - REGIONAL RELATIONSHIPS
+	- The Core: The Melkhar Empire serves as the geographical center, flanked by Onires Forest to the northwest and Shining Principalities to the south.
+	- The Barrier: The Wound (A Ferida) acts as a massive northeastern topographical barrier.
+	- The Divide: The Aldarian Sea is the primary divider between the Western/Central continent and the Eastern landmass (Shinmarsh/Celestial Lion Empire).
+	- The West-East Axis: The world moves from the rugged, forested, and imperial West/Center toward the more desert-heavy and island-dotted East and South.
+
+	## GEOGRAPHIC REFERENCE DATA
+
+	JSON-style adjacency data for quick reference and potential system integration.
+
+	```json
+	{
+	"world_layout": {
+		"main_continent": {
+		"north_border": "Sea of the Sleeping",
+		"west_border": "Sea of Twilight",
+		"east_border": "Sea of Pearl",
+		"south_border": "Celestial Sea (coastal)",
+		"regions": [
+			{"name": "Talassia", "type": "island", "location": "NW offshore"},
+			{"name": "Vanidrad", "borders": ["Sea of Twilight", "Karn", "Onires Forest"]},
+			{"name": "Karn", "borders": ["Sea of Sleeping", "The Wound", "Melkhar", "Vanidrad"], "terrain": "Highlands"},
+			{"name": "Onires Forest", "borders": ["Vanidrad", "Ur-Kthar", "Melkhar", "Cimeris"]},
+			{"name": "Ur-Kthar Protectorate", "borders": ["Sea of Twilight", "Onires Forest", "Cimeris"], "threat_level": "High", "note": "Necromantic realm that threatens adjacent regions"},
+			{"name": "Melkhar Empire", "borders": ["Karn", "Onires Forest", "Shining Principalities", "The Wound"]},
+			{"name": "Cimeris", "borders": ["Ur-Kthar", "Onires Forest", "Shining Principalities"]},
+			{"name": "Shining Principalities", "borders": ["Cimeris", "Melkhar", "Aldarian Sea", "The Wound"], "note": "Contains Fort of Sacred Dawn - defensive line against undead from Haradath"},
+			{"name": "The Wound", "borders": ["Karn", "Melkhar", "Aldarian Sea", "Sea of Pearl"], "sub_regions": ["Northern Lands", "Khazantar", "Desert of Cutting Winds", "Aryavarta", "Haradath"], "note": "Source of Divine Metal; contains necromantically-corrupted Haradath region that spawns undead forces", "undead_wall_target": "Fort of the Sacred Dawn in Shining Principalities"}
+		]
+		},
+		"southeast_landmass": {
+		"west_border": "Aldarian Sea",
+		"east_border": "Sea of Pearl",
+		"south_border": "Celestial Sea",
+		"regions": [
+			{"name": "Northern Lands", "borders": ["Aldarian Sea", "Shinmarsh", "Sea of Pearl"]},
+			{"name": "Shinmarsh", "borders": ["Aldarian Sea", "Huan"]},
+			{"name": "Huan", "borders": ["Shinmarsh", "Celestial Lion Empire", "Sea of Pearl"]},
+			{"name": "Celestial Lion Empire", "borders": ["Shinmarsh", "Huan", "Celestial Sea"]}
+		]
+		},
+		"major_islands": [
+		{"name": "Ris-Malenti Archipelago", "sea": "Celestial Sea", "pos": "Southwest"},
+		{"name": "Lamaraj", "sea": "Celestial Sea", "pos": "South"},
+		{"name": "Unexplored Isles", "sea": "Celestial Sea", "pos": "Southeast"},
+		{"name": "Talassia", "sea": "Sea of Twilight", "pos": "Northwest"}
+		],
+		"isolation_notes": {
+		"Onires Forest": "Sovereign elven entity; Court of Deep Silence maintains neutrality; Daishin tradition keeps outside connection; magical barriers deter ill-intent",
+		"The Wound": "Desert/undead source; Haradath subregion spawns necromantic undead hordes targeting Fort of Sacred Dawn; Divine Metal primary source; contains dead gods' remains",
+		"Eastern Continent": "Separate landmass requiring Aldarian Sea crossing; distinct political/cultural identity from Aldar",
+		"Karn": "Dwarf city-state federation (Karnemoar, Karn Zurdin, High Lands of Rydaen); primary metal/ore source; mercenary tradition",
+		"Cimeris": "Matrilineal Amazon society; Emerald Valleys agricultural base; Warrior Matrons governance; cautious outsider relations",
+		"Deydhor": "Knight-Sorcerer order (Corte das Folhas Ardentes); coastal citadels; coasts Sea of Twilight; Forges of Transformation for enchanting",
+		"Shining Principalities": "Good/neutral defense alliance; Fort of Sacred Dawn holds undead wall against Haradath/The Wound threats; diverse mercenary-friendly culture",
+		"Fort of the Sacred Dawn": "Garrison fortress in Shining Principalities; primarily defended by Paladins, Fighters, Clerics, Rangers; perpetually threatened by undead from Haradath (part of The Wound to northeast)",
+		"Haradath": "Undead swamp region within The Wound; necromantically corrupted; primary source of undead hordes that assault the Fort of Sacred Dawn"
+	}
+	}
+	}
+	```
 
 3. Peoples and Factions of Isaldar
 
@@ -68,12 +287,12 @@ Races
 	Elves: Skilled in magic. Maintain the tradition of Daishin (exploring beyond their lands). Many dwell in the forest of Onires. 
 	Gnomes: Many Bards. Prominent in the city of Concordia within the Shining Principalities. 
 	Halflings: Now live as nomadic clans. 
-	Half-Elves (“Children of the Moon”): Rare and often ostracized. 
-	Half-Orcs: Descendants of Isaldar's original inhabitants (Orcs) and newcomers. Hunt threats emerging from the Wound/shadows.
-	Orcs: The original masters of Isaldar. Hate Technomagic. Subgroups include the more civilized Orcs of Lamaraj and the bestial albino Urorcs. The tribes that inhabit the Wound are viewed as beast-men by others but are proud and resilient (Ukar philosophy).
-		Lamarajian Orcs: A highly advanced matriarchal society of artificers, warriors, hunters, shamans, priests, builders, and golem crafters. Short-lived, and intense. Considered adults by 14. Anyone over 40 is regarded as an elder. They live bright, passionate, and fast-burning lives valuing strength, community, and sexual agency. Sex is is as casual and normalized as breathing and is done for bonding, teaching, communion, pleasure, teaching, recreation, and fun. Religious prostitution is respected and begins around age 11. Families teach the young about sexuality through exposure and practice. It's as likely to lose one's virginity to a household beast as it is to a family member. Females are expected to bear a child before 15, and 1/10 of all births are incestuous. The loser of a formal duel must submit sexually to the victor to retain their honor. Most outsiders engage in trade and sex, but rarely immerse in the culture. Those who do are taught that the body is a vessel to be shared among kin, allies, and friends, including beloved pets, animal companions, and magical familiars. They see the peoples of Aldar as strange, overdressed, and repressed, and will often offer to share their bodies with visitors out of pity, to show what it means to live.
+	Half-Elves ("Children of the Moon"): Rare and often ostracized. 
+	Half-Orcs: Descendants of Isaldar's original inhabitants (Orcs) and newcomers. Hunt threats emerging from The Wound/shadows.
+	Orcs: The original masters of Isaldar. Hate Technomagic. Subgroups include the more civilized Orcs of Lamaraj and the bestial albino Urorcs. The tribes that inhabit The Wound are viewed as beast-men by others but are proud and resilient (Ukar philosophy).
+		Lamarajian Orcs: A highly advanced matriarchal society of artificers, warriors, hunters, shamans, priests, builders, and golem crafters. Short-lived, and intense. Considered adults by 14. Anyone over 40 is regarded as an elder. They live bright, passionate, and fast-burning lives valuing strength, community, and sexual agency. Sex is as casual and normalized as breathing and is done for bonding, teaching, communion, pleasure, teaching, recreation, and fun. Religious prostitution is respected and begins around age 11. Families teach the young about sexuality through exposure and practice. It's as likely to lose one's virginity to a household beast as it is to a family member. Females are expected to bear a child before 15, and 1/10 of all births are incestuous. The loser of a formal duel must submit sexually to the victor to retain their honor. Most Outsiders engage in trade and sex, but rarely immerse in the culture. Those who do are taught that the body is a vessel to be shared among kin, allies, and friends, including beloved pets, animal companions, and magical familiars. They see the peoples of Aldar as strange, overdressed, and repressed, and will often offer to share their bodies with visitors out of pity, to show what it means to live.
 	Yakshas: Tall, human-like with metallic skin (gold), metallic eyes (copper/silver), and red/white hair. Religious (many Monks and Clerics). Prominent in the Celestial Lion Empire.
-	Other races: tieflings, aasimar, changelings, half-dragons, and drakizias(Draconids).
+	Other races: tieflings, aasimar, changelings, half-dragons, and drakizias (Draconids).
 	Dragons in Isaldar: Male dragons, in both their true draconic form and any alternate forms they assume, can impregnate females of other species. Female dragons, however, can only be fertilized by males of other species while in their true draconic form.
 
 4. Religion and Magic in Isaldar:
@@ -87,7 +306,7 @@ Races
 		Evil Deities:
 			Nikthar: Murder, assassins (Black Blood Scrolls). Feared cults.
 			Shaektis: Tragedies, destruction, wild forces. Worshiped by Orc shamans (Codex of Tears).
-			Ur-Akthar: War, conquest, tyranny. Ruler of the Protectorate. Most powerful evil deity.
+			Ur-Akthar: War, conquest, tyranny. Ruler of The Protectorate. Most powerful evil deity.
 			Vantheris: Tragedies, bad luck, misfortune, urban chaos.
 			Yurgattach: Underworld, darkness, earthquakes, subterranean creatures, blood rituals.
 			Athar-Abannon: Slaughter, invasions, brutality by monstrosities. Goblinoid survivor.
@@ -139,8 +358,7 @@ Races
 		Battle Cadence: Each round on your turn, as long as the spell persists, you (the caster) chooses to gain one of the following benefits once:
 		(A) Spectral Assault: As a free action, you direct a spectral blade to strike a target within the spell's area. The blade uses your Base Attack Bonus + your Wisdom modifier for its attack roll(s) and deals 1d8 points of force damage + 1 point per three caster levels (maximum +5) per hit. The blade makes iterative attacks if your BAB allows. It strikes as a force effect spell (hitting incorporeal creatures and ignoring DR), not as a physical weapon, and uses the threat range/critical multiplier of your deity's favored weapon (or a default if none). Your combat feats or actions do not modify the blade's attacks. If the target has Spell Resistance, make a caster level check when the blade first strikes.
 		(B) Flurry of Steel: When making a full attack action, you may make one extra attack with any weapon you are holding at your highest base attack bonus. This effect is not cumulative with similar effects, such as that provided by the haste spell or a weapon of speed.
-		(B) Divine Celerity: You may cast any prepared Cleric spell of 0-level or 1st-level as a free action, as though affected by the Quicken Spell feat. For every three caster levels beyond 9th, the maximum level of spell you can quicken increases by one (2nd at CL 12 , 3rd at CL 15 , 4th at CL 18 ). This benefit cannot be applied to spells higher than 4th level.
-
+		(C) Divine Celerity: You may cast any prepared Cleric spell of 0-level or 1st-level as a free action, as though affected by the Quicken Spell feat. For every three caster levels beyond 9th, the maximum level of spell you can quicken increases by one (2nd at CL 12, 3rd at CL 15, 4th at CL 18). This benefit cannot be applied to spells higher than 4th level.
 
 
 
@@ -148,7 +366,7 @@ Races
 
 
 My character is Thiago, Neutral Good, lvl 5 Cleric/Ordained Champion of a god much like Torm from the Forgotten Realms or Herironeous from Greyhawk. His chosen Domains would be War and Healing, later getting access to the Law Domain.
-He is something between a Knights Hospitaller, a Hedge Knight, and an open-minded Mercenary or Adventurer, but most of all, he's a Priest.
+Trained in the the Great Temple of Ashkar-Mithrael as well as the Fort of the Sacred Dawn, he is something between a Knights Hospitaller, a Hedge Knight, and an open-minded Mercenary or Adventurer, but most of all, he's a Priest.
 He goes around looking for adventure, people to help, and evil to slay because he both longs for adventure and and to respect his Deity's (something between Heironeous and Torm) dogma of worship and spreading their name by actions and deeds.
 As opposed to the Cloistered Clerics of the Great Temple, or the Lawful Good Paladins and other such peers, he is not stiff or dogmatic. He is open-minded and willing to work with peoples and experience different cultures as long as they are not Evil or performing Evil deeds.
 

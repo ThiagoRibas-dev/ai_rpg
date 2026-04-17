@@ -291,14 +291,14 @@ class SetupWizard:
 
             stream = LoreStream()
 
-            # Parallelize extraction using asyncio.gather for true async parallelism
+            # Parallelize extraction using TaskGroup for fail-fast cancellation
             try:
-                char_coro = run_chargen(stream)
-                world_coro = run_worldgen(stream)
-
-                char_results, world_results = await asyncio.gather(char_coro, world_coro)
-                self.preview_entity = char_results
-                self.extracted_world = world_results
+                async with asyncio.TaskGroup() as tg:
+                    task_char = tg.create_task(run_chargen(stream))
+                    task_world = tg.create_task(run_worldgen(stream))
+                
+                self.preview_entity = task_char.result()
+                self.extracted_world = task_world.result()
             except Exception as e:
                 logger.error(f"Generation tasks failed: {e}")
                 stream.set_error(e)

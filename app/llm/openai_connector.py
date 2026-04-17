@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, cast
 import openai
 from pydantic import BaseModel, ValidationError
 
+import httpx
 from app.llm.llm_connector import LLMConnector, LLMResponse
 from app.models.message import Message
 from app.models.vocabulary import MessageRole
@@ -58,17 +59,34 @@ class OpenAIConnector(LLMConnector):
 
     def _get_async_client(self) -> openai.AsyncOpenAI:
         """Returns an AsyncOpenAI client associated with the current event loop."""
+        
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
             # Fallback for sync contexts or before loop starts
             # Note: We don't cache this as it's not tied to a loop
-            return openai.AsyncOpenAI(base_url=self.base_url, api_key=self.api_key, timeout=self.timeout)
+            http_client = httpx.AsyncClient(
+                timeout=self.timeout,
+                limits=httpx.Limits(max_keepalive_connections=0)
+            )
+            return openai.AsyncOpenAI(
+                base_url=self.base_url, 
+                api_key=self.api_key, 
+                max_retries=3,
+                http_client=http_client
+            )
 
         if loop not in self._async_clients:
             logger.debug(f"Creating new AsyncOpenAI client for loop {id(loop)}")
+            http_client = httpx.AsyncClient(
+                timeout=self.timeout,
+                limits=httpx.Limits(max_keepalive_connections=0)
+            )
             self._async_clients[loop] = openai.AsyncOpenAI(
-                base_url=self.base_url, api_key=self.api_key, timeout=self.timeout
+                base_url=self.base_url, 
+                api_key=self.api_key, 
+                max_retries=3,
+                http_client=http_client
             )
         return self._async_clients[loop]
 
@@ -296,14 +314,7 @@ class OpenAIConnector(LLMConnector):
         self._clean_schema(json_schema)
 
         extra_params={
-                # "chat_template_kwargs": {"enable_thinking": False},
-                # "thinking": { "type": "disabled", "budget_tokens": 0 },
                 "top_k": 50,
-                "json_schema": json_schema,
-                "response_format": {
-                    "type": "json_object",
-                    "schema": json_schema,
-                },
                 "include_thoughts": True,
                 "stop": ["<|im_end|>", "<|im_end|"]
             }
@@ -314,15 +325,19 @@ class OpenAIConnector(LLMConnector):
                 cast(Any, client.chat.completions).create(
                     model=self.model or "gpt-4o",
                     messages=messages,
-                    max_completion_tokens=-1,
+                    # max_completion_tokens omitted as requested for compatibility
                     temperature=temperature,
                     top_p=top_p,
                     response_format={
                         "type": "json_schema",
-                        "schema": json_schema,
+                        "json_schema": {
+                            "name": output_schema.__name__,
+                            "schema": json_schema,
+                        },
                     },
                     stop=["<|im_end|>"],
                     extra_body=extra_params,
+                    timeout=self.timeout
                 ),
                 timeout=self.timeout
             )
