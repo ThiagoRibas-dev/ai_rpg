@@ -57,8 +57,8 @@ graph TB
     TurnManager -->|Chat Requests| LLM
     SimulationService -->|Streaming| LLM
     
-    SQLite <-->|Data Access| TurnManager
-    VectorStore <-->|RAG Queries| MemoryRetriever
+    SQLite <-->|FTS / Query| MemoryRetriever
+    VectorStore <-->|Semantic Search| MemoryRetriever
 ```
 
 ## Turn Execution Flow
@@ -70,10 +70,11 @@ sequenceDiagram
     participant Orch as Orchestrator
     participant TM as ReActTurnManager
     participant CB as ContextBuilder
-    participant LLM as LLM Provider
-    participant TE as ToolExecutor
+    participant MR as MemoryRetriever
     participant DB as SQLite Database
     participant VS as Vector Store
+    participant LLM as LLM Provider
+    participant TE as ToolExecutor
 
     User->>UI: Submit user message
     UI->>Orch: plan_and_execute(session, message)
@@ -91,9 +92,11 @@ sequenceDiagram
     CB->>DB: Fetch active quests
     CB->>DB: Fetch current scene
     CB->>DB: Fetch character sheet
-    TM->>VS: get_relevant(mems)
-    VS->>VS: Perform semantic search
-    VS-->>TM: Return relevant memories
+    TM->>MR: get_relevant(active_tags)
+    MR->>DB: Search BM25 (FTS)
+    MR->>VS: Search Semantic
+    MR->>MR: RRF Fusion & Reranking
+    MR-->>TM: Return relevant memories
     
     Note over TM,LLM: Phase 2: ReAct Loop
     loop Max 15 iterations
@@ -175,29 +178,37 @@ graph TB
     subgraph ToolExecutor["ToolExecutor"]
         Validate[Validate Args]
         Dispatch[Dispatch Handler]
-        PostProcess[Post-Process Result]
+        PostHook[Post-Hook / UI Events]
     end
 
     subgraph Handlers["Tool Handlers"]
-        Adjust[adjust]
-        Set_[set]
-        Roll[roll]
-        Mark[mark]
-        Move[move]
-        Note[note]
-        ContextRet[context_retrieve]
-        StateQuery[state_query]
-        NpcSpawn[npc_spawn]
-        LocCreate[location_create]
+        direction TB
+        ReadDB[(Read State)]
+        
+        subgraph Logic["Logic & Validation"]
+            direction TB
+            Adjust[adjust]
+            Set_[set]
+            Roll[roll]
+            Mark[mark]
+            Move[move]
+            Note[note]
+            ContextRet["context.retrieve"]
+            StateQuery["state.query"]
+            NpcSpawn["npc.spawn"]
+            LocCreate["location.create"]
+            
+            subgraph Validation["Validation Pipeline"]
+                Formulas["Recalculate Formulas"]
+                Clamp["Clamp Values"]
+                Invariants["Check Invariants"]
+            end
+        end
+        
+        WriteDB[(Write State)]
     end
 
-    subgraph Validation["Validation Pipeline"]
-        Formulas[Recalculate Formulas]
-        Clamp[Clamp Values]
-        Invariants[Check Invariants]
-    end
-
-    subgraph Storage["Storage"]
+    subgraph Storage["External Storage"]
         DB[(SQLite)]
         VS[(Vector Store)]
     end
@@ -207,33 +218,17 @@ graph TB
     Dispatch --> ToolList
     ToolList --> HandlerSelect{Select Handler}
     
-    HandlerSelect --> Adjust
-    HandlerSelect --> Set_
-    HandlerSelect --> Roll
-    HandlerSelect --> Mark
-    HandlerSelect --> Move
-    HandlerSelect --> Note
-    HandlerSelect --> ContextRet
-    HandlerSelect --> StateQuery
-    HandlerSelect --> NpcSpawn
-    HandlerSelect --> LocCreate
-
-    Adjust --> PostProcess
-    Set_ --> PostProcess
-    Roll --> PostProcess
-    Mark --> PostProcess
-    Move --> PostProcess
-    Note --> PostProcess
-    ContextRet --> PostProcess
-    StateQuery --> PostProcess
-    NpcSpawn --> PostProcess
-    LocCreate --> PostProcess
-
-    PostProcess --> Formulas
-    Formulas --> Clamp
-    Clamp --> Invariants
-    Invariants --> DB
-    Invariants --> VS
+    HandlerSelect --> ReadDB
+    ReadDB -.-> DB
+    
+    ReadDB --> Logic
+    Logic --> Validation
+    Validation --> WriteDB
+    
+    WriteDB -.-> DB
+    WriteDB -.-> VS
+    
+    WriteDB --> PostHook
 ```
 
 ## Context Building Flow
@@ -254,8 +249,24 @@ graph TB
     end
 
     subgraph RAG["RAG Integration"]
+        direction TB
         MemoryRet[Memory Retriever]
-        VectorSearch[Vector Search]
+        
+        subgraph HybridSearch["Hybrid Search"]
+            direction LR
+            FTS[SQLite FTS / BM25]
+            Semantic[Vector Semantic]
+        end
+        
+        RRF[RRF Fusion]
+        Rerank[Cross-Encoder Reranking]
+        Budget[Budgeting & Formatting]
+
+        MemoryRet --> HybridSearch
+        HybridSearch --> RRF
+        RRF --> Rerank
+        Rerank --> Budget
+        Budget --> DynamicContext
     end
 
     subgraph Manifest["Manifest System"]
@@ -281,9 +292,6 @@ graph TB
     ManifestData --> PrefabRules
     EngineConfig --> Rules
     PrefabRules --> Rules
-
-    MemoryRet --> VectorSearch
-    VectorSearch --> DynamicContext
 ```
 
 ## UI Event Flow
@@ -419,9 +427,11 @@ graph TB
     end
 
     subgraph MemoryRetriever["MemoryRetriever"]
-        SemanticSearch[Semantic Search]
-        MemoryFilter[Memory Filter]
-        MemoryFormat[Memory Format]
+        HybridSearch[Hybrid Search: FTS + Semantic]
+        RRFFusion[RRF Rank Fusion]
+        Reranking[Cross-Encoder Reranking]
+        Deduplication[Episodic Deduplication]
+        Budgeting[Budgeting & Formatting]
     end
 
     MainController --> TurnManager
@@ -451,7 +461,9 @@ graph TB
     StateBuilder --> CharacterSheet
     StateBuilder --> WorldIndex
 
-    MemoryRetriever --> SemanticSearch
-    MemoryRetriever --> MemoryFilter
-    MemoryRetriever --> MemoryFormat
+    MemoryRetriever --> HybridSearch
+    MemoryRetriever --> RRFFusion
+    MemoryRetriever --> Reranking
+    MemoryRetriever --> Deduplication
+    MemoryRetriever --> Budgeting
 ```

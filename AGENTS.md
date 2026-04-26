@@ -13,6 +13,8 @@ This document provides a technical overview of the Solo Text AI-RPG framework, o
 **Code Quality & Strong Typing:** Run `.\run_checks.bat` after batches of changes.
 - **Strong Typing:** Use type hints everywhere. Favor Pydantic models for structured data. Avoid `Any` and use `NewType` or dedicated classes for domain-specific IDs (e.g., `SessionID`, `EntityID`).
     - **Pydantic & Mypy:** To ensure Mypy correctly identifies default values while preserving Pydantic metadata, use the `Annotated[T, Field(...)] = default` pattern. This prevents "Missing named argument" errors in model constructors.
+    - **Empty Collections:** Always provide explicit type annotations when defining empty lists or dictionaries (e.g., `items: list[Annotation] = []`) to prevent Mypy inference errors.
+- **Naming Conventions:** Use expressive, verbose variable names. Avoid single-letter variables (like `t`, `i`, `e`) even in loops. Favor descriptive names (e.g., `coroutine`, `task_index`, `error`) to improve readability and assist type checkers.
 - **Error Handling:** Never use silent exceptions (`try/except: pass`). Always log errors with the appropriate level (`logger.error` for critical failures, `logger.warning` for degradations) and provide an informative message to help with debugging.
 
 **Deterministic Rendering:** UI components must not "guess" how to render data. Always prioritize the `SystemManifest` (via `item_shape`) over heuristics. Use the 3-layer detection algorithm (Schema → Shape → Heuristics) to ensure accuracy.

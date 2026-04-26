@@ -8,10 +8,10 @@ import weakref
 from collections.abc import AsyncGenerator
 from typing import TYPE_CHECKING, Any, cast
 
+import httpx
 import openai
 from pydantic import BaseModel, ValidationError
 
-import httpx
 from app.llm.llm_connector import LLMConnector, LLMResponse
 from app.models.message import Message
 from app.models.vocabulary import MessageRole
@@ -59,7 +59,7 @@ class OpenAIConnector(LLMConnector):
 
     def _get_async_client(self) -> openai.AsyncOpenAI:
         """Returns an AsyncOpenAI client associated with the current event loop."""
-        
+
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
@@ -70,8 +70,8 @@ class OpenAIConnector(LLMConnector):
                 limits=httpx.Limits(max_keepalive_connections=0)
             )
             return openai.AsyncOpenAI(
-                base_url=self.base_url, 
-                api_key=self.api_key, 
+                base_url=self.base_url,
+                api_key=self.api_key,
                 max_retries=3,
                 http_client=http_client
             )
@@ -83,8 +83,8 @@ class OpenAIConnector(LLMConnector):
                 limits=httpx.Limits(max_keepalive_connections=0)
             )
             self._async_clients[loop] = openai.AsyncOpenAI(
-                base_url=self.base_url, 
-                api_key=self.api_key, 
+                base_url=self.base_url,
+                api_key=self.api_key,
                 max_retries=3,
                 http_client=http_client
             )

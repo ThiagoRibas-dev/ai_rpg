@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Any
 
 import nltk
+from fastembed.rerank.cross_encoder import TextCrossEncoder
 
 from app.models.message import Message
 from app.models.vocabulary import WORLD_GEN_TAG, MemoryKind
@@ -16,26 +17,10 @@ DB_FETCH_LIMIT_TAGS = 50
 DB_FETCH_LIMIT_PRIORITY = 10
 DB_FETCH_LIMIT_EPISODIC = 50
 
-# General Scoring Constants
-CODEX_PRIORITY_BUMP = 30
-TAG_OVERLAP_BONUS = 40
-KEYWORD_RELEVANCE_BONUS = 30
-SEMANTIC_HIT_BONUS = 100
-
-# FTS Scoring Constants
-FTS_HIT_BONUS = 80
-FTS_MULTIPLIER = 10
-
-# Specific Codex Constants
-MIN_CODEX_SCORE_THRESHOLD = 30
-
-# Specific Episodic Constants
-MIN_EPISODIC_SCORE_THRESHOLD = 0
-EPISODIC_PRIORITY_BONUS = 50
-EPISODIC_RECENCY_MULTIPLIER = 2
-EPISODIC_RECENCY_MAX = 30
-EPISODIC_DEDUP_THRESHOLD = 0.6
-EPISODIC_DEDUP_PENALTY = 200
+# RRF and Reranking Constants
+RRF_K = 60
+RERANKER_TOP_N = 30
+RERANKER_MODEL = "Xenova/ms-marco-MiniLM-L-6-v2"
 
 # Tags that are applied universally and provide zero discriminative value for retrieval
 NON_DISCRIMINATIVE_TAGS = {WORLD_GEN_TAG}
@@ -62,6 +47,14 @@ class MemoryRetriever:
 
         # Create an instance-bound LRU cache to drastically speed up repetitive Episodic checks
         self._cached_extract = functools.lru_cache(maxsize=200)(self._extract_keywords_internal)
+
+        # Initialize Cross-Encoder Reranker
+        self.reranker: TextCrossEncoder | None = None
+        try:
+            self.reranker = TextCrossEncoder(model_name=RERANKER_MODEL)
+            self.logger.info(f"Initialized Cross-Encoder with {RERANKER_MODEL}")
+        except Exception as e:
+            self.logger.warning(f"Could not load Cross-Encoder reranker: {e}. Falling back to RRF only.")
 
     def extract_keywords(self, text: str, min_length: int = 3) -> list[str]:
         return self._cached_extract(text, min_length)
@@ -95,12 +88,62 @@ class MemoryRetriever:
             and w.isalpha()
         })
 
+    def _rrf_fuse(
+        self,
+        candidate_ids: set[int],
+        ranked_lists: dict[str, list[int]],
+    ) -> list[tuple[int, float]]:
+        """
+        Reciprocal Rank Fusion across multiple ranked retrieval sources.
+        """
+        scores: dict[int, float] = {cid: 0.0 for cid in candidate_ids}
+        for _source_name, ranked_ids in ranked_lists.items():
+            for rank_position, mem_id in enumerate(ranked_ids):
+                if mem_id in scores:
+                    scores[mem_id] += 1.0 / (RRF_K + rank_position + 1)
+        return sorted(scores.items(), key=lambda item: item[1], reverse=True)
+
+    def _rerank_candidates(
+        self,
+        query: str,
+        candidates: list[tuple[int, Any]],  # (mem_id, Memory)
+        top_n: int = RERANKER_TOP_N,
+    ) -> list[Any]:
+        """
+        Cross-encoder reranking of top-N candidates.
+        """
+        if not self.reranker or not query or not candidates:
+            return [mem for _, mem in candidates]
+
+        # Limit candidates for reranking
+        to_rerank = candidates[:top_n]
+        remaining = candidates[top_n:]
+
+        try:
+            doc_texts = [mem.content for _, mem in to_rerank]
+            # fastembed rerank returns scores for the documents
+            scores = list(self.reranker.rerank(query, doc_texts))
+
+            # Sort by reranker score
+            scored_mems = sorted(
+                zip(scores, [mem for _, mem in to_rerank], strict=False),
+                key=lambda x: x[0], reverse=True
+            )
+            reranked = [mem for _, mem in scored_mems]
+
+            # Append non-reranked as fallback
+            reranked.extend([mem for _, mem in remaining])
+            return reranked
+        except Exception as e:
+            self.logger.warning(f"Reranking failed: {e}")
+            return [mem for _, mem in candidates]
+
     def _fetch_codex_kind(
         self,
         session_id: int,
         kind: MemoryKind,
         active_tags: set[str],
-        keywords: list[str],
+        query_text: str,
         sem_hits: list[dict[str, Any]],
         fts_hits: dict[int, dict[str, Any]],
         exclude_ids: list[int] | None,
@@ -108,62 +151,77 @@ class MemoryRetriever:
     ) -> list[Any]:
         candidates: dict[int, Any] = {}
 
-        # 1. Fetch natively from Vector Hits
-        hit_ids = {h["memory_id"] for h in sem_hits}
-        for hid in hit_ids:
-            mem = self.db.memories.get_by_id(hid)
+        # 1. Gather Candidates and Sources
+        # Semantic Rank
+        sem_ranked = []
+        for h in sem_hits:
+            mem_id = h["memory_id"]
+            if mem_id in (exclude_ids or []):
+                continue
+
+            # We don't fetch every memory yet if we can help it,
+            # but we need to check the 'kind'
+            mem = self.db.memories.get_by_id(mem_id)
             if mem and mem.kind == kind:
                 candidates[mem.id] = mem
+                sem_ranked.append(mem.id)
 
-        # 2. Fetch natively from FTS Hits
-        for data in fts_hits.values():
+        # FTS Rank
+        fts_ranked = []
+        for fts_mem_id, data in fts_hits.items():
+            if fts_mem_id in (exclude_ids or []):
+                continue
             mem = data["mem"]
             if mem and mem.kind == kind:
                 candidates[mem.id] = mem
+                fts_ranked.append(mem.id)
 
-        # 3. Fetch from DB by tags
+        # Tag Overlap & Priority Ranking
+        # For these, we fetch from DB to get pool of potential matches
+        tag_mems = []
         if active_tags:
             tag_mems = self.db.memories.query(session_id, kind=kind, tags=list(active_tags), limit=DB_FETCH_LIMIT_TAGS)
             for m in tag_mems:
+                if exclude_ids and m.id in exclude_ids:
+                    continue
                 candidates[m.id] = m
 
-        # 4. Fetch highest priority natively
         high_pri = self.db.memories.query(session_id, kind=kind, limit=DB_FETCH_LIMIT_PRIORITY)
         for m in high_pri:
+            if exclude_ids and m.id in exclude_ids:
+                continue
             candidates[m.id] = m
 
-        scored = []
-        for mem in candidates.values():
-            if exclude_ids and mem.id in exclude_ids:
-                continue
+        if not candidates:
+            return []
 
-            # Flat priority bump to prevent it from dominating relevance
-            score = 0
-            if mem.priority >= 4:
-                score += CODEX_PRIORITY_BUMP
+        # Build Ranked Lists for RRF
+        # Tag overlaps list
+        tag_ranked = sorted(
+            candidates.keys(),
+            key=lambda mid: len(active_tags & {t.lower() for t in candidates[mid].tags_list()}),
+            reverse=True
+        )
+        # Priority list
+        pri_ranked = sorted(
+            candidates.keys(),
+            key=lambda mid: candidates[mid].priority,
+            reverse=True
+        )
 
-            mem_tags = {t.lower() for t in mem.tags_list()}
-            score += len(active_tags & mem_tags) * TAG_OVERLAP_BONUS
+        ranked_lists = {
+            "semantic": sem_ranked,
+            "fts": fts_ranked,
+            "tags": tag_ranked,
+            "priority": pri_ranked
+        }
 
-            # Keyword overlap boost (Legacy NLTK intersection - kept as fallback/supplement)
-            if keywords:
-                mem_words = set(self.extract_keywords(mem.content))
-                overlap = len(set(keywords) & mem_words)
-                score += overlap * KEYWORD_RELEVANCE_BONUS
+        # FUSE
+        fused = self._rrf_fuse(set(candidates.keys()), ranked_lists)
 
-            # Semantic Boost
-            if mem.id in hit_ids:
-                score += SEMANTIC_HIT_BONUS
-
-            # FTS BM25 Boost
-            if mem.id in fts_hits:
-                score += FTS_HIT_BONUS + (fts_hits[mem.id]["score"] * FTS_MULTIPLIER)
-
-            if score >= MIN_CODEX_SCORE_THRESHOLD: # Minimum filter
-                scored.append((score, mem))
-
-        scored.sort(key=lambda x: x[0], reverse=True)
-        return [m for s, m in scored[:limit]]
+        # RERANK
+        mem_candidates = [(mid, candidates[mid]) for mid, score in fused]
+        return self._rerank_candidates(query_text, mem_candidates, top_n=limit * 2)[:limit]
 
     def get_relevant(
         self,
@@ -274,77 +332,80 @@ class MemoryRetriever:
 
         for k in codex_kinds:
             result_dict[k] = self._fetch_codex_kind(
-                session.id, k, active_tags, keywords, sem_hits, fts_hits, exclude_ids, limit=budgets.get(k, 2)
+                session.id, k, active_tags, fts_search_text, sem_hits, fts_hits, exclude_ids, limit=budgets.get(k, 2)
             )
 
         # 4. CHRONICLE RETRIEVAL (Episodic)
         if kinds is None or MemoryKind.EPISODIC in kinds:
             candidates_ep: dict[int, Any] = {}
 
+            # Gather sources
+            sem_ranked_ep = []
             hit_ids = {h["memory_id"] for h in sem_hits}
             for hid in hit_ids:
                 mem = self.db.memories.get_by_id(hid)
                 if mem and mem.kind == MemoryKind.EPISODIC:
                     candidates_ep[mem.id] = mem
+                    sem_ranked_ep.append(mem.id)
 
-            # Fetch natives from FTS Hits (Episodic)
-            for data in fts_hits.values():
+            fts_ranked_ep = []
+            for _fts_id, data in fts_hits.items():
                 mem = data["mem"]
                 if mem and mem.kind == MemoryKind.EPISODIC:
                     candidates_ep[mem.id] = mem
+                    fts_ranked_ep.append(mem.id)
 
-            # Fetch candidate episodic memories
             episodic_mems = self.db.memories.query(session.id, kind=MemoryKind.EPISODIC, limit=DB_FETCH_LIMIT_EPISODIC)
             for m in episodic_mems:
+                if exclude_ids and m.id in exclude_ids:
+                    continue
                 candidates_ep[m.id] = m
 
-            hit_ids_ep = {m.id for m in candidates_ep.values() if m.id in hit_ids}
-            fts_ids_ep = {m.id for m in candidates_ep.values() if m.id in fts_hits}
+            if candidates_ep:
+                # History fingerprint for deduplication
+                history_mems = [m for m in history if m.content]
+                history_content = " ".join(str(m.content) for m in history_mems[-10:] if m.content is not None)
+                history_words = set(self.extract_keywords(history_content))
 
-            # Create history fingerprint for deduplication
-            history_mems = [m for m in history if m.content]
-            history_content = " ".join(str(m.content) for m in history_mems[-10:] if m.content is not None)
-            history_words = set(self.extract_keywords(history_content))
+                # Ranked Lists for Episodic
+                # Recency Rank
+                def get_age(m):
+                    try:
+                        return (datetime.now() - datetime.fromisoformat(m.created_at)).total_seconds()
+                    except (ValueError, TypeError):
+                        return 999999
 
-            scored_episodic = []
-            for mem in candidates_ep.values():
-                if exclude_ids and mem.id in exclude_ids:
-                    continue
-                score = 0
-                if mem.id in hit_ids_ep:
-                    score += SEMANTIC_HIT_BONUS
+                recency_ranked = sorted(candidates_ep.keys(), key=lambda mid: get_age(candidates_ep[mid]))
+                # Priority Rank
+                pri_ranked_ep = sorted(candidates_ep.keys(), key=lambda mid: candidates_ep[mid].priority, reverse=True)
 
-                if mem.id in fts_ids_ep:
-                    score += FTS_HIT_BONUS + (fts_hits[mem.id]["score"] * FTS_MULTIPLIER)
+                ranked_lists_ep = {
+                    "semantic": sem_ranked_ep,
+                    "fts": fts_ranked_ep,
+                    "recency": recency_ranked,
+                    "priority": pri_ranked_ep
+                }
 
-                if mem.priority >= 4:
-                    score += EPISODIC_PRIORITY_BONUS
+                # FUSE
+                fused_ep = self._rrf_fuse(set(candidates_ep.keys()), ranked_lists_ep)
 
-                # Keyword overlap boost
-                mem_words = set(self.extract_keywords(mem.content))
-                if keywords:
-                     overlap = len(set(keywords) & mem_words)
-                     score += overlap * KEYWORD_RELEVANCE_BONUS
+                # Filter and Deduplicate
+                final_candidates_ep = []
+                for mid, _score in fused_ep:
+                    mem = candidates_ep[mid]
+                    mem_words = set(self.extract_keywords(mem.content))
 
-                # Recency inversion
-                try:
-                    created = datetime.fromisoformat(mem.created_at)
-                    age_days = (datetime.now() - created).days
-                    if age_days >= 1:
-                        score += min(age_days * EPISODIC_RECENCY_MULTIPLIER, EPISODIC_RECENCY_MAX)
-                except Exception:
-                    pass
+                    # Deduplication check
+                    overlap_ratio = len(mem_words & history_words) / max(len(mem_words), 1)
+                    if overlap_ratio > 0.6: # EPISODIC_DEDUP_THRESHOLD was 0.6
+                        continue
 
-                # Deduplication: Penalize if already clearly in recent history
-                overlap_ratio = len(mem_words & history_words) / max(len(mem_words), 1)
-                if overlap_ratio > EPISODIC_DEDUP_THRESHOLD:
-                    score -= EPISODIC_DEDUP_PENALTY
+                    final_candidates_ep.append((mid, mem))
 
-                if score > MIN_EPISODIC_SCORE_THRESHOLD:
-                    scored_episodic.append((score, mem))
-
-            scored_episodic.sort(key=lambda x: x[0], reverse=True)
-            result_dict[MemoryKind.EPISODIC] = [m for s, m in scored_episodic[:episodic_limit]]
+                # RERANK
+                result_dict[MemoryKind.EPISODIC] = self._rerank_candidates(
+                    fts_search_text, final_candidates_ep, top_n=episodic_limit * 2
+                )[:episodic_limit]
 
         # 5. ORGANIZE AND BUDGET
         # Final pass if limit was global (sum of all results)

@@ -9,9 +9,10 @@ from app.gui.components.context_editor import ContextEditor
 from app.gui.dialogs.lore_editor import LoreEditorDialog
 
 if TYPE_CHECKING:
+    from app.database.models import GameSession
+
     from app.core.orchestrator import Orchestrator
     from app.database.db_manager import DBManager
-    from app.database.models import GameSession
     from app.gui.components.chat import ChatComponent
     from app.gui.components.map import MapComponent
     from app.gui.inspectors.manager import InspectorManager

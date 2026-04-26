@@ -129,11 +129,11 @@ class WorldGenService:
             # --- WAIT & COLLECT ---
             # Fire all parallel requests at once using TaskGroup for fail-fast cancellation.
             # If one task fails, all others are immediately cancelled.
-            tg_tasks = []
+            tg_tasks: list[asyncio.Task[Any]] = []
             async with asyncio.TaskGroup() as tg:
-                for t in tasks:
-                    tg_tasks.append(tg.create_task(t))
-            
+                for extraction_task in tasks:
+                    tg_tasks.append(tg.create_task(extraction_task))
+
             # Map results back from tasks
             results = [t.result() for t in tg_tasks]
 

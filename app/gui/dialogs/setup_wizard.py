@@ -296,7 +296,7 @@ class SetupWizard:
                 async with asyncio.TaskGroup() as tg:
                     task_char = tg.create_task(run_chargen(stream))
                     task_world = tg.create_task(run_worldgen(stream))
-                
+
                 self.preview_entity = task_char.result()
                 self.extracted_world = task_world.result()
             except Exception as e:

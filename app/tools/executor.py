@@ -142,21 +142,21 @@ class ToolExecutor:
             "adjust",
             "set",
             "mark",
-            "entity.update",
-            "inventory.add_item",
+            "npc.spawn",
+            "location.create",
         ]:
             if self.ui_queue:
                 self.ui_queue.put({"type": UIEventType.STATE_CHANGED, "turn_id": turn_id})
 
         # Memory -> Refresh Log
-        if tool_name in ["note", "game.log", "memory.upsert"]:
+        if tool_name in ["note"]:
             if self.ui_queue:
                 self.ui_queue.put(
                     {"type": UIEventType.REFRESH_MEMORY_INSPECTOR, "turn_id": turn_id}
                 )
 
         # Navigation
-        if tool_name in ["move", "world.travel"] and isinstance(result, dict):
+        if tool_name in ["move", "location.create"] and isinstance(result, dict):
             loc_data = result.get("location_data", {})
             exits = list((loc_data.get("connections") or {}).keys())
             if self.ui_queue:
